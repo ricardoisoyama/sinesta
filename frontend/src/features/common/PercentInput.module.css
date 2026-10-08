@@ -1,0 +1,40 @@
+.pct {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d7d3ca;
+  border-radius: 8px;
+  padding: 8px 11px;
+  background: #fff;
+  transition: 0.15s;
+  height: 36px;
+}
+.pct:focus-within {
+  border-color: #e8702f;
+  box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15);
+}
+.pct > span {
+  color: #6b7b72;
+  font-size: 13px;
+  font-weight: 600;
+}
+/* !important: o ".field input" genérico (borda, altura, foco laranja) tem a mesma
+   especificidade e chegava a vencer, desenhando um input dentro do input. */
+.pct input,
+.pct input:focus {
+  flex: 1;
+  width: 100% !important;
+  height: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  outline: 0;
+  background: transparent !important;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1f2a24;
+  text-align: right;
+}
+.invalid {
+  border-color: #c0392b;
+}

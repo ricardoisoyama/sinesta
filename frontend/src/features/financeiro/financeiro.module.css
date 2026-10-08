@@ -1,0 +1,136 @@
+/* ── Movimentações ─────────────────────────────────────────────────────── */
+.kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 12px; }
+@media (max-width: 900px) { .kpis { grid-template-columns: repeat(2, 1fr); } }
+.kpi { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04); cursor: pointer; text-align: left; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s; }
+.kpi:hover { border-color: #cfe0d4; }
+.kpiOn { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+.kpiLabel { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; display: flex; align-items: center; gap: 6px; }
+.kpiLabel svg { width: 14px; height: 14px; }
+.kpiVal { font-size: 22px; font-weight: 700; color: #143d18; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.kpiVal.entrada { color: #2e7d44; }
+.kpiVal.saida { color: #b5651d; }
+.kpiVal.alerta { color: #c0392b; }
+.kpiSub { font-size: 12px; color: #6b7b72; margin-top: 2px; }
+
+.empresaSel { font: inherit; font-size: 13px; font-weight: 600; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 10px; cursor: pointer; }
+.segmento { display: inline-flex; background: #f6f5f1; border: 1px solid #e6e3db; border-radius: 9px; padding: 3px; gap: 2px; }
+.segmento button { font: inherit; font-size: 12px; font-weight: 600; color: #6b7b72; background: transparent; border: none; border-radius: 7px; padding: 6px 12px; cursor: pointer; }
+.segmento button.on { background: #fff; color: #143d18; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.12); }
+.segmento button.onReceber { background: #e8f5ec; color: #2e7d44; }
+.segmento button.onPagar { background: #fdf0e6; color: #b5651d; }
+
+.valor { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.valor.receber { color: #2e7d44; }
+.valor.pagar { color: #b5651d; }
+.valor.cancelado { color: #9aa39b; text-decoration: line-through; font-weight: 500; }
+
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.status svg { width: 12px; height: 12px; }
+.status.aberto { background: #fbf3d5; color: #8a6d00; }
+.status.atrasado { background: #fdecea; color: #c0392b; }
+.status.liquidado { background: #e8f5ec; color: #2e7d44; }
+.status.cancelado { background: #f0eee7; color: #6b7b72; }
+
+.venc { display: flex; flex-direction: column; line-height: 1.2; }
+.venc small { color: #6b7b72; font-size: 11px; }
+.venc small.atraso { color: #c0392b; font-weight: 600; }
+.descr { display: flex; flex-direction: column; line-height: 1.25; }
+.descr small { color: #6b7b72; font-size: 11.5px; }
+.tipoDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.tipoDot.receber { background: #2e7d44; }
+.tipoDot.pagar { background: #e8702f; }
+.parcelaTag { font-size: 10.5px; font-weight: 600; color: #6b7b72; background: #f0eee7; border-radius: 5px; padding: 1px 5px; margin-left: 6px; }
+
+/* ── Modais ─────────────────────────────────────────────────────────────── */
+.tipoSeg { display: flex; gap: 8px; margin-bottom: 14px; }
+.tipoSeg label { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 12px; border: 1.5px solid #e6e3db; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 13px; color: #6b7b72; background: #fff; }
+.tipoSeg label svg { width: 16px; height: 16px; }
+.tipoSeg label.onReceber { border-color: #2e7d44; color: #2e7d44; background: #e8f5ec; }
+.tipoSeg label.onPagar { border-color: #e8702f; color: #b5651d; background: #fdf0e6; }
+.tipoSeg input { position: absolute; opacity: 0; width: 0; height: 0; }
+.parcelasPreview { margin-top: 10px; font-size: 12px; color: #6b7b72; display: flex; flex-wrap: wrap; gap: 6px; }
+.parcelasPreview span { background: #f6f5f1; border: 1px solid #e6e3db; border-radius: 6px; padding: 3px 8px; }
+.baixaTotal { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: #eef4ef; border: 1px solid #cfe0d4; border-radius: 10px; margin-top: 8px; font-weight: 600; color: #143d18; }
+.baixaTotal b { font-size: 18px; }
+.baixaLista { max-height: 180px; overflow: auto; border: 1px solid #e6e3db; border-radius: 10px; margin-bottom: 12px; }
+.baixaLista div { display: flex; justify-content: space-between; gap: 10px; padding: 7px 12px; border-bottom: 1px solid #f0eee7; font-size: 12.5px; }
+.baixaLista div:last-child { border-bottom: none; }
+
+/* ── Fluxo de caixa ─────────────────────────────────────────────────────── */
+.carteiras { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.carteira { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 12px 14px; border-left-width: 5px; cursor: pointer; text-align: left; font-family: inherit; transition: box-shadow 0.15s; }
+.carteira:hover { box-shadow: 0 4px 12px -6px rgba(20, 61, 24, 0.25); }
+.carteiraOn { box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.14); }
+.carteiraNome { font-size: 12px; font-weight: 700; color: #1f2a24; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.carteiraNome small { font-weight: 500; color: #9aa39b; font-size: 11px; }
+.carteiraSaldo { font-size: 20px; font-weight: 700; color: #143d18; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.carteiraSaldo.neg { color: #c0392b; }
+.carteiraPrev { font-size: 11.5px; color: #6b7b72; margin-top: 2px; display: flex; justify-content: space-between; }
+.carteiraPrev b { font-variant-numeric: tabular-nums; }
+.carteiraTotal { border-left-color: #143d18; background: #f7f6f2; }
+
+.fluxoTop { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 16px; border-bottom: 1px solid #e6e3db; }
+.fluxoTop input[type="date"] { font: inherit; font-size: 12px; border: 1px solid #e6e3db; border-radius: 8px; padding: 6px 8px; background: #f6f5f1; color: #1f2a24; }
+.insight { display: flex; align-items: center; gap: 10px; padding: 10px 16px; font-size: 12.5px; border-bottom: 1px solid #e6e3db; background: #fbfaf7; color: #4a5a50; }
+.insight svg { width: 15px; height: 15px; flex-shrink: 0; }
+.insight.ruim { background: #fdf0ee; color: #a33a2a; }
+.insight b { font-variant-numeric: tabular-nums; }
+.grafico { padding: 12px 16px 4px; }
+.legenda { display: flex; gap: 14px; font-size: 11.5px; color: #6b7b72; padding: 0 16px 8px; flex-wrap: wrap; }
+.legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+
+.fluxoTabela { width: 100%; border-collapse: collapse; font-size: 13px; }
+.fluxoTabela th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; padding: 10px 16px; border-top: 1px solid #e6e3db; border-bottom: 1px solid #e6e3db; background: #fbfaf7; }
+.fluxoTabela td { padding: 10px 16px; border-bottom: 1px solid #f0eee7; font-variant-numeric: tabular-nums; }
+.fluxoTabela tr.linha { cursor: pointer; }
+.fluxoTabela tr.linha:hover td { background: #faf9f5; }
+.fluxoTabela tr.futuro td { color: #6b7b72; }
+.fluxoTabela tr.futuro td:first-child::after { content: "previsto"; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: #b5651d; background: #fdf0e6; border-radius: 5px; padding: 1px 5px; margin-left: 8px; }
+.fluxoTabela tr.hoje td { box-shadow: inset 3px 0 0 #e8702f; }
+.fluxoTabela .r { text-align: right; }
+.fluxoTabela .pos { color: #2e7d44; font-weight: 600; }
+.fluxoTabela .negv { color: #c0392b; font-weight: 600; }
+.fluxoTabela .acum { font-weight: 700; color: #143d18; }
+.fluxoTabela .acum.neg { color: #c0392b; }
+.fluxoTabela tr.detalhe td { background: #fbfaf7; padding: 4px 16px 10px 32px; }
+.detLista { display: grid; gap: 4px; }
+.detItem { display: grid; grid-template-columns: 90px 1fr auto; gap: 12px; font-size: 12.5px; align-items: center; }
+.detItem small { color: #9aa39b; }
+.fluxoRodape td { font-weight: 700; border-top: 2px solid #e6e3db; background: #fbfaf7; }
+.chev { width: 14px; height: 14px; color: #9aa39b; vertical-align: middle; margin-right: 6px; }
+.segmento button.onVencido { background: #fdecea; color: #c0392b; }
+
+/* ── aprovação de lançamentos ───────────────────────────────────────────── */
+.aprov { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+.aprov_pendente { background: #fbf3d5; color: #8a6d00; }
+.aprov_aprovado { background: #e8f5ec; color: #2e7d44; }
+.aprov_reprovado { background: #fdecea; color: #c0392b; }
+.aprovBtn { border: none; background: none; padding: 0; cursor: pointer; font: inherit; }
+.aprovBtn:hover .aprov { box-shadow: 0 0 0 2px rgba(232, 112, 47, 0.25); }
+.aprovSub { display: block; font-size: 11px; color: #6b7b72; margin-top: 2px; }
+.aprovTopo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; }
+.aprovAviso { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; margin: 10px 0; border-radius: 10px; background: #fdf0e6; border: 1px solid #f0c69e; color: #8a4513; font-size: 13px; line-height: 19px; }
+.aprovAviso svg { flex-shrink: 0; margin-top: 1px; }
+.aprovNota { margin-top: 10px; font-size: 12.5px; color: #6b7b72; }
+.aprovMotivo { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 12px; font-weight: 600; color: #6b7b72; }
+.aprovMotivo textarea { font: inherit; font-size: 13px; padding: 9px 11px; border: 1px solid #d7d3ca; border-radius: 8px; resize: vertical; color: #1f2a24; }
+
+.carteiraEditar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  opacity: 0.55;
+}
+.carteiraEditar:hover,
+.carteiraEditar:focus-visible {
+  opacity: 1;
+}
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+}

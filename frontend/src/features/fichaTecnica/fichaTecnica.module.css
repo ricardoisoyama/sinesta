@@ -1,0 +1,126 @@
+/* Fichas como pastas à esquerda; o grid da ficha escolhida à direita. */
+.layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.pastas {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid #e6e3db;
+  border-radius: 12px;
+  padding: 10px;
+  position: sticky;
+  top: 76px;
+}
+.pastasTitulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #7a877f;
+  padding: 2px 6px 6px;
+}
+.pastasDica { margin: 6px 4px 0; font-size: 12px; line-height: 1.5; color: #6b7b72; }
+
+/* Painel de colunas › "Total do item": soma das marcadas ou fórmula da ficha. */
+.totalBloco { display: flex; flex-direction: column; gap: 8px; border: 1px solid #f0d9c6; background: #fffaf6; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px; }
+.totalTitulo { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #b5651d; }
+.totalOpcao { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: #42524a; cursor: pointer; line-height: 1.4; }
+.totalOpcao input { accent-color: #e8702f; margin-top: 2px; }
+
+.pasta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  color: #33413a;
+}
+.pasta > svg { flex-shrink: 0; color: var(--orange); margin-left: 8px; }
+.pastaOn { background: #fdf0e6; box-shadow: inset 3px 0 0 var(--orange); }
+.pastaOff { opacity: 0.55; }
+
+.pastaBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 8px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pastaBtn:hover { background: #f6f5f1; }
+.pastaBtn:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
+.pastaBtn > svg { flex-shrink: 0; color: #9aa39d; }
+.pastaBtn span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pastaBtn small {
+  font-size: 11px;
+  color: #7a877f;
+  background: #f0eee7;
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pastaNome {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid transparent;
+  background: transparent;
+  border-radius: 6px;
+  padding: 7px 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b3a17;
+}
+.pastaNome:hover { border-color: #ecd3bf; }
+.pastaNome:focus { outline: 0; border-color: var(--orange); background: #fff; }
+
+.pastaAcao {
+  background: none;
+  border: 0;
+  color: #9a6a4a;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.pastaAcao:hover { background: #fbe2cf; color: #b42318; }
+
+.novaPasta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 8px;
+  border: 1px dashed #d9d4c8;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: 13px;
+  color: var(--green);
+  cursor: pointer;
+}
+.novaPasta:hover { border-color: var(--orange); background: #fffaf6; }
+.novaPasta:disabled { opacity: 0.5; cursor: default; }
+
+@media (max-width: 900px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .pastas { position: static; flex-direction: row; flex-wrap: wrap; }
+  .pastasTitulo { width: 100%; }
+}

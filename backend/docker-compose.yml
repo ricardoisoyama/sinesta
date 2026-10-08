@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: elrond-postgres
+    environment:
+      POSTGRES_DB: elrond
+      POSTGRES_USER: elrond
+      POSTGRES_PASSWORD: elrond
+    ports:
+      - "5432:5432"
+    volumes:
+      - elrond-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  elrond-pgdata:

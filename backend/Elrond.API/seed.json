@@ -1,0 +1,1489 @@
+{
+  "taxas": [
+    {
+      "id": "tx-seguro",
+      "nome": "Seguro (ad valorem)",
+      "tipo": "percentual",
+      "valor": 0.003,
+      "status": "ativo"
+    },
+    {
+      "id": "tx-rctr",
+      "nome": "RCTR-C + RCF-DC (ad valorem)",
+      "tipo": "percentual",
+      "valor": 0.0004,
+      "status": "ativo"
+    },
+    {
+      "id": "tx-diversas",
+      "nome": "Taxas diversas (CT-e + NFS-e)",
+      "tipo": "fixo",
+      "valor": 680,
+      "status": "ativo"
+    }
+  ],
+  "planoContas": [
+    {
+      "id": "d",
+      "codigo": "3",
+      "nome": "DESPESAS",
+      "paiId": null,
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "d-pessoal",
+      "codigo": "3.01",
+      "nome": "Despesas com Pessoal",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-pessoal",
+      "codigo": "3.01.001",
+      "nome": "Pessoal",
+      "paiId": "d-pessoal",
+      "grupoDre": "Despesa",
+      "contaContabil": "301001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-prolabore",
+      "codigo": "3.01.002",
+      "nome": "Pró-labore",
+      "paiId": "d-pessoal",
+      "grupoDre": "Despesa",
+      "contaContabil": "301002",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-encargos",
+      "codigo": "3.01.003",
+      "nome": "Encargos e benefícios",
+      "paiId": "d-pessoal",
+      "grupoDre": "Despesa",
+      "contaContabil": "301003",
+      "status": "ativo"
+    },
+    {
+      "id": "d-adm",
+      "codigo": "3.02",
+      "nome": "Despesas Administrativas",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-contabil",
+      "codigo": "3.02.001",
+      "nome": "Contábil/Jurídico",
+      "paiId": "d-adm",
+      "grupoDre": "Despesa",
+      "contaContabil": "302001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-ti",
+      "codigo": "3.02.002",
+      "nome": "Sistemas/TI",
+      "paiId": "d-adm",
+      "grupoDre": "Despesa",
+      "contaContabil": "302002",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-marketing",
+      "codigo": "3.02.003",
+      "nome": "Marketing",
+      "paiId": "d-adm",
+      "grupoDre": "Despesa",
+      "contaContabil": "302003",
+      "status": "ativo"
+    },
+    {
+      "id": "d-oper",
+      "codigo": "3.03",
+      "nome": "Despesas Operacionais",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-operacional",
+      "codigo": "3.03.001",
+      "nome": "Operacional",
+      "paiId": "d-oper",
+      "grupoDre": "Despesa",
+      "contaContabil": "303001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-seguros",
+      "codigo": "3.03.002",
+      "nome": "Seguros",
+      "paiId": "d-oper",
+      "grupoDre": "Despesa",
+      "contaContabil": "303002",
+      "status": "ativo"
+    },
+    {
+      "id": "d-frota",
+      "codigo": "3.04",
+      "nome": "Despesas Operacionais",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-combustivel",
+      "codigo": "3.04.001",
+      "nome": "Combustível",
+      "paiId": "d-frota",
+      "grupoDre": "Despesa",
+      "contaContabil": "304001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-manutencao",
+      "codigo": "3.04.002",
+      "nome": "Manutenção de equipamentos",
+      "paiId": "d-frota",
+      "grupoDre": "Despesa",
+      "contaContabil": "304002",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-pedagio",
+      "codigo": "3.04.003",
+      "nome": "Deslocamentos",
+      "paiId": "d-frota",
+      "grupoDre": "Despesa",
+      "contaContabil": "304003",
+      "status": "ativo"
+    },
+    {
+      "id": "d-servicos",
+      "codigo": "3.05",
+      "nome": "Serviços Prestados",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-fretes-contr",
+      "codigo": "3.05.001",
+      "nome": "Serviços contratados",
+      "paiId": "d-servicos",
+      "grupoDre": "Despesa",
+      "contaContabil": "305001",
+      "status": "ativo"
+    },
+    {
+      "id": "d-trib-fed",
+      "codigo": "3.06",
+      "nome": "Tributos Federais",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-pis-cofins",
+      "codigo": "3.06.001",
+      "nome": "PIS/COFINS",
+      "paiId": "d-trib-fed",
+      "grupoDre": "Despesa",
+      "contaContabil": "306001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-irpj-csll",
+      "codigo": "3.06.002",
+      "nome": "IRPJ/CSLL",
+      "paiId": "d-trib-fed",
+      "grupoDre": "Despesa",
+      "contaContabil": "306002",
+      "status": "ativo"
+    },
+    {
+      "id": "d-trib-est",
+      "codigo": "3.07",
+      "nome": "Tributos Estaduais",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-icms",
+      "codigo": "3.07.001",
+      "nome": "ICMS",
+      "paiId": "d-trib-est",
+      "grupoDre": "Despesa",
+      "contaContabil": "307001",
+      "status": "ativo"
+    },
+    {
+      "id": "d-trib-mun",
+      "codigo": "3.08",
+      "nome": "Tributos Municipais",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-iss",
+      "codigo": "3.08.001",
+      "nome": "ISS",
+      "paiId": "d-trib-mun",
+      "grupoDre": "Despesa",
+      "contaContabil": "308001",
+      "status": "ativo"
+    },
+    {
+      "id": "d-emprestimos",
+      "codigo": "3.09",
+      "nome": "Empréstimos / Financiamentos",
+      "paiId": "d",
+      "grupoDre": "Despesa",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-fin-veiculos",
+      "codigo": "3.09.001",
+      "nome": "Financiamento de veículos",
+      "paiId": "d-emprestimos",
+      "grupoDre": "Despesa",
+      "contaContabil": "209001",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-capital-giro",
+      "codigo": "3.09.002",
+      "nome": "Capital de giro",
+      "paiId": "d-emprestimos",
+      "grupoDre": "Despesa",
+      "contaContabil": "209002",
+      "status": "ativo"
+    },
+    {
+      "id": "r",
+      "codigo": "4",
+      "nome": "RECEITAS",
+      "paiId": null,
+      "grupoDre": "Receita",
+      "status": "ativo"
+    },
+    {
+      "id": "r-vendas",
+      "codigo": "4.01",
+      "nome": "Receitas de Vendas",
+      "paiId": "r",
+      "grupoDre": "Receita",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-frete-receita",
+      "codigo": "4.01.001",
+      "nome": "Receita de serviços",
+      "paiId": "r-vendas",
+      "grupoDre": "Receita",
+      "contaContabil": "401001",
+      "status": "ativo"
+    },
+    {
+      "id": "r-financeiras",
+      "codigo": "4.02",
+      "nome": "Receitas Financeiras",
+      "paiId": "r",
+      "grupoDre": "Receita",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-rendimentos",
+      "codigo": "4.02.001",
+      "nome": "Rendimentos de aplicações",
+      "paiId": "r-financeiras",
+      "grupoDre": "Receita",
+      "contaContabil": "402001",
+      "status": "ativo"
+    },
+    {
+      "id": "r-outras",
+      "codigo": "4.03",
+      "nome": "Outras Receitas",
+      "paiId": "r",
+      "grupoDre": "Receita",
+      "status": "ativo"
+    },
+    {
+      "id": "pc-sucata",
+      "codigo": "4.03.001",
+      "nome": "Venda de sucata",
+      "paiId": "r-outras",
+      "grupoDre": "Receita",
+      "contaContabil": "403001",
+      "status": "ativo"
+    }
+  ],
+  "custosFixos": [
+    {
+      "id": "cf-m01",
+      "unidadeId": "matriz",
+      "descricao": "Func. OP",
+      "categoriaId": "cat-pessoal",
+      "valorMensal": 0,
+      "planoContaId": "pc-pessoal",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-m02",
+      "unidadeId": "matriz",
+      "descricao": "Pro Labore",
+      "categoriaId": "cat-pessoal",
+      "valorMensal": 9000,
+      "planoContaId": "pc-pessoal",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m03",
+      "unidadeId": "matriz",
+      "descricao": "Contador + Abertura Emp.",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 150,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m04",
+      "unidadeId": "matriz",
+      "descricao": "Sistema (TMS)",
+      "categoriaId": "cat-ti",
+      "valorMensal": 787.4,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m05",
+      "unidadeId": "matriz",
+      "descricao": "Coworking (End. Fiscal)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 105,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m06",
+      "unidadeId": "matriz",
+      "descricao": "Hospedagem - Sistema e Site - Mirai",
+      "categoriaId": "cat-ti",
+      "valorMensal": 65,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m07",
+      "unidadeId": "matriz",
+      "descricao": "Hospedagem - Servidor Google",
+      "categoriaId": "cat-ti",
+      "valorMensal": 65,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m08",
+      "unidadeId": "matriz",
+      "descricao": "Domínio - Registro BR",
+      "categoriaId": "cat-ti",
+      "valorMensal": 10,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m09",
+      "unidadeId": "matriz",
+      "descricao": "IA",
+      "categoriaId": "cat-ti",
+      "valorMensal": 0,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-m10",
+      "unidadeId": "matriz",
+      "descricao": "CRM - Zoho (plano padrão - 3 usuários)",
+      "categoriaId": "cat-ti",
+      "valorMensal": 387,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m11",
+      "unidadeId": "matriz",
+      "descricao": "Manutenção de equip",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 0,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-m12",
+      "unidadeId": "matriz",
+      "descricao": "Advogado - Tabachini",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 900,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m13",
+      "unidadeId": "matriz",
+      "descricao": "Campanha - Google ADS",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 775,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m14",
+      "unidadeId": "matriz",
+      "descricao": "Assinatura Eletrônica",
+      "categoriaId": "cat-ti",
+      "valorMensal": 75,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m15",
+      "unidadeId": "matriz",
+      "descricao": "RCTR-C",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 269.95,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m16",
+      "unidadeId": "matriz",
+      "descricao": "RCF-DC",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 269.95,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m17",
+      "unidadeId": "matriz",
+      "descricao": "RCV",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 175,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m18",
+      "unidadeId": "matriz",
+      "descricao": "Gestor de Tráfego e Social Mídia",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 1250,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m19",
+      "unidadeId": "matriz",
+      "descricao": "Alvará Filial",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 0,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-m20",
+      "unidadeId": "matriz",
+      "descricao": "VOIP",
+      "categoriaId": "cat-ti",
+      "valorMensal": 22.495,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m21",
+      "unidadeId": "matriz",
+      "descricao": "RP Agenda",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 1750,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m22",
+      "unidadeId": "matriz",
+      "descricao": "Rodoclube (mensalidade)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 195,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m23",
+      "unidadeId": "matriz",
+      "descricao": "Certificado Digital (e-CNPJ)",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 9,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m24",
+      "unidadeId": "matriz",
+      "descricao": "Tarifa de conta (Diversas)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 360,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-m25",
+      "unidadeId": "matriz",
+      "descricao": "Plataforma de gestão",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 225,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f01",
+      "unidadeId": "filial-02",
+      "descricao": "Func. OP",
+      "categoriaId": "cat-pessoal",
+      "valorMensal": 0,
+      "planoContaId": "pc-pessoal",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-f02",
+      "unidadeId": "filial-02",
+      "descricao": "Pro Labore",
+      "categoriaId": "cat-pessoal",
+      "valorMensal": 9000,
+      "planoContaId": "pc-pessoal",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f03",
+      "unidadeId": "filial-02",
+      "descricao": "Contador + Abertura Emp.",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 150,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f04",
+      "unidadeId": "filial-02",
+      "descricao": "Sistema (TMS)",
+      "categoriaId": "cat-ti",
+      "valorMensal": 787.4,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f05",
+      "unidadeId": "filial-02",
+      "descricao": "Coworking (End. Fiscal)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 0,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-f06",
+      "unidadeId": "filial-02",
+      "descricao": "Hospedagem - Sistema Mirai",
+      "categoriaId": "cat-ti",
+      "valorMensal": 65,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f07",
+      "unidadeId": "filial-02",
+      "descricao": "Hospedagem - Servidor Google e Site",
+      "categoriaId": "cat-ti",
+      "valorMensal": 65,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f08",
+      "unidadeId": "filial-02",
+      "descricao": "Domínio - Registro BR",
+      "categoriaId": "cat-ti",
+      "valorMensal": 0,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-f09",
+      "unidadeId": "filial-02",
+      "descricao": "IA",
+      "categoriaId": "cat-ti",
+      "valorMensal": 0,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-f10",
+      "unidadeId": "filial-02",
+      "descricao": "CRM - Zoho (plano padrão - 3 usuários)",
+      "categoriaId": "cat-ti",
+      "valorMensal": 387,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f11",
+      "unidadeId": "filial-02",
+      "descricao": "Manutenção de equip",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 0,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "inativo"
+    },
+    {
+      "id": "cf-f12",
+      "unidadeId": "filial-02",
+      "descricao": "Advogado - Tabachini",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 900,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f13",
+      "unidadeId": "filial-02",
+      "descricao": "Campanha - Google ADS",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 775,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f14",
+      "unidadeId": "filial-02",
+      "descricao": "Assinatura Eletrônica",
+      "categoriaId": "cat-ti",
+      "valorMensal": 75,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f15",
+      "unidadeId": "filial-02",
+      "descricao": "RCTR-C",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 269.95,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f16",
+      "unidadeId": "filial-02",
+      "descricao": "RCF-DC",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 269.95,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f17",
+      "unidadeId": "filial-02",
+      "descricao": "RCV",
+      "categoriaId": "cat-seguros",
+      "valorMensal": 175,
+      "planoContaId": "pc-seguros",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f18",
+      "unidadeId": "filial-02",
+      "descricao": "Gestor de Tráfego e Social Mídia",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 1250,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f19",
+      "unidadeId": "filial-02",
+      "descricao": "Alvará Filial",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 740,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f20",
+      "unidadeId": "filial-02",
+      "descricao": "VOIP",
+      "categoriaId": "cat-ti",
+      "valorMensal": 44.99,
+      "planoContaId": "pc-ti",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f21",
+      "unidadeId": "filial-02",
+      "descricao": "RP Agenda",
+      "categoriaId": "cat-marketing",
+      "valorMensal": 1750,
+      "planoContaId": "pc-marketing",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f22",
+      "unidadeId": "filial-02",
+      "descricao": "Rodoclube (mensalidade)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 195,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f23",
+      "unidadeId": "filial-02",
+      "descricao": "Certificado Digital (e-CNPJ)",
+      "categoriaId": "cat-contabil",
+      "valorMensal": 9,
+      "planoContaId": "pc-contabil",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f24",
+      "unidadeId": "filial-02",
+      "descricao": "Tarifa de conta (Diversas)",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 360,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    },
+    {
+      "id": "cf-f25",
+      "unidadeId": "filial-02",
+      "descricao": "Plataforma de gestão",
+      "categoriaId": "cat-operacional",
+      "valorMensal": 225,
+      "planoContaId": "pc-operacional",
+      "tipo": "recorrente",
+      "dataInicio": "",
+      "dataFim": "",
+      "fornecedorId": "",
+      "status": "ativo"
+    }
+  ],
+  "empresas": [
+    {
+      "id": "matriz",
+      "nome": "Matriz",
+      "razaoSocial": "Sinesta Transportes Ltda",
+      "nomeFantasia": "Sinesta",
+      "cnpj": "00.000.000/0001-00",
+      "tipo": "Matriz",
+      "endereco": "Cajamar - SP",
+      "logo": "",
+      "status": "ativo",
+      "dv": {
+        "impostos": 0.11,
+        "custos": 0,
+        "comissoes": 0,
+        "lucro": 0.07,
+        "despFinanceira": 0.023,
+        "receitaEstimadaMensal": 225000
+      },
+      "regime": "Lucro Presumido",
+      "das": 0,
+      "ir": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "csll": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "inss": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "pis": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "cofins": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "iss": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "ibsMunicipal": 0,
+      "ibsEstadual": 0,
+      "cbs": 0,
+      "icmsAtivo": true,
+      "icms": [
+        {
+          "id": "ac",
+          "uf": "AC",
+          "nome": "Acre",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "al",
+          "uf": "AL",
+          "nome": "Alagoas",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ap",
+          "uf": "AP",
+          "nome": "Amapá",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "am",
+          "uf": "AM",
+          "nome": "Amazonas",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ba",
+          "uf": "BA",
+          "nome": "Bahia",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ce",
+          "uf": "CE",
+          "nome": "Ceará",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "df",
+          "uf": "DF",
+          "nome": "Distrito Federal",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "es",
+          "uf": "ES",
+          "nome": "Espírito Santo",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "go",
+          "uf": "GO",
+          "nome": "Goiás",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ma",
+          "uf": "MA",
+          "nome": "Maranhão",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "mt",
+          "uf": "MT",
+          "nome": "Mato Grosso",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ms",
+          "uf": "MS",
+          "nome": "Mato Grosso do Sul",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "mg",
+          "uf": "MG",
+          "nome": "Minas Gerais",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "pa",
+          "uf": "PA",
+          "nome": "Pará",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pb",
+          "uf": "PB",
+          "nome": "Paraíba",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pr",
+          "uf": "PR",
+          "nome": "Paraná",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "pe",
+          "uf": "PE",
+          "nome": "Pernambuco",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pi",
+          "uf": "PI",
+          "nome": "Piauí",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rj",
+          "uf": "RJ",
+          "nome": "Rio de Janeiro",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "rn",
+          "uf": "RN",
+          "nome": "Rio Grande do Norte",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rs",
+          "uf": "RS",
+          "nome": "Rio Grande do Sul",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "ro",
+          "uf": "RO",
+          "nome": "Rondônia",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rr",
+          "uf": "RR",
+          "nome": "Roraima",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "sc",
+          "uf": "SC",
+          "nome": "Santa Catarina",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "sp",
+          "uf": "SP",
+          "nome": "São Paulo",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "se",
+          "uf": "SE",
+          "nome": "Sergipe",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "to",
+          "uf": "TO",
+          "nome": "Tocantins",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        }
+      ]
+    },
+    {
+      "id": "filial-02",
+      "nome": "Filial 02",
+      "razaoSocial": "Sinesta Transportes Ltda",
+      "nomeFantasia": "Sinesta Filial 02",
+      "cnpj": "00.000.000/0002-00",
+      "tipo": "Filial",
+      "endereco": "Penápolis - SP",
+      "logo": "",
+      "status": "ativo",
+      "dv": {
+        "impostos": 0.11,
+        "custos": 0,
+        "comissoes": 0.015,
+        "lucro": 0.1,
+        "despFinanceira": 0.023,
+        "receitaEstimadaMensal": 225000
+      },
+      "regime": "Simples Nacional",
+      "das": 0.06,
+      "ir": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "csll": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "inss": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "pis": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "cofins": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "iss": {
+        "aliquota": 0,
+        "retido": false,
+        "reducaoBase": 0
+      },
+      "ibsMunicipal": 0,
+      "ibsEstadual": 0,
+      "cbs": 0,
+      "icmsAtivo": true,
+      "icms": [
+        {
+          "id": "ac",
+          "uf": "AC",
+          "nome": "Acre",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "al",
+          "uf": "AL",
+          "nome": "Alagoas",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ap",
+          "uf": "AP",
+          "nome": "Amapá",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "am",
+          "uf": "AM",
+          "nome": "Amazonas",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ba",
+          "uf": "BA",
+          "nome": "Bahia",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ce",
+          "uf": "CE",
+          "nome": "Ceará",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "df",
+          "uf": "DF",
+          "nome": "Distrito Federal",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "es",
+          "uf": "ES",
+          "nome": "Espírito Santo",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "go",
+          "uf": "GO",
+          "nome": "Goiás",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ma",
+          "uf": "MA",
+          "nome": "Maranhão",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "mt",
+          "uf": "MT",
+          "nome": "Mato Grosso",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "ms",
+          "uf": "MS",
+          "nome": "Mato Grosso do Sul",
+          "regiao": "Centro-Oeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "mg",
+          "uf": "MG",
+          "nome": "Minas Gerais",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "pa",
+          "uf": "PA",
+          "nome": "Pará",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pb",
+          "uf": "PB",
+          "nome": "Paraíba",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pr",
+          "uf": "PR",
+          "nome": "Paraná",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "pe",
+          "uf": "PE",
+          "nome": "Pernambuco",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "pi",
+          "uf": "PI",
+          "nome": "Piauí",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rj",
+          "uf": "RJ",
+          "nome": "Rio de Janeiro",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "rn",
+          "uf": "RN",
+          "nome": "Rio Grande do Norte",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rs",
+          "uf": "RS",
+          "nome": "Rio Grande do Sul",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "ro",
+          "uf": "RO",
+          "nome": "Rondônia",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "rr",
+          "uf": "RR",
+          "nome": "Roraima",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        },
+        {
+          "id": "sc",
+          "uf": "SC",
+          "nome": "Santa Catarina",
+          "regiao": "Sul",
+          "aliquota": 0.12
+        },
+        {
+          "id": "sp",
+          "uf": "SP",
+          "nome": "São Paulo",
+          "regiao": "Sudeste",
+          "aliquota": 0.12
+        },
+        {
+          "id": "se",
+          "uf": "SE",
+          "nome": "Sergipe",
+          "regiao": "Nordeste",
+          "aliquota": 0.07
+        },
+        {
+          "id": "to",
+          "uf": "TO",
+          "nome": "Tocantins",
+          "regiao": "Norte",
+          "aliquota": 0.07
+        }
+      ]
+    }
+  ],
+  "propostas": [],
+  "metas": [
+    {
+      "id": "c1",
+      "nome": "Cenário 1",
+      "metaAnual": 2400000,
+      "ano": 2026
+    },
+    {
+      "id": "c2",
+      "nome": "Cenário 2",
+      "metaAnual": 1800000,
+      "ano": 2026
+    }
+  ]
+}

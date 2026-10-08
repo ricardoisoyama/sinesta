@@ -1,0 +1,36 @@
+/* ── Bloco "Dados da operação" (prévia e Precificação) ─────────────────── */
+.bloco { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px 14px; }
+.larg1 { grid-column: span 1; }
+.larg2 { grid-column: span 2; }
+.larg4 { grid-column: span 4; }
+@media (max-width: 900px) {
+  .bloco { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .larg4 { grid-column: span 2; }
+}
+.blocoVazio { padding: 18px; border: 1px dashed #d8d4c9; border-radius: 10px; color: #6b7b72; font-size: 13px; text-align: center; }
+.campoFalta input, .campoFalta select { border-color: #c0392b !important; }
+.efeitoTag { position: absolute; right: 0; top: 0; font-size: 10px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border-radius: 5px; padding: 1px 6px; }
+.bloco > div { position: relative; }
+.cinza { background: #f0eee7; color: #6b7b72; }
+.laranja { background: #fdf0e6; color: #b5651d; }
+.verde { background: #e8f5ec; color: #2e7d44; }
+
+/* ── Cadastro (tela) ───────────────────────────────────────────────────── */
+.previaCard { padding: 14px 18px 18px; margin-bottom: 16px; }
+.previaTitulo { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #e8702f; display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.previaTitulo small { font-weight: 500; text-transform: none; letter-spacing: 0; color: #6b7b72; font-size: 12px; }
+.legenda { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11.5px; color: #6b7b72; margin-top: 12px; align-items: center; }
+.legenda span { display: inline-flex; align-items: center; gap: 5px; }
+.legenda i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.efeitoBadge { display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; text-transform: uppercase; border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+.empresaSel { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7b72; font-weight: 600; }
+.empresaSel select { font: inherit; font-size: 13px; font-weight: 600; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; min-width: 180px; }
+.acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.prontosMenu { min-width: 280px; }
+.prontosMenu button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; background: none; border: none; border-radius: 8px; padding: 8px 10px; text-align: left; font-family: inherit; cursor: pointer; width: 100%; }
+.prontosMenu button:hover { background: #f6f5f1; }
+.prontosMenu b { font-size: 13px; color: #143d18; }
+.prontosMenu small { font-size: 11.5px; color: #6b7b72; }
+.dica { display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-size: 12.5px; color: #4a5a50; background: #fbfaf7; border-top: 1px solid #e6e3db; }
+.dica svg { width: 14px; height: 14px; color: #e8702f; flex-shrink: 0; }
+.dica kbd { font-family: inherit; font-size: 11px; background: #fff; border: 1px solid #d8d4c9; border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }

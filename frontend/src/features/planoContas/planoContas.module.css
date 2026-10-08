@@ -1,0 +1,231 @@
+/* ── Árvore do plano de contas ─────────────────────────────────────────── */
+.tree {
+  padding: 6px 4px;
+}
+
+/* wrapper de um nó + seus filhos; a borda esquerda vira a "guia" da hierarquia */
+.branch {
+  position: relative;
+}
+.children {
+  margin-left: 20px;
+  border-left: 1px dashed #e2ddd0;
+  padding-left: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 9px;
+  cursor: default;
+  position: relative;
+}
+.row:hover {
+  background: #f5f3ec;
+}
+.rowInativa {
+  opacity: 0.5;
+}
+
+/* chevron de expandir/recolher */
+.caret {
+  width: 22px;
+  height: 22px;
+  border: none;
+  background: none;
+  color: #6b7b72;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 6px;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+.caret:hover {
+  background: #e8e4d9;
+  color: #143d18;
+}
+.caretOpen {
+  transform: rotate(90deg);
+}
+.caretSpacer {
+  width: 22px;
+  flex-shrink: 0;
+}
+
+/* ícone da conta (pasta = sintética, folha = analítica) */
+.icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.icon svg {
+  width: 16px;
+  height: 16px;
+}
+.iconDespesa {
+  background: #fdf0e6;
+  color: #c05a1e;
+}
+.iconReceita {
+  background: #e8f5ec;
+  color: #2e7d44;
+}
+.iconLeaf {
+  background: #eef1ee;
+  color: #6b7b72;
+}
+
+.codigo {
+  font-family: 'JetBrains Mono', ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #5a6b60;
+  background: #eef1ee;
+  border: 1px solid #e2e6e1;
+  border-radius: 6px;
+  padding: 2px 7px;
+  flex-shrink: 0;
+  min-width: 62px;
+  text-align: center;
+}
+
+.nome {
+  color: #1f2a24;
+  font-size: 14px;
+}
+.nomeSintetica {
+  font-weight: 700;
+}
+.nomeRaiz {
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+.count {
+  font-size: 11px;
+  color: #9aa39b;
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.contabil {
+  font-size: 11px;
+  color: #9aa39b;
+  font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+}
+
+.dre {
+  font-size: 11px;
+  color: #4d6b57;
+  background: #eef3ef;
+  border-radius: 10px;
+  padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.limite {
+  font-size: 11px;
+  color: #b5651d;
+  background: #fdf0e6;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-weight: 600;
+}
+
+/* badge Despesa / Receita */
+.dre {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 9px;
+  border-radius: 20px;
+}
+.dreDespesa {
+  background: #fdf0e6;
+  color: #b5651d;
+}
+.dreReceita {
+  background: #e8f5ec;
+  color: #2e7d44;
+}
+
+.tipoTag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2d5d7c;
+  background: #eef3f7;
+  border-radius: 20px;
+  padding: 2px 9px;
+}
+
+.tagOff {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #9aa39b;
+  background: #f0eee7;
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+/* ações no hover */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.12s;
+  flex-shrink: 0;
+}
+.row:hover .actions {
+  opacity: 1;
+}
+
+.empty {
+  text-align: center;
+  color: #9aa39b;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+/* toolbar extra (expandir/recolher) */
+.treeTools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.treeToolBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4a5a50;
+  background: #fff;
+  border: 1px solid #e2e6e1;
+  border-radius: 8px;
+  padding: 7px 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.treeToolBtn:hover {
+  border-color: #cdd4cc;
+  background: #f7f6f1;
+}
+.treeToolBtn svg {
+  width: 14px;
+  height: 14px;
+}

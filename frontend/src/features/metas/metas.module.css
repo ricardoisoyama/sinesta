@@ -1,0 +1,63 @@
+/* cores por percentual atingido (verde / amarelo / vermelho) */
+.faixaOk {
+  border-color: #cfe0d4;
+}
+.faixaAtencao {
+  border-color: #f0dfb0;
+}
+.faixaRuim {
+  border-color: #f3c2bb;
+}
+
+.pill {
+  display: inline-block;
+  min-width: 64px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+.pill.faixaOk {
+  background: #e8f5ec;
+  color: #2e7d44;
+}
+.pill.faixaAtencao {
+  background: #fdf6e3;
+  color: #9a6b16;
+}
+.pill.faixaRuim {
+  background: #fdecea;
+  color: #c0392b;
+}
+
+.tabela {
+  margin-top: 14px;
+}
+.mesAtual td {
+  background: #fbfaf7;
+}
+
+.somenteLeitura {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6b7b72;
+  background: #f6f5f1;
+  border: 1px solid #e6e3db;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+/* formulário da meta mês a mês */
+.mesesGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
+@media (max-width: 700px) { .mesesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.totalLinha { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; background: #eef4ef; border: 1px solid #cfe0d4; border-radius: 10px; font-size: 13px; color: #143d18; }
+.totalLinha b { font-variant-numeric: tabular-nums; }
+.distribuir { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: #6b7b72; }
+.principal { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #1f2a24; height: 38px; cursor: pointer; }
+.principal input { width: 16px; height: 16px; accent-color: #e8702f; }
+.empresaTag { font-size: 11px; font-weight: 700; color: #1a4d1e; background: #eef4ef; border-radius: 6px; padding: 2px 8px; }
+.semEmpresa { font-size: 11px; font-weight: 700; color: #b5651d; background: #fdf0e6; border-radius: 6px; padding: 2px 8px; }

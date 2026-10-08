@@ -1,0 +1,636 @@
+.layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.card {
+  background: #fff;
+  border: 1px solid #e6e3db;
+  border-radius: 14px;
+  padding: 15px 18px;
+  box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04);
+}
+.cardTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #e8702f;
+  border-bottom: 1px solid #ede6d8;
+  padding-bottom: 7px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.cardTitle svg {
+  width: 15px;
+  height: 15px;
+}
+.inputBlock {
+  margin-bottom: 14px;
+}
+.inputBlock:last-child {
+  margin-bottom: 0;
+}
+.inputLabel {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7b72;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 5px;
+  display: block;
+}
+.select {
+  width: 100%;
+  height: 36px;
+  border: 1px solid #d7d3ca;
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2a24;
+  background: #fff;
+  outline: none;
+}
+.select:focus {
+  border-color: #e8702f;
+  box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15);
+}
+
+/* PV destaque */
+.pvBox {
+  background: linear-gradient(135deg, #1a4d1e, #143d18);
+  border-radius: 12px;
+  padding: 11px 18px;
+  color: #fff;
+  margin-bottom: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pvLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #b9d6bd;
+}
+.pvVal {
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1.05;
+  margin-top: 2px;
+}
+.pvMeta {
+  text-align: right;
+  font-size: 12px;
+  color: #cfe3d2;
+}
+.pvMeta b {
+  color: #fff;
+  font-size: 16px;
+}
+
+/* preço negociado (cálculo reverso) */
+.negociadoTag {
+  margin-left: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+.finalEdit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.finalEdit > div {
+  min-width: 170px;
+}
+.finalEditBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 12px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.finalEditBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.26);
+}
+.finalEditBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.reverso {
+  border: 1px solid #e6e3db;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: #fbfaf7;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reversoLinha {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  color: #6b7b72;
+}
+.reversoLinha b {
+  color: #143d18;
+}
+.reversoRuim {
+  color: #c0392b !important;
+}
+
+.precoOriginal {
+  font-size: 11px;
+  font-weight: 500;
+  color: #9aa39b;
+  text-decoration: line-through;
+}
+
+.justificativaBox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 18px 16px;
+  border-top: 1px solid #ede6d8;
+}
+.justificativa {
+  width: 100%;
+  border: 1px solid #d7d3ca;
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #1f2a24;
+  resize: vertical;
+  outline: none;
+}
+.justificativa:focus {
+  border-color: #e8702f;
+  box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12);
+}
+.justificativaNota {
+  font-size: 12px;
+  color: #6b7b72;
+}
+
+/* Preço final (com impostos) — destaque laranja */
+.finalBox {
+  background: linear-gradient(135deg, #e8702f, #d9641f);
+  border-radius: 12px;
+  padding: 12px 18px;
+  color: #fff;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.finalLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #ffe1cd;
+}
+.finalVal {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.05;
+  margin-top: 1px;
+}
+.finalMeta {
+  text-align: right;
+  font-size: 12px;
+  color: #ffe1cd;
+}
+.finalMeta b {
+  color: #fff;
+}
+.aConfirmar {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #b5651d;
+  background: #fdf0e6;
+  border: 1px solid #f0c69e;
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-top: 6px;
+}
+.divider {
+  height: 1px;
+  background: #ede6d8;
+  margin: 14px 0;
+}
+.inputHint {
+  font-size: 11px;
+  color: #9aa39b;
+  margin-top: 4px;
+}
+.obrig {
+  color: #c0392b;
+  margin-left: 2px;
+}
+
+/* validação visível: campo que falta fica vermelho e a mensagem diz o motivo */
+.campoErro,
+.campoErro:focus {
+  border-color: #c0392b !important;
+  box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.12) !important;
+}
+.blocoErro {
+  border: 1px solid #f3c2bb;
+  background: #fdf3f1;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.faltas {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: #a33a2a;
+  background: #fdf0ee;
+  border: 1px solid #f3d5cf;
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+
+/* custos dinâmicos */
+.extraRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.extraInput {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  border: 1px solid #d7d3ca;
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2a24;
+  background: #fff;
+  outline: none;
+}
+.extraInput:focus {
+  border-color: #e8702f;
+  box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15);
+}
+.extraMoney {
+  width: 148px;
+  flex-shrink: 0;
+}
+.rmBtn {
+  width: 34px;
+  height: 36px;
+  border: 1px solid #e6e3db;
+  border-radius: 8px;
+  background: #fff;
+  color: #c0392b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.rmBtn:hover {
+  background: #fdecea;
+}
+.addBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e8702f;
+  background: none;
+  border: 1px dashed #f0c69e;
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.addBtn:hover {
+  background: #fdf0e6;
+}
+.addBtn svg {
+  width: 14px;
+  height: 14px;
+}
+.memDesc .memVal {
+  color: #b5651d;
+}
+
+/* toggle ICMS + UF origem/destino */
+.swWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.sw {
+  width: 40px;
+  height: 22px;
+  border-radius: 20px;
+  background: #cfd4cd;
+  position: relative;
+  transition: 0.18s;
+  flex-shrink: 0;
+}
+.swOn {
+  background: #2e7d44;
+}
+.swDot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: 0.18s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.swOn .swDot {
+  left: 20px;
+}
+.swLbl {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2a24;
+}
+.mutedNote {
+  font-size: 12px;
+  color: #9aa39b;
+}
+.ufGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+.ufMini {
+  font-size: 11px;
+  color: #6b7b72;
+  margin-bottom: 3px;
+  display: block;
+}
+
+/* itens da proposta */
+.itensCard {
+  background: #fff;
+  border: 1px solid #e6e3db;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04);
+  margin-top: 16px;
+}
+.gerarRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e6e3db;
+}
+.clienteInput {
+  flex: 1;
+  min-width: 200px;
+  height: 36px;
+  border: 1px solid #d7d3ca;
+  border-radius: 8px;
+  padding: 0 11px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #1f2a24;
+  background: #fff;
+  outline: none;
+}
+.clienteInput:focus {
+  border-color: #e8702f;
+  box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15);
+}
+.itensTotal {
+  font-size: 14px;
+  font-weight: 700;
+  color: #143d18;
+}
+.dvInfo {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6b7b72;
+  background: #f6f5f1;
+  border: 1px solid #e6e3db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+}
+.dvInfo b {
+  color: #143d18;
+}
+
+/* memória de cálculo */
+.memTitle {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #9aa39b;
+  margin: 6px 0 2px;
+}
+.memRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed #ece8df;
+}
+.memRow:last-child {
+  border-bottom: none;
+}
+.memLabel {
+  color: #6b7b72;
+}
+.memSub {
+  color: #9aa39b;
+  font-size: 11px;
+}
+.memVal {
+  font-weight: 600;
+  color: #143d18;
+}
+.memNeg .memVal {
+  color: #b5651d;
+}
+.memTotal {
+  border-top: 1px solid #e6e3db;
+  border-bottom: none;
+  margin-top: 2px;
+  padding-top: 9px;
+}
+.memTotal .memLabel,
+.memTotal .memVal {
+  font-weight: 700;
+  color: #143d18;
+  font-size: 14px;
+}
+.mlBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2e7d44;
+  background: #e8f5ec;
+  border-radius: 20px;
+  padding: 4px 12px;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* fieldset só para travar o input do custo quando o valor é pré-cadastrado */
+.fsetInline {
+  display: contents;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.fsetInline:disabled input {
+  background: #f6f5f1;
+  color: #6b7b72;
+}
+.extraNota {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: #6b7b72;
+  margin: -4px 0 4px 2px;
+}
+.extraRow {
+  flex-wrap: wrap;
+}
+
+/* alerta do piso do markup */
+.alertaPiso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #a33a2a;
+  background: #fdf0ee;
+  border: 1px solid #f3d5cf;
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+.alertaPiso svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.alertaPisoGestor {
+  color: #9a6b16;
+  background: #fdf6e7;
+  border-color: #f0dfb0;
+}
+.mlBadgeRuim {
+  color: #c0392b;
+  background: #fdecea;
+}
+.itemAviso {
+  font-size: 11px;
+  font-weight: 600;
+  color: #c0392b;
+}
+
+/* dados da proposta (cliente, vendedor, pagamento, validade, modelo) */
+.gerarGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e6e3db;
+}
+.gerarCampo {
+  min-width: 0;
+}
+.gerarCampo:first-child {
+  grid-column: span 2;
+}
+.gerarCampo input:disabled,
+.gerarCampo select:disabled {
+  background: #f6f5f1;
+  color: #6b7b72;
+}
+.clienteNovo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #a33a2a;
+}
+@media (max-width: 900px) {
+  .gerarGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* dois campos lado a lado no cartão da esquerda (tela mais curta, sem rolagem à toa) */
+.dupla {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.dupla .inputBlock {
+  margin-bottom: 14px;
+}
+.dupla .ufGrid {
+  grid-template-columns: 1fr;
+}
+
+.linkBtn { background: none; border: none; padding: 0; font: inherit; font-size: 11px; font-weight: 600; color: #c85a1c; cursor: pointer; text-decoration: underline; }

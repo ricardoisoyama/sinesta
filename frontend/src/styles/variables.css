@@ -1,0 +1,32 @@
+:root {
+  /* ── Brand colors ───────────────────────────────────────────────────── */
+  --green:       #1a4d1e;
+  --green2:      #143d18;
+  --orange:      #e8702f;
+  --cream:       #f5f0e8;
+  --cream2:      #ede6d8;
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-serif:  'Cormorant Garamond', Georgia, serif;
+  --font-sans:   'Montserrat', system-ui, sans-serif;
+
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── Radii ──────────────────────────────────────────────────────────── */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+
+  /* ── Transitions ────────────────────────────────────────────────────── */
+  --transition-fast: 0.2s ease;
+  --transition-base: 0.3s ease;
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+}

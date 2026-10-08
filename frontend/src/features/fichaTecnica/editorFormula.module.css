@@ -1,0 +1,19 @@
+.editor { display: flex; flex-direction: column; gap: 8px; }
+.linha { display: flex; gap: 6px; align-items: center; }
+.campo { flex: 1; min-width: 0; height: 34px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 0 10px; font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace; font-size: 12.5px; color: #1f2a24; background: #fff; outline: none; }
+.campo:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+.limpar { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e6e3db; background: #fff; color: #6b7b72; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.limpar:hover { color: #c0392b; border-color: #f0c8c2; }
+.grupo { display: flex; gap: 8px; align-items: flex-start; }
+.rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #9aa39b; width: 52px; flex-shrink: 0; padding-top: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font: inherit; font-size: 12px; font-weight: 600; color: #1a4d1e; background: #eef4ef; border: 1px solid #d8e3da; border-radius: 14px; padding: 4px 10px; cursor: pointer; }
+.chip:hover { background: #e2ede4; }
+.sinal { font: inherit; font-size: 14px; font-weight: 700; color: #143d18; background: #fff; border: 1px solid #d7d3ca; border-radius: 8px; width: 32px; height: 28px; cursor: pointer; }
+.sinal:hover { border-color: #e8702f; color: #e8702f; }
+.vazio { font-size: 12px; color: #9aa39b; padding-top: 4px; }
+.leitura { font-size: 12.5px; color: #42524a; background: #fbfaf7; border: 1px solid #ece9e1; border-radius: 8px; padding: 8px 10px; }
+.leitura > span { color: #9aa39b; }
+.ok { margin-top: 4px; color: #2e7d44; }
+.erro { margin-top: 4px; color: #c0392b; }
+.ajuda { margin: 0; font-size: 11.5px; line-height: 16px; color: #9aa39b; }

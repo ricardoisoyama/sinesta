@@ -1,0 +1,33 @@
+# Segredos / ambiente (ficam só no servidor ou na máquina)
+.env
+.env.prod
+.env.local
+client_secret*.json
+*.pfx
+*.p12
+
+# Documentos e dados do cliente (não são código; não vão para o repositório)
+PRINTS/
+*.xlsx
+*.docx
+*.pptx
+*.pdf
+~$*
+
+# Artefatos de deploy
+site.tar.gz
+*.tgz
+*.tar.gz
+
+# Node / build
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.tsbuildinfo
+*.log
+
+# .NET
+backend/**/bin/
+backend/**/obj/
+
+# Configuração local do Claude Code
+.claude/settings.local.json

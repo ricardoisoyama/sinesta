@@ -1,0 +1,8 @@
+# Scripts que rodam no servidor Linux: sempre LF (CRLF quebra o bash).
+*.sh text eol=lf
+*.conf text eol=lf
+deploy/*.txt text eol=lf
+docker-compose*.yml text eol=lf
+**/Dockerfile text eol=lf
+# Scripts do Windows: CRLF.
+*.bat text eol=crlf

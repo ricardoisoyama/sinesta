@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Elrond.API</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <!-- Só para as ferramentas (dotnet ef); não vai para a imagem de runtime. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Elrond.Application\Elrond.Application.csproj" />
+    <ProjectReference Include="..\Elrond.Infrastructure\Elrond.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Seed dos cadastros (gerado dos mocks do front) -->
+    <Content Update="seed.json" Condition="Exists('seed.json')" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Municípios do IBGE (extraídos uma única vez; dado de referência) -->
+    <Content Update="cidades.json" Condition="Exists('cidades.json')" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

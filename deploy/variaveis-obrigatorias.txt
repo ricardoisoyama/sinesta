@@ -1,0 +1,6 @@
+# Variáveis que todo .env de ambiente precisa ter (com valor). Se faltar uma em qualquer
+# ambiente, o deploy para ANTES de mexer em qualquer um. Variável nova obrigatória entra aqui.
+POSTGRES_PASSWORD
+JWT_SECRET_KEY
+HTTP_PORT
+CERTIFICADO_CHAVE

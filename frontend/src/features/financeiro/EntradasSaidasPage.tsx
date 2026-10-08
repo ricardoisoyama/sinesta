@@ -1,0 +1,327 @@
+import { useState, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Ban, CheckCircle2, Clock, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { getErrorMessage } from '@/lib/api'
+import { useAuth } from '@/features/auth/auth-context'
+import { useUsuarios } from '@/features/usuarios/store'
+import { listRegrasAprovacao } from '@/features/cadastros/api'
+import { AprovacaoModal } from './AprovacaoModal'
+import ui from '@/features/common/ui.module.css'
+import { PageHeader } from '@/features/common/PageHeader'
+import { CrudList } from '@/features/common/CrudList'
+import { Hint } from '@/features/common/Hint'
+import type { Column } from '@/features/common/DataTable'
+import { formatBRL } from '@/lib/format'
+import { semAcento } from '@/lib/texto'
+import { diasParaVencer, hojeISO, liquidoDe, primeiroDiaDoMes, resumo, somarDias, statusDe, ultimoDiaDoMes } from './calculos'
+import { useFinanceiro } from './store'
+import { MovimentoFormModal } from './MovimentoFormModal'
+import { BaixaModal } from './BaixaModal'
+import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
+import s from './financeiro.module.css'
+
+type Aba = 'todos' | TipoMovimento
+type Janela = 'vencidos' | 'mes' | '30dias' | 'tudo'
+type FiltroAprov = 'todas' | 'pendente' | 'minha' | 'aprovado' | 'reprovado'
+const JANELAS: { valor: Janela; label: string }[] = [
+  { valor: 'vencidos', label: 'Vencidos' },
+  { valor: 'mes', label: 'Este mês' },
+  { valor: '30dias', label: 'Próximos 30 dias' },
+  { valor: 'tudo', label: 'Tudo' },
+]
+const ICONE_STATUS: Record<StatusMovimento, typeof Clock> = { aberto: Clock, atrasado: AlertTriangle, liquidado: CheckCircle2, cancelado: Ban }
+
+const dataBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—')
+
+/**
+ * Entradas e Saídas: contas a receber e a pagar numa lista só, com situação calculada
+ * (em aberto, atrasado, liquidado), baixa individual ou em lote e lançamento parcelado.
+ */
+export function EntradasSaidasPage() {
+  const { carteiras, movimentos, adicionar, atualizar, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
+  const { user } = useAuth()
+  const { usuarios } = useUsuarios()
+  const meuId = usuarios.find((u) => u.email === user?.email)?.id ?? ''
+  const nomeDe = (id: string) => usuarios.find((u) => u.id === id)?.nome ?? ''
+  // Aprovar exige a permissão no perfil e estar entre os aprovadores da regra.
+  const podeAprovar = !!user?.permissoes?.includes('/financeiro/aprovar')
+  const { data: regrasData } = useQuery({ queryKey: ['regras-aprovacao'], queryFn: listRegrasAprovacao })
+  const regraDe = (m: Movimento) => (regrasData ?? []).find((r) => r.id === m.regraId && r.status !== 'inativo')
+  const [filtroAprov, setFiltroAprov] = useState<FiltroAprov>('todas')
+  const [aprovando, setAprovando] = useState<Movimento | null>(null)
+  /** Executa no servidor e mostra o motivo quando ele recusa. Devolve true se deu certo. */
+  const exec = async (acao: () => Promise<unknown>): Promise<boolean> => {
+    try {
+      await acao()
+      return true
+    } catch (err) {
+      window.alert(getErrorMessage(err))
+      return false
+    }
+  }
+  const aguardandoMim = (m: Movimento) =>
+    (m.aprovacao ?? 'pendente') === 'pendente' && !!regraDe(m)?.aprovadores.includes(meuId) && !(m.aprovacoes ?? []).some((a) => a.usuarioId === meuId)
+  const qtdMinhas = movimentos.filter((m) => !m.cancelado && aguardandoMim(m)).length
+  const hoje = hojeISO()
+  const [aba, setAba] = useState<Aba>('todos')
+  const [janela, setJanela] = useState<Janela>('mes')
+  const [mostrarLiquidados, setMostrarLiquidados] = useState(false)
+  const [busca, setBusca] = useState('')
+  const [editando, setEditando] = useState<Movimento | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
+  const [baixando, setBaixando] = useState<{ itens: Movimento[]; limpar?: () => void } | null>(null)
+
+  const r = resumo(movimentos, hoje)
+  const carteira = (id: string) => carteiras.find((c) => c.id === id)?.nome ?? '—'
+
+  // Sem useMemo de propósito: o React Compiler memoiza sozinho e a lista é pequena.
+  const linhas = (() => {
+    const q = semAcento(busca.trim())
+    const ini = primeiroDiaDoMes(hoje)
+    const fim = ultimoDiaDoMes(hoje)
+    const lim30 = somarDias(hoje, 30)
+    return movimentos
+      .filter((m) => aba === 'todos' || m.tipo === aba)
+      .filter((m) => {
+        const st = statusDe(m, hoje)
+        if (!mostrarLiquidados && (st === 'liquidado' || st === 'cancelado')) return false
+        if (janela === 'vencidos') return st === 'atrasado'
+        if (janela === 'mes') return m.vencimento >= ini && m.vencimento <= fim
+        if (janela === '30dias') return m.vencimento >= hoje && m.vencimento <= lim30
+        return true
+      })
+      .filter((m) => filtroAprov === 'todas' || (filtroAprov === 'minha' ? aguardandoMim(m) : (m.aprovacao ?? 'pendente') === filtroAprov))
+      .filter((m) => !q || semAcento(`${m.parceiroNome} ${m.descricao} ${m.documento}`).includes(q))
+      .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
+  })()
+
+  const totalLista = linhas.reduce((a, m) => a + (m.tipo === 'receber' ? 1 : -1) * liquidoDe(m), 0)
+
+  const columns: Column<Movimento>[] = [
+    {
+      header: 'Vencimento',
+      fixa: true,
+      valor: (m) => dataBR(m.vencimento),
+      cell: (m) => {
+        const st = statusDe(m, hoje)
+        const dias = diasParaVencer(m, hoje)
+        return (
+          <div className={s.venc}>
+            <span className={ui.cellStrong}>{dataBR(m.vencimento)}</span>
+            {st === 'atrasado' && <small className={s.atraso}>{-dias} dia{dias === -1 ? '' : 's'} de atraso</small>}
+            {st === 'aberto' && <small>{dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
+            {st === 'liquidado' && <small>pago em {dataBR(m.pagoEm)}</small>}
+          </div>
+        )
+      },
+    },
+    {
+      header: 'Lançamento',
+      fixa: true,
+      valor: (m) => `${m.parceiroNome} ${m.descricao} ${m.documento}`,
+      cell: (m) => (
+        <div className={s.descr}>
+          <span className={ui.cellStrong}>
+            <i className={`${s.tipoDot} ${s[m.tipo]}`} />
+            {m.parceiroNome}
+            {m.totalParcelas > 1 && <span className={s.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
+          </span>
+          <small>{m.descricao}{m.documento ? ` · ${m.documento}` : ''}</small>
+        </div>
+      ),
+    },
+    { header: 'Carteira', valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
+    { header: 'Forma', valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
+    {
+      header: 'Valor',
+      className: ui.right,
+      valor: (m) => liquidoDe(m),
+      cell: (m) => (
+        <span className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}>
+          {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
+        </span>
+      ),
+    },
+    {
+      header: 'Situação',
+      valor: (m) => STATUS_MOVIMENTO[statusDe(m, hoje)],
+      cell: (m) => {
+        const st = statusDe(m, hoje)
+        const Ic = ICONE_STATUS[st]
+        return (
+          <span className={`${s.status} ${s[st]}`}>
+            <Ic /> {STATUS_MOVIMENTO[st]}
+          </span>
+        )
+      },
+    },
+    {
+      header: 'Aprovação',
+      valor: (m) => APROVACAO_LABEL[m.aprovacao ?? 'pendente'],
+      cell: (m) => {
+        const ap = m.aprovacao ?? 'pendente'
+        const regra = regraDe(m)
+        const faltam = regra ? regra.aprovadores.filter((id) => !(m.aprovacoes ?? []).some((a) => a.usuarioId === id)).map(nomeDe) : []
+        return (
+          <button type="button" className={s.aprovBtn} onClick={() => setAprovando(m)} title="Ver aprovadores">
+            <span className={`${s.aprov} ${s[`aprov_${ap}`]}`}>{APROVACAO_LABEL[ap]}</span>
+            {ap === 'pendente' && (
+              <span className={s.aprovSub}>{!regra ? 'sem regra para este valor' : aguardandoMim(m) ? 'aguardando você' : `aguardando ${faltam.join(', ')}`}</span>
+            )}
+          </button>
+        )
+      },
+    },
+    {
+      header: 'Ações',
+      fixa: true,
+      className: ui.colActions,
+      cell: (m) => {
+        const st = statusDe(m, hoje)
+        const aprovado = (m.aprovacao ?? 'pendente') === 'aprovado'
+        return (
+          <>
+            {(st === 'aberto' || st === 'atrasado') && (
+              <button className={ui.iconBtn} title={aprovado ? 'Liquidar' : 'Só lançamento aprovado pode ser baixado'} disabled={!aprovado} onClick={() => setBaixando({ itens: [m] })}>
+                <CheckCircle2 />
+              </button>
+            )}
+            {st === 'liquidado' && (
+              <button className={ui.iconBtn} title="Estornar (volta para em aberto)" onClick={() => { if (window.confirm('Estornar a baixa deste lançamento?')) exec(() => estornar(m.id)) }}>
+                <RotateCcw />
+              </button>
+            )}
+            {st !== 'cancelado' && (
+              <button className={ui.iconBtn} title="Editar" onClick={() => { setEditando(m); setFormOpen(true) }}>
+                <Pencil />
+              </button>
+            )}
+          </>
+        )
+      },
+    },
+  ]
+
+  const kpi = (cls: string, on: boolean, label: ReactNode, valor: string, sub: string, onClick: () => void) => (
+    <button type="button" className={`${s.kpi} ${on ? s.kpiOn : ''}`} onClick={onClick}>
+      <div className={s.kpiLabel}>{label}</div>
+      <div className={`${s.kpiVal} ${cls}`}>{valor}</div>
+      <div className={s.kpiSub}>{sub}</div>
+    </button>
+  )
+
+  return (
+    <div>
+      <PageHeader
+        breadcrumb="Financeiro"
+        title="Entradas e Saídas"
+        subtitle="O que há para receber e pagar, com baixa individual ou em lote. A situação é calculada pelo vencimento."
+        action={
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Hint text={'Todo lançamento nasce pendente de aprovação e só pode ser baixado depois de aprovado. Quem aprova e em que faixa de valor fica em Parametrizações › Aprovadores e Regras (tipo "Lançamentos financeiros").'} />
+            <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => { setEditando(null); setFormOpen(true) }}>
+              <Plus /> Novo lançamento
+            </button>
+          </div>
+        }
+      />
+
+      <div className={s.kpis}>
+        {kpi(s.entrada, aba === 'receber' && janela === 'tudo', <><ArrowDownLeft /> A receber</>, formatBRL(r.aReceber), 'em aberto, todas as datas', () => { setAba('receber'); setJanela('tudo') })}
+        {kpi(s.saida, aba === 'pagar' && janela === 'tudo', <><ArrowUpRight /> A pagar</>, formatBRL(r.aPagar), 'em aberto, todas as datas', () => { setAba('pagar'); setJanela('tudo') })}
+        {kpi(r.qtdVencidos ? s.alerta : '', janela === 'vencidos', <><AlertTriangle /> Vencidos</>, formatBRL(r.vencidos), `${r.qtdVencidos} lançamento${r.qtdVencidos === 1 ? '' : 's'} atrasado${r.qtdVencidos === 1 ? '' : 's'}`, () => { setAba('todos'); setJanela('vencidos') })}
+        {kpi(r.previsto30 >= 0 ? s.entrada : s.saida, aba === 'todos' && janela === '30dias', <><Wallet /> Próximos 30 dias</>, `${r.previsto30 >= 0 ? '+' : '−'} ${formatBRL(Math.abs(r.previsto30))}`, 'entradas menos saídas previstas', () => { setAba('todos'); setJanela('30dias') })}
+      </div>
+
+      <CrudList
+        id="financeiro-entradas-saidas"
+        query={busca}
+        onQuery={setBusca}
+        searchPlaceholder="Buscar por nome, descrição ou documento..."
+        columns={columns}
+        rows={linhas}
+        getKey={(m) => m.id}
+        rotulo={['lançamento', 'lançamentos']}
+        pageSize={12}
+        empty="Nenhum lançamento neste recorte."
+        filters={
+          <>
+            <div className={s.segmento}>
+              <button className={aba === 'todos' ? s.on : ''} onClick={() => setAba('todos')}>Todos</button>
+              <button className={aba === 'receber' ? `${s.on} ${s.onReceber}` : ''} onClick={() => setAba('receber')}>A receber</button>
+              <button className={aba === 'pagar' ? `${s.on} ${s.onPagar}` : ''} onClick={() => setAba('pagar')}>A pagar</button>
+              {/* Vencidos liga e desliga sobre a aba escolhida (ex.: só os a pagar vencidos). */}
+              <button className={janela === 'vencidos' ? `${s.on} ${s.onVencido}` : ''} onClick={() => setJanela(janela === 'vencidos' ? 'mes' : 'vencidos')}>
+                Vencidos
+              </button>
+            </div>
+            <select className={ui.filterSelect} value={janela} onChange={(e) => setJanela(e.target.value as Janela)}>
+              {JANELAS.map((j) => (
+                <option key={j.valor} value={j.valor}>{j.label}</option>
+              ))}
+            </select>
+            <label className={`${ui.chip} ${mostrarLiquidados ? ui.chipOn : ''}`} title="Liquidados e cancelados ficam escondidos por padrão">
+              <input type="checkbox" className={ui.chipCheck} checked={mostrarLiquidados} onChange={(e) => setMostrarLiquidados(e.target.checked)} />
+              <CheckCircle2 /> Mostrar liquidados
+            </label>
+            <select className={ui.filterSelect} value={filtroAprov} onChange={(e) => setFiltroAprov(e.target.value as FiltroAprov)} title="Filtrar pela aprovação">
+              <option value="todas">Aprovação: todas</option>
+              <option value="minha">Aguardando minha aprovação{qtdMinhas ? ` (${qtdMinhas})` : ''}</option>
+              <option value="pendente">Pendentes</option>
+              <option value="aprovado">Aprovados</option>
+              <option value="reprovado">Reprovados</option>
+            </select>
+            <span className={ui.count} title="Entradas menos saídas do que está na lista">
+              saldo da lista: <b className={totalLista >= 0 ? s.entrada : s.saida}>{totalLista >= 0 ? '+' : '−'} {formatBRL(Math.abs(totalLista))}</b>
+            </span>
+          </>
+        }
+        acoesLote={({ itens, limpar }) => {
+          const abertos = itens.filter((m) => !m.pagoEm && !m.cancelado)
+          const baixaveis = abertos.filter((m) => m.aprovacao === 'aprovado')
+          return (
+            <>
+              <button type="button" className={ui.selBtn} disabled={baixaveis.length === 0} onClick={() => setBaixando({ itens: baixaveis, limpar })} title={baixaveis.length < abertos.length ? 'Só os aprovados entram na baixa' : 'Liquidar todos os selecionados em aberto'}>
+                <CheckCircle2 /> Baixar em lote ({baixaveis.length})
+              </button>
+              <button type="button" className={`${ui.selBtn} ${ui.selBtnWarn}`} disabled={abertos.length === 0} onClick={async () => { if (window.confirm(`Cancelar ${abertos.length} lançamento(s)? Eles ficam no histórico como cancelados.`) && (await exec(() => cancelar(abertos.map((m) => m.id))))) limpar() }}>
+                <Ban /> Cancelar
+              </button>
+            </>
+          )
+        }}
+      />
+
+      <MovimentoFormModal
+        open={formOpen}
+        initial={editando}
+        carteiras={carteiras}
+        onClose={() => setFormOpen(false)}
+        onSave={async (mov, parcelas, periodicidade) => {
+          if (await exec(() => (editando ? atualizar(mov) : adicionar(mov, parcelas, periodicidade)))) setFormOpen(false)
+        }}
+      />
+      <BaixaModal
+        open={!!baixando}
+        movimentos={baixando?.itens ?? []}
+        carteiras={carteiras}
+        onClose={() => setBaixando(null)}
+        onConfirmar={async (b) => {
+          if (baixando && !(await exec(() => liquidar(baixando.itens.map((m) => m.id), b)))) return
+          baixando?.limpar?.()
+          setBaixando(null)
+        }}
+      />
+      <AprovacaoModal
+        movimento={aprovando ? (movimentos.find((m) => m.id === aprovando.id) ?? aprovando) : null}
+        regra={aprovando ? regraDe(movimentos.find((m) => m.id === aprovando.id) ?? aprovando) : undefined}
+        nomeDe={nomeDe}
+        meuId={meuId}
+        podeAprovar={podeAprovar}
+        onClose={() => setAprovando(null)}
+        onAprovar={async (m) => { await exec(() => aprovar(m.id)) }}
+        onReprovar={async (m, motivo) => { if (await exec(() => reprovar(m.id, motivo))) setAprovando(null) }}
+      />
+    </div>
+  )
+}

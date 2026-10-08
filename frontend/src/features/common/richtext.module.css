@@ -1,0 +1,66 @@
+.wrap {
+  border: 1px solid #d9d4c8;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 6px;
+  border-bottom: 1px solid #ece7db;
+  background: #faf9f6;
+}
+
+.tbBtn {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #4a5a50;
+}
+.tbBtn:hover {
+  background: #ece7db;
+}
+.tbActive {
+  background: #e8f0e9;
+  color: #143d18;
+}
+.tbSep {
+  width: 1px;
+  height: 18px;
+  background: #ddd7c9;
+  margin: 0 4px;
+}
+
+.editor {
+  font-size: 13px;
+  color: #1f2a24;
+}
+.editor :global(.ProseMirror) {
+  padding: 10px 12px;
+  min-height: 90px;
+  outline: none;
+  line-height: 1.5;
+}
+.editor :global(.ProseMirror p) {
+  margin: 0 0 8px;
+}
+.editor :global(.ProseMirror p:last-child) {
+  margin-bottom: 0;
+}
+.editor :global(.ProseMirror ul),
+.editor :global(.ProseMirror ol) {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.editor :global(.ProseMirror:focus) {
+  outline: none;
+}

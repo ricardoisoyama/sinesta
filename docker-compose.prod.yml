@@ -1,0 +1,84 @@
+# Stack completa do ELROND (produção): Postgres + API .NET + Front (nginx).
+# Uso: copie .env.prod.example para .env, ajuste os segredos e rode:
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# O front (nginx) é a porta pública e faz proxy de /api para o backend.
+# O backend e o Postgres ficam só na rede interna.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: elrond
+      POSTGRES_USER: elrond
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina no .env}
+    ports:
+      # Só no localhost da VPS — acesso externo apenas via túnel SSH (não fica público).
+      # Porta do Postgres na VPS (cada ambiente usa a sua: Sinesta 5432, BM 5433...).
+      - "127.0.0.1:${PG_PORT:-5432}:5432"
+    volumes:
+      - elrond-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U elrond"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=elrond;Username=elrond;Password=${POSTGRES_PASSWORD:?defina no .env}"
+      Jwt__SecretKey: ${JWT_SECRET_KEY:?defina no .env}
+      Jwt__Issuer: Elrond
+      Jwt__Audience: Elrond
+      Jwt__ExpirationHours: "8"
+      # true = semeia dados demo (empresas/custos/etc. + usuários de teste com senha conhecida);
+      # false (padrão) = só o admin (sistema do zero).
+      SEED_DEMO: ${SEED_DEMO:-false}
+      # Senha inicial do admin na PRIMEIRA subida (base vazia). Se ficar em branco, o backend
+      # gera uma senha aleatória e mostra uma vez em `docker logs elrond-backend-1`.
+      Seed__AdminSenha: ${ADMIN_SENHA_INICIAL:-}
+      # Documentos anexados (cliente/fornecedor) ficam neste volume, fora da imagem.
+      Arquivos__Raiz: /app/arquivos
+      # Google Agenda (app interno no Google Cloud). Os segredos ficam no .env do servidor;
+      # sem eles a integração fica desligada e o botão "Conectar" aparece inativo.
+      Google__ClientId: ${GOOGLE_CLIENT_ID:-}
+      Google__ClientSecret: ${GOOGLE_CLIENT_SECRET:-}
+      # 32 bytes em base64: cifra as chaves do Google guardadas no banco. NÃO trocar depois de
+      # conectado (as conexões teriam de ser refeitas).
+      Google__ChaveCriptografia: ${GOOGLE_CHAVE:-}
+      Google__RetornoUrl: ${APP_URL:-https://elrond.sinesta.com.br}/api/integracoes/google/retorno
+      App__UrlPublica: ${APP_URL:-https://elrond.sinesta.com.br}
+      # 32 bytes em base64: cifra os certificados A1 das empresas no banco. NÃO trocar depois de
+      # enviados (os certificados teriam de ser enviados de novo).
+      Certificados__Chave: ${CERTIFICADO_CHAVE:-}
+      # Versão publicada (commit do git), posta pelo deploy; aparece em /api/saude e no rodapé.
+      App__Versao: ${APP_VERSAO:-}
+      # E-mail do admin criado na primeira subida (banco vazio). Sem ele, admin@elrond.com.br.
+      Seed__AdminEmail: ${ADMIN_EMAIL_INICIAL:-}
+    volumes:
+      - elrond-arquivos:/app/arquivos
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      # Só no localhost da VPS: quem publica é o Apache do cPanel (.htaccess do domínio
+      # faz proxy para 127.0.0.1:${HTTP_PORT}) com TLS. Sem isso o site ficava acessível
+      # em HTTP puro por http://IP:porta, fora do certificado.
+      - "127.0.0.1:${HTTP_PORT:-8080}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  elrond-pgdata:
+  elrond-arquivos:

@@ -1,0 +1,275 @@
+/* ═══ UI compartilhada (cadastros/listas) ═══ */
+
+/* page header */
+.pageHead { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+.breadcrumb { font-size: 12px; color: #6b7b72; margin-bottom: 4px; display: flex; gap: 6px; align-items: center; }
+.breadcrumb b { color: #1a4d1e; font-weight: 600; }
+.pageTitle { font-size: 24px; font-weight: 600; color: #143d18; }
+/* cabeçalho compacto: caminho + subtítulo numa linha, sem o título grande */
+.pageHeadCompacto { margin-bottom: 14px; align-items: center; }
+.pageHeadLinha { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.pageHeadLinha .breadcrumb { margin-bottom: 0; font-size: 13px; }
+.breadcrumbTitulo { font-size: 17px; font-weight: 600; }
+.pageHeadLinha .pageSub { margin-top: 0; }
+.pageSub { font-size: 13px; color: #6b7b72; margin-top: 2px; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: 8px; border: none; border-radius: 9px; padding: 10px 16px; font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.18s; }
+.btn svg { width: 16px; height: 16px; }
+.btnPrimary { background: #e8702f; color: #fff; box-shadow: 0 6px 16px -6px rgba(232, 112, 47, 0.7); }
+.btnPrimary:hover { background: #d9641f; transform: translateY(-1px); }
+.btnGhost { background: #fff; color: #143d18; border: 1px solid #e6e3db; }
+.btnGhost:hover { background: #faf9f6; border-color: #d8d4c9; }
+
+/* card */
+.card { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04); overflow: hidden; }
+
+/* toolbar */
+.toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #e6e3db; flex-wrap: wrap; }
+.search { display: flex; align-items: center; gap: 8px; background: #f6f5f1; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; flex: 1; min-width: 200px; max-width: 360px; }
+.search svg { width: 16px; height: 16px; color: #6b7b72; }
+.search input { border: none; background: transparent; outline: none; font-family: inherit; font-size: 13px; width: 100%; color: #1f2a24; }
+.chip { font-size: 12px; font-weight: 600; font-family: inherit; color: #6b7b72; background: #f6f5f1; border: 1px solid #e6e3db; border-radius: 8px; padding: 8px 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; user-select: none; }
+.chip svg { width: 14px; height: 14px; }
+.chip:hover { border-color: #d8d4c9; color: #143d18; }
+.chipOn { background: #eef4ef; border-color: #cfe0d4; color: #1a4d1e; }
+.chipCheck { position: absolute; opacity: 0; width: 0; height: 0; }
+.chip { position: relative; }
+
+/* menu de colunas (details nativo) */
+.colunasDrop { position: relative; }
+.colunasDrop > summary { list-style: none; }
+.colunasDrop > summary::-webkit-details-marker { display: none; }
+.colunasDrop[open] > summary { background: #eef4ef; border-color: #cfe0d4; color: #1a4d1e; }
+.colunasMenu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 20; min-width: 200px; background: #fff; border: 1px solid #e6e3db; border-radius: 10px; box-shadow: 0 12px 28px -12px rgba(20, 40, 25, 0.35); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.colunasMenu .checkItem { white-space: nowrap; }
+.colunasMenu .checkItem input:disabled + * , .colunasMenu .checkItem:has(input:disabled) { color: #9aa39b; cursor: default; }
+
+/* linha de filtros por coluna */
+.filterRow th { padding: 6px 10px 10px; background: #fbfaf7; }
+.filterRow input { width: 100%; min-width: 70px; height: 30px; border: 1px solid #e6e3db; border-radius: 7px; padding: 0 9px; font-size: 12px; font-family: inherit; color: #1f2a24; background: #fff; outline: none; text-transform: none; font-weight: 500; letter-spacing: 0; }
+.filterRow input:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+.filtrosBar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; font-size: 12px; color: #6b7b72; background: #fbfaf7; border-bottom: 1px solid #e6e3db; }
+.filtrosBar button { border: none; background: none; color: #e8702f; font-weight: 600; font-family: inherit; font-size: 12px; cursor: pointer; padding: 0; }
+.count { font-size: 12px; color: #6b7b72; }
+.filterSelect { font-size: 12px; color: #1f2a24; background: #f6f5f1; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; font-family: inherit; cursor: pointer; outline: none; }
+.filterSelect:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+
+/* table */
+.table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table thead th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; padding: 12px 16px; border-bottom: 1px solid #e6e3db; background: #fbfaf7; }
+.table tbody td { padding: 13px 16px; border-bottom: 1px solid #f0eee7; color: #1f2a24; }
+.table tbody tr:hover { background: #faf9f5; }
+.rowClick { cursor: pointer; }
+.table tbody tr:last-child td { border-bottom: none; }
+.cellStrong { font-weight: 600; color: #143d18; }
+.cellMut { color: #6b7b72; font-size: 12px; }
+.right { text-align: right; }
+.table thead th.right { text-align: right; }
+.rowName { display: flex; align-items: center; gap: 10px; }
+.avatarSm { width: 30px; height: 30px; border-radius: 50%; background: #1a4d1e; color: #fff; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+/* badges */
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 20px; }
+.badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.badgeOk { background: #e8f5ec; color: #2e7d44; }
+.badgeWarn { background: #fdf0e6; color: #b5651d; }
+.badgeOff { background: #f0eee7; color: #6b7b72; }
+.badgeErr { background: #fdecea; color: #c0392b; }
+
+/* row actions */
+.iconBtn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: #6b7b72; }
+.iconBtn:hover { background: #f0eee7; color: #143d18; }
+.iconBtn.danger:hover { background: #fdecea; color: #c0392b; }
+.iconBtn svg { width: 16px; height: 16px; }
+
+/* actions column (centralizado, alinhado com o cabeçalho) */
+/* Coluna de ações: encolhe até o conteúdo (em telas largas ela esticava e os botões
+   descolavam do cabeçalho) e o cabeçalho acompanha o alinhamento das células. */
+.colActions { text-align: center; white-space: nowrap; width: 1%; }
+.table thead th.colActions { text-align: center; }
+
+/* Grid responsivo (DataTable): em tela larga nada muda. Com pouco espaço (zoom do navegador,
+   notebook, tela menor) o espaçamento das células aperta; se ainda não couber, só o grid rola
+   na horizontal e a coluna de ações fica presa à direita, sempre visível. */
+.tableScroll { overflow-x: auto; container-type: inline-size; }
+@container (max-width: 1100px) {
+  .table thead th { padding: 10px 10px; }
+  .table tbody td { padding: 11px 10px; }
+  .avatarSm { display: none; }
+}
+.tableScroll .colActions { position: sticky; right: 0; z-index: 1; background: #fff; }
+.tableScroll .table thead th.colActions { background: #fbfaf7; }
+.tableScroll .table tbody tr:hover td.colActions { background: #faf9f5; }
+
+/* toggle de status (Ativo/Inativo) */
+.switchWrap { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; }
+.switch { width: 40px; height: 22px; border-radius: 20px; background: #cfd4cd; position: relative; transition: 0.18s; flex-shrink: 0; }
+.switchOn { background: #2e7d44; }
+.switchDot { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: 0.18s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.switchOn .switchDot { left: 20px; }
+.switchLbl { font-size: 13px; font-weight: 600; color: #1f2a24; }
+
+/* checkboxes em linha */
+.checkRow { display: flex; gap: 20px; flex-wrap: wrap; }
+.checkItem { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #1f2a24; cursor: pointer; }
+.checkItem input { width: 16px; height: 16px; accent-color: #1a4d1e; cursor: pointer; }
+
+/* barra de importação (da gerenciadora) */
+.importBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #eef4ef; border: 1px solid #d8e3da; border-radius: 10px; padding: 11px 14px; margin-bottom: 16px; }
+.importBar > svg { width: 18px; height: 18px; color: #1a4d1e; flex-shrink: 0; }
+.importLbl { font-size: 13px; font-weight: 600; color: #143d18; }
+.importInput { border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px; font-size: 13px; font-family: inherit; color: #1f2a24; background: #fff; outline: none; flex: 1; min-width: 150px; max-width: 240px; }
+.importInput:focus { border-color: #1a4d1e; box-shadow: 0 0 0 3px rgba(26, 77, 30, 0.12); }
+.importMsg { font-size: 12px; font-weight: 600; color: #2e7d44; }
+
+/* rodapé dividido (ações secundárias à esquerda, principais à direita) */
+.footerSplit { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; flex-wrap: wrap; }
+.footerActions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+/* upload (demo) */
+.upload { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.uploadName { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #2e7d44; font-weight: 600; }
+.uploadName svg { width: 15px; height: 15px; }
+
+/* empty */
+.empty { padding: 48px 24px; text-align: center; color: #6b7b72; font-size: 13px; }
+
+/* pager */
+.pager { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-top: 1px solid #e6e3db; font-size: 12px; color: #6b7b72; }
+.pages { display: flex; gap: 4px; }
+.pages button { min-width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e6e3db; background: #fff; cursor: pointer; font-family: inherit; font-size: 12px; color: #1f2a24; }
+.pages button:disabled { opacity: 0.4; cursor: default; }
+.pages button.active { background: #1a4d1e; color: #fff; border-color: #1a4d1e; }
+
+/* form */
+.fsection { background: #fff; border: 1px solid #e6e3db; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+.fsection:last-child { margin-bottom: 0; }
+.fsectionTitle { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #e8702f; border-bottom: 1px solid #ede6d8; padding-bottom: 7px; margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+.fsectionTitle svg { width: 15px; height: 15px; }
+.fsectionHint { color: #9aa39b; font-weight: 600; text-transform: none; letter-spacing: 0; }
+.modalNote { font-size: 12px; color: #6b7b72; flex: 1; min-width: 200px; }
+
+/* linha topo do modal (principal + status) */
+.topRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.principalChip { display: inline-flex; align-items: center; gap: 7px; border: 1px dashed #d8b06a; background: #fff; color: #9a6b16; border-radius: 9px; padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: 0.15s; }
+.principalChip svg { width: 15px; height: 15px; }
+.principalOn { background: #fdf6e7; border-style: solid; border-color: #e0a73c; color: #8a5a0c; }
+
+/* sub-bloco repetível (ex.: contatos) */
+.subBlock { border: 1px solid #ede9e0; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fbfaf7; }
+.subBlockHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; font-weight: 700; color: #6b7b72; text-transform: uppercase; letter-spacing: 0.4px; }
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 13px; }
+.field { display: flex; flex-direction: column; min-width: 0; }
+.field label { font-size: 11px; font-weight: 600; color: #6b7b72; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+.req { color: #c0392b; margin-left: 2px; }
+.field input, .field select { height: 36px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px; font-size: 13px; font-family: inherit; color: #1f2a24; background: #fff; outline: none; transition: 0.15s; width: 100%; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
+/* Texto longo no mesmo padrão dos campos (antes ficava com a borda padrão do navegador). */
+.field textarea { border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px; font-size: 13px; font-family: inherit; line-height: 1.45; color: #1f2a24; background: #fff; outline: none; transition: 0.15s; width: 100%; min-height: 72px; resize: vertical; }
+.fieldError input, .fieldError select, .fieldError textarea { border-color: #c0392b; }
+.errMsg { color: #c0392b; font-size: 11px; margin-top: 3px; }
+.okMsg { color: #2e7d44; font-size: 11.5px; margin-top: 3px; line-height: 1.4; }
+/* Campo com mini loader à direita (ex.: CNPJ consultando a Receita). */
+.comLoader { position: relative; }
+.comLoader input { width: 100%; padding-right: 34px; }
+.loaderCampo {
+  position: absolute; right: 11px; top: 50%; width: 16px; height: 16px; margin-top: -8px;
+  color: #0d532d; animation: giraCampo 0.8s linear infinite; pointer-events: none;
+}
+@keyframes giraCampo { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loaderCampo { animation-duration: 2.4s; } }
+.col2 { grid-column: span 2; }
+.col3 { grid-column: span 3; }
+.col4 { grid-column: span 4; }
+
+@media (max-width: 760px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .col2, .col3, .col4 { grid-column: span 2; }
+}
+
+/* Tela sem permissão (RotaPermitida): aviso no lugar do conteúdo */
+.semAcesso {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 560px;
+  margin: 48px auto;
+  padding: 18px 20px;
+  border: 1px solid #f3d5cf;
+  border-radius: 12px;
+  background: #fdf0ee;
+  color: #6b3a30;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.semAcesso svg { width: 22px; height: 22px; flex-shrink: 0; color: #a33a2a; }
+.semAcesso b { display: block; color: #a33a2a; font-size: 14px; margin-bottom: 2px; }
+
+/* ── Seleção múltipla nos grids (círculo laranja) ─────────────────────────── */
+.selCol { width: 44px; padding-right: 0 !important; }
+.selCk {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border: 1.5px solid #c7c2b6;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+.selCk::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  transform: scale(0);
+  transition: transform 0.12s;
+  background: #fff;
+  clip-path: polygon(14% 44%, 0 62%, 40% 100%, 100% 20%, 84% 8%, 40% 66%);
+}
+.selCk:hover { border-color: #e8702f; box-shadow: 0 0 0 3px #fdeee4; }
+.selCk:checked { background: #e8702f; border-color: #e8702f; }
+.selCk:checked::before { transform: scale(1); }
+.selCk:indeterminate { background: #e8702f; border-color: #e8702f; }
+.selCk:indeterminate::before { transform: scale(1); clip-path: inset(40% 12% 40% 12%); }
+.selCk:focus-visible { outline: 2px solid #1a4d1e; outline-offset: 2px; }
+.table tbody tr.rowSel td { background: #fdf3ea; }
+.table tbody tr.rowSel:hover td { background: #fbeadb; }
+.tableScroll .table tbody tr.rowSel td.colActions { background: #fdf3ea; }
+.tableScroll .table tbody tr.rowSel:hover td.colActions { background: #fbeadb; }
+
+/* barra que substitui a toolbar enquanto houver linhas marcadas */
+.selBar { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background: #143d18; color: #fff; flex-wrap: wrap; min-height: 59px; }
+.selBar b { font-size: 13px; margin-right: 6px; }
+.selNota { font-size: 12px; color: rgba(245, 240, 232, 0.7); margin-right: 4px; }
+.selBtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font: inherit; font-size: 12.5px; font-weight: 600;
+  padding: 7px 12px; border-radius: 9px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.18); color: #fff;
+}
+.selBtn:hover { background: rgba(255, 255, 255, 0.2); }
+.selBtn:disabled { opacity: 0.5; cursor: default; }
+.selBtn svg { width: 15px; height: 15px; }
+.selBtnWarn { background: rgba(232, 112, 47, 0.92); border-color: transparent; }
+.selBtnWarn:hover { background: #e8702f; }
+.selLimpar { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; background: none; border: none; color: rgba(255, 255, 255, 0.8); cursor: pointer; font: inherit; font-size: 12px; }
+.selLimpar:hover { color: #fff; }
+.selLimpar svg { width: 14px; height: 14px; }
+
+/* Checkbox dentro de .field: o reset genérico de input (altura 36px, largura 100%) não vale para ele. */
+.field input[type="checkbox"],
+.field input[type="radio"] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  box-shadow: none;
+  accent-color: #1a4d1e;
+  flex: none;
+}

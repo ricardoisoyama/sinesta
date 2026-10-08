@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Elrond.API/Elrond.API.csproj" />
+  <Project Path="Elrond.Application/Elrond.Application.csproj" />
+  <Project Path="Elrond.Domain/Elrond.Domain.csproj" />
+  <Project Path="Elrond.Infrastructure/Elrond.Infrastructure.csproj" />
+  <Project Path="Elrond.Tests/Elrond.Tests.csproj" />
+</Solution>

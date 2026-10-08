@@ -1,0 +1,46 @@
+.acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.previaTag { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #b5651d; background: #fdf0e6; border: 1px solid #f0c69e; border-radius: 6px; padding: 3px 8px; }
+.empresaSel { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7b72; font-weight: 600; }
+.empresaSel select { font: inherit; font-size: 13px; font-weight: 600; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; min-width: 180px; }
+.secao { margin-top: 16px; }
+.linkConfig { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #6b7b72; text-decoration: none; }
+.linkConfig:hover { color: #e8702f; }
+
+/* custos */
+.custos { width: 100%; border-collapse: collapse; font-size: 13px; }
+.custos th { text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #6b7b72; padding: 6px 8px; border-bottom: 1px solid #e6e3db; }
+.custos td { padding: 6px 8px; border-bottom: 1px solid #f0eee7; vertical-align: middle; }
+.custos tr.linhaAberta td { background: #fbfaf7; }
+.r { text-align: right; }
+.mono { font-variant-numeric: tabular-nums; color: #4a5a50; }
+.forte { font-weight: 700; color: #143d18; }
+.qtd { width: 70px; text-align: right; }
+.fichaCell { display: flex; align-items: center; gap: 8px; }
+.olho { position: relative; display: inline-flex; color: #9aa39b; cursor: pointer; padding: 6px; border-radius: 6px; }
+.olho:hover { color: #e8702f; background: #fdf0e6; }
+.popover { position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; min-width: 260px; background: #fff; border: 1px solid #e6e3db; border-radius: 10px; box-shadow: 0 14px 30px -12px rgba(20, 40, 25, 0.35); padding: 10px 12px; font-size: 12.5px; color: #1f2a24; cursor: default; }
+.popover b { display: block; margin-bottom: 6px; color: #143d18; }
+.popover > div { display: flex; justify-content: space-between; gap: 14px; padding: 3px 0; border-bottom: 1px dashed #ece8df; }
+.popover > div span { color: #6b7b72; }
+.popover > div em { font-style: normal; font-variant-numeric: tabular-nums; }
+.popover > div.fora { opacity: 0.5; }
+.popTotal { border-bottom: none !important; margin-top: 4px; font-weight: 700; }
+.popTotal span { color: #143d18 !important; }
+.custosRodape { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 10px; }
+.custosTotal { margin-left: auto; font-size: 12.5px; color: #6b7b72; }
+.custosTotal b { color: #143d18; font-size: 14px; }
+
+/* resultado */
+.resultado { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 960px) { .resultado { grid-template-columns: 1fr; } }
+.finalSub { font-size: 12px; color: #ffe1cd; margin-top: 2px; }
+.descricaoRow { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-top: 4px; }
+.memoria { border: 1px solid #e6e3db; border-radius: 12px; padding: 8px 14px 12px; background: #fbfaf7; }
+.rmItem { margin-left: 8px; border: none; background: none; color: #c0392b; cursor: pointer; vertical-align: middle; }
+
+/* ajustes do item: desconto, comissão e ICMS lado a lado */
+.ajustes { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 4px 0 6px; }
+@media (max-width: 760px) { .ajustes { grid-template-columns: 1fr; } }
+.icmsLinha { display: flex; gap: 8px; align-items: center; }
+.icmsCheck { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.icmsCheck input { accent-color: #e8702f; width: 16px; height: 16px; }

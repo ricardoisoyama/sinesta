@@ -1,0 +1,13 @@
+## .NET
+bin/
+obj/
+*.user
+[Bb]in/
+[Oo]bj/
+
+## Rider / VS
+.idea/
+.vs/
+
+## Locais
+*.log

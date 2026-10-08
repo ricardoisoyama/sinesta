@@ -1,0 +1,58 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  color: #9aa39b;
+  cursor: help;
+  outline: none;
+  vertical-align: middle;
+}
+.wrap:hover,
+.wrap:focus-visible {
+  color: #e8702f;
+}
+
+.icon {
+  width: 13px;
+  height: 13px;
+}
+
+/* O balão vive no body (portal), com posição fixa calculada a partir do ícone:
+   nunca é cortado pela borda ou pela rolagem do modal. */
+.bubble {
+  position: fixed;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: max-content;
+  max-width: 240px;
+  padding: 8px 11px;
+  border-radius: 8px;
+  background: #143d18;
+  color: #f5f0e8;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: normal;
+  box-shadow: 0 6px 18px rgba(20, 61, 24, 0.22);
+  pointer-events: none;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  margin-left: -5px;
+  border: 5px solid transparent;
+}
+/* seta para baixo (balão acima do ícone) */
+.acima::after {
+  top: 100%;
+  border-top-color: #143d18;
+}
+/* seta para cima (balão abaixo do ícone, quando não cabe em cima) */
+.abaixo::after {
+  bottom: 100%;
+  border-bottom-color: #143d18;
+}

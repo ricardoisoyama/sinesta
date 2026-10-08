@@ -1,0 +1,573 @@
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, Copy, Folder, FolderOpen, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
+import ui from '@/features/common/ui.module.css'
+import sheet from '@/features/common/planilha.module.css'
+import { PageHeader } from '@/features/common/PageHeader'
+import { MoneyInput } from '@/features/common/MoneyInput'
+import { PercentInput } from '@/features/common/PercentInput'
+import { useSalvamentoAutomatico } from '@/features/common/useSalvamentoAutomatico'
+import { SituacaoSalvamento } from '@/features/common/SituacaoSalvamento'
+import { formatBRL, formatNumberBRL, formatPct } from '@/lib/format'
+import { chaveDe, trocarReferencia } from '@/lib/formula'
+import { useEmpresaAtiva } from '@/features/camposOperacao/useEmpresaAtiva'
+import camposCss from '@/features/camposOperacao/camposOperacao.module.css'
+import { chaveFichas, listFichas, salvarFichas } from './api'
+import { calcularFicha } from './calculo'
+import { EditorFormula } from './EditorFormula'
+import { TIPOS_COLUNA, TIPOS_NUMERICOS, novaColuna, novaFicha, novoGrupo, type ColunaFicha, type FichaTecnica, type GradeFichas, type GrupoFicha, type TipoColunaFicha } from './types'
+import css from './fichaTecnica.module.css'
+
+const TAG: Record<TipoColunaFicha, { label: string; cls: string }> = {
+  valor: { label: 'R$', cls: 'tagValor' },
+  percentual: { label: '%', cls: 'tagPct' },
+  calculo: { label: 'fx', cls: 'tagCalc' },
+  numero: { label: 'nº', cls: 'tagInfo' },
+  texto: { label: 'abc', cls: 'tagInfo' },
+  lista: { label: 'lista', cls: 'tagInfo' },
+}
+
+const VAZIA: GradeFichas = { grupos: [], colunas: [], fichas: [] }
+/** Seleção da pasta virtual com o que ficou de antes das fichas. */
+const SEM_FICHA = '__sem_ficha__'
+
+/** Chave nova para a coluna (a partir do nome), sem repetir as das outras colunas ativas. */
+function chaveLivre(nome: string, outras: ColunaFicha[]): string {
+  const usadas = new Set(outras.filter((c) => c.status === 'ativo').map((c) => c.chave))
+  const base = chaveDe(nome) || 'coluna'
+  let k = base
+  for (let n = 2; usadas.has(k); n++) k = `${base}_${n}`
+  return k
+}
+
+/**
+ * Ficha Técnica: as fichas ficam à esquerda, como pastas (Funcionários, Tecnologia...). A
+ * ficha escolhida abre num grid tipo planilha, com as colunas DELA (painel à direita) e os
+ * itens (Porteiro diurno, Plano CRM...) cujo total vira o custo no Pricing.
+ * Grava sozinho um instante depois de cada alteração.
+ */
+export function FichasTecnicasPage() {
+  const { empresas, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
+  const auto = useSalvamentoAutomatico<GradeFichas>({
+    chave: chaveFichas(empresaId),
+    carregar: () => listFichas(empresaId),
+    salvar: (g) => salvarFichas(empresaId, g),
+    habilitado: !!empresaId,
+  })
+  const grade = auto.dados ?? VAZIA
+  const [painel, setPainel] = useState(false)
+  const [colunaSel, setColunaSel] = useState('')
+  const [aberta, setAberta] = useState('')
+  const [mostrarInativas, setMostrarInativas] = useState(false)
+  const [focoId, setFocoId] = useState('')
+  const [grupoSel, setGrupoSel] = useState('')
+  const [focoGrupo, setFocoGrupo] = useState('')
+
+  // ── fichas (pastas) ──
+  // Itens e colunas de antes das pastas (sem ficha) aparecem numa pasta "Sem ficha" até serem movidos.
+  const temSemFicha = grade.colunas.some((c) => !grade.grupos.some((g) => g.id === c.grupoId)) || grade.fichas.some((x) => !grade.grupos.some((g) => g.id === x.grupoId))
+  const gruposVisiveis = grade.grupos.filter((g) => mostrarInativas || g.status === 'ativo')
+  const grupoValido = gruposVisiveis.some((g) => g.id === grupoSel) || (grupoSel === SEM_FICHA && temSemFicha)
+  const grupoAtual = grupoValido ? grupoSel : (gruposVisiveis[0]?.id ?? (temSemFicha ? SEM_FICHA : ''))
+  const semFicha = grupoAtual === SEM_FICHA
+  /** Ficha onde entram as colunas e itens novos. */
+  const grupoId = semFicha ? '' : grupoAtual
+  const grupo = grade.grupos.find((g) => g.id === grupoId)
+  const doGrupo = <T extends { grupoId: string }>(x: T) => (semFicha ? !grade.grupos.some((g) => g.id === x.grupoId) : x.grupoId === grupoAtual)
+
+  const colunas = grade.colunas.filter((c) => c.status === 'ativo' && doGrupo(c))
+  const colunasRemovidas = grade.colunas.filter((c) => c.status !== 'ativo' && doGrupo(c))
+  const outrasColunas = grade.colunas.filter((c) => !doGrupo(c))
+  /** Troca as colunas desta ficha mantendo as das outras. */
+  const comOutras = (desta: ColunaFicha[]) => [...outrasColunas, ...desta]
+
+  const visiveis = grade.fichas.filter((x) => doGrupo(x) && (mostrarInativas || x.status === 'ativo'))
+  const gravar = (g: Partial<GradeFichas>) => auto.alterar({ ...grade, ...g })
+
+  // ── total do item: soma das colunas marcadas ou fórmula da ficha ──
+  const formulaTotal = grupo?.formulaTotal ?? ''
+  const [totalPorFormula, setTotalPorFormula] = useState(false)
+  const [grupoDoModo, setGrupoDoModo] = useState(grupoId)
+  if (grupoDoModo !== grupoId) {
+    // Trocou de ficha: o modo segue o que está gravado nela.
+    setGrupoDoModo(grupoId)
+    setTotalPorFormula(false)
+  }
+  const modoFormula = !!formulaTotal || totalPorFormula
+  const escolherModoTotal = (formula: boolean) => {
+    setTotalPorFormula(formula)
+    if (!formula && grupo && formulaTotal) salvarGrupo({ ...grupo, formulaTotal: '' })
+  }
+
+  const salvarGrupo = (g: GrupoFicha) => gravar({ grupos: grade.grupos.map((x) => (x.id === g.id ? g : x)) })
+  const adicionarGrupo = () => {
+    const g = novoGrupo()
+    gravar({ grupos: [...grade.grupos, g] })
+    setGrupoSel(g.id)
+    setFocoGrupo(g.id)
+    setColunaSel('')
+    setAberta('')
+  }
+  const escolherGrupo = (id: string) => {
+    setGrupoSel(id)
+    setColunaSel('')
+    setAberta('')
+  }
+  const qtdItens = (gid: string) => grade.fichas.filter((x) => x.status === 'ativo' && (gid === '' ? !grade.grupos.some((g) => g.id === x.grupoId) : x.grupoId === gid)).length
+
+  // ── linhas ──
+  const salvarFicha = (f: FichaTecnica) => gravar({ fichas: grade.fichas.map((x) => (x.id === f.id ? f : x)) })
+  const setValor = (f: FichaTecnica, colunaId: string, v: number | string) => salvarFicha({ ...f, valores: { ...f.valores, [colunaId]: v } })
+  const adicionarFicha = () => {
+    const nova = novaFicha(grupoId)
+    gravar({ fichas: [...grade.fichas, nova] })
+    setFocoId(nova.id)
+  }
+  const duplicar = (f: FichaTecnica) => {
+    const copia: FichaTecnica = { ...f, id: crypto.randomUUID(), nome: `${f.nome} (cópia)`, valores: { ...f.valores }, status: 'ativo' }
+    const i = grade.fichas.findIndex((x) => x.id === f.id)
+    const lista = [...grade.fichas]
+    lista.splice(i + 1, 0, copia)
+    gravar({ fichas: lista })
+    setFocoId(copia.id)
+  }
+  const alternarStatus = (f: FichaTecnica) => salvarFicha({ ...f, status: f.status === 'ativo' ? 'inativo' : 'ativo' })
+
+  // ── colunas ──
+  const updColuna = (id: string, patch: Partial<ColunaFicha>) =>
+    gravar({ colunas: grade.colunas.map((c) => (c.id === id ? { ...c, ...patch } : c)) })
+  /** Renomear troca a chave e reescreve as fórmulas e bases que apontavam para a antiga. */
+  const renomearColuna = (c: ColunaFicha, nome: string) => {
+    const nova = chaveLivre(nome, grade.colunas.filter((x) => x.id !== c.id && x.grupoId === c.grupoId))
+    gravar({
+      // A fórmula do total da ficha também acompanha o nome novo.
+      grupos: grade.grupos.map((g) => (g.id === c.grupoId && g.formulaTotal ? { ...g, formulaTotal: trocarReferencia(g.formulaTotal, c.chave, nova) } : g)),
+      colunas: grade.colunas.map((x) =>
+        x.id === c.id
+          ? { ...x, nome, chave: nova }
+          : x.grupoId !== c.grupoId
+            ? x // fórmulas só enxergam as colunas da mesma ficha
+            : { ...x, formula: trocarReferencia(x.formula, c.chave, nova), base: x.base === c.chave ? nova : x.base },
+      ),
+    })
+  }
+  const trocarTipoColuna = (c: ColunaFicha, tipo: TipoColunaFicha) =>
+    updColuna(c.id, { tipo, compoeTotal: tipo === 'valor' || tipo === 'percentual' || tipo === 'calculo' ? true : tipo === 'numero' ? c.compoeTotal : false })
+  const removerColuna = (id: string) => {
+    updColuna(id, { status: 'inativo' })
+    if (colunaSel === id) setColunaSel('')
+  }
+  const restaurarColuna = (c: ColunaFicha) =>
+    gravar({ colunas: comOutras([...colunas, { ...c, status: 'ativo', chave: chaveLivre(c.chave || c.nome, colunas) }, ...colunasRemovidas.filter((x) => x.id !== c.id)]) })
+  const moverColuna = (i: number, delta: -1 | 1) => {
+    const j = i + delta
+    if (j < 0 || j >= colunas.length) return
+    const lista = [...colunas]
+    const [item] = lista.splice(i, 1)
+    lista.splice(j, 0, item)
+    gravar({ colunas: comOutras([...lista, ...colunasRemovidas]) })
+  }
+  const adicionarColuna = () => {
+    const c = { ...novaColuna(grupoId, 'Nova coluna'), chave: chaveLivre('Nova coluna', colunas) }
+    gravar({ colunas: comOutras([...colunas, c, ...colunasRemovidas]) })
+    setColunaSel(c.id)
+    setPainel(true)
+  }
+  const abrirColuna = (id: string) => {
+    setColunaSel(id)
+    setPainel(true)
+  }
+  const trocarEmpresa = (id: string) => {
+    setEmpresaId(id)
+    setGrupoSel('')
+    setColunaSel('')
+    setAberta('')
+  }
+  const podeLancar = !!empresaId && (!!grupo || semFicha)
+
+  // Prévia da fórmula usa a primeira ficha (ou zeros) para mostrar se a conta fecha.
+  const amostra = visiveis[0]?.valores ?? {}
+  const calcAmostra = calcularFicha(colunas, amostra, formulaTotal)
+  const colunasDaConta = colunas.filter((x) => TIPOS_NUMERICOS.includes(x.tipo)).map((x) => ({ chave: x.chave, nome: x.nome || x.chave }))
+
+  return (
+    <>
+      <PageHeader
+        breadcrumb="Cadastros"
+        title="Ficha Técnica"
+        subtitle="Cada ficha é uma pasta (Funcionários, Tecnologia...) com as suas colunas e os seus itens. O total de cada item é o custo que o Pricing usa."
+        action={
+          <div className={camposCss.acoes}>
+            {empresaId && <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />}
+            <label className={camposCss.empresaSel}>
+              Empresa
+              <select value={empresaId} onChange={(e) => trocarEmpresa(e.target.value)} disabled={carregando}>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className={`${ui.chip} ${painel ? ui.chipOn : ''}`} onClick={() => setPainel((p) => !p)} disabled={!podeLancar}>
+              <Settings2 /> Colunas ({colunas.length})
+            </button>
+            <label className={ui.chip}>
+              <input className={ui.chipCheck} type="checkbox" checked={mostrarInativas} onChange={(e) => setMostrarInativas(e.target.checked)} />
+              {mostrarInativas ? 'Ocultar inativas' : 'Mostrar inativas'}
+            </label>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={adicionarFicha} disabled={!podeLancar}>
+              <Plus /> Item
+            </button>
+          </div>
+        }
+      />
+
+      {auto.erroCarga && <div className={camposCss.blocoVazio}>{auto.erroCarga}</div>}
+
+      <div className={css.layout}>
+      <nav className={css.pastas} aria-label="Fichas">
+        <div className={css.pastasTitulo}>Fichas</div>
+        {gruposVisiveis.map((g) => {
+          const on = g.id === grupoAtual
+          const Icone = on ? FolderOpen : Folder
+          return (
+            <div key={g.id} className={`${css.pasta} ${on ? css.pastaOn : ''} ${g.status !== 'ativo' ? css.pastaOff : ''}`}>
+              {on ? (
+                <>
+                  <Icone size={16} />
+                  <input
+                    className={css.pastaNome}
+                    value={g.nome}
+                    autoFocus={focoGrupo === g.id}
+                    onFocus={(e) => focoGrupo === g.id && e.target.select()}
+                    onChange={(e) => salvarGrupo({ ...g, nome: e.target.value })}
+                    aria-label="Nome da ficha"
+                  />
+                  <button type="button" className={css.pastaAcao} title={g.status === 'ativo' ? 'Inativar a ficha (os itens saem do Pricing)' : 'Reativar a ficha'} onClick={() => salvarGrupo({ ...g, status: g.status === 'ativo' ? 'inativo' : 'ativo' })}>
+                    <Power size={14} />
+                  </button>
+                </>
+              ) : (
+                <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(g.id)}>
+                  <Icone size={16} />
+                  <span>{g.nome || 'Sem nome'}</span>
+                  <small>{qtdItens(g.id)}</small>
+                </button>
+              )}
+            </div>
+          )
+        })}
+        {temSemFicha && (
+          <div className={`${css.pasta} ${semFicha ? css.pastaOn : ''}`}>
+            <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(SEM_FICHA)}>
+              <Folder size={16} />
+              <span>Sem ficha</span>
+              <small>{qtdItens('')}</small>
+            </button>
+          </div>
+        )}
+        <button type="button" className={css.novaPasta} onClick={adicionarGrupo} disabled={!empresaId}>
+          <Plus size={15} /> Nova ficha
+        </button>
+        {gruposVisiveis.length === 0 && !temSemFicha && !auto.carregando && (
+          <p className={css.pastasDica}>Crie a primeira ficha, por exemplo <b>Funcionários</b> ou <b>Tecnologia</b>. Cada uma tem as suas colunas.</p>
+        )}
+      </nav>
+
+      <div className={`${sheet.split} ${painel ? '' : sheet.splitFechado}`}>
+        <div className={ui.card}>
+          <div className={sheet.wrap}>
+            <table className={sheet.sheet}>
+              <thead>
+                <tr>
+                  <th className={sheet.fixa} style={{ minWidth: 220 }}>Item</th>
+                  {colunas.map((c) => (
+                    <th key={c.id} style={{ minWidth: c.tipo === 'texto' ? 160 : 120 }} className={TIPOS_NUMERICOS.includes(c.tipo) ? sheet.num : ''}>
+                      <button type="button" className={`${sheet.colHead} ${colunaSel === c.id && painel ? sheet.colHeadOn : ''}`} onClick={() => abrirColuna(c.id)} title="Configurar coluna">
+                        {c.nome || 'Sem nome'}
+                        <span className={`${sheet.tag} ${sheet[TAG[c.tipo].cls]}`}>{TAG[c.tipo].label}</span>
+                      </button>
+                    </th>
+                  ))}
+                  <th className={sheet.num} style={{ minWidth: 130 }}>Total (custo)</th>
+                  <th style={{ width: 120 }}>
+                    <button type="button" className={sheet.addCol} onClick={adicionarColuna} disabled={!podeLancar}><Plus /> Coluna</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {visiveis.map((f) => {
+                  const calc = calcularFicha(colunas, f.valores, formulaTotal)
+                  const por = Object.fromEntries(calc.colunas.map((c) => [c.chave, c]))
+                  const expandida = aberta === f.id
+                  return (
+                    <FichaLinha
+                      key={f.id}
+                      f={f}
+                      colunas={colunas}
+                      por={por}
+                      total={calc.total}
+                      porFormula={!!calc.porFormula}
+                      erro={calc.erro}
+                      expandida={expandida}
+                      foco={focoId === f.id}
+                      onNome={(nome) => salvarFicha({ ...f, nome })}
+                      onValor={(k, v) => setValor(f, k, v)}
+                      onExpandir={() => setAberta(expandida ? '' : f.id)}
+                      onDuplicar={() => duplicar(f)}
+                      onStatus={() => alternarStatus(f)}
+                      onEnter={adicionarFicha}
+                    />
+                  )
+                })}
+                {visiveis.length === 0 && !auto.carregando && (
+                  <tr className={sheet.vazio}>
+                    <td colSpan={colunas.length + 3}>
+                      {!podeLancar ? (
+                        <>
+                          <b>Nenhuma ficha ainda.</b> Clique em <b>+ Nova ficha</b> à esquerda (ex.: Funcionários).
+                        </>
+                      ) : colunas.length === 0 ? (
+                        <>
+                          <b>{grupo?.nome || 'Ficha'} vazia.</b> Comece pelas colunas desta ficha: clique em <b>+ Coluna</b> (salário, encargos... ou valor mensal). Depois, <b>+ Item</b> para cada cargo, plano ou serviço.
+                        </>
+                      ) : (
+                        <>
+                          <b>Nenhum item ainda.</b> Clique em <b>+ Item</b> para cadastrar o primeiro.
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )}
+                <tr className={sheet.addRow}>
+                  <td colSpan={colunas.length + 3}>
+                    <button type="button" onClick={adicionarFicha} disabled={!podeLancar}><Plus /> Adicionar item</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className={camposCss.dica}>
+            <Lightbulb />
+            <span>
+              Grava sozinho a cada alteração. Clique no título de uma coluna para mudar tipo, fórmula ou se ela entra no total. Clique no total para ver a composição. <kbd>Enter</kbd> no nome cria o próximo item. Remover coluna ou inativar item ou ficha não apaga nada: as propostas feitas guardam a composição do dia.
+            </span>
+          </div>
+        </div>
+
+        {painel && (
+          <aside className={sheet.painel}>
+            <div className={sheet.painelHead}>
+              <span>Colunas de {grupo?.nome || 'Sem ficha'}</span>
+              <button type="button" className={ui.iconBtn} onClick={() => setPainel(false)} title="Fechar"><X /></button>
+            </div>
+            <div className={sheet.painelBody}>
+              {grupo && (
+                <div className={css.totalBloco}>
+                  <div className={css.totalTitulo}>Total do item (o custo que vai para o Pricing)</div>
+                  <label className={css.totalOpcao}>
+                    <input type="radio" name="modo-total" checked={!modoFormula} onChange={() => escolherModoTotal(false)} />
+                    <span>
+                      <b>Soma das colunas</b> marcadas com "Entra no total"
+                    </span>
+                  </label>
+                  <label className={css.totalOpcao}>
+                    <input type="radio" name="modo-total" checked={modoFormula} onChange={() => escolherModoTotal(true)} />
+                    <span>
+                      <b>Fórmula</b>: monte a conta do total (ex.: Valor hora × Horas)
+                    </span>
+                  </label>
+                  {modoFormula && (
+                    <EditorFormula
+                      valor={formulaTotal}
+                      onChange={(v) => salvarGrupo({ ...grupo, formulaTotal: v })}
+                      colunas={colunasDaConta}
+                      previa={visiveis.length > 0 && formulaTotal.trim() ? { valor: calcAmostra.total, erro: calcAmostra.erro?.startsWith('Total:') ? calcAmostra.erro.slice(7) : undefined } : null}
+                      placeholder="Ex.: clique em Valor hora, depois ×, depois Horas"
+                    />
+                  )}
+                </div>
+              )}
+              {colunas.length === 0 && <span className={sheet.chave}>Nenhuma coluna. Clique em + Coluna.</span>}
+              {colunas.map((c, i) => {
+                const numerica = TIPOS_NUMERICOS.includes(c.tipo)
+                const previa = c.tipo === 'calculo' || c.tipo === 'percentual' ? calcAmostra.colunas.find((x) => x.chave === c.chave) : undefined
+                return (
+                  <div key={c.id} className={`${sheet.colItem} ${colunaSel === c.id ? sheet.colItemOn : ''}`} onFocus={() => setColunaSel(c.id)}>
+                    <div className={sheet.colItemTop}>
+                      <span className={sheet.ordem}>
+                        <button type="button" onClick={() => moverColuna(i, -1)} disabled={i === 0} title="Mover para a esquerda"><ChevronUp /></button>
+                        <button type="button" onClick={() => moverColuna(i, 1)} disabled={i === colunas.length - 1} title="Mover para a direita"><ChevronDown /></button>
+                      </span>
+                      <input value={c.nome} placeholder="Nome da coluna" autoFocus={colunaSel === c.id && c.nome === 'Nova coluna'} onChange={(e) => renomearColuna(c, e.target.value)} />
+                      <button type="button" className={ui.iconBtn} title="Remover coluna (fica guardada para as propostas antigas)" onClick={() => removerColuna(c.id)}><Trash2 /></button>
+                    </div>
+                    <div className={sheet.colItemLinha}>
+                      <select value={c.tipo} onChange={(e) => trocarTipoColuna(c, e.target.value as TipoColunaFicha)}>
+                        {TIPOS_COLUNA.map((t) => (
+                          <option key={t.valor} value={t.valor}>{t.label}</option>
+                        ))}
+                      </select>
+                      {numerica && modoFormula ? (
+                        <span className={sheet.chave}>o total vem da fórmula</span>
+                      ) : numerica ? (
+                        <label className={sheet.chk}>
+                          <input type="checkbox" checked={c.compoeTotal} onChange={(e) => updColuna(c.id, { compoeTotal: e.target.checked })} /> Entra no total
+                        </label>
+                      ) : (
+                        <span className={sheet.chave}>só informa</span>
+                      )}
+                    </div>
+                    {c.tipo === 'percentual' && (
+                      <select value={c.base} onChange={(e) => updColuna(c.id, { base: e.target.value })}>
+                        <option value="">% sobre qual coluna?</option>
+                        {colunas.filter((x) => x.id !== c.id && TIPOS_NUMERICOS.includes(x.tipo)).map((x) => (
+                          <option key={x.id} value={x.chave}>{x.nome}</option>
+                        ))}
+                      </select>
+                    )}
+                    {c.tipo === 'calculo' && (
+                      <EditorFormula
+                        valor={c.formula}
+                        onChange={(v) => updColuna(c.id, { formula: v })}
+                        colunas={colunasDaConta.filter((x) => x.chave !== c.chave)}
+                        previa={previa && visiveis.length > 0 ? { valor: previa.valor, erro: previa.erro } : null}
+                      />
+                    )}
+                    {c.tipo === 'lista' && (
+                      <input className={sheet.txt} value={c.opcoes.join(', ')} placeholder="Opções separadas por vírgula" onChange={(e) => updColuna(c.id, { opcoes: e.target.value.split(',').map((o) => o.trimStart()) })} />
+                    )}
+                    {previa && c.tipo === 'percentual' && (previa.erro ? <span className={sheet.erro}>{previa.erro}</span> : visiveis.length > 0 && <span className={sheet.ok}>No 1º item dá {formatBRL(previa.valor)}</span>)}
+                    <span className={sheet.chave}>nas fórmulas: {c.chave}</span>
+                  </div>
+                )
+              })}
+              {colunasRemovidas.length > 0 && (
+                <>
+                  <span className={sheet.chave} style={{ marginTop: 6 }}>Removidas ({colunasRemovidas.length})</span>
+                  {colunasRemovidas.map((c) => (
+                    <div key={c.id} className={sheet.colItem} style={{ opacity: 0.7 }}>
+                      <div className={sheet.colItemTop}>
+                        <span style={{ flex: 1, fontSize: 13 }}>{c.nome}</span>
+                        <button type="button" className={sheet.restaurar} onClick={() => restaurarColuna(c)}>Restaurar</button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+            <div className={sheet.painelFoot}>
+              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={adicionarColuna}><Plus /> Coluna</button>
+            </div>
+          </aside>
+        )}
+      </div>
+      </div>
+    </>
+  )
+}
+
+interface LinhaProps {
+  f: FichaTecnica
+  colunas: ColunaFicha[]
+  por: Record<string, { valor: number; erro?: string; compoeTotal: boolean; nome: string }>
+  total: number
+  /** O total vem da fórmula da ficha (não da soma das colunas marcadas). */
+  porFormula: boolean
+  erro?: string
+  expandida: boolean
+  foco: boolean
+  onNome: (nome: string) => void
+  onValor: (colunaId: string, v: number | string) => void
+  onExpandir: () => void
+  onDuplicar: () => void
+  onStatus: () => void
+  onEnter: () => void
+}
+
+function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco, onNome, onValor, onExpandir, onDuplicar, onStatus, onEnter }: LinhaProps) {
+  const inativa = f.status !== 'ativo'
+  return (
+    <>
+      <tr className={inativa ? sheet.ativoOff : ''}>
+        <td className={sheet.fixa}>
+          <input
+            value={f.nome}
+            autoFocus={foco}
+            placeholder="Nome do item (ex.: Porteiro · Diurno)"
+            onChange={(e) => onNome(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                onEnter()
+              }
+            }}
+          />
+        </td>
+        {colunas.map((c) => {
+          const v = f.valores[c.id]
+          if (c.tipo === 'valor') return <td key={c.id} className={sheet.num}><MoneyInput value={Number(v) || 0} onChange={(n) => onValor(c.id, n)} /></td>
+          if (c.tipo === 'percentual') return <td key={c.id} className={sheet.num}><PercentInput value={Number(v) || 0} onChange={(n) => onValor(c.id, n)} /></td>
+          if (c.tipo === 'numero')
+            return (
+              <td key={c.id} className={sheet.num}>
+                <input inputMode="decimal" value={v === undefined ? '' : typeof v === 'number' ? formatNumberBRL(v).replace(/,00$/, '') : String(v)} placeholder="0" onChange={(e) => onValor(c.id, e.target.value.replace(/[^\d.,]/g, ''))} />
+              </td>
+            )
+          if (c.tipo === 'lista')
+            return (
+              <td key={c.id}>
+                <select value={String(v ?? '')} onChange={(e) => onValor(c.id, e.target.value)}>
+                  <option value="">—</option>
+                  {c.opcoes.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+              </td>
+            )
+          if (c.tipo === 'calculo') {
+            const r = por[c.chave]
+            return (
+              <td key={c.id} className={sheet.calc} title={c.formula}>
+                {r?.erro ? <span className={sheet.calcErro}>erro</span> : formatNumberBRL(r?.valor ?? 0)}
+              </td>
+            )
+          }
+          return <td key={c.id}><input value={String(v ?? '')} onChange={(e) => onValor(c.id, e.target.value)} /></td>
+        })}
+        <td className={sheet.total}>
+          <button type="button" className={sheet.totalBtn} onClick={onExpandir} title={erro ?? 'Ver composição'}>
+            {erro ? <span className={sheet.calcErro}>{erro}</span> : formatBRL(total)} <Info />
+          </button>
+        </td>
+        <td>
+          <div className={sheet.acoes}>
+            <button type="button" title="Duplicar item" onClick={onDuplicar}><Copy /></button>
+            <button type="button" className={inativa ? '' : sheet.perigo} title={inativa ? 'Reativar' : 'Inativar (fica no histórico)'} onClick={onStatus}><Power /></button>
+          </div>
+        </td>
+      </tr>
+      {expandida && (
+        <tr className={sheet.detalhe}>
+          <td colSpan={colunas.length + 3}>
+            <div className={sheet.comp}>
+              {colunas.map((c) => {
+                const r = por[c.chave]
+                const numerica = TIPOS_NUMERICOS.includes(c.tipo)
+                const v = f.valores[c.id]
+                return (
+                  <div key={c.id} className={numerica && (porFormula || r?.compoeTotal) ? '' : sheet.fora}>
+                    <span>{c.nome}{c.tipo === 'percentual' ? ` (${formatPct(Number(v) || 0)})` : ''}{c.tipo === 'calculo' ? ' (fx)' : ''}</span>
+                    <b>{numerica ? formatNumberBRL(r?.valor ?? 0) : String(v ?? '—')}</b>
+                  </div>
+                )
+              })}
+            </div>
+            <div className={sheet.compTotal}>
+              Total {formatBRL(total)}{' '}
+              <small>{porFormula ? 'pela fórmula do total da ficha (Colunas › Total do item)' : 'soma das colunas marcadas como "entra no total"; as apagadas só informam ou alimentam fórmulas'}</small>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}

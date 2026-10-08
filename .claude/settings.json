@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash",
+      "PowerShell",
+      "Read",
+      "Edit",
+      "Write",
+      "Grep",
+      "Glob"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Ricardo\\.claude\\projects\\c--Users-Ricardo-Desktop-Projeto-EREBOR-ELROND\\memory",
+      "c:\\Users\\Ricardo\\Desktop\\Projeto EREBOR",
+      "c:\\Users\\Ricardo\\Desktop\\temp"
+    ]
+  }
+}

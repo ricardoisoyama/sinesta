@@ -1,0 +1,220 @@
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e6e3db;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7b72;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+}
+.tab:hover {
+  color: #143d18;
+}
+.tabActive {
+  color: #e8702f;
+  border-bottom-color: #e8702f;
+}
+
+.impHead,
+.impRow {
+  display: grid;
+  grid-template-columns: 1fr 120px 70px 120px;
+  gap: 14px;
+  align-items: center;
+}
+.impHead {
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #e6e3db;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #9aa39b;
+}
+.impRow {
+  padding: 9px 0;
+  border-bottom: 1px solid #f3f1ea;
+}
+.impRow:last-child {
+  border-bottom: none;
+}
+.impLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1f2a24;
+}
+
+.sw {
+  width: 40px;
+  height: 22px;
+  border-radius: 20px;
+  background: #cfd4cd;
+  position: relative;
+  transition: 0.18s;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+.swOn {
+  background: #2e7d44;
+}
+.swDot {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: 0.18s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+.swOn .swDot {
+  left: 20px;
+}
+
+.quickFill {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #f6f5f1;
+  border: 1px solid #e6e3db;
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #6b7b72;
+}
+.quickFill label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.quickFill .qInput {
+  width: 90px;
+}
+.icmsScroll {
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid #e6e3db;
+  border-radius: 10px;
+}
+.icmsScroll thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 10px;
+}
+.icmsScroll td {
+  padding: 4px 10px;
+}
+.aliqCell {
+  width: 120px;
+}
+.calc {
+  color: #9aa39b;
+  background: #faf9f6;
+}
+.logoRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.logoPreview {
+  height: 40px;
+  max-width: 180px;
+  object-fit: contain;
+  background: #143d18;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.logoEmpty {
+  font-size: 12px;
+  color: #9aa39b;
+}
+
+/* markup: o fieldset só existe para desabilitar os dois campos de uma vez */
+.fsetInline {
+  display: contents;
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.fsetInline:disabled input {
+  background: #f6f5f1;
+  color: #6b7b72;
+}
+.markupMemoria {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: #6b7b72;
+  background: #f6f5f1;
+  border: 1px solid #e6e3db;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 12px;
+}
+.markupMemoria b {
+  color: #143d18;
+}
+
+/* aba Despesa Variável: campos à esquerda, fator ao vivo à direita */
+.dvLayout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+@media (max-width: 760px) { .dvLayout { grid-template-columns: 1fr; } }
+.dvNota { margin-top: 14px; font-size: 12px; line-height: 18px; color: #6b7b72; }
+.numeracao { border: 1px solid #ece9e1; border-radius: 12px; padding: 12px 14px 4px; background: #fbfaf7; }
+.numeracaoTitulo { font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #143d18; margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.numeracaoTitulo span { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #6b7b72; }
+/* Certificado A1 (aba Empresa, ao lado do logo) */
+.cert { display: grid; gap: 8px; }
+.certInfo { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border: 1px solid #cfe3d5; background: #f2f8f4; border-radius: 10px; color: #2e7d44; }
+.certInfo div { display: grid; gap: 1px; }
+.certInfo b { font-size: 13px; color: #1f2a24; }
+.certInfo span { font-size: 12px; color: #4b5a51; }
+.certAlerta { border-color: #f1c9b8; background: #fdf3ee; color: #c0392b; }
+.certMeta { color: #9aa39b !important; }
+.certEnvio { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
+@media (max-width: 640px) { .certEnvio { flex-wrap: wrap; } }
+.certEnvio label { white-space: nowrap; }
+.certEnvio input[type='password'] { flex: 1 1 150px; min-width: 0; height: 36px; }
+.certConfirma { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #f1c9b8; background: #fdf3ee; border-radius: 10px; font-size: 12.5px; color: #7a2e1f; }
+.btnPerigo { background: #c0392b; border-color: #c0392b; color: #fff; }
+.btnPerigo:hover { background: #a93226; }
+.certGira { width: 18px; height: 18px; color: #0d532d; animation: giraCert 0.8s linear infinite; }
+@keyframes giraCert { to { transform: rotate(360deg); } }
+/* Validades da proposta (aba Proposta) */
+.validades { display: grid; gap: 8px; max-width: 420px; }
+.validadeLinha { display: grid; grid-template-columns: minmax(0, 1fr) auto 28px; gap: 12px; align-items: center; }
+.validadeLinha input[type='text'] {
+  height: 36px; width: 100%; border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px;
+  font-size: 13px; font-family: inherit; color: #1f2a24; background: #fff; outline: none; transition: 0.15s;
+}
+.validadeLinha input[type='text']:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
+.radioPadrao { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #4b5a51; cursor: pointer; white-space: nowrap; }
+.radioPadrao input { accent-color: #e8702f; }
+.blocoTitulo { font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #143d18; margin-bottom: 10px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.blocoTitulo span { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #6b7b72; }
+.avisoLegado { font-size: 12px; line-height: 18px; color: #8a5300; background: #fdf6e7; border: 1px solid #f1dfb5; border-radius: 8px; padding: 9px 12px; margin: 0 0 14px; }
+.obrig { color: #c0392b; }
+.impHead span { display: inline-flex; align-items: center; gap: 4px; }
+/* Logo e certificado lado a lado, perto um do outro */
+.logoCert { display: flex; gap: 36px; flex-wrap: wrap; align-items: flex-start; }
+.logoCert > :first-child { flex: none; }
+.logoCert > :last-child { flex: 1 1 420px; min-width: 0; }
+.checkLinha { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; font-size: 13px; cursor: pointer; }
+.checkLinha input { accent-color: #e8702f; width: 16px; height: 16px; }

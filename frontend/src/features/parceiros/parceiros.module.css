@@ -1,0 +1,97 @@
+/* abas do modal de cliente/fornecedor/vendedor */
+.tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #e6e3db;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tab {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7b72;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tab:hover {
+  color: #143d18;
+}
+.tabActive {
+  color: #e8702f;
+  border-bottom-color: #e8702f;
+}
+.tabErro {
+  color: #c0392b;
+}
+.tabBadge {
+  font-size: 10.5px;
+  font-weight: 700;
+  background: #f0eee7;
+  color: #6b7b72;
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.contatosVazio {
+  font-size: 13px;
+  color: #9aa39b;
+  padding: 10px 0 12px;
+}
+
+/* lista de aprovadores (checkbox) no fornecedor */
+.listaCheck {
+  max-height: 176px;
+  overflow-y: auto;
+  border: 1px solid #e6e3db;
+  border-radius: 10px;
+  background: #fff;
+}
+.listaCheck label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0eee7;
+  font-size: 13px;
+  cursor: pointer;
+}
+.listaCheck label:last-child {
+  border-bottom: none;
+}
+.listaCheck input {
+  width: 15px;
+  height: 15px;
+  accent-color: #1a4d1e;
+}
+.listaCheck small {
+  color: #6b7b72;
+  margin-left: auto;
+}
+
+/* checkbox "fornecedor do exterior" acima do grid */
+.externoCheck {
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: #143d18;
+}
+
+/* linhas do editor de regiões bloqueadas */
+.regiaoLinha {
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 10px;
+}
+@media (max-width: 640px) {
+  .regiaoLinha {
+    grid-template-columns: 1fr;
+  }
+}
