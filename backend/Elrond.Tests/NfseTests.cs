@@ -187,6 +187,17 @@ public class NfeIoMapeadorTests
     }
 
     [Fact]
+    public void NumeroZeroDaRespostaInicialEhSemNumero()
+    {
+        // Resposta real da NFE.io ao aceitar a emissão (ambiente de teste, 09/10/2026).
+        var r = NfeIoMapeador.ParaRetorno(JsonDocument.Parse("""{"id":"x","environment":"Development","flowStatus":"WaitingCalculateTaxes","number":0,"rpsNumber":0,"rpsSerialNumber":"5"}""").RootElement);
+        Assert.Equal(SituacaoNfse.Processando, r.Situacao);
+        Assert.Equal(string.Empty, r.Numero);
+        Assert.Equal(string.Empty, r.NumeroRps);
+        Assert.Equal("5", r.SerieRps);
+    }
+
+    [Fact]
     public void ExplicaOQueFaltaNoCadastroDaNfeIo() =>
         Assert.Contains("Inscrição Municipal", NfeIoProvedor.NaoEncontrado("\"Municipal tax not found.\"", "emissão"));
 }

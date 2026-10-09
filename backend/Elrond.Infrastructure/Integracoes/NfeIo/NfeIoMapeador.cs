@@ -130,10 +130,11 @@ public static class NfeIoMapeador
             Mensagem: msg,
             CancelamentoRecusado: cancelamentoRecusado,
             Ambiente: Texto(n, "environment"),
-            Numero: Texto(n, "number"),
+            // Antes de numerar, a NFE.io manda 0: é "ainda sem número", não o número zero.
+            Numero: SemZero(Texto(n, "number")),
             CodigoVerificacao: Texto(n, "checkCode"),
             SerieRps: Texto(n, "rpsSerialNumber"),
-            NumeroRps: Texto(n, "rpsNumber"),
+            NumeroRps: SemZero(Texto(n, "rpsNumber")),
             ValorIss: Numero(n, "issTaxAmount"),
             ValorRetido: Numero(n, "amountWithheld"),
             ValorLiquido: Numero(n, "amountNet"),
@@ -206,6 +207,8 @@ public static class NfeIoMapeador
         && DateTimeOffset.TryParse(v.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var d)
             ? d.UtcDateTime
             : null;
+
+    private static string SemZero(string s) => s.Trim('0').Length == 0 ? string.Empty : s;
 
     private static decimal Dinheiro(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
     private static decimal? SeMaiorQueZero(decimal v) => v > 0 ? Dinheiro(v) : null;
