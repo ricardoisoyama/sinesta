@@ -60,6 +60,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/propostas/conferencia', label: 'Conferir o resultado de cada item na lista de propostas (custo, DF, DV, margem)', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/cadastros/vendedores/transferir', label: 'Transferir a carteira de clientes de um vendedor', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/propostas/alterar-pagamento', label: 'Alterar forma e prazo de pagamento na proposta', grupo: GRUPO_ESPECIAIS, extra: true },
+  { key: '/fiscal/nfse', label: 'Emitir, consultar e cancelar NFS-e (motor fiscal, em teste)', grupo: GRUPO_ESPECIAIS, extra: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)

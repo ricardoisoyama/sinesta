@@ -65,6 +65,8 @@ public static class Funcionalidades
         "/cadastros/vendedores/transferir",
         // Altera forma e prazo de pagamento (que vêm do cliente) na proposta.
         "/propostas/alterar-pagamento",
+        // Emite, consulta e cancela NFS-e pelo motor fiscal, e configura o provedor da empresa.
+        "/fiscal/nfse",
     };
 
     public static readonly IReadOnlyList<string> Todas = Base.Concat(Extras).ToList();

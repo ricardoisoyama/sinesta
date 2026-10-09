@@ -21,6 +21,9 @@ public class AppDbContext : DbContext
     public DbSet<ValidadeProposta> ValidadesProposta => Set<ValidadeProposta>();
     public DbSet<CertificadoEmpresa> CertificadosEmpresa => Set<CertificadoEmpresa>();
     public DbSet<RegistroErro> RegistrosErro => Set<RegistroErro>();
+    public DbSet<NotaFiscalServico> NotasFiscaisServico => Set<NotaFiscalServico>();
+    public DbSet<ConfiguracaoFiscalEmpresa> ConfiguracoesFiscais => Set<ConfiguracaoFiscalEmpresa>();
+    public DbSet<AvisoNfseRecebido> AvisosNfse => Set<AvisoNfseRecebido>();
     public DbSet<Compromisso> Compromissos => Set<Compromisso>();
     public DbSet<ConexaoGoogle> ConexoesGoogle => Set<ConexaoGoogle>();
     public DbSet<VinculoGoogle> VinculosGoogle => Set<VinculoGoogle>();
@@ -117,6 +120,57 @@ public class AppDbContext : DbContext
             e.OwnsOne(x => x.Iss, b => b.ToJson());
             e.OwnsMany(x => x.Icms, b => b.ToJson());
             e.OwnsOne(x => x.Banco, b => b.ToJson());
+        });
+
+        // ── NFS-e (motor de emissão) ──
+        modelBuilder.Entity<NotaFiscalServico>(e =>
+        {
+            e.ToTable("notas_fiscais_servico");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(40);
+            e.Property(x => x.Situacao).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Pedido).HasColumnType("jsonb");
+            e.Property(x => x.Provedor).HasMaxLength(20);
+            e.Property(x => x.IdEmpresaProvedor).HasMaxLength(100);
+            e.Property(x => x.IdProvedor).HasMaxLength(100);
+            e.Property(x => x.Ambiente).HasMaxLength(30);
+            e.Property(x => x.EtapaProvedor).HasMaxLength(60);
+            e.Property(x => x.Mensagem).HasMaxLength(2000);
+            e.Property(x => x.Numero).HasMaxLength(60);
+            e.Property(x => x.CodigoVerificacao).HasMaxLength(100);
+            e.Property(x => x.SerieRps).HasMaxLength(10);
+            e.Property(x => x.NumeroRps).HasMaxLength(20);
+            e.Property(x => x.TomadorNome).HasMaxLength(200);
+            e.Property(x => x.TomadorDocumento).HasMaxLength(20);
+            e.Property(x => x.Descricao).HasMaxLength(300);
+            e.Property(x => x.OrigemTipo).HasMaxLength(40);
+            e.Property(x => x.OrigemId).HasMaxLength(60);
+            e.Property(x => x.CriadaPor).HasMaxLength(200);
+            e.Property(x => x.CanceladaPor).HasMaxLength(200);
+            e.Property(x => x.MotivoCancelamento).HasMaxLength(500);
+            e.Ignore(x => x.EmAndamento);
+            e.Ignore(x => x.TemArquivos);
+            e.HasIndex(x => new { x.EmpresaId, x.CriadaEm });
+            e.HasIndex(x => new { x.Provedor, x.IdProvedor });
+            e.HasIndex(x => new { x.Situacao, x.ProximaConsultaEm });
+            e.HasIndex(x => new { x.OrigemTipo, x.OrigemId });
+        });
+
+        modelBuilder.Entity<ConfiguracaoFiscalEmpresa>(e =>
+        {
+            e.ToTable("configuracoes_fiscais");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Provedor).HasMaxLength(20);
+            e.Property(x => x.IdEmpresaProvedor).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<AvisoNfseRecebido>(e =>
+        {
+            e.ToTable("avisos_nfse");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Id).HasMaxLength(120);
+            e.Property(x => x.Provedor).HasMaxLength(20);
+            e.HasIndex(x => x.RecebidoEm);
         });
 
         modelBuilder.Entity<RegistroErro>(e =>

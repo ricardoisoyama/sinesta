@@ -58,6 +58,9 @@ services:
       Certificados__Chave: ${CERTIFICADO_CHAVE:-}
       # Versão publicada (commit do git), posta pelo deploy; aparece em /api/saude e no rodapé.
       App__Versao: ${APP_VERSAO:-}
+      # NFE.io (motor de NFS-e): chave de API da conta e segredo do webhook. Sem a chave, só o simulador.
+      NfeIo__ChaveApi: ${NFEIO_CHAVE:-}
+      NfeIo__SegredoAviso: ${NFEIO_SEGREDO_AVISO:-}
       # E-mail do admin criado na primeira subida (banco vazio). Sem ele, admin@elrond.com.br.
       Seed__AdminEmail: ${ADMIN_EMAIL_INICIAL:-}
     volumes:

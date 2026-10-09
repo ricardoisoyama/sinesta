@@ -97,6 +97,27 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("anexos", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.AvisoNfseRecebido", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Provedor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("RecebidoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecebidoEm");
+
+                    b.ToTable("avisos_nfse", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.CampoOperacao", b =>
                 {
                     b.Property<string>("Id")
@@ -690,6 +711,53 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("conexoes_google", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.ConfiguracaoFiscalEmpresa", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Ativa")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IdEmpresaProvedor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Provedor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("configuracoes_fiscais", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.CustoFixo", b =>
@@ -1730,6 +1798,165 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasIndex("Vencimento");
 
                     b.ToTable("movimentos", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.NotaFiscalServico", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Ambiente")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<DateTime>("AtualizadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CanceladaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CanceladaPor")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CodigoVerificacao")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly?>("Competencia")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Consultas")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CriadaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CriadaPor")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("EmitidaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EtapaProvedor")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("IdEmpresaProvedor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("IdProvedor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("MotivoCancelamento")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("NumeroRps")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("OrigemId")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("OrigemTipo")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Pedido")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Provedor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("ProximaConsultaEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SerieRps")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TomadorDocumento")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TomadorNome")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<decimal>("ValorIss")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("ValorLiquido")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("ValorRetido")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("ValorServicos")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "CriadaEm");
+
+                    b.HasIndex("OrigemTipo", "OrigemId");
+
+                    b.HasIndex("Provedor", "IdProvedor");
+
+                    b.HasIndex("Situacao", "ProximaConsultaEm");
+
+                    b.ToTable("notas_fiscais_servico", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.NumeracaoProposta", b =>

@@ -3,6 +3,8 @@ using Elrond.Application.Services;
 using Elrond.Application.Validators;
 using Elrond.Infrastructure.Integracoes.ConsultaPublica;
 using Elrond.Infrastructure.Integracoes.Google;
+using Elrond.Infrastructure.Integracoes.NfeIo;
+using Elrond.Infrastructure.Integracoes.Simulador;
 using Elrond.Infrastructure.Persistence;
 using Elrond.Infrastructure.Repositories;
 using Elrond.Infrastructure.Security;
@@ -82,6 +84,26 @@ public static class DependencyInjection
         // Certificado A1 das empresas (NFS-e): cifrado no banco com a chave do ambiente do servidor.
         services.AddSingleton(new CertificadoOpcoes { ChaveBase64 = configuration["Certificados:Chave"] ?? string.Empty });
         services.AddScoped<ICertificadoService, CertificadoService>();
+        // Motor de NFS-e: provedores trocáveis (NFE.io real e simulador), escolhidos pela configuração
+        // fiscal de cada empresa. A chave da NFE.io vem do ambiente; sem ela, só o simulador funciona.
+        services.AddSingleton(TimeProvider.System);
+        var nfeio = new NfeIoOpcoes
+        {
+            ChaveApi = configuration["NfeIo:ChaveApi"] ?? string.Empty,
+            UrlBase = configuration["NfeIo:UrlBase"] is { Length: > 0 } url ? url : "https://api.nfe.io",
+            SegredoAviso = configuration["NfeIo:SegredoAviso"] ?? string.Empty,
+        };
+        services.AddSingleton(nfeio);
+        services.AddSingleton<NfeIoAvisos>();
+        // A NFE.io responde em até 60 s antes de dar tempo esgotado: o cliente espera um pouco mais.
+        var httpNfeIo = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(70) };
+        httpNfeIo.DefaultRequestHeaders.UserAgent.ParseAdd("ELROND/1.0 (+https://elrond.sinesta.com.br)");
+        services.AddSingleton<INfseProvedor>(sp => new NfeIoProvedor(httpNfeIo, nfeio, sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<NfeIoProvedor>>()));
+        services.AddSingleton<INfseProvedor, SimuladorNfseProvedor>();
+        services.AddSingleton<INfseProvedores, NfseProvedores>();
+        services.AddScoped<INotasFiscaisServicoRepository, NotasFiscaisServicoRepository>();
+        services.AddScoped<INfseService, NfseService>();
+
         // Erros devolvidos pelo servidor, guardados no banco para diagnóstico (90 dias).
         services.AddSingleton<IRegistroErros, RegistroErros>();
         // Trilha de auditoria e numeração da proposta (sequência do Postgres)
