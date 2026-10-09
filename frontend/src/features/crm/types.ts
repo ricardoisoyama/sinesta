@@ -12,10 +12,12 @@ export interface EtapaFunil {
 }
 
 /** Tipos de campo customizado que o cliente pode criar no funil. */
-export type TipoCampoCustomizado = 'texto' | 'numero' | 'data' | 'lista'
+/** "moeda": valor em reais (guardado como número, ex.: "1500.5"; a tela mostra R$ 1.500,50). */
+export type TipoCampoCustomizado = 'texto' | 'numero' | 'moeda' | 'data' | 'lista'
 export const TIPOS_CAMPO: { valor: TipoCampoCustomizado; label: string }[] = [
   { valor: 'texto', label: 'Texto livre' },
   { valor: 'numero', label: 'Número' },
+  { valor: 'moeda', label: 'Valor (R$)' },
   { valor: 'data', label: 'Data' },
   { valor: 'lista', label: 'Lista de opções' },
 ]

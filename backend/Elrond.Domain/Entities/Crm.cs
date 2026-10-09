@@ -17,7 +17,7 @@ public class CampoCustomizado
 {
     public string Id { get; set; } = string.Empty;
     public string Nome { get; set; } = string.Empty;
-    /// <summary>"texto" | "numero" | "data" | "lista".</summary>
+    /// <summary>"texto" | "numero" | "moeda" (valor em R$, guardado como número) | "data" | "lista".</summary>
     public string Tipo { get; set; } = "texto";
     /// <summary>Opções quando Tipo = lista.</summary>
     public List<string> Opcoes { get; set; } = new();

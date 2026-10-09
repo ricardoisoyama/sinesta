@@ -560,6 +560,11 @@ function OportunidadeForm({
                     </option>
                   ))}
                 </select>
+              ) : c.tipo === 'moeda' ? (
+                <MoneyInput
+                  value={Number(valorCampo(c.id)) || 0}
+                  onChange={(n) => setCampo(c.id, n ? String(n) : '')}
+                />
               ) : (
                 <input
                   type={c.tipo === 'data' ? 'date' : c.tipo === 'numero' ? 'number' : 'text'}
