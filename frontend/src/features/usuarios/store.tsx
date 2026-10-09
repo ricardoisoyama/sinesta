@@ -5,20 +5,16 @@ import { createUsuario, listUsuarios, updateUsuario, type SalvarUsuario } from '
 
 const KEY = ['usuarios']
 
-const toSalvar = (u: Omit<Usuario, 'id'> & { senha?: string }): SalvarUsuario => ({
-  nome: u.nome,
-  email: u.email,
-  perfil: u.perfil,
-  permissoes: u.permissoes,
-  status: u.status,
-  senha: u.senha,
-  cargo: u.cargo,
-  departamento: u.departamento,
-  cpf: u.cpf,
-  rg: u.rg,
-  telefone: u.telefone,
-  dataAdmissao: u.dataAdmissao,
-})
+/**
+ * O que vai para a API: o cadastro inteiro, menos o id (que vai na rota). Não lista campo a campo
+ * de propósito: antes, campo novo do formulário (endereço, banco) ficava de fora e não era salvo.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export const toSalvar = (u: Omit<Usuario, 'id'> & { id?: string; senha?: string }): SalvarUsuario => {
+  const dados = { ...u }
+  delete dados.id
+  return dados
+}
 
 /** Mantido por compatibilidade (o estado agora vem do react-query). */
 export function UsuariosProvider({ children }: { children: ReactNode }) {
