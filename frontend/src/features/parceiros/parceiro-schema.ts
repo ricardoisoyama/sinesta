@@ -27,6 +27,16 @@ export const bancoSchema = z.object({
   roteamento: z.string().optional(),
 })
 
+/** Endereço (cliente, fornecedor, funcionário); a cidade fica num campo próprio de cada cadastro. */
+export const enderecoSchema = z.object({
+  cep: z.string(),
+  logradouro: z.string(),
+  numero: z.string(),
+  complemento: z.string(),
+  bairro: z.string(),
+  estado: z.string().optional(),
+})
+
 export const parceiroSchema = z.object({
   tipo: z.enum(['juridica', 'fisica']),
   nome: z.string().min(2, 'Informe a razão social ou o nome'),
@@ -38,7 +48,7 @@ export const parceiroSchema = z.object({
   telefone: z.string(),
   email: emailOpcional,
   cidade: z.string(),
-  endereco: z.object({ cep: z.string(), logradouro: z.string(), numero: z.string(), complemento: z.string(), bairro: z.string(), estado: z.string().optional() }),
+  endereco: enderecoSchema,
   observacao: z.string(),
   status: z.enum(['ativo', 'inativo']),
 

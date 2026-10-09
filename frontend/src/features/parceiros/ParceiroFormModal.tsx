@@ -7,7 +7,7 @@ import { Field } from '@/features/common/Field'
 import { StatusToggle } from '@/features/common/StatusToggle'
 import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import ui from '@/features/common/ui.module.css'
-import { formatCep, formatCpfCnpj } from '@/lib/format'
+import { formatCpfCnpj } from '@/lib/format'
 import { Loader2 } from 'lucide-react'
 import { mesclar } from '@/lib/mesclar'
 import { listCategoriasCusto, listVendedores } from '@/features/cadastros/api'
@@ -32,7 +32,8 @@ import { DadosBancariosFields } from './DadosBancariosFields'
 import { PaisAutocomplete } from '@/features/common/PaisAutocomplete'
 import { paisPorNome } from '@/lib/paises'
 import { getErrorMessage } from '@/lib/api'
-import { consultarCep, consultarCnpj, resumoCnpj } from '@/features/common/consultas'
+import { consultarCnpj, resumoCnpj, type CepConsulta } from '@/features/common/consultas'
+import { CampoCep } from '@/features/common/CampoCep'
 import { AnexosTab } from '@/features/anexos/AnexosTab'
 import s from './parceiros.module.css'
 
@@ -123,7 +124,6 @@ export function ParceiroFormModal({
 
   // ── Consulta pública: CNPJ (Receita) preenche o cadastro; CEP preenche o endereço ──
   const [buscandoCnpj, setBuscandoCnpj] = useState(false)
-  const [infoCep, setInfoCep] = useState<{ texto: string; alerta: boolean } | null>(null)
   // Ao sair do campo com os 14 números de um CNPJ novo: preenche com os dados da Receita.
   const buscarCnpj = async () => {
     const digitos = cpfCnpj.replace(/\D/g, '')
@@ -153,22 +153,11 @@ export function ParceiroFormModal({
       setBuscandoCnpj(false)
     }
   }
-  const [buscandoCep, setBuscandoCep] = useState(false)
-  const buscarCep = async (valor: string) => {
-    if (valor.replace(/\D/g, '').length !== 8) return
-    setInfoCep(null)
-    setBuscandoCep(true)
-    try {
-      const c = await consultarCep(valor)
-      const v = getValues()
-      // Número e complemento ficam como estão: o CEP não sabe deles.
-      setValue('endereco', { ...mesclar(emptyParceiro.endereco, v.endereco), cep: c.cep, logradouro: c.logradouro || v.endereco?.logradouro || '', bairro: c.bairro || v.endereco?.bairro || '' })
-      if (c.cidade) setValue('cidade', c.cidade)
-    } catch (err) {
-      setInfoCep({ texto: getErrorMessage(err).replace(/^Não foi possível salvar \(\d+\)\. /, ''), alerta: true })
-    } finally {
-      setBuscandoCep(false)
-    }
+  // CEP encontrado → rua, bairro e cidade (número e complemento ficam como estão: o CEP não sabe deles).
+  const aplicarCep = (c: CepConsulta) => {
+    const v = getValues()
+    setValue('endereco', { ...mesclar(emptyParceiro.endereco, v.endereco), cep: c.cep, logradouro: c.logradouro || v.endereco?.logradouro || '', bairro: c.bairro || v.endereco?.bairro || '' })
+    if (c.cidade) setValue('cidade', c.cidade)
   }
 
   // Cadastros de apoio das abas.
@@ -432,22 +421,7 @@ export function ParceiroFormModal({
               ) : (
                 <>
                   <Field label="CEP" hint="Com os 8 números, rua, bairro e cidade são preenchidos sozinhos.">
-                    <div className={ui.comLoader}>
-                      <input
-                        value={cep}
-                        onChange={(e) => {
-                          const v = formatCep(e.target.value)
-                          setValue('endereco.cep', v)
-                          buscarCep(v)
-                        }}
-                        placeholder="00000-000"
-                        inputMode="numeric"
-                        maxLength={9}
-                        aria-busy={buscandoCep}
-                      />
-                      {buscandoCep && <Loader2 className={ui.loaderCampo} aria-label="Consultando o CEP" />}
-                    </div>
-                    {infoCep && <span className={infoCep.alerta ? ui.errMsg : ui.okMsg} style={{ fontSize: 12 }}>{infoCep.texto}</span>}
+                    <CampoCep value={cep} onChange={(v) => setValue('endereco.cep', v)} onEncontrado={aplicarCep} />
                   </Field>
                   <Field className={ui.col2} label="Endereço">
                     <input {...register('endereco.logradouro')} placeholder="Rua, avenida..." />

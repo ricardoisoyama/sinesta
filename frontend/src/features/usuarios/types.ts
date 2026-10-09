@@ -1,3 +1,5 @@
+import type { DadosBancarios, Endereco } from '@/features/parceiros/types'
+
 /** Perfil de acesso do usuário. */
 export type Perfil = 'Gestor' | 'Colaborador'
 export const PERFIS: Perfil[] = ['Gestor', 'Colaborador']
@@ -23,4 +25,9 @@ export interface Usuario {
   telefone: string
   /** Data de admissão (yyyy-MM-dd). Vazio = não informada. */
   dataAdmissao: string
+  /** Cidade ("Santos - SP"); rua e número ficam em `endereco`. */
+  cidade?: string
+  endereco?: Endereco | null
+  /** Conta para pagamento (salário, reembolso). */
+  banco?: DadosBancarios | null
 }

@@ -2725,6 +2725,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("Cpf")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -4059,6 +4066,90 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("Aprovacoes");
 
                     b.Navigation("Itens");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.User", b =>
+                {
+                    b.OwnsOne("Elrond.Domain.Entities.DadosBancarios", "Banco", b1 =>
+                        {
+                            b1.Property<Guid>("UserId");
+
+                            b1.Property<string>("Agencia")
+                                .IsRequired();
+
+                            b1.Property<string>("Banco")
+                                .IsRequired();
+
+                            b1.Property<string>("Beneficiario")
+                                .IsRequired();
+
+                            b1.Property<string>("Conta")
+                                .IsRequired();
+
+                            b1.Property<string>("Iban")
+                                .IsRequired();
+
+                            b1.Property<string>("Pix")
+                                .IsRequired();
+
+                            b1.Property<string>("Roteamento")
+                                .IsRequired();
+
+                            b1.Property<string>("Swift")
+                                .IsRequired();
+
+                            b1.Property<string>("TipoConta")
+                                .IsRequired();
+
+                            b1.HasKey("UserId");
+
+                            b1.ToTable("usuarios");
+
+                            b1
+                                .ToJson("Banco")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UserId");
+                        });
+
+                    b.OwnsOne("Elrond.Domain.Entities.Endereco", "Endereco", b1 =>
+                        {
+                            b1.Property<Guid>("UserId");
+
+                            b1.Property<string>("Bairro")
+                                .IsRequired();
+
+                            b1.Property<string>("Cep")
+                                .IsRequired();
+
+                            b1.Property<string>("Complemento")
+                                .IsRequired();
+
+                            b1.Property<string>("Estado")
+                                .IsRequired();
+
+                            b1.Property<string>("Logradouro")
+                                .IsRequired();
+
+                            b1.Property<string>("Numero")
+                                .IsRequired();
+
+                            b1.HasKey("UserId");
+
+                            b1.ToTable("usuarios");
+
+                            b1
+                                .ToJson("Endereco")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("UserId");
+                        });
+
+                    b.Navigation("Banco");
+
+                    b.Navigation("Endereco");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.Vendedor", b =>

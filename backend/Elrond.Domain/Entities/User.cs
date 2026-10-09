@@ -23,6 +23,11 @@ public class User
     public string Telefone { get; private set; } = string.Empty;
     /// <summary>Data de admissão (yyyy-MM-dd). Vazio = não informada.</summary>
     public string DataAdmissao { get; private set; } = string.Empty;
+    /// <summary>Cidade do funcionário ("Santos - SP"); a rua e o número ficam em <see cref="Endereco"/>.</summary>
+    public string Cidade { get; private set; } = string.Empty;
+    public Endereco? Endereco { get; private set; }
+    /// <summary>Conta para pagamento (salário, reembolso).</summary>
+    public DadosBancarios? Banco { get; private set; }
 
     private User() { } // EF Core
 
@@ -58,6 +63,16 @@ public class User
         Telefone = telefone;
         DataAdmissao = dataAdmissao;
     }
+
+    /// <summary>Atualiza o endereço do funcionário.</summary>
+    public void AtualizarEndereco(string cidade, Endereco? endereco)
+    {
+        Cidade = (cidade ?? string.Empty).Trim();
+        Endereco = endereco;
+    }
+
+    /// <summary>Atualiza a conta bancária do funcionário.</summary>
+    public void AtualizarDadosBancarios(DadosBancarios? banco) => Banco = banco;
 
     /// <summary>Define uma nova senha (já com hash).</summary>
     public void DefinirSenha(string passwordHash) => PasswordHash = passwordHash;

@@ -1,5 +1,7 @@
 import { z } from 'zod'
 import { PERFIL_PRESET } from './funcionalidades'
+import { bancoSchema, enderecoSchema } from '@/features/parceiros/parceiro-schema'
+import { bancoVazio, enderecoVazio } from '@/features/parceiros/types'
 
 export const usuarioSchema = z.object({
   nome: z.string().min(2, 'Informe o nome'),
@@ -16,6 +18,9 @@ export const usuarioSchema = z.object({
   rg: z.string(),
   telefone: z.string(),
   dataAdmissao: z.string(),
+  cidade: z.string(),
+  endereco: enderecoSchema,
+  banco: bancoSchema,
 })
 
 export type UsuarioForm = z.infer<typeof usuarioSchema>
@@ -33,4 +38,7 @@ export const emptyUsuario: UsuarioForm = {
   rg: '',
   telefone: '',
   dataAdmissao: '',
+  cidade: '',
+  endereco: enderecoVazio(),
+  banco: bancoVazio(),
 }

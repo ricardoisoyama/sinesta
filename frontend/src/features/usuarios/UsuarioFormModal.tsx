@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Users, ShieldCheck, Eye, EyeOff, IdCard } from 'lucide-react'
+import { Users, ShieldCheck, Eye, EyeOff, IdCard, Landmark } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import { StatusToggle } from '@/features/common/StatusToggle'
+import { CampoCep } from '@/features/common/CampoCep'
+import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
+import { DadosBancariosFields } from '@/features/parceiros/DadosBancariosFields'
+import { mesclar } from '@/lib/mesclar'
 import ui from '@/features/common/ui.module.css'
 import { formatCpf, formatRg, formatTelefone } from '@/lib/format'
 import s from './usuarios.module.css'
@@ -43,13 +47,28 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
   const cpf = useWatch({ control, name: 'cpf' }) ?? ''
   const rg = useWatch({ control, name: 'rg' }) ?? ''
   const telefone = useWatch({ control, name: 'telefone' }) ?? ''
+  const cep = useWatch({ control, name: 'endereco.cep' }) ?? ''
+  const cidade = useWatch({ control, name: 'cidade' }) ?? ''
+  const banco = useWatch({ control, name: 'banco' }) ?? emptyUsuario.banco
   const isGestor = perfil === 'Gestor'
 
   useEffect(() => {
     if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowPw(false)
-    reset(initial ? { ...emptyUsuario, ...initial, senha: '' } : emptyUsuario)
+    reset(
+      initial
+        ? {
+            ...emptyUsuario,
+            ...initial,
+            senha: '',
+            // Cadastros de antes não têm endereço nem banco: começam em branco (sem null no salvar).
+            cidade: initial.cidade ?? '',
+            endereco: mesclar(emptyUsuario.endereco, initial.endereco),
+            banco: mesclar(emptyUsuario.banco, initial.banco),
+          }
+        : emptyUsuario,
+    )
   }, [open, initial, reset])
 
   const trocarPerfil = (p: Perfil) => {
@@ -197,7 +216,45 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
             <Field className={ui.col2} label="Data de admissão">
               <input type="date" {...register('dataAdmissao')} />
             </Field>
+
+            <div className={`${ui.col4} ${ui.fsectionTitle}`} style={{ marginTop: 4, marginBottom: 0 }}>
+              Endereço
+            </div>
+            <Field label="CEP" hint="Com os 8 números, rua, bairro e cidade são preenchidos sozinhos.">
+              <CampoCep
+                value={cep}
+                onChange={(v) => setValue('endereco.cep', v)}
+                onEncontrado={(c) => {
+                  // Número e complemento ficam como estão: o CEP não sabe deles.
+                  if (c.logradouro) setValue('endereco.logradouro', c.logradouro)
+                  if (c.bairro) setValue('endereco.bairro', c.bairro)
+                  if (c.cidade) setValue('cidade', c.cidade)
+                }}
+              />
+            </Field>
+            <Field className={ui.col2} label="Rua">
+              <input {...register('endereco.logradouro')} placeholder="Rua, avenida..." />
+            </Field>
+            <Field label="Número">
+              <input {...register('endereco.numero')} placeholder="Ex.: 45 ou S/N" />
+            </Field>
+            <Field label="Complemento">
+              <input {...register('endereco.complemento')} placeholder="Apto, bloco..." />
+            </Field>
+            <Field label="Bairro">
+              <input {...register('endereco.bairro')} />
+            </Field>
+            <Field className={ui.col2} label="Cidade">
+              <CidadeAutocomplete value={cidade} onChange={(v) => setValue('cidade', v)} placeholder="Digite e escolha a cidade" />
+            </Field>
           </div>
+        </section>
+
+        <section className={ui.fsection}>
+          <div className={ui.fsectionTitle}>
+            <Landmark /> Dados bancários
+          </div>
+          <DadosBancariosFields value={banco} onChange={(v) => setValue('banco', v)} />
         </section>
 
         <section className={ui.fsection}>

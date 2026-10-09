@@ -6,7 +6,7 @@ import { StatusToggle } from '@/features/common/StatusToggle'
 import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { PercentInput } from '@/features/common/PercentInput'
 import ui from '@/features/common/ui.module.css'
-import { formatCep, formatCnpj, formatNumberBRL, formatPct } from '@/lib/format'
+import { formatCnpj, formatNumberBRL, formatPct } from '@/lib/format'
 import { Hint } from '@/features/common/Hint'
 import { mesclar } from '@/lib/mesclar'
 import { REGIMES, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
@@ -18,7 +18,8 @@ import { useFator } from '@/features/pricing/usePreco'
 import { useQuery } from '@tanstack/react-query'
 import { getNumeracaoEmpresa } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
-import { consultarCep, consultarCnpj, resumoCnpj } from '@/features/common/consultas'
+import { consultarCnpj, resumoCnpj, type CepConsulta } from '@/features/common/consultas'
+import { CampoCep } from '@/features/common/CampoCep'
 import { FatorPainel } from '@/features/pricing/FatorPainel'
 import { CertificadoEmpresa } from './CertificadoEmpresa'
 import s from './empresa.module.css'
@@ -169,26 +170,13 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
       setBuscando(false)
     }
   }
-  // CEP com 8 números → rua, bairro e cidade (número e complemento ficam como estão).
-  const [erroCep, setErroCep] = useState('')
-  const [buscandoCep, setBuscandoCep] = useState(false)
-  const buscarCep = async (valor: string) => {
-    if (valor.replace(/\D/g, '').length !== 8) return
-    setErroCep('')
-    setBuscandoCep(true)
-    try {
-      const c = await consultarCep(valor)
-      setD((p) => ({
-        ...p,
-        endereco: c.cidade || p.endereco,
-        enderecoCompleto: { ...p.enderecoCompleto, cep: c.cep, logradouro: c.logradouro || p.enderecoCompleto.logradouro, bairro: c.bairro || p.enderecoCompleto.bairro },
-      }))
-    } catch (err) {
-      setErroCep(semPrefixo(err))
-    } finally {
-      setBuscandoCep(false)
-    }
-  }
+  // CEP encontrado → rua, bairro e cidade (número e complemento ficam como estão).
+  const aplicarCep = (c: CepConsulta) =>
+    setD((p) => ({
+      ...p,
+      endereco: c.cidade || p.endereco,
+      enderecoCompleto: { ...p.enderecoCompleto, cep: c.cep, logradouro: c.logradouro || p.enderecoCompleto.logradouro, bairro: c.bairro || p.enderecoCompleto.bairro },
+    }))
 
   const setImp = (key: ImpostoKey, patch: Partial<ImpostoConfig>) =>
     setD((p) => ({ ...p, [key]: { ...p[key], ...patch } }))
@@ -322,22 +310,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
               <span className={ui.fsectionHint}>sai na proposta e na nota fiscal</span>
             </div>
             <Field label="CEP" hint="Com os 8 números, rua, bairro e cidade são preenchidos sozinhos.">
-              <div className={ui.comLoader}>
-                <input
-                  value={d.enderecoCompleto.cep}
-                  onChange={(e) => {
-                    const v = formatCep(e.target.value)
-                    setEnd({ cep: v })
-                    buscarCep(v)
-                  }}
-                  placeholder="00000-000"
-                  inputMode="numeric"
-                  maxLength={9}
-                  aria-busy={buscandoCep}
-                />
-                {buscandoCep && <Loader2 className={ui.loaderCampo} aria-label="Consultando o CEP" />}
-              </div>
-              {erroCep && <span className={ui.errMsg}>{erroCep}</span>}
+              <CampoCep value={d.enderecoCompleto.cep} onChange={(cep) => setEnd({ cep })} onEncontrado={aplicarCep} />
             </Field>
             <Field className={ui.col2} label="Rua">
               <input value={d.enderecoCompleto.logradouro} onChange={(e) => setEnd({ logradouro: e.target.value })} placeholder="Rua, avenida..." />

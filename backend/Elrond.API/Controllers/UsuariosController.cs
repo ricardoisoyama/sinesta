@@ -39,11 +39,20 @@ public class UsuariosController : ControllerBase
     {
         nome = u.Name, email = u.Email, perfil = u.Perfil, permissoes = u.Permissoes, ativo = u.Ativo,
         cargo = u.Cargo, departamento = u.Departamento, cpf = u.Cpf, rg = u.Rg, telefone = u.Telefone, dataAdmissao = u.DataAdmissao,
+        // Troca de conta bancária fica no histórico (é o tipo de alteração que precisa de rastro).
+        cidade = u.Cidade, endereco = u.Endereco, banco = u.Banco,
     };
 
     private static UsuarioDto ToDto(User u) =>
         new(u.Id.ToString(), u.Name, u.Email, u.Perfil, u.Permissoes, u.Ativo ? "ativo" : "inativo",
-            u.Cargo, u.Departamento, u.Cpf, u.Rg, u.Telefone, u.DataAdmissao);
+            u.Cargo, u.Departamento, u.Cpf, u.Rg, u.Telefone, u.DataAdmissao, u.Cidade, u.Endereco, u.Banco);
+
+    private static void AplicarDadosPessoais(User user, SalvarUsuarioDto dto)
+    {
+        user.AtualizarDadosRh(dto.Cargo, dto.Departamento, dto.Cpf, dto.Rg, dto.Telefone, dto.DataAdmissao);
+        user.AtualizarEndereco(dto.Cidade, dto.Endereco);
+        user.AtualizarDadosBancarios(dto.Banco);
+    }
 
     /// <summary>Versão enxuta para quem não tem a tela de Usuários (combos de vendedor/aprovador): sem CPF, RG, telefone e permissões.</summary>
     private static UsuarioDto ToDtoResumido(User u) =>
@@ -69,7 +78,7 @@ public class UsuariosController : ControllerBase
 
         var user = new User(dto.Email, dto.Nome, _hasher.Hash(dto.Senha),
             dto.Perfil, PermissoesConhecidas(dto.Permissoes), dto.Status != "inativo");
-        user.AtualizarDadosRh(dto.Cargo, dto.Departamento, dto.Cpf, dto.Rg, dto.Telefone, dto.DataAdmissao);
+        AplicarDadosPessoais(user, dto);
         await _repo.AddAsync(user);
         await _auditoria.RegistrarAsync("criar", "Usuario", user.Id.ToString(), $"Usuário \"{user.Name}\" ({user.Email}) criado como {user.Perfil}");
         return Ok(ToDto(user));
@@ -99,7 +108,7 @@ public class UsuariosController : ControllerBase
 
         var antes = Retrato(user);
         user.AtualizarCadastro(dto.Email, dto.Nome, perfil, permissoes, ativo);
-        user.AtualizarDadosRh(dto.Cargo, dto.Departamento, dto.Cpf, dto.Rg, dto.Telefone, dto.DataAdmissao);
+        AplicarDadosPessoais(user, dto);
         // Senha em branco no edit = manter a atual.
         var trocouSenha = !string.IsNullOrWhiteSpace(dto.Senha);
         if (trocouSenha)

@@ -73,6 +73,9 @@ public class AppDbContext : DbContext
             e.Property(u => u.Rg).HasMaxLength(20);
             e.Property(u => u.Telefone).HasMaxLength(30);
             e.Property(u => u.DataAdmissao).HasMaxLength(10);
+            e.Property(u => u.Cidade).HasMaxLength(120).HasDefaultValue(string.Empty);
+            e.OwnsOne(u => u.Endereco, b => b.ToJson());
+            e.OwnsOne(u => u.Banco, b => b.ToJson());
         });
 
         modelBuilder.Entity<Taxa>(e =>

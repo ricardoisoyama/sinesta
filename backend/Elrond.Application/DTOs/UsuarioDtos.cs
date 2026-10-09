@@ -1,3 +1,5 @@
+using Elrond.Domain.Entities;
+
 namespace Elrond.Application.DTOs;
 
 /// <summary>
@@ -16,7 +18,10 @@ public record UsuarioDto(
     string Cpf,
     string Rg,
     string Telefone,
-    string DataAdmissao
+    string DataAdmissao,
+    string Cidade = "",
+    Endereco? Endereco = null,
+    DadosBancarios? Banco = null
 );
 
 /// <summary>Payload para criar/editar funcionário. Senha: no create define a senha; no edit, vazio = manter.</summary>
@@ -32,5 +37,8 @@ public record SalvarUsuarioDto(
     string Cpf = "",
     string Rg = "",
     string Telefone = "",
-    string DataAdmissao = ""
+    string DataAdmissao = "",
+    string Cidade = "",
+    Endereco? Endereco = null,
+    DadosBancarios? Banco = null
 );
