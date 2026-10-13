@@ -41,7 +41,8 @@ public class FatorService : IFatorService
         }
         // O rascunho da tela pode não ter id ainda (empresa nova): DF e meta vêm do id informado.
         var id = string.IsNullOrWhiteSpace(empresa.Id) ? req.EmpresaId ?? string.Empty : empresa.Id;
-        var custos = id.Length == 0 ? new List<CustoFixo>() : await _custos.ListarAsync(c => c.UnidadeId == id);
+        // Todas as ativas: uma despesa paga por outra empresa pode ter parte rateada para esta.
+        var custos = id.Length == 0 ? new List<CustoFixo>() : await _custos.ListarAsync(c => c.Status == "ativo");
         var metas = id.Length == 0 ? new List<Meta>() : await _metas.ListarAsync(m => m.EmpresaId == id);
 
         // Comissão: a informada na precificação; senão a do vendedor (regra de comissão); senão a da empresa.
@@ -64,8 +65,9 @@ public class FatorService : IFatorService
     public static FatorResultado Calcular(Empresa empresa, string empresaId, IEnumerable<CustoFixo> custos, IEnumerable<Meta> metas,
         DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null)
     {
-        var naDf = custos.Where(c => c.UnidadeId == empresaId && c.EntraNaDf(hoje)).ToList();
-        var totalDf = naDf.Sum(c => c.ValorMensal);
+        // DF da empresa = a parte dela em cada despesa (inteira se for só dela; o percentual se rateada).
+        var naDf = custos.Where(c => c.EntraNaDf(hoje) && c.PercentualDa(empresaId) > 0).ToList();
+        var totalDf = naDf.Sum(c => c.ValorPara(empresaId));
 
         var (meta, avisoMeta) = MetaDoAno(metas, empresaId, hoje.Year);
         var metaAnual = meta?.TotalDoAno ?? 0m;

@@ -3095,6 +3095,36 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("Endereco");
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.CustoFixo", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.RateioCustoFixo", "Rateio", b1 =>
+                        {
+                            b1.Property<string>("CustoFixoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("EmpresaId")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Percentual")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("CustoFixoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("custos_fixos");
+
+                            b1
+                                .ToJson("Rateio")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CustoFixoId");
+                        });
+
+                    b.Navigation("Rateio");
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Empresa", b =>
                 {
                     b.OwnsOne("Elrond.Domain.Entities.DvEmpresa", "Dv", b1 =>

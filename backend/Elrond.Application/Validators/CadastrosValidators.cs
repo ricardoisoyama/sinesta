@@ -105,6 +105,7 @@ public class CustoFixoValidator : AbstractValidator<CustoFixo>
         RuleFor(c => c.ValorMensal).GreaterThanOrEqualTo(0).WithMessage("Valor inválido.");
         RuleFor(c => c.Tipo).Must(t => t is "recorrente" or "spot").WithMessage("Tipo deve ser recorrente ou spot.");
         RuleFor(c => c.DiaVencimento).InclusiveBetween(0, 31).WithMessage("Dia de vencimento deve ser de 1 a 31.");
+        RuleFor(c => c).Must(c => c.ConferirRateio() is null).WithMessage(c => c.ConferirRateio()!);
     }
 }
 

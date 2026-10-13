@@ -36,5 +36,16 @@ export interface CustoFixo {
   fornecedorId: string
   /** Dia do mês em que vence (1–31). 0 = não informado. */
   diaVencimento?: number
+  /**
+   * Rateio entre empresas: a parte de cada uma vai para a DF (e o markup) dela. Vazio = sem rateio
+   * (tudo de `unidadeId`, a empresa que paga a conta, que sempre faz parte quando há rateio).
+   */
+  rateio?: RateioEmpresa[]
   status: 'ativo' | 'inativo'
+}
+
+export interface RateioEmpresa {
+  empresaId: string
+  /** Fração (0,5 = 50%). */
+  percentual: number
 }

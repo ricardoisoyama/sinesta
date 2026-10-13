@@ -1,4 +1,4 @@
-import { entraNaDf } from './regras'
+import { entraNaDf, valorDaEmpresa } from './regras'
 import type { CustoFixo } from './types'
 
 /** Conta do plano de contas por categoria (usada só para montar a massa demo). */
@@ -36,10 +36,11 @@ const custo = (
  * Soma dos custos que compõem a DF mensal de uma unidade: ativos, recorrentes e
  * vigentes. Despesas spot ficam de fora (não são projetadas).
  */
+/** DF do mês da empresa: a parte dela em cada despesa (inteira se for só dela; o percentual se rateada). */
 export const totalCustoFixoAtivo = (unidadeId: string): number =>
   mockCustosFixos
-    .filter((c) => c.unidadeId === unidadeId && entraNaDf(c))
-    .reduce((acc, c) => acc + c.valorMensal, 0)
+    .filter((c) => entraNaDf(c))
+    .reduce((acc, c) => acc + valorDaEmpresa(c, unidadeId), 0)
 
 /** Substitui o conteúdo (in place) pelos dados vindos do backend. */
 export function hydrateCustosFixos(list: CustoFixo[]): void {

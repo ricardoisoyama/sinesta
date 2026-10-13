@@ -1,0 +1,34 @@
+/* Rateio da despesa entre empresas (modal de Despesa Fixa) */
+.ativo { border: 2px solid #e8702f; }
+.topo { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid #ede6d8; padding-bottom: 8px; margin-bottom: 12px; }
+.chave { display: inline-flex; align-items: center; gap: 10px; border: none; background: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 600; color: #1f2a24; padding: 2px 0; }
+.chave:disabled { cursor: not-allowed; opacity: 0.55; }
+.chave:focus-visible { outline: 2px solid #e8702f; outline-offset: 3px; border-radius: 6px; }
+.sw { width: 40px; height: 22px; border-radius: 20px; background: #cfd4cd; position: relative; transition: 0.18s; flex: none; }
+.swOn { background: #2e7d44; }
+.swDot { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: 0.18s; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); }
+.swOn .swDot { left: 20px; }
+.semRateio { font-size: 13px; color: #4b5a51; background: #f7f6f2; border-radius: 8px; padding: 11px 14px; }
+
+.grade { border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; }
+.linha { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 40px; gap: 12px; align-items: center; padding: 8px 14px; border-top: 1px solid #efebe2; font-size: 13px; }
+.linha:first-child { border-top: none; }
+.cabecalho { background: #f3f0e8; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #6b7b72; }
+.rodape { background: #fbfaf6; font-weight: 700; border-top: 1px solid #e6e3db; }
+.empresa { display: flex; align-items: center; gap: 8px; font-weight: 600; min-width: 0; }
+.selo { font-size: 11px; font-weight: 700; color: #8a4b12; background: #fdebd9; border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.pct { justify-self: end; width: 120px; }
+.dir { text-align: right; font-variant-numeric: tabular-nums; }
+.acoes { display: flex; justify-content: flex-end; }
+
+.acoesRodape { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.adicionar { height: 36px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 0 10px; font-family: inherit; font-size: 13px; font-weight: 600; color: #173f1c; background: #fff; cursor: pointer; }
+.adicionar:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
+.espaco { flex: 1; }
+.bom { color: #1d6b3e; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.ruim { color: #b42318; font-size: 13px; font-weight: 600; }
+
+@media (max-width: 640px) {
+  .linha { grid-template-columns: minmax(0, 1fr) 110px 40px; }
+  .linha > :nth-child(3) { display: none; }
+}

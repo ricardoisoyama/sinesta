@@ -94,6 +94,9 @@ public class AppDbContext : DbContext
         {
             e.ToTable("custos_fixos");
             e.HasKey(c => c.Id);
+            // Rateio entre empresas: lista {empresa, fração} em JSON; vazia = a despesa é toda de quem paga.
+            e.OwnsMany(c => c.Rateio, b => b.ToJson());
+            e.Ignore(c => c.Rateada);
         });
 
         modelBuilder.Entity<Empresa>(e =>

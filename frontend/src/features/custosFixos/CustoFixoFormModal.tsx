@@ -17,6 +17,7 @@ import { CadastroBusca } from '@/features/camposOperacao/CadastroBusca'
 import { empresaPadrao } from '@/features/unidades/types'
 import { custoFixoSchema, emptyCustoFixo, type CustoFixoForm } from './custo-fixo-schema'
 import { DATA_FIM_SEM_PRAZO, TIPOS_CUSTO_FIXO, type CustoFixo } from './types'
+import { RateioEmpresas } from './RateioEmpresas'
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 
@@ -68,10 +69,18 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     if (open)
       reset(
         initial
-          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0 }
+          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, rateio: initial.rateio ?? [] }
           : emptyCustoFixo,
       )
   }, [open, initial, reset])
+
+  const rateio = useWatch({ control, name: 'rateio' }) ?? []
+  // Trocar quem paga com o rateio ligado: a nova pagadora entra na grade (com 0%, para a pessoa ajustar).
+  const trocarPagadora = (empresaId: string) => {
+    setValue('unidadeId', empresaId, { shouldValidate: true })
+    if (rateio.length > 0 && empresaId && !rateio.some((r) => r.empresaId === empresaId))
+      setValue('rateio', [...rateio, { empresaId, percentual: 0 }], { shouldValidate: true })
+  }
 
   // Novo registro: pré-seleciona a empresa padrão (ou a primeira ativa) assim que a lista chegar.
   const unidadeSel = useWatch({ control, name: 'unidadeId' })
@@ -166,14 +175,15 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
             </Field>
             <Field
               className={ui.col2}
-              label="Empresa"
+              label="Empresa que paga"
               req
+              hint="Recebe a cobrança e paga a conta inteira. Para dividir o custo com outras empresas, use o rateio abaixo."
               error={
                 errors.unidadeId?.message ??
                 (semEmpresa ? 'Nenhuma empresa ativa. Cadastre uma empresa primeiro.' : undefined)
               }
             >
-              <select {...register('unidadeId')} disabled={semEmpresa}>
+              <select value={unidadeSel} onChange={(e) => trocarPagadora(e.target.value)} disabled={semEmpresa}>
                 <option value="" disabled>
                   {carregandoEmpresas ? 'Carregando...' : 'Selecione'}
                 </option>
@@ -227,6 +237,14 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
             </Field>
           </div>
         </section>
+
+        <RateioEmpresas
+          rateio={rateio}
+          onChange={(r) => setValue('rateio', r, { shouldValidate: true })}
+          pagadoraId={unidadeSel}
+          empresas={empresasAtivas.map((e) => ({ id: e.id, nome: e.nome }))}
+          valorMensal={valor}
+        />
 
         <section className={ui.fsection}>
           <div className={ui.fsectionTitle}>

@@ -41,4 +41,45 @@ public class CustoFixo : Rastreavel, IEntity, IInativavel
         if (DateOnly.TryParse(DataFim, out var fim) && hoje > fim) return false;
         return true;
     }
+
+    // ── Rateio entre empresas ──────────────────────────────────────────────
+    // A empresa da despesa (UnidadeId) é a que paga a conta inteira. Com rateio, cada empresa
+    // listada leva a sua parte para a DF (e o markup) dela; sem rateio, tudo é da que paga.
+
+    /// <summary>Empresas que dividem a despesa e a parte de cada uma (fração; a soma é 1). Vazio = sem rateio.</summary>
+    public List<RateioCustoFixo> Rateio { get; set; } = new();
+
+    public bool Rateada => Rateio is { Count: > 0 };
+
+    /// <summary>Fração da despesa que é da empresa (1 = inteira, 0 = nada).</summary>
+    public decimal PercentualDa(string empresaId) =>
+        Rateada ? Rateio.Where(r => r.EmpresaId == empresaId).Sum(r => r.Percentual) : UnidadeId == empresaId ? 1m : 0m;
+
+    /// <summary>Quanto do valor mensal vai para a DF da empresa.</summary>
+    public decimal ValorPara(string empresaId) => ValorMensal * PercentualDa(empresaId);
+
+    /// <summary>O rateio fecha? Null quando está certo (ou não há rateio); senão, o motivo.</summary>
+    public string? ConferirRateio()
+    {
+        if (!Rateada) return null;
+        if (Rateio.Any(r => string.IsNullOrWhiteSpace(r.EmpresaId))) return "Rateio: escolha a empresa de cada linha.";
+        if (Rateio.GroupBy(r => r.EmpresaId).Any(g => g.Count() > 1)) return "Rateio: cada empresa entra uma vez só.";
+        if (Rateio.Any(r => r.Percentual <= 0)) return "Rateio: toda empresa do rateio precisa de um percentual maior que zero.";
+        if (Rateio.All(r => r.EmpresaId != UnidadeId)) return "Rateio: a empresa que paga a conta precisa fazer parte do rateio.";
+        var total = Rateio.Sum(r => r.Percentual);
+        if (Math.Abs(total - 1m) > ToleranciaRateio)
+            return $"Rateio: os percentuais somam {total * 100:0.##}%; precisam fechar 100%.";
+        return null;
+    }
+
+    /// <summary>Folga de arredondamento na soma (0,01 ponto percentual).</summary>
+    public const decimal ToleranciaRateio = 0.0001m;
+}
+
+/// <summary>Parte de uma empresa numa despesa rateada.</summary>
+public class RateioCustoFixo
+{
+    public string EmpresaId { get; set; } = string.Empty;
+    /// <summary>Fração (0,5 = 50%).</summary>
+    public decimal Percentual { get; set; }
 }
