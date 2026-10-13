@@ -146,9 +146,12 @@ public class MetaValidator : AbstractValidator<Meta>
         RuleFor(m => m.ValoresMensais)
             .Must(v => v is null || v.Count == 0 || v.Count == 12).WithMessage("Informe a meta dos 12 meses.")
             .Must(v => v is null || v.All(x => x >= 0)).WithMessage("A meta de um mês não pode ser negativa.");
-        RuleFor(m => m)
-            .Must(m => (m.ValoresMensais is { Count: 12 } ? m.ValoresMensais.Sum() : m.MetaAnual) > 0)
-            .WithMessage("Informe a meta de pelo menos um mês.");
+        RuleFor(m => m.BasePreco).Must(b => b is Meta.BaseMedia or Meta.BaseMes)
+            .WithMessage("Escolha a base do preço: média mensal do ano ou meta do mês.");
+        RuleFor(m => m.OrigemAnual).Must(o => o is Meta.AnualValor or Meta.AnualAnoAnterior)
+            .WithMessage("Escolha de onde vem o valor anual.");
+        // O valor anual manda: os meses precisam somar exatamente ele (nem menos, nem mais).
+        RuleFor(m => m).Must(m => m.ConferirValores() is null).WithMessage(m => m.ConferirValores()!);
     }
 }
 

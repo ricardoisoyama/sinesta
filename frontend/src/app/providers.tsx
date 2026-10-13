@@ -7,6 +7,7 @@ import { UsuariosProvider } from '@/features/usuarios/store'
 import { PlanoContasProvider } from '@/features/planoContas/store'
 import { PropostasProvider } from '@/features/propostas/store'
 import { CrmProvider } from '@/features/crm/store'
+import { DialogoHost } from '@/features/common/dialogo/DialogoHost'
 
 // Devtools do React Query: carregado só em desenvolvimento
 // (em produção vira um no-op e é removido do bundle).
@@ -34,6 +35,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
           </UsuariosProvider>
         </AuthProvider>
       </BrowserRouter>
+      <DialogoHost />
       <Suspense fallback={null}>
         <ReactQueryDevtools initialIsOpen={false} />
       </Suspense>

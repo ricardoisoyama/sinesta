@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 
 /** Estado/ações genéricos para uma lista CRUD em memória (mock). */
 export function useCrud<T extends { id: string }>(
@@ -46,8 +47,9 @@ export function useCrud<T extends { id: string }>(
     add: (it: T) => setItems((l) => [it, ...l]),
     update: (id: string, patch: Partial<T>) =>
       setItems((l) => l.map((x) => (x.id === id ? { ...x, ...patch } : x))),
-    remove: (it: T) => {
-      if (window.confirm('Remover este registro?')) setItems((l) => l.filter((x) => x.id !== it.id))
+    remove: async (it: T) => {
+      const ok = await confirmar({ titulo: 'Remover registro', mensagem: 'Remover este registro?', confirmar: 'Remover', perigo: true })
+      if (ok) setItems((l) => l.filter((x) => x.id !== it.id))
     },
   }
 }

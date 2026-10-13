@@ -241,6 +241,11 @@ public class AppDbContext : DbContext
             e.Property(m => m.ValoresMensais).HasColumnType("numeric(18,6)[]");
             e.Property(m => m.Principal).HasDefaultValue(false);
             e.Ignore(m => m.TotalDoAno);
+            e.Ignore(m => m.UsaMedia);
+            // Base do preço: média mensal do ano (decisão de 13/10: inclusive as metas que já existiam).
+            e.Property(m => m.BasePreco).HasMaxLength(20).HasDefaultValue(Meta.BaseMedia);
+            e.Property(m => m.EntradaMeses).HasMaxLength(20).HasDefaultValue("valor");
+            e.Property(m => m.OrigemAnual).HasMaxLength(20).HasDefaultValue(Meta.AnualValor);
             e.HasIndex(m => new { m.EmpresaId, m.Ano });
         });
 

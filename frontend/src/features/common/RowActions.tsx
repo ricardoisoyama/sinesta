@@ -1,4 +1,5 @@
 import { Pencil, Trash2, RotateCcw, Lock } from 'lucide-react'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import ui from './ui.module.css'
 
 interface Props {
@@ -29,7 +30,9 @@ export function RowActions({ status, onEdit, onSetStatus, podeEditar = true, mot
       ) : (
         <button
           className={`${ui.iconBtn} ${ui.danger}`}
-          onClick={() => { if (window.confirm('Inativar este registro?')) onSetStatus('inativo') }}
+          onClick={async () => {
+            if (await confirmar({ titulo: 'Inativar registro', mensagem: 'Inativar este registro?', confirmar: 'Inativar', perigo: true })) onSetStatus('inativo')
+          }}
           title="Inativar"
         >
           <Trash2 />

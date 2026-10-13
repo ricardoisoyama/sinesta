@@ -66,6 +66,8 @@ public class CustoFixo : Rastreavel, IEntity, IInativavel
         if (Rateio.GroupBy(r => r.EmpresaId).Any(g => g.Count() > 1)) return "Rateio: cada empresa entra uma vez só.";
         if (Rateio.Any(r => r.Percentual <= 0)) return "Rateio: toda empresa do rateio precisa de um percentual maior que zero.";
         if (Rateio.All(r => r.EmpresaId != UnidadeId)) return "Rateio: a empresa que paga a conta precisa fazer parte do rateio.";
+        // Rateio com uma empresa só é o mesmo que não ratear.
+        if (Rateio.Count < 2) return "Rateio: com o rateio ligado, inclua pelo menos mais uma empresa (ou desligue o rateio).";
         var total = Rateio.Sum(r => r.Percentual);
         if (Math.Abs(total - 1m) > ToleranciaRateio)
             return $"Rateio: os percentuais somam {total * 100:0.##}%; precisam fechar 100%.";

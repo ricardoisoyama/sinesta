@@ -71,7 +71,7 @@ export const ARTIGOS: Artigo[] = [
     rotas: ['/cadastros/unidades', '/simulador'],
     resumo: 'O fator é o número que multiplica o custo para chegar ao preço. Ele é igual ao da Matriz de Preço da planilha.',
     passos: [
-      'DF% = despesas fixas divididas pela meta do mês corrente (o preço muda a cada mês).',
+      'DF% = despesas fixas divididas pela base escolhida na meta: a média mensal do ano (preço estável) ou a meta do mês corrente (o preço muda a cada mês).',
       'Markup = DF% + impostos + comissão + despesa financeira + outras + lucro.',
       'No Pricing, comissão e lucro podem ser ajustados por linha. Lucro abaixo do da empresa vai para aprovação. Os impostos ficam só no cadastro da empresa.',
       'Fator = 1 ÷ (1 − markup).',
@@ -102,10 +102,12 @@ export const ARTIGOS: Artigo[] = [
     resumo: 'A meta é por empresa e mês a mês. Ela é a base do DF%: sem meta, o Pricing não calcula o preço.',
     passos: [
       'Clique em "Nova meta", escolha a empresa e o ano.',
-      'Digite o valor de cada mês ou use "dividir igual" a partir do total.',
+      'Informe o valor anual (ou "% sobre o ano anterior", quando existe a meta dele): é o total que manda.',
+      'Distribua pelos meses em R$ ou em % do ano; só salva quando os meses fecham exatamente o valor anual.',
+      'Escolha a base do preço: média mensal do ano (preço estável) ou meta do mês corrente (muda a cada mês).',
       'Marque a meta como principal: é ela que entra no fator.',
     ],
-    palavras: ['meta', 'mensal', 'faturamento', 'principal', 'bloqueado', 'sem meta'],
+    palavras: ['meta', 'mensal', 'anual', 'faturamento', 'principal', 'bloqueado', 'sem meta', 'média', 'ano anterior', 'sazonalidade'],
   },
   {
     id: 'proposta-aprovacao',

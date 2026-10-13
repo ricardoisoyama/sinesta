@@ -5,6 +5,7 @@ import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import ui from '@/features/common/ui.module.css'
 import { getErrorMessage } from '@/lib/api'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { listClientes } from '@/features/cadastros/api'
 import { useUsuarios } from '@/features/usuarios/store'
 import { useCrm } from '@/features/crm/store'
@@ -115,7 +116,13 @@ export function CompromissoModal({ compromisso, onClose, onSalvar, onExcluir }: 
     }
   }
   const excluir = async () => {
-    if (!window.confirm('Excluir este compromisso? Ele sai da Agenda e fica no histórico.')) return
+    const ok = await confirmar({
+      titulo: 'Excluir compromisso',
+      mensagem: 'Excluir este compromisso? Ele sai da Agenda e fica no histórico.',
+      confirmar: 'Excluir',
+      perigo: true,
+    })
+    if (!ok) return
     setSalvando(true)
     try {
       await onExcluir(d.id)

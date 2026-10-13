@@ -39,6 +39,8 @@ export function conferirRateio(rateio: RateioEmpresa[], pagadoraId: string): str
   if (new Set(rateio.map((r) => r.empresaId)).size !== rateio.length) return 'Cada empresa entra uma vez só no rateio.'
   if (rateio.some((r) => !(r.percentual > 0))) return 'Toda empresa do rateio precisa de um percentual maior que zero (tire a que ficou com 0%).'
   if (!rateio.some((r) => r.empresaId === pagadoraId)) return 'A empresa que paga a conta precisa fazer parte do rateio.'
+  // Rateio "com uma empresa só" é o mesmo que não ratear: pede a outra (ou desligar).
+  if (rateio.length < 2) return 'Com o rateio ligado, inclua pelo menos mais uma empresa (ou desligue o rateio).'
   const total = somaRateio(rateio)
   if (Math.abs(total - 1) > TOLERANCIA) {
     const faltam = (1 - total) * 100

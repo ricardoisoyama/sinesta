@@ -58,9 +58,11 @@ export function FatorPainel({ fator: f, carregando, comLinks = true }: Props) {
         {linha(
           'Despesa fixa (DF)',
           f.dfPct,
-          f.faturamentoMensal > 0
-            ? `${formatBRL(f.totalDf)} de fixos ÷ ${formatBRL(f.faturamentoMensal)} de meta de ${MESES[f.mes - 1]}/${f.ano}; muda a cada mês`
-            : `${formatBRL(f.totalDf)} de fixos · sem meta de ${MESES[f.mes - 1] ?? ''}/${f.ano}`,
+          f.faturamentoMensal <= 0
+            ? `${formatBRL(f.totalDf)} de fixos · sem meta de ${MESES[f.mes - 1] ?? ''}/${f.ano}`
+            : f.basePreco === 'media'
+              ? `${formatBRL(f.totalDf)} de fixos ÷ ${formatBRL(f.faturamentoMensal)} (média mensal da meta de ${f.ano}); igual o ano todo`
+              : `${formatBRL(f.totalDf)} de fixos ÷ ${formatBRL(f.faturamentoMensal)} de meta de ${MESES[f.mes - 1]}/${f.ano}; muda a cada mês`,
         )}
         {linha('Impostos', f.impostos, f.impostosDoCadastro ? 'detalhados na aba Impostos' : f.impostos > 0 ? 'total informado na aba Impostos' : 'nenhum informado na aba Impostos')}
         {linha('Comissão', f.comissoes, f.comissoes !== f.comissoesPadrao ? `padrão ${formatPct(f.comissoesPadrao)}, ajustada nesta operação` : 'padrão; ajustável no Pricing')}

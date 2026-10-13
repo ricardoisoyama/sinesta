@@ -5,6 +5,7 @@ import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import ui from '@/features/common/ui.module.css'
 import { apiFetch, getErrorMessage } from '@/lib/api'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { diaDe, horaDe } from './datas'
 import type { EventoAgenda } from './types'
 import s from './agenda.module.css'
@@ -73,8 +74,14 @@ export function GoogleEventoModal({ evento, onClose }: { evento: EventoAgenda | 
       }),
     )
   }
-  const excluir = () => {
-    if (!window.confirm(evento.recorrente ? 'Excluir só esta ocorrência do evento no seu Google Agenda?' : 'Excluir este evento do seu Google Agenda?')) return
+  const excluir = async () => {
+    const ok = await confirmar({
+      titulo: evento.recorrente ? 'Excluir ocorrência' : 'Excluir evento',
+      mensagem: evento.recorrente ? 'Excluir só esta ocorrência do evento no seu Google Agenda?' : 'Excluir este evento do seu Google Agenda?',
+      confirmar: 'Excluir',
+      perigo: true,
+    })
+    if (!ok) return
     return executar(() => apiFetch<void>(`/integracoes/google/eventos/${encodeURIComponent(evento.googleId!)}`, { method: 'DELETE' }))
   }
 

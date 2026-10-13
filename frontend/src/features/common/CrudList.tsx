@@ -5,6 +5,7 @@ import { DataTable, type Column } from './DataTable'
 import { colunaId, filtrarPorColunas, gravarOcultas, lerOcultas, listaTemStatus, semInativos } from './grid'
 import { exportarXlsx } from './exportar'
 import { getErrorMessage } from '@/lib/api'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 
 const COL_SELECAO = '__selecao'
 const COL_RASTRO = 'Rastro'
@@ -188,7 +189,7 @@ export function CrudList<T>({
     try {
       await exportarXlsx(id ?? 'lista', visiveis, itens)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 
@@ -197,7 +198,13 @@ export function CrudList<T>({
     const alvo = selecionados.filter((r) => (r as { status?: string }).status !== status)
     if (alvo.length === 0) return
     const verbo = status === 'inativo' ? 'Inativar' : 'Reativar'
-    if (!window.confirm(`${verbo} ${alvo.length} ${alvo.length === 1 ? rotulo[0] : rotulo[1]}?`)) return
+    const ok = await confirmar({
+      titulo: `${verbo} ${rotulo[1]}`,
+      mensagem: `${verbo} ${alvo.length} ${alvo.length === 1 ? rotulo[0] : rotulo[1]}?`,
+      confirmar: verbo,
+      perigo: status === 'inativo',
+    })
+    if (!ok) return
     setLoteBusy(true)
     try {
       await onStatusLote(alvo, status)

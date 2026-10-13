@@ -1,5 +1,6 @@
 using Elrond.API.Security;
 using Elrond.Application.Interfaces;
+using Elrond.Application.Services;
 using Elrond.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -169,11 +170,22 @@ public class MetasController(ICrudRepository<Meta> repo, UsuarioContexto usuario
     private async Task<IActionResult?> SoGestorAsync() =>
         await usuario.EhGestorAsync() ? null : StatusCode(StatusCodes.Status403Forbidden, "Só um gestor define metas.");
 
-    /// <summary>Com os 12 meses preenchidos, o anual é sempre a soma deles (não o digitado).</summary>
-    private static void Normalizar(Meta m)
+    /// <summary>
+    /// Anual "X% sobre o ano anterior": o servidor refaz a conta com a meta do ano anterior
+    /// (a mesma que compõe o fator naquele ano), para a tela não ser a fonte da verdade.
+    /// Meta inativada não refaz (inativar não pode falhar porque a do ano anterior mudou).
+    /// </summary>
+    private async Task<string?> NormalizarAsync(Meta m)
     {
         m.ValoresMensais ??= new();
-        if (m.ValoresMensais.Count == 12) m.MetaAnual = m.ValoresMensais.Sum();
+        if (m.OrigemAnual != Meta.AnualAnoAnterior || m.Status == "inativo") return null;
+        var doAnoAnterior = await Repo.ListarAsync(x => x.EmpresaId == m.EmpresaId && x.Ano == m.Ano - 1 && x.Id != m.Id);
+        var (anterior, _) = FatorService.MetaDoAno(doAnoAnterior, m.EmpresaId, m.Ano - 1);
+        if (anterior is null || anterior.TotalDoAno <= 0)
+            return $"Não há meta ativa de {m.Ano - 1} desta empresa para calcular \"% sobre o ano anterior\". Digite o valor anual.";
+        m.BaseAnoAnterior = anterior.TotalDoAno;
+        m.MetaAnual = Meta.AnualSobreAnterior(anterior.TotalDoAno, m.CrescimentoAnoAnterior);
+        return null;
     }
 
     /// <summary>Só uma meta principal por empresa e ano: marcar uma desmarca as outras.</summary>
@@ -191,7 +203,7 @@ public class MetasController(ICrudRepository<Meta> repo, UsuarioContexto usuario
     public override async Task<IActionResult> Create([FromBody] Meta entity)
     {
         if (await SoGestorAsync() is { } negado) return negado;
-        Normalizar(entity);
+        if (await NormalizarAsync(entity) is { } erro) return BadRequest(erro);
         var r = await base.Create(entity);
         if (r is OkObjectResult { Value: Meta criada }) await DesmarcarOutrasPrincipaisAsync(criada);
         return r;
@@ -200,14 +212,15 @@ public class MetasController(ICrudRepository<Meta> repo, UsuarioContexto usuario
     public override async Task<IActionResult> CreateMany([FromBody] List<Meta> entities)
     {
         if (await SoGestorAsync() is { } negado) return negado;
-        entities.ForEach(Normalizar);
+        for (var i = 0; i < entities.Count; i++)
+            if (await NormalizarAsync(entities[i]) is { } erro) return BadRequest($"Linha {i + 1}: {erro}");
         return await base.CreateMany(entities);
     }
 
     public override async Task<IActionResult> Update(string id, [FromBody] Meta entity)
     {
         if (await SoGestorAsync() is { } negado) return negado;
-        Normalizar(entity);
+        if (await NormalizarAsync(entity) is { } erro) return BadRequest(erro);
         var r = await base.Update(id, entity);
         if (r is OkObjectResult { Value: Meta salva }) await DesmarcarOutrasPrincipaisAsync(salva);
         return r;

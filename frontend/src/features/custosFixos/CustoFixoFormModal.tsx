@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
@@ -18,6 +18,8 @@ import { empresaPadrao } from '@/features/unidades/types'
 import { custoFixoSchema, emptyCustoFixo, type CustoFixoForm } from './custo-fixo-schema'
 import { DATA_FIM_SEM_PRAZO, TIPOS_CUSTO_FIXO, type CustoFixo } from './types'
 import { RateioEmpresas } from './RateioEmpresas'
+import { conferirRateio } from './regras'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 
@@ -31,6 +33,7 @@ interface Props {
 
 /** Prefixo dos funcionários no combo de fornecedor (salário, pró-labore, reembolso...). */
 const FUNC = 'func-'
+const ID_RATEIO = 'custo-fixo-rateio'
 
 export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Props) {
   const { analiticas } = usePlanoContas()
@@ -53,6 +56,7 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     reset,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<CustoFixoForm>({
     resolver: zodResolver(custoFixoSchema),
@@ -65,9 +69,10 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
   const recorrente = tipo === 'recorrente'
   const ajudaTipo = TIPOS_CUSTO_FIXO.find((t) => t.valor === tipo)?.ajuda ?? ''
 
+  const [avisoRateio, setAvisoRateio] = useState<string | null>(null)
   useEffect(() => {
-    if (open)
-      reset(
+    if (!open) return
+    reset(
         initial
           ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, rateio: initial.rateio ?? [] }
           : emptyCustoFixo,
@@ -111,32 +116,47 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     if (c && !fornecedor?.planoContaId) setValue('planoContaId', c)
   }
 
+  // Rateio que não fecha: diz o motivo na faixa de erro do modal e rola até o rateio (antes o
+  // salvar só não acontecia, sem aviso).
+  const naoSalvou = () => {
+    const motivo = conferirRateio(getValues('rateio'), getValues('unidadeId'))
+    setAvisoRateio(motivo ? `Não dá para salvar: ${motivo}` : null)
+    if (motivo) document.getElementById(ID_RATEIO)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+  const fechar = () => {
+    setAvisoRateio(null)
+    onClose()
+  }
+
   // Recorrente sem término: grava a data "sem prazo" (31/12/9999) para o campo nunca ficar vazio
   // (exportação para planilha, filtros), mas só depois de a pessoa confirmar.
-  const submit = handleSubmit((data) => {
+  const submit = handleSubmit(async (data) => {
+    setAvisoRateio(null)
     if (data.tipo === 'recorrente' && !data.dataFim) {
-      const ok = window.confirm(
-        `A data de término não foi preenchida.\n\nA despesa será gravada sem prazo final, com término em ${dataBR(DATA_FIM_SEM_PRAZO)}. Deseja continuar?`,
-      )
+      const ok = await confirmar({
+        titulo: 'Despesa sem data de término',
+        mensagem: `A data de término não foi preenchida.\n\nA despesa será gravada sem prazo final, com término em ${dataBR(DATA_FIM_SEM_PRAZO)}. Deseja continuar?`,
+        confirmar: 'Gravar sem prazo',
+      })
       if (!ok) return
       onSave({ ...data, dataFim: DATA_FIM_SEM_PRAZO })
       return
     }
     onSave(data)
-  })
+  }, naoSalvou)
 
   return (
     <Modal
       open={open}
-      onClose={onClose}
+      onClose={fechar}
       title="Despesa Fixa (DF)"
       subtitle={initial ? 'Editar registro' : 'Novo registro'}
       icon={<Wallet />}
       maxWidth={760}
-      error={error}
+      error={error ?? avisoRateio}
       footer={
         <>
-          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onClose}>
+          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={fechar}>
             Cancelar
           </button>
           <button type="submit" form="custoForm" className={`${ui.btn} ${ui.btnPrimary}`}>
@@ -238,13 +258,19 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
           </div>
         </section>
 
-        <RateioEmpresas
-          rateio={rateio}
-          onChange={(r) => setValue('rateio', r, { shouldValidate: true })}
-          pagadoraId={unidadeSel}
-          empresas={empresasAtivas.map((e) => ({ id: e.id, nome: e.nome }))}
-          valorMensal={valor}
-        />
+        <div id={ID_RATEIO}>
+          <RateioEmpresas
+            rateio={rateio}
+            onChange={(r) => {
+              setValue('rateio', r, { shouldValidate: true })
+              // Corrigiu? O aviso do salvar some junto.
+              if (avisoRateio && !conferirRateio(r, getValues('unidadeId'))) setAvisoRateio(null)
+            }}
+            pagadoraId={unidadeSel}
+            empresas={empresasAtivas.map((e) => ({ id: e.id, nome: e.nome }))}
+            valorMensal={valor}
+          />
+        </div>
 
         <section className={ui.fsection}>
           <div className={ui.fsectionTitle}>

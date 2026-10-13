@@ -9,6 +9,7 @@ import { DataTable, type Column } from '@/features/common/DataTable'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import { formatBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { useAuth } from '@/features/auth/auth-context'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
@@ -50,7 +51,7 @@ export function PropostasPage() {
     try {
       await setStatus(emailFor.id, 'enviada')
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     setEmailFor(null)
@@ -69,7 +70,7 @@ export function PropostasPage() {
     try {
       await salvarItens(detalhe.id, detalhe.itens)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       setSalvandoCustos(false)
       return
     }
@@ -82,7 +83,7 @@ export function PropostasPage() {
       const upd = await aprovar(p.id)
       setDetalhe((d) => (d && d.id === p.id ? upd : d))
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 
@@ -90,7 +91,7 @@ export function PropostasPage() {
     try {
       await setStatus(p.id, st)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     setDetalhe({ ...p, status: st })

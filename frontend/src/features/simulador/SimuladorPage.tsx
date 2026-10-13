@@ -22,6 +22,7 @@ import { PercentInput } from '@/features/common/PercentInput'
 import { Hint } from '@/features/common/Hint'
 import { formatBRL, formatPct, formatNumberBRL } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { useQuery } from '@tanstack/react-query'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { aliquotaSeguro } from '@/features/taxas/mock'
@@ -186,7 +187,7 @@ export function SimuladorPage() {
     /* eslint-disable react-hooks/set-state-in-effect */
     setCarregouProposta(propostaParam)
     if (p.status !== 'rascunho') {
-      window.alert(`A proposta ${p.numero} está "${p.status}" e não pode ser editada. Só rascunho é editável.`)
+      void avisar({ titulo: 'Proposta não editável', mensagem: `A proposta ${p.numero} está "${p.status}" e não pode ser editada. Só rascunho é editável.` })
       navigate('/propostas', { replace: true })
       return
     }
@@ -520,7 +521,7 @@ export function SimuladorPage() {
         justificativa: precisaAprovacao ? justificativa.trim() : '',
       })
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     } finally {
       setGerando(false)

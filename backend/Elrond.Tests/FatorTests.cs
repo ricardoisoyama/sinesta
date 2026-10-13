@@ -66,6 +66,7 @@ public class FatorTests
     {
         // Metas mensais da planilha (E58:E69).
         var meta = MetaMensal(0m);
+        meta.BasePreco = Meta.BaseMes; // a planilha aponta para a linha do mês
         meta.ValoresMensais = new List<decimal> { 499636.62m, 537853.22m, 537853.22m, 537853.22m, 565000, 565000, 565000, 565000, 565000, 565000, 565000, 565000 };
         return meta;
     }
@@ -86,11 +87,65 @@ public class FatorTests
     }
 
     [Fact]
+    public void Base_media_divide_pela_media_do_ano_e_o_preco_nao_muda_de_mes()
+    {
+        var fixos = new[] { Fixo(73319.526m) };
+        var meta = MetaDaPlanilha();
+        meta.BasePreco = Meta.BaseMedia;
+        Assert.Equal(Meta.BaseMedia, new Meta().BasePreco); // padrão das metas
+        var media = meta.ValoresMensais.Sum() / 12m;
+
+        var out_ = FatorService.Calcular(Empresa(), "bm", fixos, new[] { meta }, Hoje, 0.005m);
+        var jan = FatorService.Calcular(Empresa(), "bm", fixos, new[] { meta }, new DateOnly(2026, 1, 15), 0.005m);
+
+        Assert.Equal(media, out_.FaturamentoMensal);
+        Assert.Equal(Meta.BaseMedia, out_.BasePreco);
+        Perto(73319.526m / media, out_.DfPct, 0.0000001m);
+        Assert.Equal(out_.Fator, jan.Fator);
+    }
+
+    [Fact]
+    public void Base_media_nao_trava_no_mes_sem_meta()
+    {
+        var meta = MetaMensal(0m);
+        meta.ValoresMensais = new List<decimal> { 12000, 12000, 12000, 12000, 12000, 12000, 12000, 12000, 12000, 0, 12000, 12000 };
+        meta.BasePreco = Meta.BaseMedia;
+        var r = FatorService.Calcular(Empresa(), "bm", new[] { Fixo(1000m) }, new[] { meta }, Hoje, 0.005m);
+        Assert.True(r.Pronto);
+        Assert.Equal(11000m, r.FaturamentoMensal);
+    }
+
+    [Fact]
+    public void Meses_precisam_somar_exatamente_o_valor_anual()
+    {
+        var meta = MetaMensal(10000m);
+        meta.MetaAnual = 120000m;
+        Assert.Null(meta.ConferirValores());
+
+        meta.MetaAnual = 120000.01m;
+        Assert.Contains("faltam R$ 0,01", meta.ConferirValores()!);
+
+        meta.MetaAnual = 100000m;
+        Assert.Contains("passaram R$ 20.000,00", meta.ConferirValores()!);
+
+        meta.MetaAnual = 0m;
+        Assert.Contains("valor anual", meta.ConferirValores()!);
+    }
+
+    [Fact]
+    public void Anual_sobre_o_ano_anterior_arredonda_em_centavos()
+    {
+        Assert.Equal(660000m, Meta.AnualSobreAnterior(600000m, 0.10m));
+        Assert.Equal(1003.33m, Meta.AnualSobreAnterior(1000m, 0.003333m));
+    }
+
+    [Fact]
     public void Mes_corrente_sem_meta_bloqueia_e_explica()
     {
         var meta = MetaMensal(0m);
+        meta.BasePreco = Meta.BaseMes;
         meta.ValoresMensais = new List<decimal> { 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 10000, 0, 10000, 10000 };
-        var r = FatorService.Calcular(Empresa(), "bm", new[] { Fixo(1000m) }, new[] { meta }, Hoje, 0.005m);
+        var r =FatorService.Calcular(Empresa(), "bm", new[] { Fixo(1000m) }, new[] { meta }, Hoje, 0.005m);
         Assert.False(r.Pronto);
         Assert.Contains("outubro", r.Aviso!);
     }

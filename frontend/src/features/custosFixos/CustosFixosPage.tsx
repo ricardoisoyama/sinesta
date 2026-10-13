@@ -20,6 +20,7 @@ import {
   listFornecedores,
 } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { mockCustosFixos } from './mock'
 import { entraNaDf, percentualDaEmpresa, rateada, valorDaEmpresa } from './regras'
 import { CustoFixoFormModal } from './CustoFixoFormModal'
@@ -94,7 +95,7 @@ export function CustosFixosPage() {
       const upd = await updateCustoFixo({ ...c, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

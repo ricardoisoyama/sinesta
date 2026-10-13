@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Target, Pencil, Plus, Lock } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -20,12 +20,34 @@ import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { mesesDaMeta, mesesMeta, type CenarioMeta } from './mock'
 import { anoDaMeta, faixaDaMeta, realizadoPorMes, type FaixaMeta } from './realizado'
 import { useMetas } from './store'
+import { somaMeses } from './regras'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { MetaFormModal } from './MetaFormModal'
 import type { MetaForm } from './meta-schema'
 import s from '@/features/common/charts.module.css'
 import m from './metas.module.css'
 
 const kBRL = (v: number) => `R$ ${Math.round(v / 1000)}k`
+
+/**
+ * Meta gravada → formulário. O anual vem da soma dos meses em centavos (nas metas antigas o
+ * servidor gravava o anual como essa soma); opções ausentes: preço pela média, meses em R$.
+ */
+function paraFormulario(c: CenarioMeta): MetaForm {
+  const valoresMensais = mesesDaMeta(c).map((v) => Math.round(v * 100) / 100)
+  return {
+    nome: c.nome,
+    empresaId: c.empresaId ?? '',
+    ano: anoDaMeta(c.ano),
+    metaAnual: somaMeses(valoresMensais),
+    valoresMensais,
+    principal: !!c.principal,
+    basePreco: c.basePreco ?? 'media',
+    entradaMeses: c.entradaMeses ?? 'valor',
+    origemAnual: c.origemAnual ?? 'valor',
+    crescimentoAnoAnterior: c.crescimentoAnoAnterior ?? 0,
+  }
+}
 const CLASSE_FAIXA: Record<FaixaMeta, string> = { ok: m.faixaOk, atencao: m.faixaAtencao, ruim: m.faixaRuim }
 const COR_FAIXA: Record<FaixaMeta, string> = { ok: '#2e7d44', atencao: '#d99a1f', ruim: '#c0392b' }
 
@@ -40,6 +62,8 @@ export function MetasPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<CenarioMeta | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Objeto estável: o modal reinicia o formulário quando `initial` muda.
+  const formInicial = useMemo(() => (editing ? paraFormulario(editing) : null), [editing])
 
   const cenario = metas.find((c) => c.id === cenarioId) ?? metas[0]
   const { data: empresasData } = useEmpresasQuery()
@@ -47,8 +71,8 @@ export function MetasPage() {
 
   const save = async (d: MetaForm) => {
     setSaveError(null)
-    // O anual é sempre a soma dos meses (o servidor confere de novo).
-    const dados = { ...d, metaAnual: d.valoresMensais.reduce((a, v) => a + v, 0) }
+    // O anual manda; os meses fecham com ele (a tela e o servidor conferem).
+    const dados = { ...d }
     try {
       if (editing) await update({ ...editing, ...dados })
       else {
@@ -66,12 +90,18 @@ export function MetasPage() {
   // Exclusão lógica: a meta fica guardada (com quem/quando) e sai da tela.
   const removeCenario = async () => {
     if (!cenario || metas.length <= 1) return
-    if (!window.confirm(`Inativar a meta "${cenario.nome}"? Ela sai da tela, mas o histórico fica guardado.`)) return
+    const ok = await confirmar({
+      titulo: 'Inativar meta',
+      mensagem: `Inativar a meta "${cenario.nome}"? Ela sai da tela, mas o histórico fica guardado.`,
+      confirmar: 'Inativar',
+      perigo: true,
+    })
+    if (!ok) return
     const proximo = metas.find((c) => c.id !== cenario.id)
     try {
       await inativar(cenario)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     if (proximo) setCenarioId(proximo.id)
@@ -119,7 +149,7 @@ export function MetasPage() {
                 : 'Nenhuma meta cadastrada ainda. Peça ao gestor para cadastrar.'}
           </div>
         </div>
-        <MetaFormModal open={modalOpen} initial={null} podeRemover={false} error={saveError} onClose={fecharModal} onSave={save} onRemove={removeCenario} />
+        <MetaFormModal open={modalOpen} initial={null} metas={metas} podeRemover={false} error={saveError} onClose={fecharModal} onSave={save} onRemove={removeCenario} />
       </div>
     )
   }
@@ -188,7 +218,8 @@ export function MetasPage() {
             ) : (
               <span className={m.semEmpresa} title="Edite a meta e escolha a empresa: só assim ela compõe o fator">Sem empresa: não entra no fator</span>
             )}{' '}
-            {cenario.nome} · média {formatBRL(cenario.metaAnual / 12)}/mês
+            {cenario.nome} · média {formatBRL(cenario.metaAnual / 12)}/mês ·{' '}
+            {(cenario.basePreco ?? 'media') === 'media' ?'preço pela média do ano' : 'preço pela meta do mês'}
           </div>
         </div>
         <div className={s.kpiCard}>
@@ -267,24 +298,20 @@ export function MetasPage() {
         </table>
         <div className={s.note}>
           <b>Meta projetada</b> é o valor lançado em cada mês. <b>Realizado</b> soma o que a empresa vendeu nas propostas{' '}
-          <b>aprovadas</b> em cada mês de {ano}. O DF% do mês (despesas fixas ÷ meta do mês) entra no fator da empresa: o preço de cada mês usa a meta daquele mês. Cores: verde a
+          <b>aprovadas</b> em cada mês de {ano}.{' '}
+          {(cenario.basePreco ?? 'media') === 'media'
+            ? 'O DF% (despesas fixas ÷ média mensal da meta) entra no fator da empresa: o preço fica o mesmo o ano todo.'
+            : 'O DF% do mês (despesas fixas ÷ meta do mês) entra no fator da empresa: o preço de cada mês usa a meta daquele mês.'}{' '}
+          Cores: verde a
           partir de 90% da meta, amarelo a partir de 60%, vermelho abaixo disso.
         </div>
       </div>
 
       <MetaFormModal
         open={modalOpen}
-        initial={
-          editing
-            ? {
-                nome: editing.nome,
-                empresaId: editing.empresaId ?? '',
-                ano: anoDaMeta(editing.ano),
-                valoresMensais: mesesDaMeta(editing).map((v) => Math.round(v * 100) / 100),
-                principal: !!editing.principal,
-              }
-            : null
-        }
+        initial={formInicial}
+        editandoId={editing?.id}
+        metas={metas}
         podeRemover={metas.length > 1}
         error={saveError}
         onClose={fecharModal}

@@ -20,6 +20,7 @@ import type { Column } from '@/features/common/DataTable'
 import { formatBRL } from '@/lib/format'
 import { semAcento } from '@/lib/texto'
 import { getErrorMessage } from '@/lib/api'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useCrm } from './store'
 import { OportunidadeModal } from './OportunidadeModal'
 import { cardQuente, type EtapaFunil, type Funil, type Oportunidade } from './types'
@@ -252,7 +253,7 @@ export function CrmPage() {
       acabouDeArrastar.current = false
     }, 250)
     const destino = ev.over?.id
-    if (destino) moverOportunidade(String(ev.active.id), String(destino)).catch((err) => window.alert(getErrorMessage(err)))
+    if (destino) moverOportunidade(String(ev.active.id), String(destino)).catch((err) => avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) }))
   }
 
   const abrirDetalhe = (op: Oportunidade) => {
@@ -296,7 +297,13 @@ export function CrmPage() {
 
   // Exclusão lógica: o card sai do kanban e fica guardado no histórico (quem/quando).
   const excluir = async (op: Oportunidade) => {
-    if (!window.confirm(`Arquivar a oportunidade de "${op.cliente}"? Ela sai do kanban, mas o histórico fica guardado.`)) return
+    const ok = await confirmar({
+      titulo: 'Arquivar oportunidade',
+      mensagem: `Arquivar a oportunidade de "${op.cliente}"? Ela sai do kanban, mas o histórico fica guardado.`,
+      confirmar: 'Arquivar',
+      perigo: true,
+    })
+    if (!ok) return
     try {
       await arquivarOportunidade(op.id)
       fecharModal()

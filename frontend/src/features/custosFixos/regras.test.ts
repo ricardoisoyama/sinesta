@@ -59,6 +59,7 @@ describe('rateio de despesa fixa', () => {
     expect(conferirRateio([{ empresaId: 'matriz', percentual: 0.7 }, { empresaId: 'filial', percentual: 0.4 }], 'matriz')).toContain('Passou 10,00%')
     expect(conferirRateio([{ empresaId: 'matriz', percentual: 1 }, { empresaId: 'filial', percentual: 0 }], 'matriz')).toContain('maior que zero')
     expect(conferirRateio([{ empresaId: 'filial', percentual: 1 }], 'matriz')).toContain('empresa que paga')
+    expect(conferirRateio([{ empresaId: 'matriz', percentual: 1 }], 'matriz')).toContain('mais uma empresa')
   })
 
   it('dividir igual fecha 100% (o resto fica com a primeira)', () => {

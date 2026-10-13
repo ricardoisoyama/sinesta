@@ -9,6 +9,7 @@ import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
 import { formatBRL, formatNumberBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { useCustosFixosQuery, useTaxasQuery } from '@/features/cadastros/hooks'
 import { listClientes, listFornecedores, listServicos, listVendedores } from '@/features/cadastros/api'
 import { margem as calcMargem, precoParaMargem, precoVenda } from '@/features/pricing/engine'
@@ -418,7 +419,7 @@ export function PricingPage() {
     /* eslint-disable react-hooks/set-state-in-effect */
     setCarregouProposta(propostaParam)
     if (p.status !== 'rascunho') {
-      window.alert(`A proposta ${p.numero} está "${p.status}" e não pode ser editada. Só rascunho é editável.`)
+      void avisar({ titulo: 'Proposta não editável', mensagem: `A proposta ${p.numero} está "${p.status}" e não pode ser editada. Só rascunho é editável.` })
       navigate('/propostas', { replace: true })
       return
     }
@@ -467,7 +468,7 @@ export function PricingPage() {
       if (propostaEditandoId) await atualizarProposta(propostaEditandoId, dados)
       else await criarProposta(dados)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     } finally {
       setGerando(false)

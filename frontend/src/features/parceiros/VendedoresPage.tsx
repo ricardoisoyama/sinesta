@@ -14,6 +14,7 @@ import { formatCpfCnpj } from '@/lib/format'
 import { descreverRegiao } from './regiao'
 import { listVendedores, createVendedor, updateVendedor, transferirCarteira } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { VendedorFormModal } from './VendedorFormModal'
 import type { VendedorForm } from './parceiro-schema'
 import { TIPOS_VENDEDOR, type Vendedor } from './types'
@@ -73,7 +74,7 @@ export function VendedoresPage() {
     try {
       const r = await transferirCarteira(transferindoDe.id, paraId)
       qc.invalidateQueries({ queryKey: ['clientes'] })
-      window.alert(`Carteira transferida: ${r.clientes} cliente(s) passaram para o novo vendedor.`)
+      void avisar(`Carteira transferida: ${r.clientes} cliente(s) passaram para o novo vendedor.`)
       setTransferindoDe(null)
     } catch (err) {
       setTransfErro(getErrorMessage(err))
@@ -87,7 +88,7 @@ export function VendedoresPage() {
       const upd = await updateVendedor({ ...v, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

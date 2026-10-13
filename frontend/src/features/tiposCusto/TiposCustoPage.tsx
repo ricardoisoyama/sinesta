@@ -10,6 +10,7 @@ import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
 import { listTiposCusto, createTipoCusto, updateTipoCusto, type TipoCustoDto } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { formatBRL, formatPct } from '@/lib/format'
 import { TipoCustoFormModal } from './TipoCustoFormModal'
 import type { TipoCustoForm } from './tipo-custo-schema'
@@ -58,7 +59,7 @@ export function TiposCustoPage() {
       const upd = await updateTipoCusto({ ...t, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

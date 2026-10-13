@@ -17,6 +17,7 @@ import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { formatBRL } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { usePlanoContas } from './store'
 import { PlanoContaFormModal } from './PlanoContaFormModal'
 import { ImportarPlanoContasModal } from './ImportarPlanoContasModal'
@@ -106,7 +107,7 @@ export function PlanoContasPage() {
     try {
       await update(id, { status: st })
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 
@@ -117,7 +118,7 @@ export function PlanoContasPage() {
       await add({ id: crypto.randomUUID(), codigo: '1', nome: 'RECEITAS', paiId: null, grupoDre: 'Receita', contaContabil: '1', status: 'ativo' })
       await add({ id: crypto.randomUUID(), codigo: '2', nome: 'DESPESAS', paiId: null, grupoDre: 'Despesa', contaContabil: '2', status: 'ativo' })
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     } finally {
       setCriandoBase(false)
     }
@@ -310,7 +311,10 @@ function TreeNode(props: NodeProps) {
           ) : (
             <button
               className={`${ui.iconBtn} ${ui.danger}`}
-              onClick={() => { if (window.confirm('Inativar esta conta?')) props.onStatus(conta.id, 'inativo') }}
+              onClick={async () => {
+                if (await confirmar({ titulo: 'Inativar conta', mensagem: 'Inativar esta conta?', confirmar: 'Inativar', perigo: true }))
+                  props.onStatus(conta.id, 'inativo')
+              }}
               title="Inativar"
             >
               <Trash2 />

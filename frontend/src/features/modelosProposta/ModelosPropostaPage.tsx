@@ -9,6 +9,7 @@ import type { Column } from '@/features/common/DataTable'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { useModelosProposta } from './store'
 import { ModeloPropostaFormModal } from './ModeloPropostaFormModal'
 import type { ModeloProposta } from './types'
@@ -49,7 +50,7 @@ export function ModelosPropostaPage() {
     try {
       await setStatus(m, status)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 

@@ -29,8 +29,10 @@ export interface FatorResultado {
   metaId: string
   metaNome: string
   metaAnual: number
-  /** Meta do mês corrente: a base do DF%. */
+  /** Base do DF%: a média mensal da meta ou a meta do mês corrente (ver basePreco). */
   faturamentoMensal: number
+  /** Opção da meta: 'media' (preço estável no ano) ou 'mes' (muda a cada mês). */
+  basePreco: 'media' | 'mes'
   /** Mês (1–12) cuja meta foi a base do DF%. */
   mes: number
   dfPct: number

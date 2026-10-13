@@ -10,6 +10,7 @@ import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
 import { listServicos, createServico, updateServico, type ServicoDto } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { usePropostas } from '@/features/propostas/store'
 import { ServicoFormModal } from './ServicoFormModal'
 import type { ServicoForm } from './servico-schema'
@@ -64,7 +65,7 @@ export function ServicosPage() {
       const upd = await updateServico({ ...s, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

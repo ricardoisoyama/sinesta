@@ -10,6 +10,7 @@ import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
 import { formatBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import {
   listRegrasAprovacao,
   createRegraAprovacao,
@@ -62,7 +63,7 @@ export function AprovadoresPage() {
       const upd = await updateRegraAprovacao({ ...r, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

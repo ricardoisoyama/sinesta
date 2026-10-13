@@ -75,6 +75,13 @@ public class RateioCustoFixoTests
     }
 
     [Fact]
+    public void RateioLigadoComUmaEmpresaSoEhRecusado()
+    {
+        var d = Despesa("matriz", 5000m, ("matriz", 1m));
+        Assert.Contains("mais uma empresa", d.ConferirRateio());
+    }
+
+    [Fact]
     public void FatorDeCadaEmpresaSomaSoASuaParte()
     {
         // O salário do Ricardo (pago pela Matriz) e o do André (pago pela Filial), rateados 50/50.

@@ -18,6 +18,7 @@ import {
   listFornecedores, createFornecedor, updateFornecedor,
 } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { ParceiroFormModal } from './ParceiroFormModal'
 import type { ParceiroForm } from './parceiro-schema'
 import { contatosDoParceiro, type Parceiro } from './types'
@@ -97,7 +98,7 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
       const upd = await api.update({ ...p, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()
@@ -119,7 +120,7 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
     try {
       const r = await transferirClientes(transferindo.ids, destino)
       await invalidate()
-      window.alert(`${r.clientes} cliente(s) transferido(s) para o vendedor.`)
+      void avisar(`${r.clientes} cliente(s) transferido(s) para o vendedor.`)
       transferindo.limpar()
       setTransferindo(null)
     } catch (err) {

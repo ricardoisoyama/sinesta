@@ -10,7 +10,8 @@
 .swOn .swDot { left: 20px; }
 .semRateio { font-size: 13px; color: #4b5a51; background: #f7f6f2; border-radius: 8px; padding: 11px 14px; }
 
-.grade { border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; }
+/* Cor explícita: o body do sistema é creme (fundo verde) e o texto sem cor própria herdaria esse tom. */
+.grade { border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; color: #1f2a24; }
 .linha { display: grid; grid-template-columns: minmax(0, 1fr) 150px 150px 40px; gap: 12px; align-items: center; padding: 8px 14px; border-top: 1px solid #efebe2; font-size: 13px; }
 .linha:first-child { border-top: none; }
 .cabecalho { background: #f3f0e8; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #6b7b72; }

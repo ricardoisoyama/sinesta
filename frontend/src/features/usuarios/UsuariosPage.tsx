@@ -7,6 +7,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import type { Column } from '@/features/common/DataTable'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { useUsuarios } from './store'
 import { UsuarioFormModal } from './UsuarioFormModal'
 import { TODAS_FUNCIONALIDADES } from './funcionalidades'
@@ -55,7 +56,7 @@ export function UsuariosPage() {
     try {
       await update(u.id, { status })
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 

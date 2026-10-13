@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Ban, CheckCircle2, Clock, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useAuth } from '@/features/auth/auth-context'
 import { useUsuarios } from '@/features/usuarios/store'
 import { listRegrasAprovacao } from '@/features/cadastros/api'
@@ -55,7 +56,7 @@ export function EntradasSaidasPage() {
       await acao()
       return true
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return false
     }
   }
@@ -187,7 +188,14 @@ export function EntradasSaidasPage() {
               </button>
             )}
             {st === 'liquidado' && (
-              <button className={ui.iconBtn} title="Estornar (volta para em aberto)" onClick={() => { if (window.confirm('Estornar a baixa deste lançamento?')) exec(() => estornar(m.id)) }}>
+              <button
+                className={ui.iconBtn}
+                title="Estornar (volta para em aberto)"
+                onClick={async () => {
+                  const ok = await confirmar({ titulo: 'Estornar baixa', mensagem: 'Estornar a baixa deste lançamento?', confirmar: 'Estornar', perigo: true })
+                  if (ok) exec(() => estornar(m.id))
+                }}
+              >
                 <RotateCcw />
               </button>
             )}
@@ -284,7 +292,21 @@ export function EntradasSaidasPage() {
               <button type="button" className={ui.selBtn} disabled={baixaveis.length === 0} onClick={() => setBaixando({ itens: baixaveis, limpar })} title={baixaveis.length < abertos.length ? 'Só os aprovados entram na baixa' : 'Liquidar todos os selecionados em aberto'}>
                 <CheckCircle2 /> Baixar em lote ({baixaveis.length})
               </button>
-              <button type="button" className={`${ui.selBtn} ${ui.selBtnWarn}`} disabled={abertos.length === 0} onClick={async () => { if (window.confirm(`Cancelar ${abertos.length} lançamento(s)? Eles ficam no histórico como cancelados.`) && (await exec(() => cancelar(abertos.map((m) => m.id))))) limpar() }}>
+              <button
+                type="button"
+                className={`${ui.selBtn} ${ui.selBtnWarn}`}
+                disabled={abertos.length === 0}
+                onClick={async () => {
+                  const ok = await confirmar({
+                    titulo: 'Cancelar lançamentos',
+                    mensagem: `Cancelar ${abertos.length} lançamento(s)? Eles ficam no histórico como cancelados.`,
+                    confirmar: 'Cancelar lançamentos',
+                    cancelar: 'Voltar',
+                    perigo: true,
+                  })
+                  if (ok && (await exec(() => cancelar(abertos.map((m) => m.id))))) limpar()
+                }}
+              >
                 <Ban /> Cancelar
               </button>
             </>

@@ -6,6 +6,7 @@ import { PageHeader } from '@/features/common/PageHeader'
 import { RowActions } from '@/features/common/RowActions'
 import { StatusBadge } from '@/features/common/StatusBadge'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { useCrm } from './store'
 import { FunilFormModal } from './FunilFormModal'
 import type { Funil } from './types'
@@ -50,10 +51,10 @@ export function FunisPage() {
     try {
       if (status === 'inativo') {
         const r = await inativarFunil(f.id)
-        if (!r.ok && r.motivo) window.alert(r.motivo)
+        if (!r.ok && r.motivo) void avisar({ titulo: 'Não foi possível concluir', mensagem: r.motivo })
       } else await reativarFunil(f.id)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
     }
   }
 

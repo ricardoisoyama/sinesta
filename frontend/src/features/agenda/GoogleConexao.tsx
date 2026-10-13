@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { AlertTriangle, ExternalLink, RefreshCw, Unplug } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { getErrorMessage } from '@/lib/api'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { useGoogleAgenda } from './google'
 import s from './agenda.module.css'
 
@@ -61,9 +62,14 @@ export function GoogleConexao({ onAviso }: { onAviso: (texto: string, tipo: 'ok'
         className={ui.iconBtn}
         disabled={trabalhando}
         title="Desconectar o Google Agenda"
-        onClick={() => {
-          if (window.confirm('Desconectar o Google Agenda? Os eventos já criados ficam no seu Google; os novos deixam de ir.'))
-            executar(desconectar, () => 'Google Agenda desconectado.')
+        onClick={async () => {
+          const ok = await confirmar({
+            titulo: 'Desconectar Google Agenda',
+            mensagem: 'Desconectar o Google Agenda? Os eventos já criados ficam no seu Google; os novos deixam de ir.',
+            confirmar: 'Desconectar',
+            perigo: true,
+          })
+          if (ok) executar(desconectar, () => 'Google Agenda desconectado.')
         }}
       >
         <Unplug />

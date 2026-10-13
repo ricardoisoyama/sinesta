@@ -51,12 +51,43 @@
   padding: 8px 12px;
 }
 
-/* formulário da meta mês a mês */
-.mesesGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 12px; }
-@media (max-width: 700px) { .mesesGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* formulário da meta: valor anual (mandante), base do preço e distribuição pelos meses */
+.anualCalc { display: flex; flex-direction: column; justify-content: center; min-height: 38px; color: #143d18; }
+.anualCalc b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.anualCalc small { font-size: 11.5px; color: #6b7b72; }
+.semAnterior { margin-top: 10px; font-size: 12px; color: #8a5a0c; background: #fdf6e7; border: 1px solid #f0dfb0; border-radius: 8px; padding: 8px 12px; }
+.baseLinha { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 14px; align-items: end; margin-top: 14px; padding-top: 14px; border-top: 1px dashed #ede6d8; }
+.baseExplica { margin: 0; font-size: 12.5px; color: #4b5a51; background: #f7f6f2; border-radius: 8px; padding: 9px 12px; line-height: 1.45; }
+
+.distribuirTopo { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.espaco { flex: 1; }
+.alterna { display: inline-flex; border: 1px solid #d7d3ca; border-radius: 8px; padding: 2px; background: #f7f6f2; }
+.alterna button { border: none; background: none; font-family: inherit; font-size: 12.5px; font-weight: 600; color: #4b5a51; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.alterna button:focus-visible { outline: 2px solid #e8702f; outline-offset: 1px; }
+.alterna .alternaOn { background: #fff; color: #143d18; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.12); }
+
+/* Cor explícita: o body do sistema é creme e o texto sem cor própria herdaria esse tom. */
+.mesesTabela { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; color: #1f2a24; }
+.mesesColuna + .mesesColuna { border-left: 1px solid #efebe2; }
+.mesLinha { display: grid; grid-template-columns: 44px minmax(0, 1fr) 84px 56px; gap: 10px; align-items: center; padding: 6px 12px; border-top: 1px solid #efebe2; font-size: 13px; }
+.mesLinha:first-child { border-top: none; }
+.mesHoje { background: #fbf6ef; }
+.mesNome { font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+.mesHojePonto { width: 6px; height: 6px; border-radius: 50%; background: #e8702f; }
+.mesOutro { text-align: right; font-size: 12px; color: #6b7b72; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.barra { height: 6px; border-radius: 3px; background: #efebe2; overflow: hidden; }
+.barra span { display: block; height: 100%; background: #1a4d1e; border-radius: 3px; transition: width 0.2s; }
+@media (prefers-reduced-motion: reduce) { .barra span { transition: none; } }
+@media (max-width: 700px) {
+  .mesesTabela { grid-template-columns: 1fr; }
+  .mesesColuna + .mesesColuna { border-left: none; border-top: 1px solid #efebe2; }
+  .baseLinha { grid-template-columns: 1fr; }
+}
+
 .totalLinha { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; background: #eef4ef; border: 1px solid #cfe0d4; border-radius: 10px; font-size: 13px; color: #143d18; }
 .totalLinha b { font-variant-numeric: tabular-nums; }
-.distribuir { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: #6b7b72; }
+.totalRuim { background: #fdecea; border-color: #f3c2bb; color: #8f2a1f; }
+.fechou { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; color: #1d6b3e; }
 .principal { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #1f2a24; height: 38px; cursor: pointer; }
 .principal input { width: 16px; height: 16px; accent-color: #e8702f; }
 .empresaTag { font-size: 11px; font-weight: 700; color: #1a4d1e; background: #eef4ef; border-radius: 6px; padding: 2px 8px; }

@@ -11,6 +11,7 @@ import type { Column } from '@/features/common/DataTable'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { createEmpresa, updateEmpresa } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { formatCnpj } from '@/lib/format'
 import { mockUnidades } from './mock'
 import { UnidadeFormModal } from './UnidadeFormModal'
@@ -64,7 +65,7 @@ export function UnidadesPage() {
       const upd = await updateEmpresa({ ...u, status })
       crud.update(upd.id, upd)
     } catch (err) {
-      window.alert(getErrorMessage(err))
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return
     }
     invalidate()

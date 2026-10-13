@@ -1,0 +1,15 @@
+/* Confirmação/aviso no padrão do sistema; fica acima dos modais (z-index 200). */
+.fundo { position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(15, 30, 18, 0.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+.caixa { width: 100%; max-width: 440px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.5); color: #1f2a24; animation: entra 0.16s ease; }
+@keyframes entra { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .caixa { animation: none; } }
+.topo { display: flex; align-items: center; gap: 12px; padding: 14px 20px; background: #143d18; color: #fff; }
+.topo h3 { font-size: 15px; font-weight: 600; margin: 0; }
+.icone { width: 34px; height: 34px; border-radius: 9px; background: rgba(232, 112, 47, 0.22); display: flex; align-items: center; justify-content: center; flex: none; }
+.icone svg { width: 18px; height: 18px; color: #f4a06b; }
+.iconePerigo { background: rgba(240, 120, 100, 0.25); }
+.iconePerigo svg { color: #ffb3a6; }
+.mensagem { padding: 18px 20px; font-size: 13.5px; line-height: 1.55; white-space: pre-line; background: #f7f6f2; }
+.rodape { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 20px; border-top: 1px solid #e6e3db; background: #fff; }
+.btnPerigo { background: #b42318; color: #fff; border: 1px solid #b42318; }
+.btnPerigo:hover { background: #962015; }

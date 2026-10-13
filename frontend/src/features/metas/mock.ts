@@ -1,8 +1,16 @@
 /**
  * Meta de faturamento por empresa e por mês. Além de acompanhar o realizado, a meta compõe
- * o fator da empresa: o DF% é a despesa fixa mensal dividida pela meta do mês corrente.
+ * o fator da empresa: o DF% é a despesa fixa mensal dividida pela base de preço da meta
+ * (média mensal do ano ou meta do mês corrente).
  */
 export const mesesMeta = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+/** Base do DF% no preço: média mensal do ano (preço estável) ou meta do mês corrente. */
+export type BasePreco = 'media' | 'mes'
+/** De onde vem o valor anual: digitado ou "X% sobre a meta do ano anterior". */
+export type OrigemAnual = 'valor' | 'anoAnterior'
+/** Como os meses são digitados (a gravação é sempre em R$). */
+export type EntradaMeses = 'valor' | 'percentual'
 
 export interface CenarioMeta {
   id: string
@@ -19,6 +27,14 @@ export interface CenarioMeta {
   ano?: number
   /** Meta nunca é apagada: inativa sai da tela. Ausente = ativa. */
   status?: 'ativo' | 'inativo'
+  /** Ausente nas metas antigas = 'mes' (como era). */
+  basePreco?: BasePreco
+  entradaMeses?: EntradaMeses
+  origemAnual?: OrigemAnual
+  /** Crescimento sobre o ano anterior (fração: 0,1 = 10%). */
+  crescimentoAnoAnterior?: number
+  /** Total da meta do ano anterior usado na conta, quando salvou. */
+  baseAnoAnterior?: number
 }
 
 /**

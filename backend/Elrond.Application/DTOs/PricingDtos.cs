@@ -39,8 +39,10 @@ public record FatorResultado(
     string MetaId,
     string MetaNome,
     decimal MetaAnual,
-    /// <summary>Meta do mês corrente: a base do DF%.</summary>
+    /// <summary>Faturamento que divide a DF: a média mensal do ano ou a meta do mês corrente.</summary>
     decimal FaturamentoMensal,
+    /// <summary>"media" | "mes": de onde veio <see cref="FaturamentoMensal"/> (opção da meta).</summary>
+    string BasePreco,
     decimal DfPct,
     decimal Impostos,
     bool ImpostosDoCadastro,

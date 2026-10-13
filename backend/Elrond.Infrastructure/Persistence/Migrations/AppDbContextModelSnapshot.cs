@@ -1509,6 +1509,21 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<int>("Ano")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("BaseAnoAnterior")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("BasePreco")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("media");
+
+                    b.Property<decimal>("CrescimentoAnoAnterior")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
                     b.Property<string>("CriadoEm")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1523,6 +1538,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)")
                         .HasDefaultValue("");
+
+                    b.Property<string>("EntradaMeses")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("valor");
 
                     b.Property<string>("InativadoEm")
                         .IsRequired()
@@ -1539,6 +1561,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("OrigemAnual")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("valor");
 
                     b.Property<bool>("Principal")
                         .ValueGeneratedOnAdd()

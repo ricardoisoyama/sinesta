@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Upload, Eye, Download, Trash2, FileText, FileSpreadsheet, Image as ImageIcon, File as FileIcon } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { getErrorMessage } from '@/lib/api'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import {
   EXTENSOES_ANEXO,
   TAMANHO_MAXIMO_ANEXO,
@@ -94,7 +95,13 @@ export function AnexosTab({ entidade, entidadeId }: Props) {
   }
 
   const excluir = async (a: Anexo) => {
-    if (!window.confirm(`Excluir o documento "${a.nome}"? Ele sai da lista; o arquivo fica guardado no servidor com o registro de quem excluiu.`)) return
+    const ok = await confirmar({
+      titulo: 'Excluir documento',
+      mensagem: `Excluir o documento "${a.nome}"? Ele sai da lista; o arquivo fica guardado no servidor com o registro de quem excluiu.`,
+      confirmar: 'Excluir',
+      perigo: true,
+    })
+    if (!ok) return
     setErro(null)
     try {
       await excluirAnexo(a.id)

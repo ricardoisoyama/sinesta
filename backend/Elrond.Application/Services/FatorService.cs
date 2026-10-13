@@ -8,10 +8,10 @@ namespace Elrond.Application.Services;
 
 /// <summary>
 /// Motor do fator (markup) de uma empresa, a mesma conta da planilha "Matriz de Preço":
-///   DF%    = custos fixos recorrentes ÷ meta de faturamento do mês corrente
+///   DF%    = custos fixos recorrentes ÷ base da meta (média mensal do ano ou meta do mês corrente)
 ///   Markup = DF% + impostos + comissão + despesa financeira + outras despesas + lucro
 ///   Fator  = 1 ÷ (1 − Markup)
-/// O preço muda mês a mês, como na planilha (que aponta para a linha do mês, G58:G69).
+/// Com a base "mês", o preço muda mês a mês, como na planilha (linha do mês, G58:G69).
 /// Usado pela tela da empresa (ao vivo, com o rascunho do formulário) e pelo Pricing.
 /// </summary>
 public class FatorService : IFatorService
@@ -71,12 +71,9 @@ public class FatorService : IFatorService
 
         var (meta, avisoMeta) = MetaDoAno(metas, empresaId, hoje.Year);
         var metaAnual = meta?.TotalDoAno ?? 0m;
-        // Igual à planilha (aba "Matriz Preço - Matriz"): DF% do mês = fixos ÷ meta do mês (G58:G69).
-        // Vale o mês corrente; meta sem os 12 meses preenchidos divide o ano por igual.
-        var meses = meta is null
-            ? new List<decimal>()
-            : meta.ValoresMensais is { Count: 12 } ? meta.ValoresMensais : Enumerable.Repeat(metaAnual / 12m, 12).ToList();
-        var faturamentoMensal = meses.Count == 12 ? meses[hoje.Month - 1] : 0m;
+        // A meta escolhe a base: "media" = média mensal do ano (preço estável o ano todo);
+        // "mes" = meta do mês corrente, igual à planilha (G58:G69), e o preço muda a cada mês.
+        var faturamentoMensal = meta?.BaseDoMes(hoje.Month) ?? 0m;
         var semMeta = faturamentoMensal <= 0;
         var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
@@ -107,6 +104,7 @@ public class FatorService : IFatorService
             MetaNome: meta?.Nome ?? string.Empty,
             MetaAnual: metaAnual,
             FaturamentoMensal: faturamentoMensal,
+            BasePreco: meta?.BasePreco ?? Meta.BaseMes,
             DfPct: dfPct,
             Impostos: impostos,
             ImpostosDoCadastro: empresa.ImpostosSobreReceita() > 0,
