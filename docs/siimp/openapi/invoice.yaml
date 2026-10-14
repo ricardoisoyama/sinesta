@@ -1,0 +1,977 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: Faturas
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **FATURAS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383/API-REST)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: invoices
+      description: 'Rota para gerenciamento de Faturas.'
+security:
+    - ApiKeyAuth: []
+paths:
+
+    # GET
+    /invoices/search:
+        get:
+            tags:
+                - 'invoices'
+            summary: 'Busca uma Fatura no sistema'
+            description: 'Busca uma Fatura no sistema'
+            operationId: search
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/ownerIdParam'
+                - $ref: '#/components/parameters/numberParam'
+                - $ref: '#/components/parameters/numberFromParam'
+                - $ref: '#/components/parameters/numberToParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/operationIdParam'
+                - $ref: '#/components/parameters/costcenterIdParam'
+                - $ref: '#/components/parameters/invoiceIssuedAtFromParam'
+                - $ref: '#/components/parameters/invoiceIssuedAtToParam'
+                - $ref: '#/components/parameters/expiresFromParam'
+                - $ref: '#/components/parameters/expiresToParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+    # POST
+    /invoices/create:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Cria uma Fatura no sistema'
+            description: 'Cria uma Fatura no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+
+    /invoices/update:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Atualiza uma Fatura no sistema'
+            description: 'Atualiza uma Fatura no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+
+    /invoices/send:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Emite uma Fatura'
+            description: 'Emite uma Fatura'
+            operationId: 'send'
+            requestBody:
+                $ref: '#/components/requestBodies/SendBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SendSuccess'
+
+    /invoices/pay:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Liquida uma Fatura e sua movimentação no sistema'
+            description: 'Liquida uma Fatura e sua movimentação no sistema'
+            operationId: 'pay'
+            requestBody:
+                $ref: '#/components/requestBodies/PayBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/PaySuccess'
+
+    /invoices/pay-by-documents:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Realiza baixa parcial por documentos da Fatura'
+            description: 'Realiza baixa parcial por documentos da Fatura'
+            operationId: 'payByDocuments'
+            requestBody:
+                $ref: '#/components/requestBodies/PayByDocumentsBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/PayByDocumentsSuccess'
+
+    /invoices/cancel:
+        post:
+            tags:
+                - 'invoices'
+            summary: 'Cancela uma Fatura'
+            description: 'Cancela uma Fatura'
+            operationId: 'cancel'
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CancelSuccess'
+
+components:
+
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARÂMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de uma Fatura.
+
+                *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** das Faturas, separados por vírgula.
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: >
+                Realiza a busca pela **EMPRESA** da Fatura.
+            schema:
+                type: integer
+        numberParam:
+            name: number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO** da Fatura.
+            schema:
+                type: integer
+        numberFromParam:
+            name: number_from
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO INICIAL** da Fatura.
+            schema:
+                type: integer
+        numberToParam:
+            name: number_to
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO FINAL** da Fatura.
+            schema:
+                type: integer
+        statusParam:
+            name: status
+            in: query
+            description: >
+                Realiza a busca pelo **STATUS** da Fatura.
+                  - `0` = Cadastrada
+                  - `1` = Liquidada
+                  - `2` = Cancelada
+                  - `3` = Emitida
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        operationIdParam:
+            name: operation_id
+            in: query
+            description: >
+                Realiza a busca pela **OPERAÇÃO** da Fatura.
+            schema:
+                type: integer
+        costcenterIdParam:
+            name: costcenter_id
+            in: query
+            description: >
+                Realiza a busca pelo **CENTRO DE CUSTOS** da Fatura.
+            schema:
+                type: integer
+        invoiceIssuedAtFromParam:
+            name: invoice_issued_at_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE EMISSÃO INICIAL** da Fatura.
+            schema:
+                type: string
+                format: 'Y-m-d'
+        invoiceIssuedAtToParam:
+            name: invoice_issued_at_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE EMISSÃO FINAL** da Fatura.
+            schema:
+                type: string
+                format: 'Y-m-d'
+        expiresFromParam:
+            name: expires_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE VENCIMENTO INICIAL** da Fatura.
+            schema:
+                type: string
+                format: 'Y-m-d'
+        expiresToParam:
+            name: expires_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE VENCIMENTO FINAL** da Fatura.
+            schema:
+                type: string
+                format: 'Y-m-d'
+
+    # CORPO DE REQUISIÇÕES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação de uma Fatura.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/BaseInvoiceModel'
+        UpdateBody:
+            description: 'Este corpo será utilizado para atualização de uma Fatura.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/BaseInvoiceModel'
+        SendBody:
+            description: 'Este corpo será utilizado para emissão de uma Fatura.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendRequest'
+        PayBody:
+            description: 'Este corpo será utilizado para liquidação de uma Fatura e sua movimentação.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/PayRequest'
+        PayByDocumentsBody:
+            description: 'Este corpo será utilizado para baixa parcial por documentos da Fatura.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/PayByDocumentsRequest'
+        CancelBody:
+            description: 'Este corpo será utilizado para o cancelamento de uma Fatura.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de Faturas.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de uma Fatura.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de uma Fatura.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        SendSuccess:
+            description: 'Resposta de sucesso, para emissão de uma Fatura.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendResponse'
+        PaySuccess:
+            description: 'Resposta de sucesso, para liquidação de uma Fatura e sua movimentação.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/PayResponse'
+        PayByDocumentsSuccess:
+            description: 'Resposta de sucesso, para baixa parcial por documentos de uma Fatura.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/PayByDocumentsResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso, para cancelamento de uma Fatura.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+
+    # OBJETOS
+    schemas:
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        SendResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponseSend'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Fatura emitida com sucesso'
+                    description: 'Mensagem de retorno.'
+        PayResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponsePay'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Fatura liquidada com sucesso'
+                    description: 'Mensagem de retorno.'
+        PayByDocumentsResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponsePayByDocuments'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Baixa parcial realizada com sucesso'
+                    description: 'Mensagem de retorno.'
+        CancelResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InvoiceResponseCancel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Fatura cancelada com sucesso'
+                    description: 'Mensagem de retorno.'
+
+        # MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        BaseInvoiceModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                owner_id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'Código da empresa da Fatura.'
+                wallet_id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'Código da Carteira da Fatura.'
+                customer:
+                    type: object
+                    description: 'Dados do cliente da Fatura.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            nullable: true
+                            description: 'ID do cliente da Fatura.'
+                        cpf:
+                            type: string
+                            example: '11122233344'
+                            description: 'CPF do cliente da Fatura.'
+                        cnpj:
+                            type: string
+                            example: '11222333000144'
+                            description: 'CNPJ do cliente da Fatura.'
+                maturity:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2025-12-31'
+                    description: 'Data de Vencimento da Fatura.'
+                payment_form:
+                    type: integer
+                    example: 1
+                    default: 1
+                    description: >
+                        Forma de pagamento da Fatura:
+                          - `1` = Dinheiro
+                          - `2` = Cheque
+                          - `3` = Transferência
+                          - `4` = Depósito
+                          - `5` = Cartão
+                          - `6` = Boleto
+                          - `7` = Débito em Conta
+                          - `8` = PIX
+                          - `9` = Crédito em Conta
+                    enum:
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                        - 7
+                        - 8
+                        - 9
+                generate_parcels:
+                    type: integer
+                    example: 0
+                    default: 0
+                    nullable: true
+                    description: >
+                        Gerar parcelas da Fatura:
+                          - `0` = Não
+                          - `1` = Sim
+                    enum:
+                        - 0
+                        - 1
+                plots:
+                    type: integer
+                    minimum: 1
+                    maximum: 180
+                    example: 1
+                    description: 'Parcelas da Fatura.'
+                period:
+                    type: integer
+                    minimum: 1
+                    maximum: 99
+                    example: 1
+                    nullable: true
+                    description: 'Período de tempo.'
+                period_type:
+                    type: integer
+                    example: 0
+                    default: 0
+                    nullable: true
+                    description: >
+                        Tipo de Período:
+                          - `0` = Dia(s)
+                          - `1` = Mes(es)
+                    enum:
+                        - 0
+                        - 1
+                costcenter_id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    nullable: true
+                    description: 'Código do Centro Custos da Fatura.'
+                operation_id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    nullable: true
+                    description: 'Código da Operação da Fatura.'
+                invoice_obs:
+                    type: string
+                    maxLength: 2000
+                    nullable: true
+                    example: 'Observações Gerais'
+                    description: 'Observações gerais da Fatura.'
+                documents:
+                    type: array
+                    nullable: true
+                    items:
+                        type: object
+                        properties:
+                            cte_id:
+                                type: integer
+                                minimum: 1
+                                example: 123
+                                nullable: true
+                                description: 'ID do CT-e.'
+                            cte_key:
+                                type: string
+                                maxLength: 44
+                                minLength: 44
+                                example: '01010101010101010101010101010101010101010101'
+                                description: 'Chave de acesso do CT-e'
+                            income_id:
+                                type: integer
+                                minimum: 1
+                                example: 123
+                                nullable: true
+                                description: 'ID da Minuta.'
+                            nf_id:
+                                type: integer
+                                minimum: 1
+                                example: 123
+                                nullable: true
+                                description: 'ID da Nota Fiscal.'
+                            nf_key:
+                                type: string
+                                maxLength: 44
+                                minLength: 44
+                                example: '01010101010101010101010101010101010101010101'
+                                description: 'Chave de acesso da Nota Fiscal'
+
+        # REQUESTS
+        SendRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da Fatura.'
+        PayRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da Fatura.'
+        PayByDocumentsRequest:
+            type: object
+            required:
+                - id
+                - documents
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da Fatura.'
+                documents:
+                    type: array
+                    minItems: 1
+                    description: 'Lista de documentos para baixa parcial da Fatura.'
+                    items:
+                        type: object
+                        properties:
+                            cte_id:
+                                type: integer
+                                minimum: 1
+                                example: 19283
+                                nullable: true
+                                description: 'ID do CT-e (informar este ou o cte_key).'
+                            income_id:
+                                type: integer
+                                minimum: 1
+                                example: 1283639
+                                nullable: true
+                                description: 'ID da Minuta.'
+                            nf_id:
+                                type: integer
+                                minimum: 1
+                                example: 887766
+                                nullable: true
+                                description: 'ID da NF-e (informar este ou o nf_key).'
+                            cte_key:
+                                type: string
+                                minLength: 44
+                                maxLength: 44
+                                example: '99999999999999999999999999999999999999999999'
+                                nullable: true
+                                description: 'Chave da CT-e (informar este ou cte_id)'
+                            nf_key:
+                                type: string
+                                minLength: 44
+                                maxLength: 44
+                                example: '11111111111111111111111111111111111111111111'
+                                nullable: true
+                                description: 'Chave da NF-e (informar este ou nf_id)'
+        CancelRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da Fatura.'
+                reason:
+                    type: string
+                    minLength: 15
+                    maxLength: 200
+                    example: 'Motivo do cancelamento da Fatura.'
+                    description: 'Razão do cancelamento da Fatura.'
+                send_mail:
+                    type: integer
+                    example: 0
+                    default: 0
+                    description: >
+                        Enviar e-mail de notificação de cancelamento da Fatura:
+                          - `0` = Não
+                          - `1` = Sim
+                    enum:
+                        - 0
+                        - 1
+
+        # RESPONSE
+        InvoiceResponse:
+            type: array
+            items:
+                type: object
+                properties:
+                    id:
+                        type: integer
+                        example: 123
+                        description: 'Código da Fatura.'
+                    owner_id:
+                        type: integer
+                        example: 123
+                        description: 'Código da empresa da Fatura.'
+                    invoice_number:
+                        type: integer
+                        example: 123
+                        description: 'Número da Fatura.'
+                    invoice_status:
+                        type: integer
+                        example: 0
+                        description: >
+                            Status da Fatura
+                              - `0` = Cadastrada
+                              - `1` = Liquidada
+                              - `2` = Cancelada
+                              - `3` = Emitida
+                    total:
+                        type: number
+                        format: float
+                        example: 123.45
+                        description: 'Valor Total da Fatura.'
+                    wallet:
+                        type: object
+                        description: 'Carteira da Fatura.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 123
+                                description: 'Código da Carteira da Fatura.'
+                            description:
+                                type: string
+                                example: 'Banco'
+                                description: 'Nome da Carteira da Fatura.'
+                    customer:
+                        type: object
+                        description: 'Cliente da Fatura.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 123
+                                description: 'Código do Cliente da Fatura.'
+                            name:
+                                type: string
+                                example: 'Nome'
+                                description: 'Nome do Cliente da Fatura.'
+                            cpf:
+                                type: string
+                                minLength: 11
+                                maxLength: 11
+                                example: '11122233344'
+                                description: 'CPF do Cliente da Fatura.'
+                            cnpj:
+                                type: string
+                                minLength: 14
+                                maxLength: 14
+                                example: '11222333000144'
+                                description: 'CNPJ do Cliente da Fatura.'
+                    maturity:
+                        type: string
+                        format: 'Y-m-d'
+                        example: '2025-12-31'
+                        description: 'Data de Vencimento da Fatura.'
+                    paid_at:
+                        type: string
+                        format: 'Y-m-d'
+                        example: '2025-12-31'
+                        description: 'Data de Pagamento da Fatura.'
+                    payment_form:
+                        type: integer
+                        example: 1
+                        default: 1
+                        description: >
+                            Forma de pagamento da Fatura:
+                              - `1` = Dinheiro
+                              - `2` = Cheque
+                              - `3` = Transferência
+                              - `4` = Depósito
+                              - `5` = Cartão
+                              - `6` = Boleto
+                              - `7` = Débito em Conta
+                              - `8` = PIX
+                              - `9` = Crédito em Conta
+                        enum:
+                            - 1
+                            - 2
+                            - 3
+                            - 4
+                            - 5
+                            - 6
+                            - 7
+                            - 8
+                            - 9
+                    costcenter_id:
+                        type: integer
+                        example: 123
+                        description: 'Código do Centro Custos da Fatura.'
+                    operation_id:
+                        type: integer
+                        example: 123
+                        description: 'Código da Operação da Fatura.'
+                    created_at:
+                        type: string
+                        format: 'Y-m-d H:i:s'
+                        example: '2025-12-31 23:59:59'
+                        description: 'Data de Criação da Fatura.'
+                    documents:
+                        type: array
+                        description: 'Documentos da Fatura.'
+                        items:
+                            type: object
+                            properties:
+                                cte_id:
+                                    type: integer
+                                    example: 123
+                                    description: 'ID do CT-e.'
+                                income_id:
+                                    type: integer
+                                    example: 123
+                                    description: 'ID da Minuta.'
+                                nf_id:
+                                    type: integer
+                                    example: 123
+                                    description: 'ID da Nota Fiscal.'
+                                serie:
+                                    type: integer
+                                    example: 1
+                                    description: 'Série do documento.'
+                                number:
+                                    type: integer
+                                    example: 123
+                                    description: 'Número do documento.'
+                                key:
+                                    type: string
+                                    maxLength: 44
+                                    minLength: 44
+                                    example: '01010101010101010101010101010101010101010101'
+                                    description: 'Chave de acesso do documento'
+                                total:
+                                    type: number
+                                    example: 123.45
+                                    description: 'Total do documento.'
+                                sender:
+                                    type: string
+                                    example: 'Nome'
+                                    description: 'Nome do Remetente do documento.'
+                                addressee:
+                                    type: string
+                                    example: 'Nome'
+                                    description: 'Nome do Destinatário do documento.'
+                                status:
+                                    type: integer
+                                    example: 0
+                                    description: 'Status do documento.'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2025-12-31 23:59:59'
+                                    description: 'Data de Criação do documento.'
+                    parcels:
+                        type: array
+                        description: 'Parcelas da Fatura.'
+                        items:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 123
+                                    description: 'ID da parcela.'
+                                number:
+                                    type: integer
+                                    example: 123
+                                    description: 'Número da parcela.'
+                                value:
+                                    type: number
+                                    example: 123.45
+                                    description: 'Valor Total da parcela.'
+                                discount:
+                                    type: number
+                                    example: 123.45
+                                    description: 'Valor Total de desconto da parcela.'
+                                maturity:
+                                    type: string
+                                    format: 'Y-m-d'
+                                    example: '2025-12-31'
+                                    description: 'Data de Vencimento da parcela.'
+                                paid_at:
+                                    type: string
+                                    format: 'Y-m-d'
+                                    example: '2025-12-31'
+                                    description: 'Data de Pagamento da parcela.'
+                                status:
+                                    type: integer
+                                    example: 0
+                                    description: >
+                                        Status da parcela
+                                          - `0` = Em Aberto
+                                          - `1` = Liquidada
+                                          - `2` = Parc. Liquidada
+                                          - `3` = Cancelada
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2025-12-31 23:59:59'
+                                    description: 'Data de Criação da parcela.'
+                    histories:
+                        type: array
+                        description: 'Históricos da Fatura.'
+                        items:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 123
+                                    description: 'ID do histórico.'
+                                message:
+                                    type: string
+                                    example: 'Status da Fatura.'
+                                    description: 'Descrição da mensagem do histórico.'
+                                username:
+                                    type: string
+                                    example: 'usuario'
+                                    description: 'Usuário que lançou o histórico.'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2025-12-31 23:59:59'
+                                    description: 'Data de Criação do registro do histórico.'
+                    invoice_obs:
+                        type: string
+                        maxLength: 2000
+                        example: 'Observações Gerais'
+                        description: 'Observações gerais da Fatura.'
+        InvoiceResponseSend:
+            type: array
+            items:
+                type: string
+            example: []
+
+        InvoiceResponsePay:
+            type: object
+            properties:
+                invoice_number:
+                    type: integer
+                    example: 123
+                    description: 'Número da Fatura.'
+
+        InvoiceResponsePayByDocuments:
+            type: object
+            properties:
+                invoice_number:
+                    type: integer
+                    example: 123
+                    description: 'Número da Fatura.'
+                message:
+                    type: string
+                    description: 'Baixa parcial realizada com sucesso!'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+
+        InvoiceResponseCancel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 123
+                    description: 'Código da Fatura.'

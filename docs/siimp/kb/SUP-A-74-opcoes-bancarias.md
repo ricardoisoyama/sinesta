@@ -1,0 +1,11 @@
+# OPÇÕES BANCÁRIAS
+
+- ID: SUP-A-74
+- Caminho: 🛟 BASE DE CONHECIMENTO > FINANCEIRO > OPÇÕES BANCÁRIAS
+- Fonte: https://siimp.youtrack.cloud/articles/SUP-A-74
+- Filhos: SUP-A-279 CNAB DE REMESSA; SUP-A-280 CONCILIAÇÕES; SUP-A-281 CNAB DE TRANSAÇÕES; SUP-A-282 INTERCÂMBIO BANCÁRIO
+
+---
+
+
+

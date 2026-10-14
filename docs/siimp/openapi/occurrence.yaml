@@ -1,0 +1,909 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Ocorrências
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **OCORRÊNCIAS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: occurrences
+      description: Rota para atualização e inserção de ocorrências em documentos de transporte
+    - name: occurrences-ctes
+      description: Rota para busca de ocorrências inseridas em CT-es
+    - name: occurrences-incomes
+      description: Rota para busca de ocorrências inseridas em Minutas
+security:
+    - ApiKeyAuth: []
+paths:
+    /occurrences/create:
+        post:
+            tags:
+                - occurrences
+            description: Cria uma ocorrência no sistema
+            operationId: create
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            anyOf:
+                                - $ref: '#/components/schemas/OccurrenceWithCteModel'
+                                - $ref: '#/components/schemas/OccurrenceWithIncomeModel'
+                                - $ref: '#/components/schemas/OccurrenceWithCollectionModel'
+                                - $ref: '#/components/schemas/OccurrenceWithNfModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /occurrences/delete:
+        post:
+            tags:
+                - occurrences
+            description: Remove uma ocorrência
+            operationId: delete
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteRequest'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteResponse'
+    /occurrences/ctes/search:
+        get:
+            tags:
+                - occurrences-ctes
+            description: 'Busca de ocorrências de CT-es com base nos filtros informados.'
+            operationId: ctes-search
+            parameters:
+                - $ref: '#/components/parameters/KeyParam'
+                - $ref: '#/components/parameters/NfKeyParam'
+                - $ref: '#/components/parameters/OutcomeNumberParam'
+                - $ref: '#/components/parameters/NfNumberParam'
+                - $ref: '#/components/parameters/IncomeNumberParam'
+                - $ref: '#/components/parameters/MDFeNumberParam'
+                - $ref: '#/components/parameters/OccurrenceParam'
+                - $ref: '#/components/parameters/IssuedFromParam'
+                - $ref: '#/components/parameters/IssuedToParam'
+                - $ref: '#/components/parameters/CustomerNameParam'
+                - $ref: '#/components/parameters/IdsParam'
+                - $ref: '#/components/parameters/CreatedAtParam'
+                - $ref: '#/components/parameters/CreatedFromParam'
+                - $ref: '#/components/parameters/CreatedToParam'
+                - $ref: '#/components/parameters/UpdatedAtParam'
+                - $ref: '#/components/parameters/UpdatedFromParam'
+                - $ref: '#/components/parameters/UpdatedToParam'
+                - $ref: '#/components/parameters/StatusParam'
+                - $ref: '#/components/parameters/OwnerIdParam'
+                - $ref: '#/components/parameters/NumberParam'
+                - $ref: '#/components/parameters/NumberFromParam'
+                - $ref: '#/components/parameters/NumberToParam'
+                - $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchCteSuccess'
+    /occurrences/incomes/search:
+        get:
+            tags:
+                - occurrences-incomes
+            description: 'Busca de ocorrências de Minutas com base nos filtros informados.'
+            operationId: incomes-search
+            parameters:
+                - $ref: '#/components/parameters/CreatedAtParam'
+                - $ref: '#/components/parameters/CreatedFromParam'
+                - $ref: '#/components/parameters/CreatedToParam'
+                - $ref: '#/components/parameters/IdsParam'
+                - $ref: '#/components/parameters/NfNumberParam'
+                - $ref: '#/components/parameters/NumberFromParam'
+                - $ref: '#/components/parameters/NumberParam'
+                - $ref: '#/components/parameters/NumberToParam'
+                - $ref: '#/components/parameters/OccurrenceParam'
+                - $ref: '#/components/parameters/OutcomeNumberParam'
+                - $ref: '#/components/parameters/OwnerIdParam'
+                - $ref: '#/components/parameters/PageParam'
+                - $ref: '#/components/parameters/ReceiverNameParam'
+                - $ref: '#/components/parameters/RequestorNameParam'
+                - $ref: '#/components/parameters/IncomeStatusParam'
+                - $ref: '#/components/parameters/UpdatedAtParam'
+                - $ref: '#/components/parameters/UpdatedFromParam'
+                - $ref: '#/components/parameters/UpdatedToParam'
+                - $ref: '#/components/parameters/WithdrawalNameParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchIncomeSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    responses:
+        SearchCteSuccess:
+            description: 'Resposta de sucesso para a busca de CT-es e suas respectivas ocorrências com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchCteResponse'
+        SearchIncomeSuccess:
+            description: 'Resposta de sucesso para a busca de Minutas e suas respectivas ocorrências com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchIncomeResponse'
+    parameters:
+        KeyParam:
+            name: key
+            in: query
+            description: 'Realiza a busca pela chave de acesso do CT-e.'
+            required: false
+            schema:
+                type: string
+                minLength: 44
+                maxLength: 44
+        NfKeyParam:
+            name: nf_key
+            in: query
+            description: 'Realiza a busca pela chave de acesso da NF-e vinculada ao CT-e.'
+            required: false
+            schema:
+                type: string
+                minLength: 44
+                maxLength: 44
+        OutcomeNumberParam:
+            name: outcome_number
+            in: query
+            description: 'Realiza a busca pelo número do romaneio vinculado ao Documento.'
+            required: false
+            schema:
+                type: integer
+        NfNumberParam:
+            name: nf_number
+            in: query
+            description: 'Realiza a busca pelo número da NF-e vinculada ao Documento.'
+            required: false
+            schema:
+                type: string
+        IncomeNumberParam:
+            name: income_number
+            in: query
+            description: 'Realiza a busca pelo número da minuta vinculada ao CT-e.'
+            required: false
+            schema:
+                type: integer
+        MDFeNumberParam:
+            name: mdfe_number
+            in: query
+            description: 'Realiza a busca pelo número do MDF-e vinculado ao CT-e.'
+            required: false
+            schema:
+                type: integer
+        OccurrenceParam:
+            name: occurrence
+            in: query
+            description: 'Realiza a busca pelo código da ocorrência.'
+            required: false
+            schema:
+                type: string
+        IssuedFromParam:
+            name: issued_from
+            in: query
+            description: 'Realiza a busca por início de data de emissão do CT-e. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        IssuedToParam:
+            name: issued_to
+            in: query
+            description: 'Realiza a busca por fim de data de emissão do CT-e. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CustomerNameParam:
+            name: customer_name
+            in: query
+            description: 'Realiza a busca pelo nome do tomador do CT-e.'
+            required: false
+            schema:
+                type: string
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos do Documento.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status do CT-e.
+
+                - `0` = Cadastrado
+                - `1` = Emitido
+                - `2` = Em Trânsito
+                - `3` = Entregue
+                - `4` = Cancelado
+                - `5` = Não Entregue
+                - `6` = Inutilizado
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa emitente do Documento.'
+            required: false
+            schema:
+                type: integer
+        NumberParam:
+            name: number
+            in: query
+            description: 'Realiza a busca por número do Documento.'
+            required: false
+            schema:
+                type: integer
+        NumberFromParam:
+            name: number_from
+            in: query
+            description: 'Realiza a busca pelo número inicial do Documento.'
+            required: false
+            schema:
+                type: integer
+        NumberToParam:
+            name: number_to
+            in: query
+            description: 'Realiza a busca pelo número final do Documento.'
+            required: false
+            schema:
+                type: integer
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+        ReceiverNameParam:
+            name: receiver_name
+            in: query
+            description: 'Realiza a busca pelo nome do Recebedor da Minuta.'
+            schema:
+                type: string
+        RequestorNameParam:
+            name: requestor_name
+            in: query
+            description: 'Realiza a busca pelo nome do Solicitante da Minuta.'
+            schema:
+                type: string
+        WithdrawalNameParam:
+            name: withdrawal_name
+            in: query
+            description: 'Realiza a busca pelo nome do Expedidor da Minuta.'
+            schema:
+                type: string
+        IncomeStatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status da Minuta.
+
+                - `0` = Cadastrada
+                - `1` = Agendada
+                - `2` = Tentativa
+                - `3` = Coleta parcial
+                - `4` = Coletada
+                - `5` = Problema
+                - `6` = Cancelada
+                - `7` = Inutilizada
+                - `8` = Em Transito
+                - `9` = Em Execução
+                - `10` = Finalizada
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+                    - 7
+                    - 8
+                    - 9
+                    - 10
+    schemas:
+        # REQUESTS
+        DeleteRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da ocorrência'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    oneOf:
+                        - $ref: '#/components/schemas/OccurrenceWithCteModel'
+                        - $ref: '#/components/schemas/OccurrenceWithIncomeModel'
+                        - $ref: '#/components/schemas/OccurrenceWithCollectionModel'
+                        - $ref: '#/components/schemas/OccurrenceWithNfModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item removido com sucesso'
+                    description: 'Mensagem de retorno'
+        SearchCteResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteWithOccurrences'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        SearchIncomeResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/IncomeWithOccurrences'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+
+        # MODELS
+        OccurrenceModel:
+            type: object
+            required:
+                - owner_id
+                - code
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    readOnly: true
+                    description: 'ID da ocorrência'
+                owner_id:
+                    type: integer
+                    example: 192734
+                    nullable: true
+                    description: 'Código da empresa transportadora da ocorrência.'
+                code:
+                    type: integer
+                    example: 1
+                    description: 'Código da ocorrência *(utilizar códigos númericos do padrão PROCEDA)*'
+                description:
+                    type: string
+                    readOnly: true
+                    description: 'Descrição da ocorrência'
+                    example: 'Entrega realizada normalmente'
+                obs:
+                    type: string
+                    description: 'Observações gerais da ocorrência'
+                    example: 'Teste de observação'
+                date:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    description: 'Data da ocorrência *(não enviar o campo, caso deseje que a data considerada seja a data e hora atual)*'
+                    example: '2023-03-03 03:45:00'
+                stamp:
+                    type: integer
+                    description: >
+                        Possui carimbo:
+                          - `0`  = Não
+                          - `1`  = Sim
+                    example: 0
+                    nullable: true
+                    enum:
+                        - 0
+                        - 1
+                receiver:
+                    type: object
+                    description: 'Dados do recebedor'
+                    properties:
+                        name:
+                            type: string
+                            maxLength: 100
+                            description: 'Nome do recebedor'
+                            example: 'Gustavo'
+                        document:
+                            type: string
+                            maxLength: 30
+                            description: 'Documento do recebedor'
+                            example: '20978347-2'
+                image:
+                    type: object
+                    description: 'Imagem de comprovação'
+                    properties:
+                        extension:
+                            type: string
+                            example: 'png'
+                            description: 'Extensão da Imagem'
+                            enum:
+                                - png
+                                - jpg
+                                - jpeg
+                                - gif
+                        file:
+                            type: string
+                            format: 'base64'
+                            description: 'Imagem em formato base64'
+        OccurrenceWithCteModel:
+            allOf:
+                - $ref: '#/components/schemas/OccurrenceModel'
+                - type: object
+                  properties:
+                      cte:
+                          type: object
+                          description: 'CT-e da ocorrência'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 12354
+                                  description: 'ID do CT-e *(informar este ou o campo `key`)*'
+                              key:
+                                  type: string
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 44
+                                  maxLength: 44
+                                  description: 'Chave de acesso do CT-e *(informar este ou o campo `id`. No retorno, somente o campo `id` será exibido)*'
+        OccurrenceWithNfModel:
+            allOf:
+                - $ref: '#/components/schemas/OccurrenceModel'
+                - type: object
+                  properties:
+                      nf:
+                          type: object
+                          description: 'NF-e da ocorrência'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 12354
+                                  description: 'ID do NF-e *(informar este ou o campo `key`)*'
+                              key:
+                                  type: string
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 44
+                                  maxLength: 44
+                                  description: 'Chave de acesso do NF-e *(informar este ou o campo `id`. No retorno, somente o campo `id` será exibido)*'
+        OccurrenceWithIncomeModel:
+            allOf:
+                - $ref: '#/components/schemas/OccurrenceModel'
+                - type: object
+                  properties:
+                      income:
+                          type: object
+                          description: 'Minuta da ocorrência'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 83267
+                                  description: 'ID da Minuta'
+        OccurrenceWithCollectionModel:
+            allOf:
+                - $ref: '#/components/schemas/OccurrenceModel'
+                - type: object
+                  properties:
+                      income:
+                          type: object
+                          description: 'Ordem de coleta da ocorrência'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 12354
+                                  description: 'ID da ordem de coleta'
+        CteWithOccurrences:
+            type: object
+            readOnly: true
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID do CT-e'
+                owner_id:
+                    type: integer
+                    example: 192734
+                    description: 'Código da empresa transportadora do CT-e.'
+                serie:
+                    type: integer
+                    example: 2
+                    description: 'Série do CT-e'
+                    minimum: 0
+                    maximum: 999
+                number:
+                    type: integer
+                    example: 2
+                    description: 'Número do CT-e'
+                key:
+                    type: string
+                    pattern: '[A-Z0-9]'
+                    minLength: 44
+                    maxLength: 44
+                    example: '35221243256171000199550010002713451756413099'
+                    description: 'Chave de acesso do CT-e'
+                status:
+                    type: integer
+                    example: 3
+                    description: |-
+                        Status do CT-e.
+
+                        - `0` = Cadastrado
+                        - `1` = Emitido
+                        - `2` = Em Trânsito
+                        - `3` = Entregue
+                        - `4` = Cancelado
+                        - `5` = Não Entregue
+                        - `6` = Inutilizado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                issued_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 12:30:26'
+                    description: 'Data de emissão do CT-e'
+                expected_delivery:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2022-12-29'
+                    description: 'Data da expectativa de entrega do CT-e'
+                delivered_at:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2022-12-29'
+                    description: 'Data da entrega do CT-e'
+                sender:
+                    type: object
+                    description: 'Dados do Remetente do CT-e'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do remetente do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do remetente do CT-e'
+                addressee:
+                    type: object
+                    description: 'Dados do Destinatário do CT-e'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            description: 'ID do destinatário do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            description: 'Nome do destinatário do CT-e'
+                occurrences:
+                    type: array
+                    description: 'Lista de ocorrências do CT-e.'
+                    items:
+                        type: object
+                        properties:
+                            owner_id:
+                                type: integer
+                                example: 192734
+                                nullable: true
+                                description: 'Código da empresa transportadora da ocorrência.'
+                            code:
+                                type: integer
+                                example: 1
+                                description: 'Código da ocorrência *(utilizamos códigos númericos do padrão PROCEDA)*'
+                            description:
+                                type: string
+                                readOnly: true
+                                description: 'Descrição da ocorrência'
+                                example: 'Entrega realizada normalmente'
+                            obs:
+                                type: string
+                                description: 'Observações gerais da ocorrência'
+                                example: 'Teste de observação'
+                            date:
+                                type: string
+                                format: 'Y-m-d H:i:s'
+                                description: 'Data da ocorrência'
+                                example: '2023-03-03 03:45:00'
+                            stamp:
+                                type: integer
+                                description: >
+                                    Possui carimbo:
+                                    - `0`  = Não
+                                    - `1`  = Sim
+                                example: 0
+                                nullable: true
+                                enum:
+                                    - 0
+                                    - 1
+                            url:
+                                type: string
+                                format: 'url'
+                                nullable: true
+                                description: 'URL pública para acesso ao anexo de comprovação da ocorrência'
+                            receiver:
+                                type: object
+                                description: 'Dados do recebedor'
+                                properties:
+                                    name:
+                                        type: string
+                                        maxLength: 100
+                                        description: 'Nome do recebedor'
+                                        example: 'Gustavo'
+                                    document:
+                                        type: string
+                                        maxLength: 30
+                                        description: 'Documento do recebedor'
+                                        example: '20978347-2'
+                            location:
+                                type: object
+                                description: 'Dados de localização da entrega'
+                                properties:
+                                    latitude:
+                                        type: number
+                                        example: '-23.48589'
+                                        description: 'Latitude'
+                                    longitude:
+                                        type: number
+                                        example: '-46.56237'
+                                        description: 'Longitude'
+        IncomeWithOccurrences:
+            type: object
+            readOnly: true
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID da Minuta.'
+                serie:
+                    type: integer
+                    example: 2
+                    description: 'Série da Minuta.'
+                    minimum: 0
+                    maximum: 999
+                number:
+                    type: integer
+                    example: 2
+                    description: 'Número da Minuta.'
+                status:
+                    type: integer
+                    example: 3
+                    description: |-
+                        Status da Minuta.
+
+                        - `0` = Cadastrado
+                        - `1` = Emitido
+                        - `2` = Em Trânsito
+                        - `3` = Entregue
+                        - `4` = Cancelado
+                        - `5` = Não Entregue
+                        - `6` = Inutilizado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                issued_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 12:30:26'
+                    description: 'Data de emissão da Minuta.'
+                withdrawal:
+                    type: object
+                    description: 'Dados do Remetente da Minuta.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do remetente da Minuta.'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do remetente da Minuta.'
+                receiver:
+                    type: object
+                    description: 'Dados do Destinatário da Minuta.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            description: 'ID do destinatário da Minuta.'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            description: 'Nome do destinatário da Minuta.'
+                occurrences:
+                    type: array
+                    description: 'Lista de ocorrências da Minuta.'
+                    items:
+                        type: object
+                        properties:
+                            owner_id:
+                                type: integer
+                                example: 192734
+                                nullable: true
+                                description: 'Código da empresa transportadora da ocorrência.'
+                            code:
+                                type: integer
+                                example: 1
+                                description: 'Código da ocorrência *(utilizamos códigos númericos do padrão PROCEDA)*'
+                            description:
+                                type: string
+                                readOnly: true
+                                description: 'Descrição da ocorrência'
+                                example: 'Entrega realizada normalmente'
+                            obs:
+                                type: string
+                                description: 'Observações gerais da ocorrência'
+                                example: 'Teste de observação'
+                            date:
+                                type: string
+                                format: 'Y-m-d H:i:s'
+                                description: 'Data da ocorrência'
+                                example: '2023-03-03 03:45:00'
+                            stamp:
+                                type: integer
+                                description: >
+                                    Possui carimbo:
+                                    - `0`  = Não
+                                    - `1`  = Sim
+                                example: 0
+                                nullable: true
+                                enum:
+                                    - 0
+                                    - 1
+                            url:
+                                type: string
+                                format: 'url'
+                                nullable: true
+                                description: 'URL pública para acesso ao anexo de comprovação da ocorrência'
+                            receiver:
+                                type: object
+                                description: 'Dados do recebedor'
+                                properties:
+                                    name:
+                                        type: string
+                                        maxLength: 100
+                                        description: 'Nome do recebedor'
+                                        example: 'Gustavo'
+                                    document:
+                                        type: string
+                                        maxLength: 30
+                                        description: 'Documento do recebedor'
+                                        example: '20978347-2'
+                            location:
+                                type: object
+                                nullable: true
+                                description: 'Dados de localização da entrega'
+                                properties:
+                                    latitude:
+                                        type: number
+                                        example: '-23.48589'
+                                        description: 'Latitude'
+                                    longitude:
+                                        type: number
+                                        example: '-46.56237'
+                                        description: 'Longitude'

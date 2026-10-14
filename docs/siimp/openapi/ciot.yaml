@@ -1,0 +1,1229 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: CIOT
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **CIOT**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -   url: https://{subdominio}.{ambiente}.emitir.me
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: lannister
+                enum:
+                    - 'lannister'
+                    - 'dev-lannister'
+tags:
+    -   name: ciots
+        description: Rota para cadastramento, atualização e inserção, cancelamento, finalização, parcelas de CIOT
+security:
+  -
+    ApiKeyAuth: [ ]
+paths:
+    /ciots/search:
+      get:
+        tags:
+                - ciots
+        description: 'Busca de CIOTs com base nos filtros informados.'
+        parameters:
+          -
+              $ref: '#/components/parameters/IdParam'
+          -
+              $ref: '#/components/parameters/IdsParam'
+          -
+              $ref: '#/components/parameters/CreatedFromParam'
+          -
+              $ref: '#/components/parameters/CreatedToParam'
+          -
+              $ref: '#/components/parameters/UpdatedFromParam'
+          -
+              $ref: '#/components/parameters/UpdatedToParam'
+          -
+              $ref: '#/components/parameters/OwnerIdParam'
+          -
+              $ref: '#/components/parameters/Number'
+          -
+              $ref: '#/components/parameters/NumberCiot'
+          -
+              $ref: '#/components/parameters/Transporter'
+          -
+              $ref: '#/components/parameters/StatusParam'
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+
+    /ciots/create:
+      post:
+        tags:
+                - ciots
+        description: 'Criação de um CIOT no sistema.'
+        requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CiotModel'
+                required: true
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /ciots/update:
+      post:
+        tags:
+                - ciots
+        description: 'Atualização de um CIOT no sistema.'
+        requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CiotModel'
+                required: true
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateResponse'
+    /ciots/cancel:
+      post:
+        tags:
+                - ciots
+        description: 'Cancelamento de um CIOT.'
+        requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CancelModel'
+                required: true
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CancelResponse'
+    /ciots/finish:
+      post:
+        tags:
+                - ciots
+
+        description: 'Finalização de um CIOT.'
+        requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/FinishModel'
+                required: true
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/FinishResponse'
+    /ciots/parcel:
+      post:
+        tags:
+                - ciots
+
+        description: 'Realiza operações de uma parcela de um CIOT.'
+        requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ParcelModel'
+                required: true
+        responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ParcelResponse'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+      IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+      IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+      CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+      CreatedToParam:
+          name: created_to
+          in: query
+          description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+          required: false
+          schema:
+              type: string
+              format: Y-m-d|relative
+      UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+      UpdatedToParam:
+          name: updated_to
+          in: query
+          description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+          required: false
+          schema:
+              type: string
+              format: Y-m-d|relative
+      OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pelo ID da empresa proprietária do CIOT.'
+            required: false
+            schema:
+                type: integer
+      Number:
+            name: number
+            in: query
+            description: 'Realiza a busca pelo número do CIOT.'
+            required: false
+            schema:
+                type: integer
+      NumberCiot:
+            name: ciot_code
+            in: query
+            description: 'Realiza a busca pelo código do CIOT.'
+            required: false
+            schema:
+                type: integer
+      Transporter:
+            name: transporter
+            in: query
+            description: 'Realiza a busca pelo Contratado (Nome, CPF ou CNPJ).'
+            required: false
+            schema:
+                type: string
+      StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Cadastrado
+                - `1` = Emitido
+                - `2` = Cancelado
+                - `3` = Encerrado
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+    schemas:
+        SearchResponse:
+                type: object
+                properties:
+                    data:
+                      type: array
+                      items:
+                          oneOf:
+                            -   $ref: '#/components/schemas/FullCiotModel'
+                    success:
+                        type: boolean
+                        example: true
+                        description: 'Flag de sucesso na operação'
+                    total:
+                        type: integer
+                        example: 1
+                        description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FullCiotModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FullCiotModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        FinishResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        CancelResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        ParcelResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+
+    #MODELS
+        FullCiotModel:
+                type: object
+                properties:
+                        id:
+                          type: integer
+                          example: 29198
+                          description: 'ID do CIOT.'
+                        owner_id:
+                          type: integer
+                          example: 187557
+                          description: 'ID do proprietário do CIOT.'
+                        serie:
+                          type: string
+                          example: '1'
+                          description: 'Série do CIOT.'
+                        number:
+                          type: integer
+                          example: 1424
+                          description: 'Número do CIOT.'
+                        freight_type:
+                          type: integer
+                          example: 1
+                          description: >
+                            Tipo de Frete:
+                              - `0` = Padrão
+                              - `1` = TAC Agregado
+                        start_date:
+                          type: string
+                          format: date
+                          example: '2024-11-01'
+                          description: 'Data de início do CIOT.'
+                        end_date:
+                          type: string
+                          format: date
+                          example: '2024-11-15'
+                          description: 'Data de término do CIOT.'
+                        cargo_owner:
+                          type: integer
+                          example: 1
+                          description: >
+                              Proprietário da Carga:
+                                - `0` = Remetente
+                                - `1` = Destinatário
+                                - `2` = Consignatário
+                                - `3` = Outro
+                        fuel_value:
+                          type: string
+                          example: '0.00'
+                          description: 'Valor do combustível associado ao contrato.'
+                        sh_code:
+                          type: string
+                          example: '1'
+                          description: 'Código SH.'
+                        quantity:
+                          type: string
+                          example: '0.000'
+                          description: 'Quantidade de carga.'
+                        status:
+                          type: integer
+                          example: 0
+                          description: >
+                            Status do CIOT.
+                              - `0` = Cadastrado
+                              - `1` = Emitido
+                              - `2` = Cancelado
+                              - `3` = Encerrado
+                        created_at:
+                          type: string
+                          format: 'Y-m-d H:i:s'
+                          example: '2024-12-23 18:03:59'
+                          description: 'Data de criação do registro.'
+                        updated_at:
+                          type: string
+                          format: 'Y-m-d H:i:s'
+                          example: '2024-12-23 18:03:59'
+                          description: 'Data da última atualização.'
+                        trip_document:
+                          type: integer
+                          example: 5
+                          description: 'Documento relacionado à viagem.'
+                        emission_type:
+                          type: integer
+                          example: 0
+                          description: 'Tipo de emissão.'
+                        total_distance:
+                          type: integer
+                          example: 0
+                          description: 'Distância (KM).'
+                        cargo_code_type:
+                          type: integer
+                          example: 0
+                          description: >
+                            Tipo da Carga.
+                              - `0` = Nenhum
+                              - `1` = Granel Sólido
+                              - `2` = Granel Liquido
+                              - `3` = Frigorificada
+                              - `4` = Conteinerizada
+                              - `5` = Carga Geral
+                              - `6` = Neogranel
+                              - `7` = Perigosa(granel sólido)
+                              - `8` = Perigosa(granel líquido)
+                              - `9` = Perigosa(carga frigorificada)
+                              - `10` = Perigosa(carga onteinerizada)
+                              - `11` = Perigosa(carga geral)
+                        high_performance:
+                          type: integer
+                          example: 0
+                          description: >
+                            Alto Desempenho
+                              - `0` = Não
+                              - `1` = Sim
+                        commercial_destination:
+                          type: integer
+                          example: 0
+                          description: >
+                            Destino comercial.
+                              - `0` = Não
+                              - `1` = Sim
+                        return_shipping:
+                          type: integer
+                          example: 0
+                          description: >
+                            Frete Retorno.
+                              - `0` = Não
+                              - `1` = Sim
+                        return_cep:
+                          type: string
+                          example: '13154774'
+                          description: CEP do Retorno
+                        return_distance:
+                          type: integer
+                          example: 13154774
+                          description: Retorno KM
+                        operator:
+                          type: string
+                          example: 'pamcard'
+                          description: 'Operador responsável.'
+                        people:
+                          type: object
+                          properties:
+                            transporter:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  example: 667680
+                                  description: 'ID do transportador.'
+                                name:
+                                  type: string
+                                  example: 'HILTON CESAR RODRIGUES DE FREITAS - ETC'
+                                  description: 'Nome do transportador.'
+                            sender:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  example: 206007
+                                  description: 'ID do remetente.'
+                                name:
+                                  type: string
+                                  example: 'HILTON CESAR RODRIGUES DE FREITAS - ETC'
+                                  description: 'Nome do Remetente.'
+                            addressee:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  example: 206007
+                                  description: 'ID do Destinatário.'
+                                name:
+                                  type: string
+                                  example: 'HILTON CESAR RODRIGUES DE FREITAS - ETC'
+                                  description: 'Nome do destinatário.'
+                            consignee:
+                              type: object
+                              properties:
+                                id:
+                                  type: integer
+                                  example: 206007
+                                  description: 'ID do Consignatário.'
+                                name:
+                                  type: string
+                                  example: 'HILTON CESAR RODRIGUES DE FREITAS - ETC'
+                                  description: 'Nome do consignatário.'
+                        parcels:
+                          type: array
+                          description: 'Parcelas do CIOT.'
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: integer
+                                example: 12
+                                description: 'ID da parcela.'
+                              name:
+                                type: string
+                                example: '#206434'
+                                description: 'Identificador da parcela.'
+                              type:
+                                type: integer
+                                example: 0
+                                description: >
+                                  Tipo da parcela:
+                                    - `0` = Manual
+                                    - `1` = Automático
+                              category:
+                                type: integer
+                                example: 3
+                                description: >
+                                  Categoria da parcela:
+                                    - `0` = Adiantamento
+                                    - `1` = Intermediária
+                                    - `2` = Saldo Final (Quitação)
+                                    - `3` = Vale Abastecimento
+                                    - `4` = Combustível
+                                    - `5` = Diária
+                                    - `6` = Despesa
+                              favored:
+                                type: integer
+                                example: 1
+                                description: >
+                                  Favorecido:
+                                    - `0` = Contratado
+                                    - `1` = Motorista
+                              value:
+                                type: number
+                                format: float
+                                example: 4900.00
+                                description: 'Valor Bruto da parcela.'
+                              status:
+                                type: integer
+                                example: 0
+                                description: >
+                                  Status da parcela:
+                                    - `0` = Pendente
+                                    - `1` = Pendente
+                                    - `2` = Liberado
+                                    - `3` = Bloqueado
+                                    - `4` = Cancelado
+                              real_value:
+                                type: number
+                                format: float
+                                example: 4900.00
+                                description: 'Valor real liquidado da parcela.'
+                              paid_at:
+                                type: string
+                                format: date-time
+                                example: '2024-11-23 10:15:00'
+                                nullable: true
+                                description: 'Data/hora em que a parcela foi paga.'
+                              payment_date:
+                                type: string
+                                format: date
+                                example: '2024-11-23'
+                                description: 'Data prevista de pagamento da parcela.'
+                              payment_time:
+                                type: string
+                                example: '10:15:00'
+                                nullable: true
+                                description: 'Horário previsto/real de pagamento da parcela.'
+                              created_at:
+                                  type: string
+                                  format: date-time
+                                  example: '2024-11-23 10:15:00'
+                                  description: 'Data de criação da parcela.'
+                              updated_at:
+                                  type: string
+                                  format: date-time
+                                  example: '2024-11-23 10:15:00'
+                                  description: 'Data de atualização da parcela.'
+                              taxes:
+                                type: object
+                                properties:
+                                  irrf:
+                                    type: string
+                                    example: '0.00'
+                                    description: 'Valor do IRRF da parcela.'
+                                  inss:
+                                    type: string
+                                    example: '0.00'
+                                    description: 'Valor do INSS da parcela.'
+                                  sest:
+                                    type: string
+                                    example: '0.00'
+                                    description: 'Valor do SEST/SENAT da parcela.'
+                                  tax_type:
+                                    type: integer
+                                    example: 0
+                                    description: >
+                                      Tipo de imposto da parcela:
+                                        - `0` = Automático
+                                        - `1` = Manual
+                        taxes:
+                          type: object
+                          properties:
+                            inss:
+                              type: string
+                              example: '0.00'
+                              description: 'Valor do INSS.'
+                            irrf:
+                              type: string
+                              example: '0.00'
+                              description: 'Valor do IRRF.'
+                            sest:
+                              type: string
+                              example: '0.00'
+                              description: 'Valor do SEST/SENAT.'
+                        freight_value:
+                          type: object
+                          properties:
+                            value:
+                              type: string
+                              example: '4900.00'
+                              description: 'Valor do frete.'
+                        rates:
+                          type: object
+                          properties:
+                            total:
+                              type: string
+                              example: '0.00'
+                              description: 'Valor total das tarifas.'
+                            quantity:
+                              type: integer
+                              example: 1
+                              description: 'Quantidade de tarifas.'
+                        toll:
+                          type: object
+                          properties:
+                            use_credit:
+                              type: integer
+                              example: 0
+                              description: 'Indica se o crédito foi utilizado (1 para sim, 0 para não).'
+                            value:
+                              type: string
+                              example: '0.00'
+                              description: 'Valor do pedágio.'
+        CiotModel:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 29198
+              description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+            operator:
+              type: string
+              example: 'pamcard'
+              description: 'Operador responsável pelo CIOT.'
+            owner_id:
+              type: integer
+              example: 187557
+              description: 'ID do proprietário do frete.'
+            freight_type:
+              type: integer
+              example: 1
+              description: >
+                Tipo de Frete:
+                  - `0` = Padrão
+                  - `1` = TAC Agregado
+            emission_type:
+              type: integer
+              example: 1
+              description: >
+                Tipo de Emissão ou Tipo de Pagamento (**Obrigatório quando o `operator` é extratta, truckpad, rodobank, ndd, efrete):
+                  - `0` = Manual
+                  - `1` = Automática
+            sh_code:
+              type: string
+              example: '1'
+              description: 'Código SH. (**Obrigatório quando o `operator` é truckpad, ndd, pamcard)'
+            quantity:
+              type: number
+              format: float
+              example: 0
+              description: 'Quantidade total.'
+            start_date:
+              type: string
+              format: date
+              example: '2024-11-01'
+              description: 'Data de início do contrato.'
+            end_date:
+              type: string
+              format: date
+              example: '2024-11-15'
+              description: 'Data de término do contrato.'
+            toll_solution:
+              type: integer
+              example: 667680
+              description: >
+                Solução de Pedágio (**OPCIONAL QUANDO O `operator` é pamcard**):
+                  - `0` = Nenhum
+                  - `1` = DBTRANS
+                  - `2` = Bradesco(Visa Pedagio)
+                  - `3` = REPOM
+                  - `4` = Sem Para/Via Fácil
+                  - `5` = Cartão Pedágio(Administradora)
+                - `5` = TAG
+            toll_use_credit:
+              type: integer
+              example: 1
+              description: >
+                Usar Saldo?(**OPCIONAL QUANDO O `operator` é pamcard**):
+                  - `0` = Não
+                  - `1` = Sim
+            cargo_owner:
+              type: integer
+              example: 1
+              description: >
+                  Proprietário da Carga (**Obrigatório quando o `operator` é rodobank, ndd ou efrete**):
+                    - `0` = Remetente
+                    - `1` = Destinatário
+                    - `2` = Consignatário
+                    - `3` = Outro
+            route_id:
+              type: string
+              format: date
+              example: '10'
+              description: 'ID da rota.'
+            created_at:
+              type: string
+              format: date-time
+              example: '2024-11-22 16:33:47'
+              description: 'Data de criação do CIOT.'
+            updated_at:
+              type: string
+              format: date-time
+              example: '2024-11-22 17:28:03'
+              description: 'Última atualização do CIOT.'
+            return_cep:
+              type: string
+              example: '13154774'
+              description: CEP do Retorno
+            return_distance:
+              type: integer
+              example: 13154774
+              description: Retorno KM
+            total_distance:
+              type: integer
+              example: 0
+              description: 'Distância (KM).'
+            cargo_code_type:
+              type: integer
+              example: 0
+              description: >
+                Tipo da Carga.
+                  - `0` = Nenhum
+                  - `1` = Granel Sólido
+                  - `2` = Granel Liquido
+                  - `3` = Frigorificada
+                  - `4` = Conteinerizada
+                  - `5` = Carga Geral
+                  - `6` = Neogranel
+                  - `7` = Perigosa(granel sólido)
+                  - `8` = Perigosa(granel líquido)
+                  - `9` = Perigosa(carga frigorificada)
+                  - `10` = Perigosa(carga onteinerizada)
+                  - `11` = Perigosa(carga geral)
+            high_performance:
+              type: integer
+              example: 0
+              description: >
+                Alto Desempenho
+                  - `0` = Não
+                  - `1` = Sim
+            commercial_destination:
+              type: integer
+              example: 0
+              description: >
+                'Destino comercial.
+                  - `0` = Não
+                  - `1` = Sim
+            return_shipping:
+              type: integer
+              example: 0
+              description: >
+                'Frete Retorno.
+                  - `0` = Não
+                  - `1` = Sim
+            persons:
+              type: object
+              properties:
+                transporter:
+                  $ref: '#/components/schemas/Person'
+                sender:
+                  $ref: '#/components/schemas/Person'
+                addressee:
+                  $ref: '#/components/schemas/Person'
+                consignee:
+                  $ref: '#/components/schemas/Person'
+            parcels:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: '#206434'
+                    description: 'Identificador da parcela.'
+                  payment_date:
+                    type: string
+                    format: date
+                    example: '2024-11-23'
+                    description: 'Data do pagamento.'
+                  type:
+                    type: integer
+                    example: 0
+                    description: >
+                      Tipo da parcela:
+                        - `0` = Manual
+                        - `1` = Automático
+                  favored:
+                    type: integer
+                    example: 1
+                    description: >
+                      Favorecido:
+                          - `0` = Contratado
+                          - `1` = Motorista
+                  category:
+                    type: integer
+                    example: 3
+                    description: >
+                      Categoria da parcela
+                          - `0` = Adiantamento
+                          - `1` = Intermediária
+                          - `2` = Saldo Final (Quitação)
+                          - `3` = Vale Abastecimento
+                          - `4` = Combustível
+                          - `5` = Diária
+                          - `6` = Despesa
+                  value:
+                    type: number
+                    format: float
+                    example: 4900.00
+                    description: 'Valor da parcela.'
+                  tax_type:
+                    type: integer
+                    example: 0
+                    description: >
+                      Impostos:
+                        - `0` = Automático
+                        - `1` = Manual
+                  inss:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do INSS.'
+                  irrf:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do IRRF.'
+                  sest:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do SEST/SENAT.'
+            drivers:
+              type: array
+              items:
+                type: object
+                properties:
+                  cpf:
+                    type: string
+                    example: '21969596856'
+                    nullable: true
+                    description: 'CPF do motorista.'
+                  id:
+                    type: integer
+                    example: 667680
+                    nullable: true
+                    description: 'ID do motorista.'
+                  name:
+                    type: string
+                    example: 'ROBERVAL DA SILVA'
+                    description: 'Nome do motorista.'
+            vehicles:
+              type: array
+              items:
+                type: object
+                properties:
+                  license_plate:
+                    type: string
+                    example: 'IUM2200'
+                    description: 'Placa do veículo.'
+            documents:
+              allOf:
+                  -
+                      $ref: '#/components/schemas/CiotDocs'
+            routes:
+              type: array
+              items:
+                type: object
+                properties:
+                  city_ibge:
+                    type: string
+                    example: '5201108'
+                    description: 'Código IBGE da cidade.'
+                  cep:
+                    type: string
+                    example: '75132130'
+                    description: 'CEP da rota.'
+
+        EditCiotModel:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 29198
+              description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+            operator:
+              type: string
+              example: 'pamcard'
+              description: 'Operador responsável pelo CIOT.'
+            owner_id:
+              type: integer
+              example: 187557
+              description: 'ID do proprietário do frete.'
+            freight_type:
+              type: integer
+              example: 1
+              description: >
+                Tipo de Frete:
+                  - `0` = Padrão
+                  - `1` = TAC Agregado
+            emission_type:
+              type: integer
+              example: 1
+              description: >
+                Tipo de Emissão ou Tipo de Pagamento (**Obrigatório quando o `operator` é extratta, truckpad, rodobank, ndd, efrete):
+                  - `0` = Manual
+                  - `1` = Automática
+            sh_code:
+              type: string
+              example: '1'
+              description: 'Código SH. (**Obrigatório quando o `operator` é truckpad, ndd, pamcard)'
+            quantity:
+              type: number
+              format: float
+              example: 0
+              description: 'Quantidade total.'
+            start_date:
+              type: string
+              format: date
+              example: '2024-11-01'
+              description: 'Data de início do CIOT.'
+            end_date:
+              type: string
+              format: date
+              example: '2024-11-15'
+              description: 'Data de término do CIOT.'
+            toll_solution:
+              type: integer
+              example: 667680
+              description: >
+                Solução de Pedágio (**OPCIONAL QUANDO O `operator` é pamcard**):
+                  - `0` = Nenhum
+                  - `1` = DBTRANS
+                  - `2` = Bradesco(Visa Pedagio)
+                  - `3` = REPOM
+                  - `4` = Sem Para/Via Fácil
+                  - `5` = Cartão Pedágio(Administradora)
+                - `5` = TAG
+            toll_use_credit:
+              type: integer
+              example: 1
+              description: >
+                Usar Saldo?(**OPCIONAL QUANDO O `operator` é pamcard**):
+                  - `0` = Não
+                  - `1` = Sim
+            cargo_owner:
+              type: integer
+              example: 1
+              description: >
+                  Proprietário da Carga (**Obrigatório quando o `operator` é rodobank, ndd ou efrete**):
+                    - `0` = Remetente
+                    - `1` = Destinatário
+                    - `2` = Consignatário
+                    - `3` = Outro
+            route_id:
+              type: string
+              format: date
+              example: '10'
+              description: 'ID da rota.'
+            persons:
+              type: object
+              properties:
+                transporter:
+                  $ref: '#/components/schemas/Person'
+                sender:
+                  $ref: '#/components/schemas/Person'
+                addressee:
+                  $ref: '#/components/schemas/Person'
+                consignee:
+                  $ref: '#/components/schemas/Person'
+            parcels:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                    example: '#206434'
+                    description: 'Identificador da parcela.'
+                  payment_date:
+                    type: string
+                    format: date
+                    example: '2024-11-23'
+                    description: 'Data do pagamento.'
+                  type:
+                    type: integer
+                    example: 0
+                    description: >
+                      Tipo da parcela:
+                        - `0` = Manual
+                        - `1` = Automático
+                  favored:
+                    type: integer
+                    example: 1
+                    description: >
+                      Favorecido:
+                          - `0` = Contratado
+                          - `1` = Motorista
+                  category:
+                    type: integer
+                    example: 3
+                    description: >
+                      Categoria da parcela
+                          - `0` = Adiantamento
+                          - `1` = Intermediária
+                          - `2` = Saldo Final (Quitação)
+                          - `3` = Vale Abastecimento
+                          - `4` = Combustível
+                          - `5` = Diária
+                          - `6` = Despesa
+                  value:
+                    type: number
+                    format: float
+                    example: 4900.00
+                    description: 'Valor da parcela.'
+                  tax_type:
+                    type: integer
+                    example: 0
+                    description: >
+                      Impostos:
+                        - `0` = Automático
+                        - `1` = Manual
+                  inss:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do INSS.'
+                  irrf:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do IRRF.'
+                  sestsenat:
+                    type: string
+                    example: '0.00'
+                    description: 'Valor do SEST/SENAT.'
+
+            drivers:
+              type: array
+              items:
+                type: object
+                properties:
+                  cpf:
+                    type: string
+                    example: '21969596856'
+                    nullable: true
+                    description: 'CPF do motorista.'
+                  id:
+                    type: integer
+                    example: 667680
+                    nullable: true
+                    description: 'ID do motorista.'
+                  name:
+                    type: string
+                    example: 'ROBERVAL DA SILVA'
+                    description: 'Nome do motorista.'
+            vehicles:
+              type: array
+              items:
+                type: object
+                properties:
+                  license_plate:
+                    type: string
+                    example: 'IUM2200'
+                    description: 'Placa do veículo.'
+            documents:
+              allOf:
+                  -
+                      $ref: '#/components/schemas/CiotDocs'
+            routes:
+              type: array
+              items:
+                type: object
+                properties:
+                  city_ibge:
+                    type: string
+                    example: '5201108'
+                    description: 'Código IBGE da cidade.'
+                  cep:
+                    type: string
+                    example: '75132130'
+                    description: 'CEP da rota.'
+        Person:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 667680
+              description: 'ID da pessoa.'
+            name:
+              type: string
+              example: 'ROBERVAL DA SILVA'
+              description: 'Nome da pessoa.'
+
+        FinishModel:
+          type: object
+          properties:
+            ciot_id:
+              type: integer
+              example: 28974
+              description: 'ID do CIOT a ser finalizado.'
+        CancelModel:
+          type: object
+          properties:
+            ciot_id:
+              type: integer
+              example: 28821
+              description: 'ID do CIOT a ser cancelado.'
+            cancel_reason:
+              type: string
+              example: 'Cancelamento de Teste'
+              description: 'Motivo do cancelamento do CIOT.'
+        ParcelModel:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 28821
+              description: 'ID do CIOT.'
+            parcel_id:
+              type: integer
+              example: 12
+              description: 'ID da parcela.'
+            operation:
+              type: integer
+              example: 'pay'
+              description: >
+                Operações à serem executadas
+                  - `pay` = Pagamento da Parcela
+                  - `block` = Bloqueia a Parcela
+                  - `add` = Adiciona a Parcela
+                  - `remove` = Remove a Parcela
+
+        CiotDocs:
+            type: object
+            properties:
+                cte:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 211654
+                            description: 'ID do CT-e'
+                        key:
+                            type: string
+                            minLength: 44
+                            maxLength: 44
+                            example: '51349283374528369719371987028492376104857653'
+                            description: 'Chave do CT-e'
+                income:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 31468
+                            description: 'ID da Minuta'
+                collection:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 445568
+                            description: 'ID da Coleta'
+                outcome:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 445568
+                            description: 'ID da Romaneio'

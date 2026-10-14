@@ -1,0 +1,355 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Vale Pedágio
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Vale Pedágio**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1903591425/API+REST)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - lannister
+                  - dev-lannister
+
+security:
+    - ApiKeyAuth: []
+
+paths:
+    /toll-vouchers/search:
+        get:
+            tags:
+                - 'Vale Pedágio'
+
+            description: Busca de vales pedágio com base nos filtros informados.
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/IssuedFromParam'
+                -
+                    $ref: '#/components/parameters/IssuedToParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/NumberParam'
+                -
+                    $ref: '#/components/parameters/MdfeNumberParam'
+                -
+                    $ref: '#/components/parameters/RouteParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        IssuedFromParam:
+            name: issued_from
+            in: query
+            description: 'Realiza a busca por início de data de emissão. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        IssuedToParam:
+            name: issued_to
+            in: query
+            description: 'Realiza a busca por fim de data de emissão. Aceita **[formatos de datas relativas](https://simpbox.atlassian.net/wiki/spaces/BTC/pages/1888419858/REGRAS+DE+EXECU+O+PIPELINES#%F0%9F%93%85-PAR%C3%82METROS-DE-DATAS-DE-FORMATOS-RELATIVOS).**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pelo ID da empresa proprietária do Vale Pedágio.'
+            required: false
+            schema:
+                type: integer
+        NumberParam:
+            name: number
+            in: query
+            description: 'Realiza a busca pelo número do Vale Pedágio.'
+            required: false
+            schema:
+                type: integer
+        MdfeNumberParam:
+            name: mdfe_number
+            in: query
+            description: 'Realiza a busca pelo MDF-e do Vale Pedágio.'
+            required: false
+            schema:
+                type: integer
+        RouteParam:
+            name: route
+            in: query
+            description: 'Realiza a busca pelo linha do Vale Pedágio.'
+            required: false
+            schema:
+                type: integer
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+                - `0` = Cadastrado
+                - `1` = Emitido
+                - `2` = Cancelado
+                - `3` = Encerrado
+                - `4` = Processando
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TollVoucher'
+                success:
+                    type: boolean
+                    example: true
+                total:
+                    type: integer
+                    example: 1
+
+        TollVoucher:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 278
+                    description: 'ID do Vale Pedágio.'
+                owner_id:
+                    type: integer
+                    example: 1
+                    description: 'ID do proprietário do Vale Pedágio.'
+                status:
+                    type: integer
+                    example: 2
+                    description: >
+                        Status:
+                          - `0` = Cadastrado
+                          - `1` = Emitido
+                          - `2` = Cancelado
+                          - `3` = Encerrado
+                          - `4` = Processando
+                number:
+                    type: string
+                    example: '3123123103'
+                    description: 'Número do Vale Pedágio'
+                expires_at:
+                    type: string
+                    format: date-time
+                    example: '2026-05-01 00:00:00'
+                    description: 'Vencimento do Vale Pedágio'
+                issued_at:
+                    type: string
+                    format: date-time
+                    example: '2026-04-01 10:48:22'
+                    nullable: true
+                    description: 'Emissão do Vale Pedágio'
+                created_at:
+                    type: string
+                    format: date-time
+                    example: '2026-04-01 09:29:31'
+                    description: 'Criação do Vale Pedágio'
+                updated_at:
+                    type: string
+                    format: date-time
+                    example: '2026-04-01 11:30:31'
+                    description: 'Atualização do Vale Pedágio'
+                toll_value:
+                    type: string
+                    example: '913.94'
+                    description: 'Total do Vale Pedágio'
+                request_protocol:
+                    type: string
+                    example: 'f0f82d80-6ec9-4300-b6e8-e9030dd05dd9'
+                    description: 'Protocolo do Vale Pedágio'
+                round_trip:
+                    type: integer
+                    example: 1
+                    nullable: true
+                    description: 'Ida e Volta do Vale Pedágio'
+                category_artesp_id:
+                    type: integer
+                    example: 5
+                    nullable: true
+                    description: 'Categoria Artesp do Vale Pedágio'
+                plazas:
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 1
+                                description: 'Código Pedágio'
+                            price:
+                                type: number
+                                format: float
+                                example: 28.5
+                                description: 'Valor Pedágio'
+                            description:
+                                type: string
+                                example: 'Pedágio - Araquari'
+                                description: 'Descrição Pedágio'
+                vehicle:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 522
+                            description: 'Veículo Pedágio'
+                        license_plate:
+                            type: string
+                            example: 'RXM8F04'
+                            description: 'Placa de Veículo'
+                        vehicle_owner_id:
+                            type: integer
+                            example: '12312'
+                            description: 'ID do Proprietário'
+                responsible:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                        name:
+                            type: string
+                            example: 'Responsável teste'
+                            nullable: true
+                            description: 'Nome do Responsável'
+                        document_number:
+                            type: string
+                            example: '74937835000109'
+                            nullable: true
+                            description: 'Documento do Responsável'
+                route:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 316
+                            description: 'Código da Linha'
+                        name:
+                            type: string
+                            example: 'SC-ITAJAÍ X SP-AGUDOS'
+                            description: 'Nome da Linha'
+                integration:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                            description: 'Código da Integração'
+                        name:
+                            type: string
+                            example: 'VPO sem parar'
+                            description: 'Nome da Integração'
+                cancel:
+                    type: object
+                    nullable: true
+                    properties:
+                        date:
+                            type: string
+                            format: date-time
+                            example: '2026-04-01 11:30:31'
+                            nullable: true
+                            description: 'Data do Cancelamento'
+                        reason:
+                            type: string
+                            nullable: true
+                            example: 'ajuste de rota e valores'
+                            description: 'Razão do Cancelamento'

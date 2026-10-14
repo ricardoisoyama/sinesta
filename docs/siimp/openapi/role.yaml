@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: Perfis de Acesso
+    description: |-
+        Esta integração documenta o endpoint disponível para consultar **PERFIS DE ACESSO**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383/API-REST)**
+        
+        ## Uso
+        
+        Este endpoint é útil para obter a lista de perfis de acesso disponíveis antes de criar ou atualizar usuários,
+        permitindo identificar o `role_id` correto a ser utilizado.
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: roles
+      description: Rota para consultar perfis de acesso disponíveis no sistema
+
+paths:
+    /roles/search:
+        get:
+            tags:
+                - roles
+            summary: Busca perfis de acesso
+            description: |-
+                Busca perfis de acesso (roles) disponíveis no sistema.
+
+            operationId: searchRoles
+            parameters:
+                - name: id
+                  in: query
+                  description: >
+                      Realiza a busca pelo **ID** de um perfil. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: name
+                  in: query
+                  description: Realiza a busca pelo **NOME** do perfil, podendo ser parcial.
+                  required: false
+                  schema:
+                      type: string
+
+            security:
+                - ApiKeyAuth: []
+
+            responses:
+                '200':
+                    description: Busca realizada com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/Role'
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    total:
+                                        type: integer
+                                        example: 5
+
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            in: header
+            name: X-Api-Key
+            description: Token de autenticação da API
+
+    schemas:
+        Role:
+            type: object
+            description: Objeto perfil de acesso
+            properties:
+                id:
+                    type: integer
+                    description: ID do perfil de acesso
+                    example: 5
+                name:
+                    type: string
+                    description: Nome do perfil de acesso
+                    example: "Administrador"

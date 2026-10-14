@@ -1,0 +1,1062 @@
+openapi: 3.0.3
+info:
+    version: "2.0"
+    title: Minutas de AET
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Minutas de AET**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: "https://{subdominio}.{ambiente}.emitir.me"
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: dev-lannister
+              enum:
+                  - lannister
+                  - dev-lannister
+tags:
+    - name: special-transit-permit
+      description: "Rota para cadastramento, atualização e inserção de Minutas de AET"
+security:
+    - ApiKeyAuth: []
+paths:
+    /special-transit-permit/search:
+        get:
+            tags:
+                - special-transit-permit
+            description: "Busca de Minutas com base nos filtros informados."
+            operationId: search
+            parameters:
+                - $ref: "#/components/parameters/IdParam"
+                - $ref: "#/components/parameters/IdsParam"
+                - $ref: "#/components/parameters/OwnerIdParam"
+                - $ref: "#/components/parameters/LastOccurrenceParam"
+                - $ref: "#/components/parameters/OnlyHonorFeesParam"
+                - $ref: "#/components/parameters/LicensePlateParam"
+                - $ref: "#/components/parameters/ProcessingResponsibleIdParam"
+                - $ref: "#/components/parameters/ResponsibleIdParam"
+                - $ref: "#/components/parameters/DeliveryFromParam"
+                - $ref: "#/components/parameters/DeliveryToParam"
+                - $ref: "#/components/parameters/ServiceIdParam"
+                - $ref: "#/components/parameters/RequestorParam"
+                - $ref: "#/components/parameters/NumberInvoiceParam"
+                - $ref: "#/components/parameters/NumberQuotationParam"
+                - $ref: "#/components/parameters/ReferenceParam"
+                - $ref: "#/components/parameters/LocalParam"
+                - $ref: "#/components/parameters/CreatedAtParam"
+                - $ref: "#/components/parameters/RequestFromParam"
+                - $ref: "#/components/parameters/RequestToParam"
+                - $ref: "#/components/parameters/RequestorIdParam"
+                - $ref: "#/components/parameters/CreatedFromParam"
+                - $ref: "#/components/parameters/CreatedToParam"
+                - $ref: "#/components/parameters/UpdatedAtParam"
+                - $ref: "#/components/parameters/UpdatedFromParam"
+                - $ref: "#/components/parameters/UpdatedToParam"
+                - $ref: "#/components/parameters/StatusParam"
+                - $ref: "#/components/parameters/NumberParam"
+                - $ref: "#/components/parameters/NumberFromParam"
+                - $ref: "#/components/parameters/NumberToParam"
+                - $ref: "#/components/parameters/PageParam"
+            responses:
+                "200":
+                    $ref: "#/components/responses/SearchSuccess"
+    /special-transit-permit/create:
+        post:
+            tags:
+                - special-transit-permit
+            description: "Criação de uma Minuta no sistema."
+            operationId: create
+            requestBody:
+                $ref: "#/components/requestBodies/CreateBody"
+            responses:
+                "200":
+                    $ref: "#/components/responses/CreateSuccess"
+    /special-transit-permit/update:
+        post:
+            tags:
+                - special-transit-permit
+            description: "Atualização de uma Minuta no sistema."
+            operationId: update
+            requestBody:
+                $ref: "#/components/requestBodies/UpdateBody"
+            responses:
+                "200":
+                    $ref: "#/components/responses/UpdateSuccess"
+    /special-transit-permit/upload-file:
+        post:
+            tags:
+                - special-transit-permit
+            description: "Upload de arquivo para uma Minuta no sistema."
+            operationId: uploadFile
+            requestBody:
+                $ref: "#/components/requestBodies/UploadFileBody"
+            responses:
+                "200":
+                    $ref: "#/components/responses/UploadFileSuccess"
+    /special-transit-permit/remove-file:
+        post:
+            tags:
+                - special-transit-permit
+            description: "Remoção de arquivo para uma Minuta no sistema."
+            operationId: removeFile
+            requestBody:
+                $ref: "#/components/requestBodies/RemoveFileBody"
+            responses:
+                "200":
+                    $ref: "#/components/responses/RemoveFileSuccess"
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: "Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*"
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: "Realiza a busca por IDs pré-definidos."
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: "Realiza a busca pela empresa."
+            required: false
+            schema:
+                type: integer
+        LastOccurrenceParam:
+            name: last_occurrence
+            in: query
+            description: "Realiza a busca pela última ocorrência adicionada à AET."
+            required: false
+            schema:
+                type: integer
+        OnlyHonorFeesParam:
+            name: only_honor_fees
+            in: query
+            description: |-
+                Realiza o filtro somente pelos honorários.
+
+                - `true`  = Sim
+                - `false` = Não
+            required: false
+            schema:
+                type: string
+                enum:
+                    - 'true'
+                    - 'false'
+        LicensePlateParam:
+            name: license_plate
+            in: query
+            description: "Realiza a busca pela placa atrelada na Minuta."
+            required: false
+            schema:
+                type: string
+        ProcessingResponsibleIdParam:
+            name: processing_responsible_id
+            in: query
+            description: "Realiza a busca pelo responsável pelo processamento da Minuta."
+            required: false
+            schema:
+                type: integer
+        ResponsibleIdParam:
+            name: responsible_id
+            in: query
+            description: "Realiza a busca pelo responsável da Minuta."
+            required: false
+            schema:
+                type: integer
+        DeliveryFromParam:
+            name: delivery_from
+            in: query
+            description: "Realiza a busca por início de data de processamento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        DeliveryToParam:
+            name: delivery_to
+            in: query
+            description: "Realiza a busca por fim de data de processamento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        ServiceIdParam:
+            name: service_id
+            in: query
+            description: "Realiza a busca pelo serviço da AET."
+            required: false
+            schema:
+                type: integer
+        RequestorParam:
+            name: requestor
+            in: query
+            description: "Realiza a busca pelo solicitante da Minuta."
+            required: false
+            schema:
+                type: string
+        NumberInvoiceParam:
+            name: number_invoice
+            in: query
+            description: "Realiza a busca pelo número da fatura da Minuta."
+            required: false
+            schema:
+                type: integer
+        NumberQuotationParam:
+            name: number_quotation
+            in: query
+            description: "Realiza a busca pelo número da cotação da Minuta."
+            required: false
+            schema:
+                type: integer
+        ReferenceParam:
+            name: reference
+            in: query
+            description: "Realiza a busca pelo Tipo da O.S. da Minuta."
+            required: false
+            schema:
+                type: string
+        LocalParam:
+            name: local
+            in: query
+            description: 'Realiza a busca pela Categorização da Minuta.'
+            required: false
+            schema:
+                type: string
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: "Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        RequestFromParam:
+            name: request_from
+            in: query
+            description: "Realiza a busca pela data inicial de solicitação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        RequestToParam:
+            name: request_to
+            in: query
+            description: "Realiza a busca pela data final de solicitação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        RequestorIdParam:
+            name: requestor_id
+            in: query
+            description: "Realiza a busca pelo solicitante da Minuta."
+            required: false
+            schema:
+                type: integer
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: "Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: "Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: "Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: "Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: "Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**"
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0`  = Nova
+                - `4`  = Processada
+                - `6`  = Cancelada
+                - `9`  = Em Andamento
+                - `10` = Finalizada
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 4
+                    - 6
+                    - 9
+                    - 10
+        NumberParam:
+            name: number
+            in: query
+            description: "Realiza a busca por número."
+            required: false
+            schema:
+                type: integer
+        NumberFromParam:
+            name: number_from
+            in: query
+            description: "Realiza a busca pelo número inicial."
+            required: false
+            schema:
+                type: integer
+        NumberToParam:
+            name: number_to
+            in: query
+            description: "Realiza a busca pelo número final."
+            required: false
+            schema:
+                type: integer
+        PageParam:
+            name: page
+            in: query
+            description: "Página dos resultados"
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: "Este corpo será utilizado para criação de uma Minuta"
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/SpecialTransitPermit"
+        UpdateBody:
+            required: true
+            description: "Este corpo será utilizado para atualização de uma Minuta"
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/SpecialTransitPermit"
+        UploadFileBody:
+            required: true
+            description: "Este corpo será utilizado para upload de arquivo para uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/UploadFile"
+        RemoveFileBody:
+            required: true
+            description: "Este corpo será utilizado para remoção de arquivo para uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/RemoveFile"
+    responses:
+        SearchSuccess:
+            description: "Resposta de sucesso para a busca de Minutas com base nos filtros informados."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/SearchResponse"
+        CreateSuccess:
+            description: "Resposta de sucesso para a criação de uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/CreateResponse"
+        UpdateSuccess:
+            description: "Resposta de sucesso para a atualização de uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/UpdateResponse"
+        UploadFileSuccess:
+            description: "Resposta de sucesso para o upload de arquivo para uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/UploadFileResponse"
+        RemoveFileSuccess:
+            description: "Resposta de sucesso para a remoção de arquivo para uma Minuta no sistema."
+            content:
+                application/json:
+                    schema:
+                        $ref: "#/components/schemas/RemoveFileResponse"
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: "#/components/schemas/SpecialTransitPermitSimple"
+                            - $ref: "#/components/schemas/SpecialTransitPermitAll"
+                success:
+                    type: boolean
+                    example: true
+                    description: "Flag de sucesso na operação"
+                total:
+                    type: integer
+                    example: 90
+                    description: "Quantidade total de resultados"
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: "#/components/schemas/SpecialTransitPermit"
+                success:
+                    type: boolean
+                    example: true
+                    description: "Flag de sucesso na operação"
+                message:
+                    type: string
+                    example: "Item criado com sucesso"
+                    description: "Mensagem de retorno"
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: "#/components/schemas/SpecialTransitPermit"
+                success:
+                    type: boolean
+                    example: true
+                    description: "Flag de sucesso na operação"
+                message:
+                    type: string
+                    example: "Item editado com sucesso"
+                    description: "Mensagem de retorno"
+        SpecialTransitPermitBase:
+            type: object
+            required:
+                - owner_id
+                - request_date
+                - local
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: "ID *(não informá-lo durante a criação)*."
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação da Minuta"
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de atualização da Minuta"
+                    readOnly: true
+                comments:
+                    type: string
+                    example: "Detalhe do atraso"
+                    description: "Motivos de atraso da Minuta"
+                delivery_at:
+                    type: string
+                    format: "Y-m-d"
+                    example: "2026-01-09"
+                    description: "Data de processamento da Minuta"
+                discount:
+                    type: number
+                    example: 0.00
+                    description: "Total de desconto da Minuta"
+                local:
+                    type: string
+                    example: "Honorários"
+                    description: "Categorização da Minuta"
+                number:
+                    type: integer
+                    example: 29139
+                    description: "Número da Minuta"
+                obs:
+                    type: string
+                    example: 'TJB7E73 com 4 carretas. ELY0F27 com 3 carretas. (MS).\n\nTaxas pagas diretamente pelo cliente e Honorários 15 dias da nota fiscal.'
+                    description: "Observação da Minuta"
+                owner_id:
+                    type: integer
+                    example: 210210
+                    description: "ID da Empresa"
+                reference:
+                    type: string
+                    example: "Nova"
+                    description: "Tipo da O.S."
+                request_date:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-30 00:00:00"
+                    description: "Data de solicitação da Minuta"
+                status:
+                    type: integer
+                    example: 0
+                    enum:
+                        - 0
+                        - 4
+                        - 6
+                        - 9
+                        - 10
+                    description: |-
+                      Status da Minuta:
+      
+                      - `0`  = Nova
+                      - `4`  = Processada
+                      - `6`  = Cancelada
+                      - `9`  = Em Andamento
+                      - `10` = Finalizada
+                total:
+                    type: number
+                    example: 464.00
+                    description: "Total deral da Minuta"
+                requestor:
+                    $ref: "#/components/schemas/RequestorBase"
+                processing_responsible:
+                    $ref: "#/components/schemas/ProcessingResponsibleBase"
+                responsible:
+                    $ref: "#/components/schemas/ResponsibleBase"
+        SpecialTransitPermit:
+            allOf:
+                - $ref: "#/components/schemas/SpecialTransitPermitBase"
+                - type: object 
+                  properties:
+                      authorizations:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/AuthorizationUpdate"
+        SpecialTransitPermitSimple:
+            allOf:
+                - $ref: "#/components/schemas/SpecialTransitPermitBase"
+        SpecialTransitPermitAll:
+            allOf:
+                - $ref: "#/components/schemas/SpecialTransitPermitBase"
+                - type: object
+                  properties:
+                      requestor:
+                          $ref: "#/components/schemas/Requestor"
+                      processing_responsible:
+                          $ref: "#/components/schemas/ProcessingResponsible"
+                      responsible:
+                          $ref: "#/components/schemas/Responsible"
+                      authorizations:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/Authorization"
+                      files:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/File"
+                      histories:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/History"
+                      income_references:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/IncomeReference"
+                      occurrences:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/Occurrence"
+                      services:
+                          type: array
+                          items:
+                              $ref: "#/components/schemas/Service"
+        RequestorBase:
+            type: object
+            required:
+                - contact
+                - email
+            properties:
+                id:
+                    type: integer
+                    example: 628828
+                    description: "ID do Solicitante"
+                cnpj:
+                    type: string
+                    example: "12345678901234"
+                    description: "CNPJ do Solicitante"
+                contact:
+                    type: string
+                    example: "Contato Teste"
+                    description: "Contato do Solicitante"
+                email:
+                    type: string
+                    example: "empresa.teste@mail.com"
+                    description: "E-mail do Solicitante"
+                name:
+                    type: string
+                    example: "Empresa Teste"
+                    description: "Nome do Solicitante"
+                phone:
+                    type: string
+                    example: "(99) 99999-9999"
+                    description: "Telefone do Solicitante"
+        ProcessingResponsibleBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1439
+                    description: "ID do Usuário responsável pelo processamento"
+        ResponsibleBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1017
+                    description: "ID do Usuário responsável"
+        Requestor:
+            allOf:
+                - $ref: "#/components/schemas/RequestorBase"
+                - type: object
+                  properties:
+                      address:
+                          $ref: "#/components/schemas/Address"
+        ProcessingResponsible:
+            allOf:
+                - $ref: "#/components/schemas/ProcessingResponsibleBase"
+                - type: object
+                  properties:
+                      username:
+                          type: string
+                          example: "john.doe"
+                          description: "Nome do Usuário responsável pelo processamento"
+        Responsible:
+            allOf:
+                - $ref: "#/components/schemas/ResponsibleBase"
+                - type: object
+                  required:
+                      - username
+                  properties:
+                      username:
+                          type: string
+                          example: "john.doe"
+                          description: "Nome do Usuário responsável"
+        Address:
+            type: object
+            properties:
+                zipcode:
+                    type: string
+                    example: "12345678"
+                    description: "CEP do Endereço"
+                district:
+                    type: string
+                    example: "Centro"
+                    description: "Bairro do Endereço"
+                street:
+                    type: string
+                    example: "Rua Teste"
+                    description: "Rua do Endereço"
+                number:
+                    type: string
+                    example: "123"
+                    description: "Número do Endereço"
+                city:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 10144
+                            description: "ID da Cidade"
+                        name:
+                            type: string
+                            example: "Pereiras"
+                            description: "Nome da Cidade"
+                country:
+                    type: object
+                    properties:
+                        code:
+                            type: integer
+                            example: 1058
+                            description: "Código do País"
+                        name:
+                            type: string
+                            example: "BRASIL"
+                            description: "Nome do País"
+                state:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 26
+                            description: "ID do Estado"
+                        uf:
+                            type: string
+                            example: "SP"
+                            description: "UF do Estado"
+        Authorization:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Autorização"
+                number:
+                    type: string
+                    example: "1234567890"
+                    description: "Número da Autorização"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação da Autorização"
+                expiration:
+                    type: string
+                    format: "Y-m-d"
+                    example: "2026-01-09"
+                    description: "Data de vencimento da Autorização"
+                is_renewed:
+                    type: boolean
+                    example: true
+                    description: "Flag de renovação da Autorização"
+                obs:
+                    type: string
+                    example: "Observação da Autorização"
+                    description: "Observação da Autorização"
+                driver:
+                    type: object
+                    properties:
+                        name:
+                            type: string
+                            example: "John Doe"
+                            description: "Nome do Motorista"
+                traction:
+                    type: object
+                    properties:
+                        license_plate:
+                            type: string
+                            example: "ABC1234"
+                            description: "Placa da Tração"
+                classification:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                            description: "ID da Classificação do Veículo"
+                        name:
+                            type: string
+                            example: "Veículo de Passageiros"
+                            description: "Nome da Classificação do Veículo"
+        File:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID do Arquivo"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação do Arquivo"
+                filename:
+                    type: string
+                    example: "arquivo.pdf"
+                    description: "Nome do Arquivo"
+                url:
+                    type: string
+                    example: "https://example.com/arquivo.pdf"
+                    description: "URL do Arquivo"
+                username:
+                    type: string
+                    example: "john.doe"
+                    description: "Nome do Usuário que criou o Arquivo"
+        History:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID do Histórico"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação do Histórico"
+                message:
+                    type: string
+                    example: "Mensagem do Histórico"
+                username:
+                    type: string
+                    example: "john.doe"
+                    description: "Nome do Usuário que criou o Histórico"
+        IncomeReference:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Referência de Entrada"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação da Referência de Entrada"
+                number:
+                    type: string
+                    example: "1234567890"
+                    description: "Número da Referência de Entrada"
+                owner_id:
+                    type: integer
+                    example: 1
+                    description: "ID da Empresa"
+                status:
+                    type: integer
+                    example: 1
+                    description: "Status da Referência de Entrada"
+                updated_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de atualização da Referência de Entrada"
+        Occurrence:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Ocorrência"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação da Ocorrência"
+                date_added:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data da Ocorrência"
+                description:
+                    type: string
+                    example: "Descrição da Ocorrência"
+                latitude:
+                    type: number
+                    example: -23.48589
+                    description: "Latitude da Ocorrência"
+                longitude:
+                    type: number
+                    example: -46.56237
+                    description: "Longitude da Ocorrência"
+                obs:
+                    type: string
+                    example: "Observação da Ocorrência"
+                occurrence_item_id:
+                    type: integer
+                    example: 1
+                    description: "ID do Item da Ocorrência"
+                username:
+                    type: string
+                    example: "john.doe"
+                    description: "Nome do Usuário que criou a Ocorrência"
+        Service:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID do Serviço"
+                created_at:
+                    type: string
+                    format: "Y-m-d H:i:s"
+                    example: "2026-01-16 10:53:32"
+                    description: "Data de criação do Serviço"
+                service_id:
+                    type: integer
+                    example: 1
+                    description: "ID do Serviço"
+                name:
+                    type: string
+                    example: "Serviço"
+                    description: "Nome do Serviço"
+                abbreviation:
+                    type: string
+                    example: "SVC"
+                    description: "Abreviação do Serviço"
+                value:
+                    type: number
+                    example: 100.00
+                    description: "Valor do Serviço"
+                quantity:
+                    type: number
+                    example: 1
+                    description: "Quantidade do Serviço"
+                total:
+                    type: number
+                    example: 100.00
+                    description: "Total do Serviço"
+                discount:
+                    type: number
+                    example: 10.00
+                    description: "Desconto do Serviço"
+                category:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                            description: "ID da Categoria do Serviço"
+                        name:
+                            type: string
+                            example: "Categoria do Serviço"
+                            description: "Nome da Categoria do Serviço"
+        AuthorizationUpdate:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Autorização"
+                number:
+                    type: string
+                    example: "1234567890"
+                    description: "Número da Autorização"
+                expiration:
+                    type: string
+                    format: "Y-m-d"
+                    example: "2026-01-09"
+                    description: "Data de vencimento da Autorização"
+                obs:
+                    type: string
+                    example: "Observação da Autorização"
+                    description: "Observação da Autorização"
+                traction:
+                    type: object
+                    properties:
+                        license_plate:
+                            type: string
+                            example: "ABC1234"
+                            description: "Placa da Tração"
+                classification:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 1
+                            description: "ID da Classificação do Veículo"
+        UploadFile:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Minuta"
+                file:
+                    type: string
+                    example: "YXJxdWl2byBwZGY="
+                    description: "Conteúdo do arquivo em base64"
+                extension:
+                    type: string
+                    example: "pdf"
+                    enum:
+                        - pdf
+                    description: |-
+                      Extensão do arquivo:
+
+                      - `pdf` = PDF
+                filename:
+                    type: string
+                    example: "teste"
+                    description: "Nome do arquivo"
+        UploadFileResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 83871
+                            description: "ID do arquivo"
+                        created_at:
+                            type: string
+                            format: "Y-m-d H:i:s"
+                            example: "2026-01-22 14:28:59"
+                            description: "Data de criação do arquivo"
+                        filename:
+                            type: string
+                            example: "teste.pdf"
+                            description: "Nome do arquivo"
+                        url:
+                            type: string
+                            example: "https://example.com/arquivo.pdf"
+                            description: "URL do arquivo"
+                        username:
+                            type: string
+                            example: "suporteact"
+                            description: "Nome do usuário que enviou o arquivo"
+                success:
+                    type: boolean
+                    example: true
+                    description: "Flag de sucesso na operação"
+                message:
+                    type: string
+                    example: "Arquivo enviado com sucesso"
+                    description: "Mensagem de retorno"
+        RemoveFile:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1
+                    description: "ID da Minuta"
+                file_ids:
+                    type: array
+                    items:
+                        type: integer
+                        example: 1
+                        description: "IDs dos arquivos a serem removidos"
+        RemoveFileResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        type: object
+                success:
+                    type: boolean
+                    example: true
+                    description: "Flag de sucesso na operação"
+                message:
+                    type: string
+                    example: "Arquivos removidos com sucesso"
+                    description: "Mensagem de retorno"

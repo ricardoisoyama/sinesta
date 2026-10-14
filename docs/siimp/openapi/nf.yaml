@@ -1,0 +1,1458 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Central de Notas
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **CENTRAL DE NOTAS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: nfs
+      description: Rota para gerenciamento de notas fiscais de transporte.
+    - name: upload
+      description: Rotas para upload de arquivos de notas fiscais.
+security:
+    - ApiKeyAuth: []
+paths:
+    /nfs/search:
+        get:
+            tags:
+                - nfs
+            description: Busca notas fiscais com base nos filtros informados
+            operationId: search
+            parameters:
+                - name: id
+                  in: query
+                  description: >
+                    Realiza a busca pelo **ID** de uma nota fiscal. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: ids
+                  in: query
+                  description: Realiza a busca pelos **IDS** de notas fiscais, separados por vírgula
+                  required: false
+                  style: form
+                  explode: false
+                  schema:
+                      type: array
+                      items:
+                          type: integer
+
+                - name: number
+                  in: query
+                  description: Realiza a busca pelo **NÚMERO** da nota fiscal, podendo ser separado por vírgula em caso de vários.
+                  required: false
+                  schema:
+                      type: number
+
+                - name: owner_id
+                  in: query
+                  description: Realiza a busca pelo **CÓDIGO DA EMPRESA**.
+                  required: false
+                  schema:
+                      type: integer
+
+                - name: key
+                  in: query
+                  description: Realiza a busca pela **CHAVE DE ACESSO**.
+                  required: false
+                  schema:
+                      type: string
+                      pattern: '[A-Z0-9]'
+                      minLength: 44
+                      maxLength: 44
+
+                - name: type
+                  in: query
+                  description: >
+                      **TIPO** de nota fiscal:
+                        - `0`  = NF-e
+                        - `1`  = NF Avulsa 01/1A
+                        - `2`  = NF de Produtor
+                        - `80` = DTA
+                        - `81` = DAT
+                        - `97` = NFS-e
+                        - `98` = Sem NF (Declaração)
+                        - `99` = Sem NF (Outros)
+                  required: false
+                  schema:
+                      type: integer
+                      enum:
+                          - 0
+                          - 1
+                          - 2
+                          - 80
+                          - 81
+                          - 97
+                          - 98
+                          - 99
+
+                - name: order_number
+                  in: query
+                  description: Realiza a busca pelo **NÚMERO DO PEDIDO**, separados por vírgula
+                  required: false
+                  style: form
+                  explode: false
+                  schema:
+                        type: array
+                        items:
+                          type: string
+                - name: client_reference_number
+                  in: query
+                  description: Realiza a busca pelo **NUM. REFERÊNCIA DO CLIENTE**, separados por vírgula
+                  required: false
+                  style: form
+                  explode: false
+                  schema:
+                        type: array
+                        items:
+                          type: string
+
+                - name: taker_id
+                  in: query
+                  description: >
+                      **TOMADOR** da nota fiscal:
+                        - `1`  = Remetente
+                        - `2`  = Destinatário
+                        - `3`  = Outros
+                  required: false
+                  schema:
+                      type: integer
+                      enum:
+                          - 1
+                          - 2
+                          - 3
+
+                - name: input_origin
+                  in: query
+                  description: >
+                      **ORIGEM DO CADASTRO** da nota fiscal:
+                        - `txt`          = NOTFIS
+                        - `sefazwebsite` = Chave de Acesso
+                        - `user`         = Digitada
+                        - `xml`          = XML
+                        - `duplicada`    = Duplicada
+                        - `sefaz`        = SEFAZ
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - txt
+                          - sefazwebsite
+                          - user
+                          - xml
+                          - duplicada
+                          - sefaz
+
+                - name: using_in
+                  in: query
+                  description: >
+                      **TOMADOR** da nota fiscal:
+                        - `0`  = Usando em Minuta
+                        - `2`  = Usando em CT-e
+                        - `4`  = Sem Utilização *(opção padrão, quando o campo não for informado)*
+                        - `6`  = Usando em Ordem de Coleta
+                  required: false
+                  schema:
+                      type: integer
+                      default: 4
+                      enum:
+                          - 0
+                          - 2
+                          - 4
+                          - 6
+
+                - name: nftype
+                  in: query
+                  description: >
+                      **Tipo da importação** da nota fiscal, referente à localização no sistema:
+                        - `0`  = Normal
+                        - `1`  = Compras
+                        - `2`  = Devolução
+                        - `3`  = Armazém
+                  required: false
+                  schema:
+                      type: integer
+                      enum:
+                          - 0
+                          - 1
+                          - 2
+                          - 3
+
+                - name: issued_at
+                  in: query
+                  description: Data de emissão. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: issued_from
+                  in: query
+                  description: Data de emissão inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: issued_to
+                  in: query
+                  description: Data de emissão final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_at
+                  in: query
+                  description: Data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_from
+                  in: query
+                  description: Data de criação inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_to
+                  in: query
+                  description: Data de criação final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: updated_at
+                  in: query
+                  description: Data da última atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: updated_from
+                  in: query
+                  description: Data da última atualização inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: updated_to
+                  in: query
+                  description: Data da última atualização final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: cte_number
+                  in: query
+                  description: Realiza a busca pelo **NÚMERO DO CT-E** vinculado na nota fiscal, podendo ser separado por vírgula em caso de vários.
+                  required: false
+                  schema:
+                      type: number
+
+                - name: income_number
+                  in: query
+                  description: Realiza a busca pelo **NÚMERO DA MINUTA** vinculada na nota fiscal, podendo ser separado por vírgula em caso de vários.
+                  required: false
+                  schema:
+                      type: number
+
+                - name: collect_number
+                  in: query
+                  description: Realiza a busca pelo **NÚMERO DA ORDEM DE COLETA** vinculada na nota fiscal, podendo ser separado por vírgula em caso de vários.
+                  required: false
+                  schema:
+                      type: number
+
+                - name: issuer_name
+                  in: query
+                  description: Realiza a busca pelo **EMITENTE** da nota fiscal. Pode ser pelo nome *(completo ou parcial)*, CPF ou CNPJ
+                  required: false
+                  schema:
+                      type: string
+
+                - name: addressee_name
+                  in: query
+                  description: Realiza a busca pelo **DESTINATÁRIO** da nota fiscal. Pode ser pelo nome *(completo ou parcial)*, CPF ou CNPJ
+                  required: false
+                  schema:
+                      type: string
+
+                - name: description_operation
+                  in: query
+                  description: Realiza a busca pela **Natureza da Operação** da nota fiscal.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: page
+                  in: query
+                  description: Paginação dos resultados
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+    /nfs/create:
+        post:
+            tags:
+                - nfs
+            description: Cria uma nota fiscal no sistema
+            operationId: create
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/NfModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /nfs/update:
+        post:
+            tags:
+                - nfs
+            description: Atualiza uma nota fiscal
+            operationId: update
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/NfModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateResponse'
+    /nfs/delete:
+        post:
+            tags:
+                - nfs
+            description: Remove uma nota fiscal
+            operationId: delete
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteRequest'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteResponse'
+    /nfs/generate-cte:
+        post:
+            tags:
+                - nfs
+            description: Gera um CT-e para uma ou mais notas fiscais informadas
+            operationId: generateCte
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            anyOf:
+                                - $ref: '#/components/schemas/GenerateCteRequestOneNf'
+                                - $ref: '#/components/schemas/GenerateCteRequestManyNfs'
+                        examples:
+                            oneNf:
+                                summary: 'Um CT-e gerado a partir de uma nota fiscal'
+                                value:
+                                    id: 19273
+                            manyNfs:
+                                summary: 'Um CT-e gerado a partir de várias notas fiscais'
+                                value:
+                                    nfs: [ '35221243256171000199550010002713451756413099', '35221243256171000199550010002713451756413098' ]
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/GenerateCteResponse'
+    /nfs/schedule:
+        post:
+            tags:
+                - nfs
+            description: Realiza o agendamento de uma nota fiscal
+            operationId: schedule
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/ScheduleRequest'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/ScheduleResponse'
+    /nf-archive/xml:
+        post:
+            tags:
+                - upload
+            description: Realiza o upload de um arquivo XML de uma nota fiscal autorizada
+            operationId: uploadXML
+            requestBody:
+                content:
+                    multipart/form-data:
+                        schema:
+                            $ref: '#/components/schemas/UploadXMLRequest'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UploadXMLResponse'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    schemas:
+
+        # REQUESTS
+        DeleteRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da nota fiscal'
+        GenerateCteRequestOneNf:
+            type: object
+            properties:
+                nf_id:
+                    type: integer
+                    example: '12345'
+                    description: 'ID da nota fiscal para gerar o CT-e'
+        GenerateCteRequestManyNfs:
+            type: object
+            properties:
+                nfs:
+                    type: array
+                    minItems: 1
+                    description: 'Chaves de acesso das notas fiscais que devem gerar um único CT-e *(informar este ou o `nf_id`)*'
+                    example: [ '35221243256171000199550010002713451756413099', '35221243256171000199550010002713451756413098' ]
+                    items:
+                        type: string
+                        maxLength: 44
+                        minLength: 44
+                        pattern: '[0-9]'
+        ScheduleRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '12348'
+                    description: 'ID da nota fiscal'
+                date_added:
+                    type: string
+                    example: '2022-12-27'
+                    format: 'Y-m-d'
+                    description: 'Data do agendamento'
+                time_added:
+                    type: string
+                    format: 'H:i:s'
+                    example: '19:23:00'
+                    description: 'Hora do agendamento'
+        UploadXMLRequest:
+            type: object
+            properties:
+                file:
+                    type: string
+                    format: binary
+                    description: 'Arquivo XML da nota fiscal autorizada *(somente arquivos de até 1 MB serão aceitos)*'
+                force_duplicate:
+                    type: boolean
+                    example: true
+                    default: false
+                    description: 'Se informado como `true`, caso a nota fiscal já esteja sendo utilizada em um CT-e, Minuta e/ou SCT-e, o sistema irá forçar o upload novamente do XML, duplicando o armazenamento da nota'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/NfModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item removido com sucesso'
+                    description: 'Mensagem de retorno'
+        GenerateCteResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        cte_id:
+                            type: integer
+                            example: '1928'
+                            description: 'ID do CT-e gerado'
+                        cte_number:
+                            type: integer
+                            example: '298723'
+                            description: 'Número do CT-e gerado'
+                        cte_total:
+                            type: number
+                            example: '187.93'
+                            description: 'Total do CT-e gerado'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'CT-e gerado com sucesso'
+                    description: 'Mensagem de retorno'
+        ScheduleResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        scheduled_at:
+                            type: string
+                            format: 'Y-m-d H:i:s'
+                            example: '2022-12-27 19:23:00'
+                            description: 'Data e hora do agendamento'
+                        schedule_status:
+                            type: integer
+                            example: '0'
+                            description: >
+                                Status do agendamento:
+                                  - `0` = Sem Agendamento
+                                  - `1` = Aguardando
+                                  - `2` = Agendado
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                        scheduled_user:
+                            type: string
+                            example: 'nome.usuario'
+                            description: 'Nome do usuário que realizou o agendamento'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Agendamento realizado com sucesso'
+                    description: 'Mensagem de retorno'
+        UploadXMLResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: '1928'
+                            description: 'ID da nota fiscal'
+                        number:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 1
+                            maxLength: 9
+                            example: '298723'
+                            description: 'Número da nota fiscal'
+                        serie:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 1
+                            maxLength: 3
+                            example: '123'
+                            description: 'Série da nota fiscal'
+                        key:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 44
+                            maxLength: 44
+                            example: '35221243256171000199550010002713451756413099'
+                            description: 'Chave de acesso da nota fiscal'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Arquivo processado com sucesso'
+                    description: 'Mensagem de retorno'
+
+        # MODELS
+        NfModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*'
+                owner_id:
+                    type: integer
+                    example: 92784
+                    description: 'ID da empresa transportadora da nota'
+                serie:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 3
+                    description: 'Série da nota fiscal'
+                    example: '123'
+                number:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 9
+                    description: 'Número da nota fiscal'
+                    example: '123456789'
+                type:
+                    type: string
+                    pattern: '[0-9]'
+                    example: '1'
+                    description: >
+                        **TIPO** de nota fiscal:
+                          - `0`  = NF-e
+                          - `1`  = NF Avulsa 01/1A
+                          - `2`  = NF de Produtor
+                          - `80` = DTA
+                          - `81` = DAT
+                          - `97` = NFS-e
+                          - `98` = Sem NF (Declaração)
+                          - `99` = Sem NF (Outros)
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 80
+                        - 81
+                        - 97
+                        - 98
+                        - 99
+                nftype:
+                    type: integer
+                    example: '0'
+                    description: >
+                        **Tipo da importação** da nota fiscal, referente à localização no sistema:
+                          - `0` = Normal
+                          - `1` = Compras
+                          - `2` = Devolução
+                          - `3` = Armazém
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                key:
+                    type: string
+                    minLength: 44
+                    maxLength: 44
+                    pattern: '[A-Z0-9]'
+                    example: '35221243256171000199550010002713451756413099'
+                    description: 'Chave de Acesso *(obrigatório caso o campo `type` = `0`)*'
+                issued_at:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2022-12-27'
+                    description: 'Data de emissão da nota fiscal'
+                weight:
+                    type: number
+                    example: '1000.00'
+                    description: 'Peso bruto da nota fiscal'
+                net_weight:
+                    type: number
+                    example: '800.00'
+                    nullable: true
+                    description: 'Peso líquido da nota fiscal'
+                weight_calculated:
+                    type: number
+                    example: '850.82'
+                    nullable: true
+                    description: 'Peso calculado da nota fiscal'
+                total:
+                    type: number
+                    example: '14625.37'
+                    description: 'Total da nota fiscal'
+                total_net_value:
+                    type: number
+                    example: '11725.37'
+                    nullable: true
+                    description: 'Total líquido da nota fiscal'
+                qtd:
+                    type: number
+                    example: '5.00'
+                    description: 'Quantidade de volumes da nota fiscal'
+                qtd_products:
+                    type: number
+                    example: '14.00'
+                    nullable: true
+                    description: 'Quantidade de produtos da nota fiscal'
+                total_cubage:
+                    type: number
+                    example: '3.98'
+                    nullable: true
+                    description: 'Cubagem total da nota fiscal'
+                order_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'XU92749362'
+                    description: 'Número do pedido'
+                esp:
+                    type: string
+                    minLength: 3
+                    maxLength: 60
+                    example: 'Caixas'
+                    description: 'Espécie do produto'
+                description:
+                    type: string
+                    maxLength: 255
+                    example: 'Teste de descrição'
+                    description: 'Descrição da nota fiscal *(obrigatório somente se `type` for diferente de `0`)*'
+                obs:
+                    type: string
+                    maxLength: 2000
+                    nullable: true
+                    example: 'Teste de observação'
+                    description: 'Observação da nota fiscal'
+                cfop:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 4
+                    maxLength: 4
+                    nullable: true
+                    example: '1236'
+                    description: 'CFOP predominante da nota fiscal'
+                taker:
+                    type: integer
+                    example: '1'
+                    description: >
+                        **TOMADOR** da nota fiscal:
+                          - `1`  = Remetente
+                          - `2`  = Destinatário
+                          - `3`  = Outros
+                    enum:
+                        - 1
+                        - 2
+                        - 3
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação do registro'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de atualização do registro'
+                suspended_tax:
+                    type: number
+                    nullable: true
+                    example: '75.19'
+                    description: 'Valor de taxas aduaneiras suspensas. Útil quando o `type` for igual a `80` = DTA'
+                input_origin:
+                    type: string
+                    example: 'xml'
+                    readOnly: true
+                    description: >
+                        **ORIGEM DO CADASTRO** da nota fiscal:
+                          - `txt`          = NOTFIS
+                          - `sefazwebsite` = Chave de Acesso
+                          - `user`         = Digitada
+                          - `xml`          = XML
+                          - `duplicada`    = Duplicada
+                          - `sefaz`        = SEFAZ
+                    enum:
+                        - txt
+                        - sefazwebsite
+                        - user
+                        - xml
+                        - duplicada
+                        - sefaz
+                notfis:
+                    type: string
+                    example: 'NOTFIS XYZ'
+                    readOnly: true
+                    nullable: true
+                    description: 'Nome do NOTFIS utilizado para importação'
+                protocol:
+                    type: string
+                    minLength: 15
+                    maxLength: 15
+                    nullable: true
+                    pattern: '[0-9]'
+                    example: '1111111111111'
+                    description: 'Protocolo de autorização da nota fiscal'
+                ncm:
+                    type: string
+                    pattern: '[0-9]'
+                    nullable: true
+                    minLength: 8
+                    maxLength: 8
+                    example: '12345678'
+                    description: 'NCM predominante da nota fiscal'
+                description_operation:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    description: Realiza a busca pela Natureza da Operação da nota fiscal.
+                scheduling:
+                    type: object
+                    description: 'Dados de agendamento da nota fiscal'
+                    readOnly: true
+                    properties:
+                        when:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d H:i:s'
+                            description: 'Data do agendamento'
+                            example: '2022-12-27 18:00:23'
+                        status:
+                            type: integer
+                            nullable: true
+                            example: '0'
+                            description: >
+                                Status do agendamento:
+                                  - `0` = Sem Agendamento
+                                  - `1` = Aguardando
+                                  - `2` = Agendado
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                        user_id:
+                            type: integer
+                            nullable: true
+                            example: '192'
+                            description: 'ID do usuário que realizou o agendamento'
+                cte:
+                    type: object
+                    description: 'Dados do CT-e vinculado na nota fiscal'
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: '1928'
+                            description: 'ID do CT-e vinculado'
+                        number:
+                            type: integer
+                            example: '298723'
+                            description: 'Número do CT-e vinculado'
+                        status:
+                            type: integer
+                            example: '1'
+                            description: >
+                                Status do CT-e vinculado:
+                                  - `0` = Cadastrado
+                                  - `1` = Emitido
+                                  - `2` = Em Trânsito
+                                  - `3` = Entregue
+                                  - `4` = Cancelado
+                                  - `5` = Não Entregue
+                                  - `6` = Inutilizado
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                                - 3
+                                - 4
+                                - 5
+                                - 6
+                income:
+                    type: object
+                    description: 'Dados da Minuta vinculada na nota fiscal'
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: '1928'
+                            description: 'ID da Minuta vinculada'
+                        number:
+                            type: integer
+                            example: '298723'
+                            description: 'Número da Minuta vinculada'
+                operation:
+                    type: object
+                    description: 'Dados da operação'
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: '1928'
+                            description: 'ID da operação vinculada'
+                        name:
+                            type: string
+                            example: 'RET. VAZIO RASTREADO'
+                            description: 'Nome da operação'
+                issuer:
+                    type: object
+                    description: 'Dados do emitente da nota fiscal'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do emitente da nota fiscal'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do emitente da nota fiscal'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do emitente da nota fiscal *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do emitente da nota fiscal *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do emitente'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                addressee:
+                    type: object
+                    description: 'Dados do destinatário da nota fiscal'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do destinatário da nota fiscal'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do destinatário da nota fiscal'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do destinatário da nota fiscal *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do destinatário da nota fiscal *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do destinatário'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                dispatcher:
+                    type: object
+                    description: 'Dados do expedidor da nota fiscal *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do expedidor da nota fiscal'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do expedidor da nota fiscal'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do expedidor da nota fiscal *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do expedidor da nota fiscal *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do expedidor'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                receiver:
+                    type: object
+                    description: 'Dados do recebedor da nota fiscal *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do recebedor da nota fiscal'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do recebedor da nota fiscal'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do recebedor da nota fiscal *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do recebedor da nota fiscal *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do recebedor'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                collection:
+                    type: object
+                    description: 'Dados de coleta da nota fiscal *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: '1234'
+                            readOnly: true
+                            description: 'ID da coleta vinculada'
+                        number:
+                            type: integer
+                            example: '29323'
+                            description: 'Número da coleta vinculada'

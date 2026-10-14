@@ -1,0 +1,340 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Centro de Gastos
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Centro de Gastos**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: spending-centers
+        description: 'Rota para cadastramento, atualização e inserção de Centro de Gastos'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /spending-centers/search:
+        get:
+            tags:
+                - spending-centers
+            description: 'Busca de Centro de Gastos com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/NameParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /spending-centers/create:
+        post:
+            tags:
+                - spending-centers
+            description: 'Criação de um Centro de Gasto no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /spending-centers/update:
+        post:
+            tags:
+                - spending-centers
+            description: 'Atualização de um Centro de Gasto no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+    /spending-centers/delete:
+        post:
+            tags:
+                - spending-centers
+            description: 'Remoção de um Centro de Gasto.'
+            operationId: delete
+            requestBody:
+                $ref: '#/components/requestBodies/DeleteBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/DeleteSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        NameParam:
+            name: name
+            in: query
+            description: 'Realiza a busca por nome.'
+            required: false
+            schema:
+                type: string
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de um item'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SpendingCenter'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de um item'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SpendingCenter'
+        DeleteBody:
+            required: true
+            description: 'Este corpo será utilizado para remoção de um item'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 1234
+                                description: 'ID do item'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de itens com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de um item no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de um item no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        DeleteSuccess:
+            description: 'Resposta de sucesso para a remoção de um item.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/SpendingCenterSimple'
+                            -
+                                $ref: '#/components/schemas/SpendingCenterAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/SpendingCenter'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/SpendingCenter'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item removido com sucesso'
+                    description: 'Mensagem de retorno'
+        SpendingCenterBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                owner_id:
+                    type: integer
+                    example: '15236'
+                    description: 'Código da Empresa.'
+                name:
+                    type: string
+                    maxLength: 100
+                    example: 'ROBERTO'
+                    description: 'Nome do Centro de Gasto.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de criação do item.'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de atualização do item.'
+                    readOnly: true
+        SpendingCenter:
+            allOf:
+                -
+                    $ref: '#/components/schemas/SpendingCenterBase'
+        SpendingCenterSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/SpendingCenterBase'
+        SpendingCenterAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/SpendingCenterBase'

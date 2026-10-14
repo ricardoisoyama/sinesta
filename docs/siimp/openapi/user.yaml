@@ -1,0 +1,534 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: Usuários
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **ADMINISTRAÇÃO DE USUÁRIOS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383/API-REST)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: users
+      description: Rotas para gerenciamento de usuários do sistema (consulta, cadastro, atualização, ativação e desativação)
+
+paths:
+    /users/search:
+        get:
+            tags:
+                - users
+            summary: Busca usuários
+            description: |-
+                Busca usuários com base nos filtros informados.
+            operationId: searchUsers
+            parameters:
+                - name: id
+                  in: query
+                  description: >
+                      Realiza a busca pelo **ID** de um usuário. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: username
+                  in: query
+                  description: Realiza a busca pelo **NOME DE USUÁRIO**, podendo ser parcial.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: name
+                  in: query
+                  description: |-
+                      Realiza a busca pelo **NOME DA PESSOA** associada ao usuário, podendo ser parcial.
+                      Busca também por nome fantasia e nome de usuário.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: type
+                  in: query
+                  description: |-
+                      Realiza a busca pelo **TIPO** de usuário:
+                      - `1` = Cliente
+                      - `3` = Master
+                  required: false
+                  schema:
+                      type: integer
+                      enum: [1, 3]
+
+                - name: is_active
+                  in: query
+                  description: |-
+                      Filtra usuários pelo status de ativação:
+                      - `true` = Ativo
+                      - `false` = Desativado
+                  required: false
+                  schema:
+                      type: boolean
+
+                - name: role_id
+                  in: query
+                  description: Realiza a busca pelo **ID DO PERFIL DE ACESSO** do usuário.
+                  required: false
+                  schema:
+                      type: integer
+
+                - name: profile
+                  in: query
+                  description: Realiza a busca pelo **NOME DO PERFIL DE ACESSO**, podendo ser parcial.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: page
+                  in: query
+                  description: Número da página para paginação (40 registros por página)
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+
+            security:
+                - ApiKeyAuth: []
+
+            responses:
+                '200':
+                    description: Busca realizada com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/User'
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    total:
+                                        type: integer
+                                        example: 2
+
+    /users/create:
+        post:
+            tags:
+                - users
+            summary: Cria um novo usuário
+            description: |-
+                Cria um novo usuário no sistema.
+                
+                **Validações:**
+                - Username: obrigatório, máximo 40 caracteres, deve começar com letra minúscula, pode conter números, "." ou "-", não pode terminar com "."
+                - CPF: obrigatório, deve ter exatamente 11 dígitos
+                - Senha: obrigatória, mínimo 8 caracteres, deve conter letras e números
+                - Tipo: deve ser 1 (Cliente) ou 3 (Master)
+                - Perfil de acesso (role_id): obrigatório
+                
+                **Como obter os IDs de Perfis de Acesso:**
+                
+                Para criar ou atualizar usuários, é necessário informar o `role_id` (ID do perfil de acesso).
+                Para obter a lista de perfis disponíveis, utilize o endpoint:
+                
+                **GET** `/roles/search` - Consulte a documentação em `/rest/documentation/role`
+                
+                Exemplo de resposta:
+                ```json
+                {
+                  "success": true,
+                  "total": 5,
+                  "data": [
+                    { "id": 5, "name": "Administrador" },
+                    { "id": 6, "name": "Operador" }
+                  ]
+                }
+                ```
+                
+                **Observações:**
+                - O usuário é criado **ativo por padrão**
+                - Para desativar, utilize o endpoint `/users/deactivate`
+            operationId: createUser
+            security:
+                - ApiKeyAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserCreate'
+            responses:
+                '200':
+                    description: Usuário criado com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/User'
+                                    message:
+                                        type: string
+                                        example: "Item inserido com sucesso!"
+                                    success:
+                                        type: boolean
+                                        example: true
+
+    /users/update:
+        post:
+            tags:
+                - users
+            summary: Atualiza um usuário existente
+            description: |-
+                Atualiza os dados de um usuário existente.
+                
+                **Observações:**
+                - O campo `id` é obrigatório
+                - A senha é opcional. Se informada, deve seguir as mesmas regras da criação
+                - Para ativar/desativar usuários, utilize os endpoints específicos `/users/activate` e `/users/deactivate`
+            operationId: updateUser
+            security:
+                - ApiKeyAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UserUpdate'
+            responses:
+                '200':
+                    description: Usuário atualizado com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    success:
+                                        type: boolean
+                                        example: true
+                                    message:
+                                        type: string
+                                        example: "Item atualizado com sucesso!"
+                                    data:
+                                        type: array
+                                        items:
+                                            $ref: '#/components/schemas/User'
+
+    /users/activate:
+        post:
+            tags:
+                - users
+            summary: Ativa um usuário
+            description: |-
+                Ativa um usuário que estava desativado.
+            operationId: activateUser
+            security:
+                - ApiKeyAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - id
+                            properties:
+                                id:
+                                    type: integer
+                                    description: ID do usuário a ser ativado
+                                    example: 123
+            responses:
+                '200':
+                    description: Usuário ativado com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            active:
+                                                type: boolean
+                                                example: true
+                                    message:
+                                        type: string
+                                        example: Usuário ativado com sucesso!
+                                    success:
+                                        type: boolean
+                                        example: true
+
+    /users/deactivate:
+        post:
+            tags:
+                - users
+            summary: Desativa um usuário
+            description: |-
+                Desativa um usuário do sistema.
+                
+                **Importante:** É obrigatório informar um motivo para desativação com 15 a 200 caracteres.
+            operationId: deactivateUser
+            security:
+                - ApiKeyAuth: []
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - id
+                                - reason
+                            properties:
+                                id:
+                                    type: integer
+                                    description: ID do usuário a ser desativado
+                                    example: 123
+                                reason:
+                                    type: string
+                                    description: Motivo da desativação (mínimo 15, máximo 200 caracteres)
+                                    minLength: 15
+                                    maxLength: 200
+                                    example: Usuário não utiliza mais o sistema
+            responses:
+                '200':
+                    description: Usuário desativado com sucesso
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: object
+                                        properties:
+                                            active:
+                                                type: boolean
+                                                example: false
+                                            reason:
+                                                type: string
+                                                example: Usuário não utiliza mais o sistema
+                                    message:
+                                        type: string
+                                        example: Usuário desativado com sucesso!
+                                    success:
+                                        type: boolean
+                                        example: true
+
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            in: header
+            name: X-Api-Key
+            description: Token de autenticação da API
+
+    schemas:
+        User:
+            type: object
+            description: Objeto usuário (campos sensíveis como password e token são omitidos por segurança)
+            properties:
+                id:
+                    type: integer
+                    description: ID do usuário
+                    example: 123
+                username:
+                    type: string
+                    description: Nome de usuário (login)
+                    example: joao.silva
+                type:
+                    type: integer
+                    description: Tipo de usuário (1 = Cliente, 3 = Master)
+                    enum: [1, 3]
+                    example: 1
+                role_id:
+                    type: integer
+                    description: ID do perfil de acesso
+                    example: 5
+                profile:
+                    type: string
+                    nullable: true
+                    description: Nome do perfil de acesso (presente apenas em respostas de busca)
+                    example: "MASTER"
+                person_id:
+                    type: integer
+                    description: ID da pessoa associada ao usuário
+                    example: 456
+                active:
+                    type: boolean
+                    description: Status de ativação do usuário
+                    example: true
+                reason:
+                    type: string
+                    nullable: true
+                    description: Motivo de desativação (preenchido apenas quando active = false, presente apenas em respostas de busca)
+                    example: null
+                created_at:
+                    type: string
+                    format: date-time
+                    description: Data de criação do usuário
+                    example: "2026-01-22 14:23:22"
+                updated_at:
+                    type: string
+                    format: date-time
+                    description: Data da última atualização
+                    example: "2026-01-22 14:23:22"
+                person:
+                    type: object
+                    nullable: true
+                    description: Dados da pessoa associada ao usuário
+                    properties:
+                        name:
+                            type: string
+                            description: Nome completo da pessoa
+                            example: "JOAO DA SILVA SANTOS"
+                        cpf:
+                            type: string
+                            description: CPF da pessoa (somente números, 11 dígitos)
+                            example: "12345678901"
+
+        UserCreate:
+            type: object
+            required:
+                - username
+                - person
+                - type
+                - role_id
+                - new_password
+                - new_password_confirm
+            properties:
+                username:
+                    type: string
+                    description: |-
+                        Nome de usuário (login).
+                        - Deve começar com uma letra minúscula
+                        - Pode conter números, "." ou "-"
+                        - Não pode conter letras maiúsculas
+                        - Não pode terminar com "."
+                        - Máximo 40 caracteres
+                    maxLength: 40
+                    pattern: '^[a-z][a-z0-9._-]*[^.]$'
+                    example: joao.silva
+                person:
+                    type: object
+                    description: Dados da pessoa associada ao usuário
+                    required:
+                        - name
+                        - cpf
+                    properties:
+                        name:
+                            type: string
+                            description: Nome completo da pessoa
+                            maxLength: 200
+                            example: João da Silva
+                        cpf:
+                            type: string
+                            description: CPF da pessoa (somente números, 11 dígitos)
+                            pattern: '^\d{11}$'
+                            example: "12345678901"
+                type:
+                    type: integer
+                    description: Tipo de usuário (1 = Cliente, 3 = Master)
+                    enum: [1, 3]
+                    example: 1
+                role_id:
+                    type: integer
+                    description: |-
+                        ID do perfil de acesso.
+                        **Para obter os perfis disponíveis, utilize:** `GET /roles/search`
+                        Consulte a documentação em `/rest/documentation/role`
+                    minimum: 1
+                    example: 5
+                new_password:
+                    type: string
+                    description: |-
+                        Senha do usuário.
+                        - Mínimo 8 caracteres
+                        - Deve conter letras e números
+                    minLength: 8
+                    maxLength: 250
+                    pattern: '((?=.*[0-9])(?=.*[a-z]).{8,250})'
+                    example: senha123
+                new_password_confirm:
+                    type: string
+                    description: Confirmação da senha (deve ser idêntica à senha)
+                    minLength: 8
+                    maxLength: 250
+                    example: senha123
+
+        UserUpdate:
+            type: object
+            required:
+                - id
+                - username
+                - type
+                - role_id
+            properties:
+                id:
+                    type: integer
+                    description: ID do usuário a ser atualizado
+                    minimum: 1
+                    example: 123
+                username:
+                    type: string
+                    description: |-
+                        Nome de usuário (login).
+                        - Deve começar com uma letra minúscula
+                        - Pode conter números, "." ou "-"
+                        - Não pode conter letras maiúsculas
+                        - Não pode terminar com "."
+                        - Máximo 40 caracteres
+                    maxLength: 40
+                    pattern: '^[a-z][a-z0-9._-]*[^.]$'
+                    example: joao.silva
+                type:
+                    type: integer
+                    description: Tipo de usuário (1 = Cliente, 3 = Master)
+                    enum: [1, 3]
+                    example: 1
+                role_id:
+                    type: integer
+                    description: |-
+                        ID do perfil de acesso.
+                        **Para obter os perfis disponíveis, utilize:** `GET /roles/search`
+                        Consulte a documentação em `/rest/documentation/role`
+                    minimum: 1
+                    example: 5
+                new_password:
+                    type: string
+                    nullable: true
+                    description: |-
+                        Nova senha (opcional).
+                        Se informada:
+                        - Mínimo 8 caracteres
+                        - Deve conter letras e números
+                    minLength: 8
+                    maxLength: 250
+                    pattern: '((?=.*[0-9])(?=.*[a-z]).{8,250})'
+                    example: novasenha123
+                new_password_confirm:
+                    type: string
+                    nullable: true
+                    description: Confirmação da nova senha (obrigatório se new_password for informado)
+                    minLength: 8
+                    maxLength: 250
+                    example: novasenha123

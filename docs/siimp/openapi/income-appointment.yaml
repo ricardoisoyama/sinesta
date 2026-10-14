@@ -1,0 +1,1881 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: Minutas de Agendamento
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **MINUTAS DE AGENDAMENTO**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383/API-REST)**
+servers:
+    -   url: https://{subdominio}.{ambiente}.emitir.me
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: lannister
+                enum:
+                    - 'lannister'
+                    - 'dev-lannister'
+tags:
+    -   name: income-appointments
+        description: 'Rota para gerenciamento de minutas de agendamento.'
+security:
+    -   ApiKeyAuth: [ ]
+paths:
+
+    # GET
+    /income-appointments/search:
+        get:
+            tags:
+                - 'income-appointments'
+            summary: 'Busca uma minuta de agendamento no sistema'
+            description: 'Busca uma minuta de agendamento no sistema'
+            operationId: search
+            parameters:
+                -   $ref: '#/components/parameters/idParam'
+                -   $ref: '#/components/parameters/idsParam'
+                -   $ref: '#/components/parameters/ownerIdParam'
+                -   $ref: '#/components/parameters/filterAnyNameParam'
+                -   $ref: '#/components/parameters/filterNumberParam'
+                -   $ref: '#/components/parameters/filterNumberNfParam'
+                -   $ref: '#/components/parameters/filterStatusParam'
+                -   $ref: '#/components/parameters/appointmentTypeIdParam'
+                -   $ref: '#/components/parameters/filterMineParam'
+                -   $ref: '#/components/parameters/numberInvoiceParam'
+                -   $ref: '#/components/parameters/numberNfseParam'
+                -   $ref: '#/components/parameters/licensePlateParam'
+                -   $ref: '#/components/parameters/filterDriverParam'
+                -   $ref: '#/components/parameters/containerIdParam'
+                -   $ref: '#/components/parameters/containerNumberParam'
+                -   $ref: '#/components/parameters/filterRequestorParam'
+                -   $ref: '#/components/parameters/filterWithdrawalParam'
+                -   $ref: '#/components/parameters/filterReceiverParam'
+                -   $ref: '#/components/parameters/appointmentTypeCategoryParam'
+                -   $ref: '#/components/parameters/referenceParam'
+                -   $ref: '#/components/parameters/localParam'
+                -   $ref: '#/components/parameters/isRedexParam'
+                -   $ref: '#/components/parameters/hasInvoiceParam'
+                -   $ref: '#/components/parameters/operationIdParam'
+                -   $ref: '#/components/parameters/reserveNumberParam'
+                -   $ref: '#/components/parameters/shipNameParam'
+                -   $ref: '#/components/parameters/createdParam'
+                -   $ref: '#/components/parameters/createdFromParam'
+                -   $ref: '#/components/parameters/createdToParam'
+                -   $ref: '#/components/parameters/updatedParam'
+                -   $ref: '#/components/parameters/updatedFromParam'
+                -   $ref: '#/components/parameters/updatedToParam'
+                -   $ref: '#/components/parameters/scheduledAtFromParam'
+                -   $ref: '#/components/parameters/scheduledAtToParam'
+                -   $ref: '#/components/parameters/confirmedAtFromParam'
+                -   $ref: '#/components/parameters/confirmedAtToParam'
+                -   $ref: '#/components/parameters/startedAtFromParam'
+                -   $ref: '#/components/parameters/startedAtToParam'
+                -   $ref: '#/components/parameters/finishedAtFromParam'
+                -   $ref: '#/components/parameters/finishedAtToParam'
+                -   $ref: '#/components/parameters/productMaturityFromParam'
+                -   $ref: '#/components/parameters/productMaturityToParam'
+                -   $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+    # POST
+    /income-appointments/create:
+        post:
+            tags:
+                - 'income-appointments'
+            summary: 'Cria uma minuta de agendamento no sistema'
+            description: 'Cria uma minuta de agendamento no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+
+    /income-appointments/update:
+        post:
+            tags:
+                - 'income-appointments'
+            summary: 'Atualiza uma minuta de agendamento no sistema'
+            description: 'Atualiza uma minuta de agendamento no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+
+    /income-appointments/action:
+        post:
+            tags:
+                - 'income-appointments'
+            summary: 'Executa uma ação no agendamento (confirmar, iniciar ou finalizar)'
+            description: 'Altera o status de uma minuta de agendamento no sistema.'
+            operationId: 'action'
+            requestBody:
+                $ref: '#/components/requestBodies/ActionBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/ActionSuccess'
+
+    /income-appointments/cancel:
+        post:
+            tags:
+                - 'income-appointments'
+            summary: 'Cancela uma minuta de agendamento no sistema'
+            description: 'Realiza o cancelamento de uma minuta de agendamento mediante justificativa.'
+            operationId: 'cancel'
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CancelSuccess'
+
+    /income-appointments/no-show:
+        post:
+            tags:
+                - 'income-appointments'
+            summary: 'Registra No Show para uma minuta de agendamento'
+            description: 'Registra a ausência/não comparecimento (No-Show) do agendamento no sistema.'
+            operationId: 'noshow'
+            requestBody:
+                $ref: '#/components/requestBodies/NoShowBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/NoShowSuccess'
+
+components:
+
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARÂMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de uma minuta de agendamento.
+
+                *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** das minutas de agendamento, separados por vírgula.
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: Realiza a busca pela **EMPRESA** da minuta de agendamento.
+            schema:
+                type: integer
+                minimum: 1
+        filterAnyNameParam:
+            name: any_name
+            in: query
+            description: Realiza a busca pelo **NOME, CPF E/OU CNPJ DO SOLICITANTE E/OU TOMADOR** vinculado à uma minuta de agendamento. Em caso de pesquisa pelo nome, pode ser parcial.
+            schema:
+                type: string
+        filterNumberParam:
+            name: number
+            in: query
+            description: Realiza a busca pelo **NÚMERO** da minuta de agendamento.
+            schema:
+                type: string
+        filterNumberNfParam:
+            name: number_nf
+            in: query
+            description: Realiza a busca pelo **NÚMERO DA NOTA** inserida em uma minuta de agendamento.
+            schema:
+                type: string
+        filterStatusParam:
+            name: status
+            in: query
+            description: >
+                Realiza a busca pelo **STATUS** da minuta de agendamento.
+                  - `0` = Agendada
+                  - `3` = Confirmada
+                  - `5` = No Show
+                  - `6` = Cancelada
+                  - `9` = Em Execução
+                  - `10` = Finalizada
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 3
+                    - 5
+                    - 6
+                    - 9
+                    - 10
+        appointmentTypeIdParam:
+            name: appointment_type_id
+            in: query
+            description: Realiza a busca pelo **TIPO** da minuta de agendamento.
+            schema:
+                type: integer
+                minimum: 1
+        filterMineParam:
+            name: mine
+            in: query
+            description: >
+                Realiza a busca apenas pelas minutas de agendamento **CRIADAS PELO USUÁRIO DA REQUISIÇÃO**:
+                  - `false` = Não
+                  - `true` = Sim
+            schema:
+                type: string
+                enum:
+                    - false
+                    - true
+        numberInvoiceParam:
+            name: number_invoice
+            in: query
+            description: Realiza a busca pela **FATURA** vinculada à minuta de agendamento.
+            schema:
+                type: string
+        numberNfseParam:
+            name: number_nfse
+            in: query
+            description: Realiza a busca pela **NFS-e** vinculada à minuta de agendamento.
+            schema:
+                type: string
+        licensePlateParam:
+            name: license_plate
+            in: query
+            description: Realiza a busca pela **TRAÇÃO E/OU REBOQUE** vinculada à uma minuta de agendamento.
+            schema:
+                type: string
+        filterDriverParam:
+            name: driver
+            in: query
+            description: Realiza a busca pelo **NOME E/OU CPF DO MOTORISTA E/OU AUXILIAR** vinculado à uma minuta de agendamento. Em caso de pesquisa pelo nome, pode ser parcial.
+            schema:
+                type: string
+        containerIdParam:
+            name: container_id
+            in: query
+            description: Realiza a busca pelo **TIPO DE CONTAINER** vinculado à uma minuta de agendamento.
+            schema:
+                type: integer
+                minimum: 1
+        containerNumberParam:
+            name: container_number
+            in: query
+            description: Realiza a busca pelo **NÚMERO DO CONTAINER** vinculado à uma minuta de agendamento.
+            schema:
+                type: string
+        filterRequestorParam:
+            name: requestor
+            in: query
+            description: Realiza a busca pelo **NOME, CPF E/OU CNPJ DO SOLICITANTE** vinculado à uma minuta de agendamento. Em caso de pesquisa pelo nome, pode ser parcial.
+            schema:
+                type: string
+        filterWithdrawalParam:
+            name: withdrawal
+            in: query
+            description: Realiza a busca pelo **NOME, CPF E/OU CNPJ DO TOMADOR** vinculado à uma minuta de agendamento. Em caso de pesquisa pelo nome, pode ser parcial.
+            schema:
+                type: string
+        filterReceiverParam:
+            name: receiver
+            in: query
+            description: Realiza a busca pelo **NOME, CPF E/OU CNPJ DO TRANSPORTADOR** vinculado à uma minuta de agendamento. Em caso de pesquisa pelo nome, pode ser parcial.
+            schema:
+                type: string
+        appointmentTypeCategoryParam:
+            name: appointment_type_category
+            in: query
+            description: >
+                Realiza a busca pela **CATEGORIA** do tipo de agendamento:
+                  - `0` = Depósito de Container Cheio
+                  - `1` = Depósito de Container Vazio
+                  - `2` = Depósito de Carga Solta
+                  - `3` = Retirada de Container Cheio
+                  - `4` = Retirada de Container Vazio
+                  - `5` = Retirada de Carga Solta
+                  - `6` = Execução de Serviço
+                  - `7` = Transferência entre Terminais
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+                    - 7
+        referenceParam:
+            name: reference
+            in: query
+            description: Realiza a busca pela **REFERÊNCIA** da minuta de agendamento.
+            schema:
+                type: string
+        localParam:
+            name: local
+            in: query
+            description: Realiza a busca pela **LOCALIZAÇÃO** da minuta de agendamento.
+            schema:
+                type: string
+        isRedexParam:
+            name: is_redex
+            in: query
+            description: >
+                Realiza a busca por minutas de agendamento **REDEX**.
+                  - `0` = Não
+                  - `1` = Sim
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+        hasInvoiceParam:
+            name: has_invoice
+            in: query
+            description: >
+                Realiza a busca por minutas de agendamento **FATURADAS**.
+                  - `0` = Não
+                  - `1` = Sim
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+        operationIdParam:
+            name: operation_id
+            in: query
+            description: Realiza a busca pela **OPERAÇÃO** vinculada à uma minuta de agendamento.
+            schema:
+                type: integer
+                minimum: 1
+        reserveNumberParam:
+            name: reserve_number
+            in: query
+            description: Realiza a busca pelo **NÚMERO DA RESERVA** da minuta de agendamento.
+            schema:
+                type: string
+        shipNameParam:
+            name: ship_name
+            in: query
+            description: Realiza a busca pelo **NAVIO** da minuta de agendamento.
+            schema:
+                type: string
+        createdParam:
+            name: created_at
+            in: query
+            description: Data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: Data de criação inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: Data de criação final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedParam:
+            name: updated_at
+            in: query
+            description: Data da última atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: Data da última atualização inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: Data da última atualização final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        scheduledAtFromParam:
+            name: scheduled_at_from
+            in: query
+            description: Data de agendamento inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        scheduledAtToParam:
+            name: scheduled_at_to
+            in: query
+            description: Data de agendamento final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        confirmedAtFromParam:
+            name: confirmed_at_from
+            in: query
+            description: Data de confirmação inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        confirmedAtToParam:
+            name: confirmed_at_to
+            in: query
+            description: Data de confirmação final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        startedAtFromParam:
+            name: started_at_from
+            in: query
+            description: Data de início inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        startedAtToParam:
+            name: started_at_to
+            in: query
+            description: Data de início final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        finishedAtFromParam:
+            name: finished_at_from
+            in: query
+            description: Data de término inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        finishedAtToParam:
+            name: finished_at_to
+            in: query
+            description: Data de término final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        productMaturityFromParam:
+            name: product_maturity_from
+            in: query
+            description: Data de vencimento inicial do produto predominante. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        productMaturityToParam:
+            name: product_maturity_to
+            in: query
+            description: Data de vencimento final do produto predominante. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+
+    # CORPO DE REQUISIÇÕES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação de uma minuta de agendamento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/BaseIncomeAppointmentModel'
+        UpdateBody:
+            description: 'Este corpo será utilizado para atualização de uma minuta de agendamento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/BaseIncomeAppointmentModel'
+        ActionBody:
+            description: 'Corpo utilizado para executar ações no agendamento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/ActionRequest'
+        CancelBody:
+            description: 'Corpo utilizado para o cancelamento de uma minuta de agendamento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelRequest'
+        NoShowBody:
+            description: 'Corpo utilizado para registrar No-Show de uma minuta de agendamento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/NoShowRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de minutas de agendamento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de uma minuta de agendamento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de uma minuta de agendamento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        ActionSuccess:
+            description: 'Resposta de sucesso para a ação executada.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/ActionResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso para o cancelamento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+        NoShowSuccess:
+            description: 'Resposta de sucesso para o registro de No-Show.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/NoShowResponse'
+
+    # OBJETOS
+    schemas:
+
+        # Requests
+        ActionRequest:
+            type: object
+            required:
+                - id
+                - action_on
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da minuta de agendamento.'
+                when:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2026-07-30 14:00:00'
+                    description: 'Data e hora de realização da ação.'
+                action_on:
+                    type: string
+                    example: 'confirm'
+                    description: >
+                        Ação a ser executada:
+                          - `confirm` = Confirmar
+                          - `start` = Iniciar
+                          - `finish` = Finalizar
+                    enum:
+                        - confirm
+                        - start
+                        - finish
+        CancelRequest:
+            type: object
+            required:
+                - id
+                - reason
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da minuta de agendamento.'
+                reason:
+                    type: string
+                    minLength: 15
+                    maxLength: 200
+                    example: 'Cancelamento solicitado pelo cliente devido a imprevistos logísticos.'
+                    description: 'Motivo do cancelamento (mínimo 15 e máximo 200 caracteres).'
+        NoShowRequest:
+            type: object
+            required:
+                - id
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID da minuta de agendamento.'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -   $ref: '#/components/schemas/SimpleSearchIncomeAppointmentModel'
+                            -   $ref: '#/components/schemas/FullSearchIncomeAppointmentModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FullSearchIncomeAppointmentModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FullSearchIncomeAppointmentModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        ActionResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 353948
+                            description: 'ID da minuta de agendamento.'
+                        status:
+                            type: integer
+                            example: 3
+                            description: >
+                                Status atual da Minuta:
+                                  - `0` = Agendada
+                                  - `3` = Confirmada
+                                  - `5` = No Show
+                                  - `6` = Cancelada
+                                  - `9` = Em Execução
+                                  - `10` = Finalizada
+                            enum:
+                                - 0
+                                - 3
+                                - 5
+                                - 6
+                                - 9
+                                - 10
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Ação realizada com sucesso!'
+                    description: 'Mensagem de retorno.'
+        CancelResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 353949
+                            description: 'ID da minuta de agendamento.'
+                        status:
+                            type: integer
+                            example: 6
+                            description: >
+                                Status atual da Minuta:
+                                  - `0` = Agendada
+                                  - `3` = Confirmada
+                                  - `5` = No Show
+                                  - `6` = Cancelada
+                                  - `9` = Em Execução
+                                  - `10` = Finalizada
+                            enum:
+                                - 0
+                                - 3
+                                - 5
+                                - 6
+                                - 9
+                                - 10
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Cancelamento realizado com sucesso!'
+                    description: 'Mensagem de retorno.'
+        NoShowResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 353950
+                            description: 'ID da minuta de agendamento.'
+                        status:
+                            type: integer
+                            example: 5
+                            description: >
+                                Status atual da Minuta:
+                                  - `0` = Agendada
+                                  - `3` = Confirmada
+                                  - `5` = No Show
+                                  - `6` = Cancelada
+                                  - `9` = Em Execução
+                                  - `10` = Finalizada
+                            enum:
+                                - 0
+                                - 3
+                                - 5
+                                - 6
+                                - 9
+                                - 10
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'No show efetivado com sucesso!'
+                    description: 'Mensagem de retorno.'
+
+        # MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        BaseIncomeAppointmentModel:
+            type: object
+            required:
+                - owner_id
+                - appointment_type_id
+            properties:
+                id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                owner_id:
+                    type: integer
+                    minimum: 1
+                    example: 123
+                    description: 'Código da empresa proprietária da minuta de agendamento.'
+                appointment_type_id:
+                    type: integer
+                    minimum: 1
+                    example: 1
+                    description: 'Código do Tipo de Agendamento.'
+                schedule_from:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    nullable: true
+                    example: '2026-12-31 23:59:59'
+                    description: 'Data/Hora inicial da minuta de gendamento.'
+                schedule_to:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    nullable: true
+                    example: '2026-12-31 23:59:59'
+                    description: 'Data/Hora final da minuta de agendamento.'
+                requestor_phone:
+                    type: string
+                    pattern: '^[0-9]+$'
+                    maxLength: 20
+                    nullable: true
+                    example: '11999999999'
+                    description: 'Telefone do solicitante.'
+                requestor_cnpj:
+                    type: string
+                    pattern: '^[a-zA-Z0-9]{14}$'
+                    nullable: true
+                    example: '11222333000144'
+                    description: 'CNPJ do solicitante.'
+                requestor_name:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'Empresa Solicitante LTDA'
+                    description: 'Nome do solicitante.'
+                requestor_email:
+                    type: string
+                    format: email
+                    maxLength: 255
+                    nullable: true
+                    example: 'solicitante@empresa.com'
+                    description: 'E-mail do solicitante.'
+                request_date:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    nullable: true
+                    example: '2026-12-31 23:59:59'
+                    description: 'Data da requisição.'
+                reference:
+                    type: string
+                    maxLength: 50
+                    nullable: true
+                    example: 'REF-12345'
+                    description: 'Referência.'
+                local:
+                    type: string
+                    maxLength: 50
+                    nullable: true
+                    example: 'Pátio A'
+                    description: 'Localização.'
+                product_maturity:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2026-12-31'
+                    description: 'Data de vencimento do produto.'
+                operation_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 10
+                    description: 'Operação.'
+                costcenter_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 5
+                    description: 'Centro de Custo.'
+                category1_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 1
+                    description: 'Categoria 1.'
+                category2_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 2
+                    description: 'Categoria 2.'
+                category3_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 3
+                    description: 'Categoria 3.'
+                requestor:
+                    type: object
+                    description: 'Dados do **SOLICITANTE** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do solicitante (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do solicitante (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do solicitante (informar caso ID ou CPF não sejam preenchidos).'
+                withdrawal:
+                    type: object
+                    description: 'Dados do **TOMADOR** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do tomador (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do tomador (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do tomador (informar caso ID ou CPF não sejam preenchidos).'
+                receiver:
+                    type: object
+                    description: 'Dados do **TRANSPORTADOR** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do transportador (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do transportador (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do transportador (informar caso ID ou CPF não sejam preenchidos).'
+                lessee:
+                    type: object
+                    description: 'Dados do **ARRENDATÁRIO** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do arrendatário (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do arrendatário (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do arrendatário (informar caso ID ou CPF não sejam preenchidos).'
+                driver:
+                    type: object
+                    description: 'Dados do **MOTORISTA PRINCIPAL** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do motorista principal (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do motorista principal (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do motorista principal (informar caso ID ou CPF não sejam preenchidos).'
+                driver2:
+                    type: object
+                    description: 'Dados do **MOTORISTA AUXILIAR** da minuta de agendamento.'
+                    properties:
+                        id:
+                            type: integer
+                            minimum: 1
+                            example: 123
+                            description: 'Código do motorista auxiliar (informar caso CPF ou CNPJ não sejam preenchidos).'
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            example: '11122233344'
+                            description: 'CPF do motorista auxiliar (informar caso ID ou CNPJ não sejam preenchidos).'
+                        cnpj:
+                            type: string
+                            maxLength: 14
+                            example: '11222333000144'
+                            description: 'CNPJ do motorista auxiliar (informar caso ID ou CPF não sejam preenchidos).'
+                outside_driver_name:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'João da Silva'
+                    description: 'Nome do Motorista Externo.'
+                outside_driver_cpf:
+                    type: string
+                    minLength: 11
+                    maxLength: 11
+                    nullable: true
+                    example: '12345678901'
+                    description: 'CPF do Motorista Externo.'
+                outside_driver_license:
+                    type: string
+                    maxLength: 30
+                    nullable: true
+                    example: '12345678900'
+                    description: 'CNH do Motorista Externo.'
+                outside_driver_phone:
+                    type: string
+                    minLength: 1
+                    maxLength: 15
+                    nullable: true
+                    example: '11952871246'
+                    description: 'Telefone do Motorista Externo.'
+                container_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 123
+                    description: 'Código do Tipo de Container.'
+                container_number:
+                    type: string
+                    maxLength: 11
+                    minLength: 11
+                    nullable: true
+                    example: 'ABCD1234567'
+                    description: 'Número do Container.'
+                process_type:
+                    type: integer
+                    nullable: true
+                    example: 0
+                    description: >
+                        Tipo de Processo:
+                          - `0` = Importação
+                          - `1` = Exportação
+                    enum:
+                        - 0
+                        -   1[cite: 2, 4]
+                dta_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '26/1234567-8'
+                    description: 'Número de DTA/DAT.'
+                is_redex:
+                    type: integer
+                    nullable: true
+                    example: 0
+                    description: >
+                        Redex:
+                          - `0` = NÃO
+                          - `1` = SIM
+                    enum:
+                        - 0
+                        - 1
+                reserve_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'ABCD1234567'
+                    description: 'Número de Reserva.'
+                demurrage_date:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2026-12-31'
+                    description: 'Data de Demurrage/Detention.'
+                due_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '26AB0123456789'
+                    description: 'Número de DUE.'
+                di_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '26/123456-7'
+                    description: 'Número de DI.'
+                deadline:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2026-12-31'
+                    description: 'Data de Deadline.'
+                client_reference_number:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Referência de Cliente.'
+                reference_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Referência de Despachante.'
+                bl_number:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'ABCD0123456789'
+                    description: 'Número de BL.'
+                ship_name:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'NAVIO'
+                    description: 'Nome do Navio.'
+                port_name:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'PORTO DE ORIGEM'
+                    description: 'Nome do Porto de Origem.'
+                destiny_port_name:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'PORTO DE DESTINO'
+                    description: 'Nome do Porto de Destino.'
+                agency_name:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: 'AGÊNCIA/ARMADOR'
+                    description: 'Nome da Agência/Armador.'
+                awb_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '123-12345678'
+                    description: 'Número de A.W.B.'
+                seal_number:
+                    type: string
+                    maxLength: 200
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números dos Lacres.'
+                temporary_seals:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres Provisórios.'
+                exporter_seals:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres do Exportador'
+                oea_seals:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres do OEA'
+                tare:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 123.45
+                    description: 'Tara'
+                hawb_number:
+                    type: string
+                    maxLength: 100
+                    nullable: true
+                    example: '123-1234567'
+                    description: 'Número de M.A.W.B.'
+                min_temperature:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: -18.00
+                    description: 'Temperatura Mínima.'
+                max_temperature:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 5.00
+                    description: 'Temperatura Máxima.'
+                shipment:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Shipment.'
+                batch:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Remessa.'
+                transport_product_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 10
+                    description: 'Código do Produto Predominante de Transporte.'
+                ship_docking_date:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2026-12-31'
+                    description: 'Data de Atracação.'
+                internal_market:
+                    type: integer
+                    nullable: true
+                    example: 0
+                    description: >
+                        Mercado Interno:
+                          - `0` = NÃO
+                          - `1` = SIM
+                    enum:
+                        - 0
+                        - 1
+                container_truck_position:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Posição do Container no Caminhão.'
+                vehicle_traction_license_plate:
+                    type: string
+                    minLength: 7
+                    maxLength: 7
+                    nullable: true
+                    example: 'ABC1D23'
+                    description: 'Placa do Veículo de Tração (Cavalo).'
+                vehicle_trailer1_license_plate:
+                    type: string
+                    minLength: 7
+                    maxLength: 7
+                    nullable: true
+                    example: 'XYZ9876'
+                    description: 'Placa do Reboque/Carreta 1.'
+                vehicle_trailer2_license_plate:
+                    type: string
+                    minLength: 7
+                    maxLength: 7
+                    nullable: true
+                    example: 'JKL5432'
+                    description: 'Placa do Reboque/Carreta 2.'
+                destination_location_id:
+                    type: integer
+                    minimum: 1
+                    nullable: true
+                    example: 5
+                    description: 'Código da Localização de Destino.'
+                obs:
+                    type: string
+                    maxLength: 2000
+                    nullable: true
+                    example: 'Observações do Agendamento.'
+                    description: 'Observação da minuta de agendamento.'
+                nf_total_amount:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 15000.50
+                    description: 'Valor total das NFs.'
+                nf_total_weight:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 1200.00
+                    description: 'Peso total bruto das NFs.'
+                nf_total_net_weight:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 1100.00
+                    description: 'Peso total líquido das NFs.'
+                nf_total_weight_calculated:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 1200.00
+                    description: 'Peso total calculado.'
+                nf_total_qty:
+                    type: integer
+                    nullable: true
+                    example: 10
+                    description: 'Quantidade total de volumes das NFs.'
+                nf_total_cubage:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 3.55
+                    description: 'Cubagem total consolidada das NFs.'
+                pallets:
+                    type: number
+                    format: float
+                    nullable: true
+                    example: 4.00
+                    description: 'Quantidade de Pallets.'
+                nfs:
+                    type: array
+                    description: 'Lista de Notas Fiscais vinculadas. Deve ser informado ID ou Chave de Acesso.'
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                minimum: 1
+                                example: 554
+                                description: 'ID da Nota Fiscal no sistema (obrigatório caso key não seja informada).'
+                            key:
+                                type: string
+                                pattern: '^[a-zA-Z0-9]{44}$'
+                                example: '35261200000000000000550010000000011000000000'
+                                description: 'Chave de acesso da NFe de 44 dígitos (obrigatório caso ID não seja informado).'
+                services:
+                    type: array
+                    description: 'Lista de Serviços associados à minuta de agendamento.'
+                    items:
+                        type: object
+                        required:
+                            - service_id
+                            - value
+                            - quantity
+                            - total
+                        properties:
+                            service_id:
+                                type: integer
+                                minimum: 1
+                                example: 12
+                                description: 'Código identificador do Serviço.'
+                            value:
+                                type: number
+                                format: float
+                                example: 150.00
+                                description: 'Valor unitário do Serviço.'
+                            quantity:
+                                type: number
+                                format: float
+                                example: 2.00
+                                description: 'Quantidade do Serviço prestado.'
+                            total:
+                                type: number
+                                format: float
+                                example: 300.00
+                                description: 'Valor total calculado do Serviço.'
+
+        # MODEL BASE DE BUSCA
+        BaseSearchIncomeAppointmentModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 123
+                    description: 'Código da minuta de agendamento.'
+                owner_id:
+                    type: integer
+                    example: 123
+                    description: 'Código da empresa da minuta de agendamento.'
+                serie:
+                    type: string
+                    example: 'CAL'
+                    description: 'Série da minuta de agendamento.'
+                number:
+                    type: integer
+                    example: 7
+                    description: 'Número da minuta de agendamento.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2026-07-30 15:00:51'
+                    description: 'Data de criação da minuta de agendamento.'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2026-07-30 15:01:16'
+                    description: 'Data da última atualização da minuta de agendamento.'
+                entry_type:
+                    type: integer
+                    example: 3
+                    default: 0
+                    description: >
+                        Tipo da Minuta:
+                          - `0` = Coleta
+                          - `1` = Terminal
+                          - `2` = Carregamento
+                          - `3` = Entrega
+                          - `5` = Reentrega
+                          - `6` = Complemento
+                          - `7` = Devolução
+                          - `8` = AET
+                          - `9` = Agendamento
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 5
+                        - 6
+                        - 7
+                        - 8
+                        - 9
+                status:
+                    type: integer
+                    example: 0
+                    default: 0
+                    readOnly: true
+                    description: >
+                        Status da Minuta:
+                          - `0` = Agendada
+                          - `3` = Confirmada
+                          - `5` = No Show
+                          - `6` = Cancelada
+                          - `9` = Em Execução
+                          - `10` = Finalizada
+                    enum:
+                        - 0
+                        - 3
+                        - 5
+                        - 6
+                        - 9
+                        - 10
+                schedule_from:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    nullable: true
+                    example: '2026-12-31 23:59:59'
+                    description: 'Data inicial de Agendamento.'
+                schedule_to:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    nullable: true
+                    example: '2026-12-31 23:59:59'
+                    description: 'Data final de Agendamento.'
+                reference:
+                    type: string
+                    nullable: true
+                    example: '123'
+                    description: 'Referência.'
+                local:
+                    type: string
+                    nullable: true
+                    example: '456'
+                    description: 'Localização.'
+                appointment_type_id:
+                    type: integer
+                    minimum: 1
+                    example: 1
+                    description: 'Código do Tipo de Agendamento.'
+                appointment_type_category:
+                    type: integer
+                    example: 0
+                    description: >
+                        Categoria do Tipo de Agendamento:
+                          - `0` = Depósito de Container Cheio
+                          - `1` = Depósito de Container Vazio
+                          - `2` = Depósito de Carga Solta
+                          - `3` = Retirada de Container Cheio
+                          - `4` = Retirada de Container Vazio
+                          - `5` = Retirada de Carga Solta
+                          - `6` = Execução de Serviço
+                          - `7` = Transferência entre Terminais
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                        - 7
+                operation_id:
+                    type: integer
+                    nullable: true
+                    example: 2344
+                    description: 'Código da Operação.'
+                costcenter_id:
+                    type: integer
+                    nullable: true
+                    example: 1682
+                    description: 'Código do Centro de Custo.'
+                category1_id:
+                    type: integer
+                    nullable: true
+                    example: 1119
+                    description: 'Categoria 1.'
+                category2_id:
+                    type: integer
+                    nullable: true
+                    example: 1163
+                    description: 'Categoria 2.'
+                category3_id:
+                    type: integer
+                    nullable: true
+                    example: 726
+                    description: 'Categoria 3.'
+                container_id:
+                    type: integer
+                    nullable: true
+                    example: 63
+                    description: 'Tipo do Container.'
+                container_number:
+                    type: string
+                    nullable: true
+                    example: 'CAAU6225030'
+                    description: 'Número do Container.'
+                process_type:
+                    type: integer
+                    example: 0
+                    default: 0
+                    description: >
+                        Tipo:
+                        - `0` = Importação
+                        - `1` = Exportação
+                    enum:
+                        - 0
+                        - 1
+                dta_number:
+                    type: string
+                    nullable: true
+                    example: '26/1234567-8'
+                    description: 'Número de DTA/DAT.'
+                is_redex:
+                    type: integer
+                    example: 0
+                    default: 0
+                    description: >
+                        Redex:
+                        - `0` = NÃO
+                        - `1` = SIM
+                    enum:
+                        - 0
+                        - 1
+                due_number:
+                    type: string
+                    example: '26AB0123456789'
+                    description: 'Número de DUE.'
+                reserve_number:
+                    type: string
+                    nullable: true
+                    example: 'ABCD1234567'
+                    description: 'Número de Reserva.'
+                demurrage_date:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d'
+                    example: '2026-12-31'
+                    description: 'Data de Demurrage/Detention.'
+                deadline:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d'
+                    example: '2026-12-31'
+                    description: 'Data de Deadline.'
+                client_reference_number:
+                    type: string
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Referência de Cliente.'
+                reference_number:
+                    type: string
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Referência de Despachante.'
+                bl_number:
+                    type: string
+                    nullable: true
+                    example: 'ABCD0123456789'
+                    description: 'Número de BL.'
+                ship_name:
+                    type: string
+                    nullable: true
+                    example: 'NAVIO'
+                    description: 'Nome de Navio.'
+                port_name:
+                    type: string
+                    nullable: true
+                    example: 'PORTO'
+                    description: 'Porto de Origem.'
+                destiny_port_name:
+                    type: string
+                    nullable: true
+                    example: 'PORTO'
+                    description: 'Porto de Destino.'
+                agency_name:
+                    type: string
+                    nullable: true
+                    example: 'AGÊNCIA/ARMADOR'
+                    description: 'Nome de Agência/Armador.'
+                awb_number:
+                    type: string
+                    nullable: true
+                    example: '123-12345678'
+                    description: 'Número de A.W.B.'
+                seal_number:
+                    type: string
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres.'
+                temporary_seals:
+                    type: string
+                    maxLength: 255
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres Provisórios.'
+                exporter_seals:
+                    type: string
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres do Exportador'
+                oea_seals:
+                    type: string
+                    nullable: true
+                    example: 'ABC-12345678'
+                    description: 'Números de Lacres do OEA'
+                tare:
+                    type: number
+                    nullable: true
+                    format: float
+                    example: 123.45
+                    description: 'Tara.'
+                hawb_number:
+                    type: string
+                    nullable: true
+                    example: '123-1234567'
+                    description: 'Número de M.A.W.B.'
+                min_temperature:
+                    type: number
+                    nullable: true
+                    format: float
+                    example: 12.34
+                    description: 'Temperatura Mínima.'
+                max_temperature:
+                    type: number
+                    nullable: true
+                    format: float
+                    example: 12.34
+                    description: 'Temperatura Máxima.'
+                shipment:
+                    type: string
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Shipment.'
+                batch:
+                    type: string
+                    nullable: true
+                    example: '0123456789'
+                    description: 'Número de Remessa.'
+                transport_product_id:
+                    type: integer
+                    nullable: true
+                    example: 1369112
+                    description: 'ID do Produto Predominante.'
+                ship_docking_date:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d'
+                    example: '2026-12-31'
+                    description: 'Data de Atracação.'
+                internal_market:
+                    type: integer
+                    example: 0
+                    default: 0
+                    description: >
+                        Mercado Interno:
+                        - `0` = NÃO
+                        - `1` = SIM
+                    enum:
+                        - 0
+                        - 1
+                container_truck_position:
+                    type: integer
+                    nullable: true
+                    example: 0
+                    description: 'Posição do Container no caminhão.'
+                vehicle_traction_license_plate:
+                    type: string
+                    nullable: true
+                    example: 'DPC9B64'
+                    description: 'Placa da Tração.'
+                vehicle_trailer1_license_plate:
+                    type: string
+                    nullable: true
+                    example: 'ADP5G04'
+                    description: 'Placa do Reboque 1.'
+                vehicle_trailer2_license_plate:
+                    type: string
+                    nullable: true
+                    example: 'BSG2H42'
+                    description: 'Placa do Reboque 2.'
+                obs:
+                    type: string
+                    nullable: true
+                    example: 'Observação'
+                    description: 'Observação da minuta de agendamento.'
+                requestor:
+                    type: object
+                    description: 'Dados do solicitante.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 123
+                            description: 'Código do solicitante.'
+                        name:
+                            type: string
+                            example: 'Nome'
+                            description: 'Nome do solicitante.'
+                        cnpj:
+                            type: string
+                            nullable: true
+                            example: '11222333000144'
+                            description: 'CNPJ do solicitante.'
+                        phone:
+                            type: string
+                            nullable: true
+                            example: '1122223333'
+                            description: 'Telefone do solicitante.'
+                        email:
+                            type: string
+                            nullable: true
+                            example: 'empresa@mail.com'
+                            description: 'E-mail do solicitante.'
+                withdrawal:
+                    type: object
+                    description: 'Dados do tomador.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 123
+                            description: 'Código do tomador.'
+                        name:
+                            type: string
+                            example: 'Nome'
+                            description: 'Nome do tomador.'
+                receiver:
+                    type: object
+                    description: 'Dados do transportador.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 123
+                            description: 'Código do transportador.'
+                        name:
+                            type: string
+                            example: 'Nome'
+                            description: 'Nome do transportador.'
+
+        # SCHEMA BUSCA GERAL
+        SimpleSearchIncomeAppointmentModel:
+            allOf:
+                -   $ref: '#/components/schemas/BaseSearchIncomeAppointmentModel'
+
+        # SCHEMA BUSCA POR ID
+        FullSearchIncomeAppointmentModel:
+            allOf:
+                -   $ref: '#/components/schemas/BaseSearchIncomeAppointmentModel'
+                -   type: object
+                    properties:
+                        histories:
+                            type: array
+                            description: 'Históricos da minuta de agendamento.'
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 123
+                                        description: 'ID do histórico.'
+                                    username:
+                                        type: string
+                                        example: 'usuario'
+                                        description: 'Usuário que lançou o histórico.'
+                                    message:
+                                        type: string
+                                        example: 'Status da Minuta de Agendamento.'
+                                        description: 'Descrição da mensagem do histórico.'
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2026-12-31 23:59:59'
+                                        description: 'Data de Criação do registro do histórico.'
+                        nfs:
+                            type: array
+                            description: 'NF-es da minuta de agendamento.'
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 123
+                                        description: 'ID da NF-e.'
+                                    serie:
+                                        type: string
+                                        example: '1'
+                                        description: 'Série da NF-e.'
+                                    number:
+                                        type: string
+                                        example: '176473'
+                                        description: 'Número da NF-e.'
+                                    key:
+                                        type: string
+                                        example: '35260701943374000103550010001764731001243418'
+                                        description: 'Chave da NF-e'
+                                    weight:
+                                        type: number
+                                        example: 10.00
+                                        description: 'Peso bruto da NF-e.'
+                                    total:
+                                        type: number
+                                        example: 123.45
+                                        description: 'Total da NF-e.'
+                                    qtd:
+                                        type: number
+                                        example: 1.00
+                                        description: 'Quantidade de volumes da NF-e.'
+                                    qtd_products:
+                                        type: number
+                                        example: 1.00
+                                        description: 'Quantidade de produtos da NF-e.'
+                                    net_weight:
+                                        type: number
+                                        example: 10.00
+                                        description: 'Peso líquido da NF-e.'
+                        services:
+                            type: array
+                            description: 'Serviços da minuta de agendamento.'
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 123
+                                        description: 'ID do Serviço.'
+                                    name:
+                                        type: string
+                                        example: 'Nome'
+                                        description: 'Nome do Serviço.'
+                                    value:
+                                        type: number
+                                        example: 123.45
+                                        description: 'Valor do Serviço.'
+                                    quantity:
+                                        type: number
+                                        example: 123.45
+                                        description: 'Quantidade do Serviço.'
+                                    total:
+                                        type: number
+                                        example: 123.45
+                                        description: 'Total do Serviço.'

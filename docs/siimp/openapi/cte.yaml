@@ -1,0 +1,2073 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: CT-e 3.0
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **FISCAL CT-E**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: ctes
+      description: Rota para gerenciamento de conhecimentos de transporte eletrônico.
+security:
+    - ApiKeyAuth: []
+paths:
+
+    # GET
+    /ctes/search:
+        get:
+            tags:
+                - 'ctes'
+            summary: Filtros de pesquisa para CT-es
+            description: Busca ctes com base nos filtros informados
+            operationId: search
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/ownerIdParam'
+                - $ref: '#/components/parameters/numberParam'
+                - $ref: '#/components/parameters/keyParam'
+                - $ref: '#/components/parameters/numberNfParam'
+                - $ref: '#/components/parameters/typeParam'
+                - $ref: '#/components/parameters/serviceTypeParam'
+                - $ref: '#/components/parameters/takerParam'
+                - $ref: '#/components/parameters/replacedParam'
+                - $ref: '#/components/parameters/issuedAtParam'
+                - $ref: '#/components/parameters/issuedFromParam'
+                - $ref: '#/components/parameters/issuedToParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/incomeNumberParam'
+                - $ref: '#/components/parameters/anyNameParam'
+                - $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+    /ctes/xml:
+        get:
+            tags:
+                - ctes
+            summary: Buscar o arquivo XML de um CT-e
+            operationId: xml
+            parameters:
+              - name: id
+                in: query
+                description: ID do CT-e que deseja buscar o arquivo XML.
+                required: true
+                schema:
+                    type: integer
+                    minimum: 1
+            responses:
+                '200':
+                    description: Sucesso
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                                example: 'application/xml; charset=utf-8'
+                    content:
+                        application/xml:
+                            schema:
+                                type: string
+                                format: binary
+
+    /ctes/dacte:
+        get:
+            tags:
+                - ctes
+            summary: Buscar o arquivo DACT-e de um CT-e
+            description: Busca o arquivo DACT-e (_pdf_) de um CT-e
+            operationId: dacte
+            parameters:
+                - $ref: '#/components/parameters/idRequiredParam'
+                - $ref: '#/components/parameters/dacteLayoutParam'
+            responses:
+                '200':
+                    description: Sucesso
+                    headers:
+                        Content-Type:
+                            schema:
+                                type: string
+                                example: 'application/pdf; charset=utf-8'
+                    content:
+                        application/pdf:
+                            schema:
+                                type: string
+                                format: binary
+
+    #POST
+    /ctes/create:
+        post:
+            tags:
+                - 'ctes'
+            description: 'Cria um CT-e no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+
+    /ctes/update:
+        post:
+            tags:
+                - 'ctes'
+            description: 'Atualiza um CT-e no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+
+    /ctes/send:
+        post:
+            tags:
+                - 'ctes'
+            description: 'Emite um CT-e'
+            operationId: 'send'
+            requestBody:
+                $ref: '#/components/requestBodies/SendBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SendSuccess'
+
+    /ctes/calculate:
+        post:
+            tags:
+                - 'ctes'
+            description: 'Calcula um CT-e'
+            operationId: 'calculate'
+            requestBody:
+                $ref: '#/components/requestBodies/CalculateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CalculateSuccess'
+
+    /ctes/cancel:
+        post:
+            tags:
+                - 'ctes'
+            description: 'Cancela um CT-e'
+            operationId: 'cancel'
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CancelSuccess'
+
+components:
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARÂMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de um CT-e.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idRequiredParam:
+            name: id
+            in: query
+            required: true
+            description: >
+                Realiza a busca pelo **ID** de um CT-e.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** dos CT-es, separados por vírgula.
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: >
+                Realiza a busca pelo **CÓDIGO DA EMPRESA**.
+            schema:
+                type: integer
+        numberParam:
+            name: number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO**.
+            schema:
+                type: integer
+        keyParam:
+            name: key
+            in: query
+            description: Realiza a busca pela **CHAVE DE ACESSO**.
+            required: false
+            schema:
+                type: string
+                pattern: '[A-Z0-9]'
+                minLength: 44
+                maxLength: 44
+        numberNfParam:
+            name: number_nf
+            in: query
+            description: Realiza a busca pelo **NÚMERO DA NOTA** do CT-e.
+            required: false
+            schema:
+                type: integer
+        typeParam:
+            name: type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO** do CT-e:
+                  - `0` = Normal
+                  - `1` = Complemento
+                  - `2` = Anulação
+                  - `3` = Substituto
+                  - `4` = Digitação
+            required: false
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+        serviceTypeParam:
+            name: service_type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DE SERVIÇO** do CT-e:
+                  - `0` = Normal
+                  - `1` = Subcontratação
+                  - `2` = Redespacho
+                  - `3` = Redespacho Int.
+                  - `4` = Serviço Multimodal
+                  - `5` = Reentrega
+                  - `10` = Reentrega (Redespacho)
+                  - `11` = Reentrega (Red. Intermed.)
+                  - `6` = Devolução
+            required: false
+            schema:
+                type: integer
+                enum:
+                - 0
+                - 1
+                - 2
+                - 3
+                - 4
+                - 5
+                - 10
+                - 11
+                - 6
+        takerParam:
+            name: taker
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DE TOMADOR** do CT-e:
+                  - `0`  = Remetente
+                  - `1`  = Expedidor
+                  - `2`  = Recebedor
+                  - `3`  = Destinatário
+                  - `4`  = Outros
+            required: false
+            schema:
+                type: integer
+                enum:
+                - 0
+                - 1
+                - 2
+                - 3
+                - 4
+        replacedParam:
+            name: replaced
+            in: query
+            description: >
+                É Substituido?:
+                  - `0`  = Não
+                  - `1`  = Sim
+            required: false
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+        issuedAtParam:
+            name: issued_at
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        issuedFromParam:
+            name: issued_from
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO INICIAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        issuedToParam:
+            name: issued_to
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO FINAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdAtParam:
+            name: created_at
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO INICIAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO FINAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO INICIAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO FINAL** do CT-e.
+                        Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        incomeNumberParam:
+            name: number_income
+            in: query
+            description: Realiza a busca pelo **NÚMERO DA MINUTA** vinculada no CT-e.
+            required: false
+            schema:
+                type: integer
+        anyNameParam:
+            name: any_name
+            in: query
+            description: Realiza a busca por **QUALQUER PESSOA ENVOLVIDA** no CT-e. Pode ser pelo nome *(completo ou parcial)*, CPF ou CNPJ.
+            required: false
+            schema:
+                type: string
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados.
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+        dacteLayoutParam:
+            name: layout
+            in: query
+            description: >
+                Especifica o **TIPO DE LAYOUT** do arquivo PDF.
+                Valores possíveis:
+                  - `0`: DACTE Comum
+                  - `1`: DACTE 1.2
+                  - `2`: DACTE Minuta
+                  - `3`: DACTE A5
+            required: true
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+
+    # CORPO DE REQUISIÇÕES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de um CT-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Cte'
+        SendBody:
+            description: 'Este corpo será utilizado para emissão de um CT-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendRequest'
+        CalculateBody:
+            description: 'Este corpo será utilizado para o cálculo de um CT-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CalculateRequest'
+        CancelBody:
+            description: 'Este corpo será utilizado para o cancelamento de um CT-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        SendSuccess:
+            description: 'Resposta de sucesso, para emissão de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendResponse'
+        CalculateSuccess:
+            description: 'Resposta de sucesso, para cálculo de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CalculateResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso, para cancelamento de CT-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+
+    # OBJETOS
+    schemas:
+
+        # REQUESTS
+        SendRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID do CT-e.'
+        CalculateRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID do CT-e.'
+        CancelRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID do CT-e.'
+                reason:
+                    type: string
+                    nullable: false
+                    minLength: 20
+                    example: 'Cancelando por motivos XYZ.'
+                    description: 'ID do CT-e.'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/CteSimple'
+                            - $ref: '#/components/schemas/CteAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        SendResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteResponseSend'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'CT-e emitido com sucesso!'
+                    description: 'Mensagem de retorno.'
+        CalculateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteResponseCalculate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Cálculo realizado com sucesso!'
+                    description: 'Mensagem de retorno.'
+        CancelResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CteResponseCancel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'CT-e cancelado com sucesso!'
+                    description: 'Mensagem de retorno.'
+
+        # MODELS
+        ## MODEL BASE
+        CteBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID. *(somente informá-lo em caso de atualização de dados)*'
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 192734
+                    description: 'Código da empresa.'
+                serie:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 3
+                    description: 'Série do CT-e'
+                    example: '123'
+                number:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 9
+                    description: 'Número do CT-e'
+                    example: '123456789'
+                cfop:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 4
+                    maxLength: 4
+                    nullable: true
+                    example: '1236'
+                    description: 'CFOP predominante do CT-e'
+                type:
+                    type: string
+                    pattern: '[0-9]'
+                    example: '4'
+                    description: >
+                        Realiza a busca pelo **TIPO** do CT-e:
+                          - `0` = Normal
+                          - `1` = Complemento
+                          - `2` = Anulação
+                          - `3` = Substituto
+                          - `4` = Digitação
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                service_type:
+                    type: string
+                    pattern: '[0-9]'
+                    example: '0'
+                    description: >
+                        **TIPO DE SERVIÇO** do CT-e:
+                          - `0` = Normal
+                          - `1` = Subcontratação
+                          - `2` = Redespacho
+                          - `3` = Redespacho Int.
+                          - `4` = Serviço Multimodal
+                          - `5` = Reentrega
+                          - `10` = Reentrega (Redespacho)
+                          - `11` = Reentrega (Red. Intermed.)
+                          - `6` = Devolução
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 10
+                        - 11
+                        - 6
+                key:
+                    type: string
+                    minLength: 44
+                    maxLength: 44
+                    pattern: '[A-Z0-9]'
+                    example: '35221243256171000199550010002713451756413099'
+                    description: 'Chave do CT-e'
+                    readOnly: true
+                status:
+                    type: integer
+                    format: small
+                    readOnly: true
+                    example: 4
+                    description: >
+                        Tipo do Status:
+                          - `0` = Cadastrado
+                          - `1` = Emitido
+                          - `2` = Em Trânsito
+                          - `3` = Entregue
+                          - `4` = Cancelado
+                          - `5` = Não Entregue
+                          - `6` = Inutilizado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                taker:
+                    type: integer
+                    example: '1'
+                    description: >
+                        Tipo de **TOMADOR** do CT-e:
+                          - `0`  = Remetente
+                          - `1`  = Expedidor
+                          - `2`  = Recebedor
+                          - `3`  = Destinatário
+                          - `4`  = Outros
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                ref_cte_id:
+                    type: integer
+                    example: 2
+                    description: 'ID do CT-e de referência.'
+                ref_cte_serie:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 3
+                    description: 'Série do CT-e de referência.'
+                    example: '123'
+                ref_cte_number:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 1
+                    maxLength: 9
+                    description: 'Número do CT-e de referência.'
+                    example: '123456789'
+                ref_cte_key:
+                    type: string
+                    minLength: 44
+                    maxLength: 44
+                    pattern: '[A-Z0-9]'
+                    example: '35221243256171000199550010002713451756413099'
+                    description: 'Chave do CT-e de referência.'
+                protocol:
+                    type: string
+                    minLength: 15
+                    maxLength: 15
+                    nullable: true
+                    readOnly: true
+                    pattern: '[0-9]'
+                    example: '1111111111111'
+                    description: 'Protocolo de autorização do CT-e'
+                icms:
+                    type: number
+                    example: '1000.00'
+                    description: 'ICMS do CT-e'
+                    nullable: true
+                lat_long_trust_average:
+                    type: number
+                    nullable: true
+                    readOnly: true
+                    example: '-23.48589'
+                    description: 'Latitude'
+                product:
+                    type: string
+                    minLength: 0
+                    maxLength: 100
+                    pattern: '[0-9]'
+                    example: 'Caixas, papéis, etc.'
+                    description: 'Produto do CT-e'
+                insurance_payer:
+                    type: integer
+                    example: 5
+                    description: |-
+                        Responsável Seguro CT-e .
+
+                        - `4` = Emitente
+                        - `5` = Tomador
+                    enum:
+                        - 4
+                        - 5
+                sender:
+                    type: object
+                    description: 'Dados do emitente do CT-e'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do emitente do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do emitente do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do emitente do CT-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do emitente do CT-e *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do emitente'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                addressee:
+                    type: object
+                    description: 'Dados do destinatário do CT-e'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do destinatário do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do destinatário do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do destinatário do CT-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do destinatário do CT-e *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do destinatário'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                dispatcher:
+                    type: object
+                    description: 'Dados do expedidor do CT-e *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do expedidor do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do expedidor do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do expedidor do CT-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do expedidor do CT-e *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do expedidor'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                receiver:
+                    type: object
+                    description: 'Dados do recebedor do CT-e *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do recebedor do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do recebedor do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do recebedor do CT-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do recebedor do CT-e *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            readOnly: true
+                            description: 'Dados do endereço do recebedor'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            readOnly: true
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                customer:
+                    type: object
+                    description: 'Dados do cliente do CT-e *(dados opcionais)*'
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            description: 'ID do cliente do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            description: 'Nome do cliente do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do cliente do CT-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do cliente do CT-e *(informar este ou o campo CPF)*'
+                        address:
+                            type: object
+                            description: 'Dados do endereço do cliente'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                district:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Antônio Zanaga'
+                                    description: 'Bairro'
+                                city:
+                                    type: object
+                                    properties:
+                                        name:
+                                            type: string
+                                            maxLength: 255
+                                            example: 'Americana'
+                                            description: 'Nome da Cidade'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                state:
+                                    type: object
+                                    properties:
+                                        uf:
+                                            type: string
+                                            maxLength: 2
+                                            minLength: 2
+                                            example: 'SP'
+                                            description: 'Unidades federativas do Brasil'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 2
+                                            pattern: '[0-9]'
+                                            example: '35'
+                                            description: 'Código IBGE da UF'
+                                country:
+                                    type: object
+                                    properties:
+                                        code:
+                                            type: integer
+                                            example: 1058
+                                            default: 1058
+                                            description: 'Código do País'
+                                        name:
+                                            type: string
+                                            maxLength: 60
+                                            default: 'BRASIL'
+                                            example: 'BRASIL'
+                                            description: 'Nome do País'
+                                location:
+                                    type: object
+                                    properties:
+                                        latitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-23.48589'
+                                            description: 'Latitude'
+                                        longitude:
+                                            type: number
+                                            nullable: true
+                                            example: '-46.56237'
+                                            description: 'Longitude'
+                driver:
+                    type: object
+                    description: 'Dados do motorista do CT-e *(dados opcionais)*'
+                    properties:
+                        id:
+                            type: integer
+                            example: 1234
+                            readOnly: true
+                            description: 'ID do motorista do CT-e'
+                        name:
+                            type: string
+                            example: 'Siimp Sistema LTDA ME'
+                            readOnly: true
+                            description: 'Nome do motorista do CT-e'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do motorista do CT-e'
+                authorized_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 18:58:09'
+                    readOnly: true
+                    description: 'Data de autorização do CT-e'
+                issued_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 18:58:09'
+                    readOnly: true
+                    description: 'Data de emissão do CT-e'
+                delivery_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de previsão de entrega do CT-e'
+                load_date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2022-12-27'
+                    description: 'Data de carregamento do CT-e'
+                expiration:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de vencimento do CT-e'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação do CT-e'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de atualização do CT-e'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Cte:
+            allOf:
+                - $ref: '#/components/schemas/CteBase'
+                - type: object
+                  properties:
+                        obs:
+                            type: string
+                            maxLength: 2000
+                            nullable: true
+                            example: 'Teste de observação'
+                            description: 'Observação do CT-e'
+                        nfs:
+                            type: array
+                            items:
+                                type: object
+                                nullable: false
+                                description: 'Notas fiscais incluídas no CT-e.'
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 4524
+                                        description: 'ID da Nota fiscal.'
+                                    key:
+                                        type: string
+                                        minLength: 44
+                                        maxLength: 44
+                                        pattern: '[A-Z0-9]'
+                                        example: '35221243256171000199550010002713451756413099'
+                                        description: 'Chave da Nota Fiscal *(informar este ou o campo ID)*'
+                        vehicles:
+                            type: object
+                            nullable: true
+                            description: 'Veículos atrelados ao CT-e.'
+                            properties:
+                                traction:
+                                    type: object
+                                    description: 'Veículo de tração atrelada ao CT-e. *(informar este ou o campo ID)*'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            example: 'AMD0X12'
+                                            minLength: 7
+                                            maxLength: 7
+                                            description: 'Placa do Veículo de tração atrelado ao CT-e.'
+                                trailer1:
+                                    type: object
+                                    description: 'Reboque 1 do Veículo atrelado ao CT-e. *(informar este ou o campo ID)*'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            example: 'BMD0X12'
+                                            minLength: 7
+                                            maxLength: 7
+                                            description: 'Placa do Reboque 1 do Veículo atrelado ao CT-e.'
+                                trailer2:
+                                    type: object
+                                    description: 'Reboque 2 do Veículo atrelado ao CT-e. *(informar este ou o campo ID)*'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            example: 'CMD0X12'
+                                            minLength: 7
+                                            maxLength: 7
+                                            description: 'Placa do Reboque 2 do Veículo atrelado ao CT-e.'
+                                trailer3:
+                                    type: object
+                                    description: 'Reboque 3 do Veículo atrelado ao CT-e. *(informar este ou o campo ID)*'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            example: 'DMD0X12'
+                                            minLength: 7
+                                            maxLength: 7
+                                            description: 'Placa do Reboque 3 do Veículo atrelado ao CT-e.'
+                        classifications:
+                            type: object
+                            nullable: true
+                            description: 'Classificações atreladas ao CT-e.'
+                            properties:
+                                costcenter:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID do Centro de Custo atrelado ao CT-e.'
+                                category1:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 1 atrelada ao CT-e.'
+                                category2:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 2 atrelada ao CT-e.'
+                                category3:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 3 atrelada ao CT-e.'
+                                operation:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Operação atrelada ao CT-e.'
+                        totals:
+                            type: object
+                            nullable: true
+                            description: 'Totais que compõem o CT-e.'
+                            properties:
+                                total:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Total do CT-e'
+                                    readOnly: true
+                                components:
+                                    type: object
+                                    nullable: true
+                                    description: 'Totais que compõem o CT-e.'
+                                    properties:
+                                        freight_value:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Frete-valor do CT-e'
+                                        freight_weight:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Frete-peso do CT-e'
+                                        seccat:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'SEC/CAT do CT-e'
+                                        insurance:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Seguro do CT-e'
+                                        toll:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Pedágio do CT-e'
+                                        gris:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'GRIS do CT-e'
+                                        delivery_rate:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'GRIS do CT-e'
+                                        collect_rate:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Coleta do CT-e'
+                        fiscal:
+                            type: object
+                            nullable: true
+                            description: 'Dados fiscais do CT-e.'
+                            properties:
+                                icms_cod:
+                                    type: integer
+                                    example: 51
+                                    description: |-
+                                      Código da classificação tributária do ICMS.
+
+                                      - `0` = Normal
+                                      - `20` = Reduzido
+                                      - `40` = Isento
+                                      - `41` = Não tributado
+                                      - `51` = Diferido
+                                      - `60` = Substituição Tributária
+                                      - `90` = Outros
+                                      - `91` = Outra UF
+                                      - `92` = Simples Nacional
+                                    enum:
+                                        - 0
+                                        - 20
+                                        - 40
+                                        - 41
+                                        - 51
+                                        - 60
+                                        - 90
+                                        - 91
+                                        - 92
+                                icms_is_manual:
+                                    type: integer
+                                    example: 1
+                                    description: |-
+                                      ICMS manual do CT-e (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92).
+
+                                      - `0` = Não
+                                      - `1` = Sim
+                                    enum:
+                                        - 0
+                                        - 1
+                                ignore_division_factor:
+                                    type: integer
+                                    example: 0
+                                    description: |-
+                                        Ignorar fator de divisão do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92).
+
+                                        - `0` = Não
+                                        - `1` = Sim
+                                    enum:
+                                        - 0
+                                        - 1
+                                bc_icms:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Base de cálculo do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                                p_icms:
+                                    type: number
+                                    example: '12.00'
+                                    description: 'Porcentagem do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                                icms_discount:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Desconto do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                                icms_reduction:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Redução do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                                icms_credit:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Crédito do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                                division_factor:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Fator de divisão do ICMS (Não deve ser informado se icms_cod for igual a 40, 41, 51 ou 92)'
+                        additional_fields:
+                            type: array
+                            items:
+                                type: object
+                                nullable: true
+                                description: 'Campos adicionais atrelados ao CT-e '
+                                properties:
+                                    field:
+                                        type: string
+                                        example: 'Embalagem Especial'
+                                        description: 'Nome do campo adicional'
+                                    value:
+                                        type: string
+                                        example: 'Embalagem refrigerada com gelo seco'
+                                        description: 'Valor do campo adicional'
+                        cargo:
+                            type: object
+                            nullable: true
+                            description: 'Carga que compõe o CT-e.'
+                            properties:
+                                weight:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Peso Total das Notas Fiscais do CT-e'
+                                    readOnly: true
+                                value:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Quantidade Total das Notas Fiscais do CT-e'
+                                    readOnly: true
+                                weight_calculated:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Peso Calculado das Notas Fiscais do CT-e'
+                                    readOnly: true
+                                product_quantity:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Quantidade de produtos das Notas Fiscais do CT-e'
+                                    readOnly: true
+                                description:
+                                    type: string
+                                    maxLength: 2000
+                                    example: 'Teste de descrição'
+                                    description: 'Descrição da Carga do CT-e'
+                                cubage:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Cubagem da Carga do CT-e'
+                                volumes:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Volumes da Carga do CT-e'
+                                pallets:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Paletes da Carga do CT-e'
+
+
+        ## MODEL RETORNADA NA PESQUISA DE VÁRIOS ITEMS
+        CteSimple:
+            allOf:
+                - $ref: '#/components/schemas/Cte'
+                - type: object
+                  properties:
+                        obs:
+                            type: string
+                            maxLength: 2000
+                            nullable: true
+                            example: 'Teste de observação'
+                            description: 'Observação do CT-e'
+                        nfs:
+                            type: object
+                            nullable: false
+                            description: 'Notas fiscais incluídas no CT-e.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 4524
+                                    description: 'ID da Nota fiscal.'
+                                owner_id:
+                                    type: integer
+                                    nullable: false
+                                    example: 192734
+                                    description: 'Código da empresa da Nota fiscal.'
+                                serie:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    minLength: 1
+                                    maxLength: 3
+                                    description: 'Série da Nota fiscal.'
+                                    example: '123'
+                                number:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    minLength: 1
+                                    maxLength: 9
+                                    description: 'Número da Nota fiscal.'
+                                    example: '123456789'
+                                key:
+                                    type: string
+                                    minLength: 44
+                                    maxLength: 44
+                                    pattern: '[A-Z0-9]'
+                                    example: '35221243256171000199550010002713451756413099'
+                                    description: 'Chave da Nota fiscal.'
+                                issuer_id:
+                                    type: integer
+                                    nullable: false
+                                    example: 192734
+                                    description: 'Emitente da Nota fiscal.'
+                                total:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Total da Nota fiscal.'
+                                weight:
+                                    type: number
+                                    example: '1000.00'
+                                    description: 'Peso da Nota fiscal.'
+                                qtd:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Quantidade de produtos da Nota fiscal.'
+                                obs:
+                                    type: string
+                                    example: 'Observações da Nota fiscal.'
+                                    description: 'Observação do CT-e'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2022-12-27 18:58:09'
+                                    description: 'Data de criação da Nota fiscal.'
+                                issued_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2022-12-27 18:58:09'
+                                    description: 'Data de emissão da Nota fiscal.'
+                        previous_documents:
+                            type: object
+                            nullable: true
+                            description: 'Documentos anteriores atrelados ao CT-e.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 4524
+                                    description: 'ID do documento.'
+                                person_id:
+                                    type: integer
+                                    example: 4524
+                                    description: 'ID da pessoa atrelada ao documento.'
+                                key:
+                                    type: string
+                                    minLength: 44
+                                    maxLength: 44
+                                    pattern: '[A-Z0-9]'
+                                    example: '35221243256171000199550010002713451756413099'
+                                    description: 'Chave do documento atrelada ao CT-e.'
+                        additional_fields:
+                            type: object
+                            nullable: true
+                            description: 'Campos adicionais atrelados ao CT-e.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 842
+                                    description: 'ID do Campo Adicional'
+                                field:
+                                        type: string
+                                        example: 'Embalagem Especial'
+                                        description: 'Nome do campo adicional'
+                                value:
+                                        type: string
+                                        example: 'Embalagem refrigerada com gelo seco'
+                                        description: 'Valor do campo adicional'
+                        occurrences:
+                            type: object
+                            nullable: true
+                            description: 'Ocorrências atreladas ao CT-e.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 4524
+                                    description: 'ID do cadastro da ocorrência.'
+                                occurrence_item_id:
+                                    type: integer
+                                    example: 4524
+                                    description: 'ID da ocorrência.'
+                                obs:
+                                    type: string
+                                    example: 'Observações da ocorrência.'
+                                    description: 'Observação da ocorrência.'
+                                date_added:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2022-12-27 18:58:09'
+                                    description: 'Data de criação da ocorrência.'
+                        vehicles:
+                            type: object
+                            nullable: true
+                            description: 'Veículos atrelados ao CT-e.'
+                            properties:
+                                traction:
+                                    type: string
+                                    example: 'AMD0X12'
+                                    description: 'Placa da Tração atrelada ao ao CT-e. *(informar este ou o campo ID)*'
+                                trailer1:
+                                    type: string
+                                    example: 'BMD0X12'
+                                    description: 'Reboque 1 do Veículo atrelado ao ao CT-e. *(informar este ou o campo ID)*'
+                                trailer2:
+                                    type: string
+                                    example: 'CMD0X12'
+                                    description: 'Reboque 2 do Veículo atrelado ao ao CT-e. *(informar este ou o campo ID)*'
+                                trailer3:
+                                    type: string
+                                    example: 'DMD0X12'
+                                    description: 'Reboque 3 do Veículo atrelado ao ao CT-e. *(informar este ou o campo ID)*'
+                        classifications:
+                            type: object
+                            nullable: true
+                            description: 'Classificações atreladas ao CT-e.'
+                            properties:
+                                costcenter:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID do Centro de Custo atrelado ao CT-e.'
+                                category1:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 1 atrelada ao CT-e.'
+                                category2:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 2 atrelada ao CT-e.'
+                                category3:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Categoria 3 atrelada ao CT-e.'
+                                operation:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID da Operação atrelada ao CT-e.'
+                        totals:
+                            type: object
+                            nullable: true
+                            description: 'Totais que compõem o CT-e.'
+                            properties:
+                                total:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Total do CT-e'
+                                components:
+                                    type: object
+                                    nullable: true
+                                    description: 'Totais que compõem o CT-e.'
+                                    properties:
+                                        freight_value:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Frete-valor do CT-e'
+                                        freight_weight:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Frete-peso do CT-e'
+                                        seccat:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'SEC/CAT do CT-e'
+                                        insurance:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Seguro do CT-e'
+                                        toll:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Pedágio do CT-e'
+                                        gris:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'GRIS do CT-e'
+                                        delivery_rate:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'GRIS do CT-e'
+                                        collect_rate:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Coleta do CT-e'
+                                        discount:
+                                            type: number
+                                            example: '1000.00'
+                                            description: 'Entrega do CT-e'
+                                            readOnly: true
+                        cargo:
+                            type: object
+                            nullable: true
+                            description: 'Carga que compõe o CT-e.'
+                            properties:
+                                weight:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Peso Total das Notas Fiscais do CT-e'
+                                value:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Quantidade Total das Notas Fiscais do CT-e'
+                                weight_calculated:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Peso Calculado das Notas Fiscais do CT-e'
+                                product_quantity:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Quantidade de produtos das Notas Fiscais do CT-e'
+                                description:
+                                    type: string
+                                    maxLength: 2000
+                                    example: 'Teste de descrição'
+                                    description: 'Descrição da Carga do CT-e'
+                                cubage:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Cubagem da Carga do CT-e'
+                                volumes:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Volumes da Carga do CT-e'
+                                pallets:
+                                    type: number
+                                    example: '14625.37'
+                                    description: 'Paletes da Carga do CT-e'
+                        cte_reference:
+                            type: object
+                            nullable: true
+                            description: 'CT-e de referência.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 8152
+                                    description: 'ID do CT-e de referência.'
+                                serie:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    minLength: 1
+                                    maxLength: 3
+                                    description: 'Série do CT-e de referência.'
+                                    example: '123'
+                                number:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    minLength: 1
+                                    maxLength: 9
+                                    description: 'Número do CT-e de referência.'
+                                    example: '123456789'
+                                key:
+                                    type: string
+                                    minLength: 44
+                                    maxLength: 44
+                                    pattern: '[A-Z0-9]'
+                                    example: '35221243256171000199550010002713451756413099'
+                                    description: 'Chave do CT-e de referência.'
+                                    readOnly: true
+
+        ## MODEL RETORNADA NA PESQUISA DE UM ITEM
+        CteAll:
+              allOf:
+                - $ref: '#/components/schemas/CteSimple'
+
+        ## MODEL RETORNADA NA RESPOSTA DE CRIAÇÃO E ATUALIZAÇÃO
+        CteResponseCreateUpdate:
+            allOf:
+                - $ref: '#/components/schemas/CteBase'
+
+        ## MODEL RETORNADA NA RESPOSTA DA EMISSÃO DO CT-E
+        CteResponseSend:
+            allOf:
+                - $ref: '#/components/schemas/CteBase'
+
+        ## MODEL RETORNADA NA RESPOSTA DO CÁLCULO DO CT-E
+        CteResponseCalculate:
+            allOf:
+                - $ref: '#/components/schemas/CteBase'
+
+        ## MODEL RETORNADA NA RESPOSTA DE CANCELAMENTO DO CT-E
+        CteResponseCancel:
+            allOf:
+                - $ref: '#/components/schemas/CteBase'

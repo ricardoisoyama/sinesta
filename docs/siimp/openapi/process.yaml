@@ -1,0 +1,1971 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Programação de Carga
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **PROGRAMAÇÃO DE CARGA**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: processes
+      description: Rota para cadastramento, atualização e inserção de programação de carga
+security:
+    - ApiKeyAuth: []
+paths:
+
+    # CRUD
+    /processes/search:
+        get:
+            tags:
+                - 'processes'
+            description: 'Busca programação de cargas com base nos filtros informado.'
+            operationId: 'search'
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/ownerIdParam'
+                - $ref: '#/components/parameters/numberParam'
+                - $ref: '#/components/parameters/serviceTypeParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/clientNameParam'
+                - $ref: '#/components/parameters/documentTypeParam'
+                - $ref: '#/components/parameters/documentNumberParam'
+                - $ref: '#/components/parameters/quotationNumberParam'
+                - $ref: '#/components/parameters/routeNameParam'
+                - $ref: '#/components/parameters/orderNumberParam'
+                - $ref: '#/components/parameters/referenceCodeParam'
+                - $ref: '#/components/parameters/costcenterIdParam'
+                - $ref: '#/components/parameters/operationIdParam'
+                - $ref: '#/components/parameters/categoryIdParam'
+                - $ref: '#/components/parameters/descriptionOperation'
+                - $ref: '#/components/parameters/requestFromParam'
+                - $ref: '#/components/parameters/requestToParam'
+                - $ref: '#/components/parameters/scheduledFromParam'
+                - $ref: '#/components/parameters/scheduledToParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/senderNameParam'
+                - $ref: '#/components/parameters/addresseeNameParam'
+                - $ref: '#/components/parameters/dispatcherNameParam'
+                - $ref: '#/components/parameters/receiverNameParam'
+                - $ref: '#/components/parameters/terminalNameParam'
+                - $ref: '#/components/parameters/agencyNameParam'
+                - $ref: '#/components/parameters/partnerNameParam'
+                - $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+    /processes/create:
+        post:
+            tags:
+                - 'processes'
+            description: 'Cria uma programação de carga no sistema.'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+    /processes/update:
+        post:
+            tags:
+                - 'processes'
+            description: 'Atualiza uma programação de carga no sistema.'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+    /processes/cancel:
+        post:
+            tags:
+                - 'processes'
+            description: 'Cancela uma programação de carga no sistema.'
+            operationId: 'cancel'
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CancelSuccess'
+    /processes/upload-file:
+        post:
+            tags:
+                - 'processes'
+            description: 'Adiciona um anexo em uma programação de carga existente.'
+            operationId: 'uploadFile'
+            requestBody:
+                $ref: '#/components/requestBodies/AttachBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/AttachSuccess'
+    /processes/remove-file:
+        post:
+            tags:
+                - 'processes'
+            description: 'Remove um anexo vinculado a uma programação de carga.'
+            operationId: 'removeFile'
+            requestBody:
+                $ref: '#/components/requestBodies/RemoveAttachmentBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/RemoveAttachmentSuccess'
+components:
+    # SEGURANCA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID**.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS**, separados por vírgula
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: >
+                Realiza a busca pelo **CÓDIGO DA EMPRESA**.
+            schema:
+              type: integer
+        numberParam:
+            name: number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO**.
+            schema:
+              type: integer
+        serviceTypeParam:
+            name: service_type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DO SERVIÇO**.
+                  - `0` = Importação
+                  - `1` = Exportação
+                  - `2` = Cabotagem
+                  - `3` = Outros
+                  - `4` = Fechada
+                  - `5` = Fracionada
+                  - `6` = Cadência
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+        statusParam:
+            name: status
+            in: query
+            description: >
+                Realiza a busca pelo **STATUS**.
+                  - `0` = Aberta
+                  - `1` = Finalizada
+                  - `2` = Cancelada
+                  - `3` = Programada
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        clientNameParam:
+            name: client_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO CLIENTE**.
+            schema:
+                type: string
+        documentTypeParam:
+            name: document_type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DO DOCUMENTO**.
+                  - `0` = DI
+                  - `1` = DTA
+                  - `2` = DUE
+                  - `3` = DAT
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        documentNumberParam:
+            name: document_number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO DE DOCUMENTO**.
+            schema:
+                type: string
+        quotationNumberParam:
+            name: quotation_number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO DA COTAÇÃO**.
+            schema:
+              type: integer
+        routeNameParam:
+            name: route_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME DA LINHA**.
+            schema:
+                type: string
+        orderNumberParam:
+            name: order_number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO DO PEDIDO**.
+            schema:
+                type: string
+        referenceCodeParam:
+            name: reference_code
+            in: query
+            description: >
+                Realiza a busca pelo **CÓDIGO DE IDENTIFICAÇÃO**.
+            schema:
+                type: string
+        costcenterIdParam:
+            name: costcenter_id
+            in: query
+            description: >
+                Realiza a busca pelo **ID DE CENTRO DE CUSTOS**.
+            schema:
+              type: integer
+        operationIdParam:
+            name: operation_id
+            in: query
+            description: >
+                Realiza a busca pelo **ID DE OPERAÇÃO**.
+            schema:
+              type: integer
+        categoryIdParam:
+            name: category_id
+            in: query
+            description: >
+                Realiza a busca pelo **ID DE CATEGORIA 1, 2 OU 3**.
+            schema:
+              type: integer
+        descriptionOperation:
+            name: description_operation
+            in: query
+            description: >
+                Realiza a busca pela **NATUREZA DE OPERAÇÃO/PRODUTO PREDOMINANTE**.
+            schema:
+                type: string
+        requestFromParam:
+            name: request_from
+            in: query
+            description: >
+                Realiza a busca por início de **DATA DE SOLICITAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        requestToParam:
+            name: request_to
+            in: query
+            description: >
+                Realiza a busca por fim de **DATA DE SOLICITAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        scheduledFromParam:
+            name: scheduled_from
+            in: query
+            description: >
+                Realiza a busca por início de **DATA DE AGENDAMENTO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        scheduledToParam:
+            name: scheduled_to
+            in: query
+            description: >
+                Realiza a busca por fim de **DATA DE AGENDAMENTO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: >
+                Realiza a busca por início de **DATA DE CRIAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: >
+                Realiza a busca por fim de **DATA DE CRIAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA INICIAL DE ATUALIZAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA FINAL DE ATUALIZAÇÃO**.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        senderNameParam:
+            name: sender_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO REMETENTE**.
+            schema:
+                type: string
+        addresseeNameParam:
+            name: addressee_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO DESTINATÁRIO**.
+            schema:
+                type: string
+        dispatcherNameParam:
+            name: dispatcher_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO EXPEDIDOR**.
+            schema:
+                type: string
+        receiverNameParam:
+            name: receiver_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO RECEBEDOR**.
+            schema:
+                type: string
+        terminalNameParam:
+            name: terminal_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO TERMINAL**.
+            schema:
+                type: string
+        agencyNameParam:
+            name: agency_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO AGÊNCIA**.
+            schema:
+                type: string
+        partnerNameParam:
+            name: partner_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME, CPF OU CNPJ DO PARCEIRO**.
+            schema:
+                type: string
+        pageParam:
+            name: page
+            in: query
+            description: >
+                Paginação dos resultados
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de uma programação de carga.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Process'
+        CancelBody:
+            required: true
+            description: 'Este corpo será utilizado para o cancelamento de uma Programação de Carga.'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 456766
+                                description: 'ID da Programação de Carga'
+                            reason:
+                                type: string
+                                example: 'Houve um erro interno no cadastro de informações da Prog. Nº 3412'
+                                minLength: 15
+                                maxLength: 250
+                                description: 'Motivo do cancelamento da Programação de Carga'
+        AttachBody:
+            required: true
+            description: 'Este corpo será utilizado para adicionar um anexo em uma Programação de Carga.'
+            content:
+                multipart/form-data:
+                    schema:
+                        $ref: '#/components/schemas/Attach'
+        RemoveAttachmentBody:
+            required: true
+            description: 'Este corpo será utilizado para remover anexos de uma Programação de Carga.'
+            content:
+                multipart/form-data:
+                    schema:
+                        $ref: '#/components/schemas/RemoveAttachment'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de programação de cargas.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de uma programação de carga.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de uma programação de carga.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso para o cancelamento de uma programação de carga no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+        AttachSuccess:
+            description: 'Resposta de sucesso para o upload de anexo em uma Programação de Carga.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/AttachResponse'
+        RemoveAttachmentSuccess:
+            description: 'Resposta de sucesso para a remoção de anexo em uma Programação de Carga.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/RemoveAttachmentResponse'
+
+    # OBJETOS
+    schemas:
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/ProcessSimple'
+                            - $ref: '#/components/schemas/ProcessAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ProcessResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ProcessResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        CancelResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        status:
+                            type: integer
+                            example: 2
+                            description: 'Status de cancelamento da Programação de Carga.'
+                        id:
+                            type: integer
+                            example: 2
+                            description: 'ID da Programação de Carga.'
+                        reason:
+                            type: string
+                            example: 'Houve um erro interno no cadastro de informações da Prog. Nº 3412'
+                            description: 'Motivo do cancelamento da Programação de Carga.'
+                message:
+                    type: string
+                    example: 'Programação de Carga cancelada com sucesso.'
+                    description: 'Mensagem de retorno'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+        AttachResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Attachment'
+                message:
+                    type: string
+                    example: 'Arquivo adicionado com sucesso!'
+                    description: 'Mensagem de retorno'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+        RemoveAttachmentResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        type: object
+                    example: []
+                message:
+                    type: string
+                    example: 'Arquivos removidos com sucesso!'
+                    description: 'Mensagem de retorno'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+
+        # MODELS
+        Attach:
+            type: object
+            required:
+                - process_id
+                - file
+            properties:
+                process_id:
+                    type: integer
+                    description: 'ID da Programação de Carga existente.'
+                file:
+                    type: string
+                    format: binary
+                    description: 'Arquivo a ser anexado. Aceita exatamente 1 arquivo por requisição, com tamanho máximo de 5MB e tipos PDF, JPG, JPEG ou PNG.'
+        RemoveAttachment:
+            type: object
+            required:
+                - process_id
+                - attachment_id
+            properties:
+                process_id:
+                    type: integer
+                    description: 'ID da Programação de Carga de origem.'
+                attachment_id:
+                    type: integer
+                    description: 'ID do anexo a ser removido.'
+        Attachment:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 83871
+                    description: 'ID do anexo.'
+                process_id:
+                    type: integer
+                    example: 456766
+                    description: 'ID da Programação de Carga vinculada ao anexo.'
+                filename:
+                    type: string
+                    example: 'comprovante.pdf'
+                    description: 'Nome do arquivo.'
+                url:
+                    type: string
+                    example: 'https://example.com/comprovante.pdf'
+                    description: 'URL do arquivo no storage.'
+                username:
+                    type: string
+                    nullable: true
+                    example: 'suporteact'
+                    description: 'Usuário responsável pelo upload.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2026-07-03 14:28:59'
+                    description: 'Data de criação do anexo.'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2026-07-03 14:28:59'
+                    description: 'Data da última atualização do anexo.'
+
+        ## MODEL BASE
+        ProcessBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 192734
+                    description: 'Código da Empresa.'
+                number:
+                    type: integer
+                    example: '1057'
+                    readOnly: true
+                    description: 'Número da programação de carga.'
+                status:
+                    type: integer
+                    format: small
+                    readOnly: true
+                    example: 2
+                    description: >
+                        Tipo do Status:
+                          - `0` = Aberta
+                          - `1` = Finalizada
+                          - `2` = Cancelada
+                          - `3` = Programada
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                service_type:
+                    type: integer
+                    format: small
+                    nullable: false
+                    example: 4
+                    description: >
+                        Tipo do Serviço:
+                          - `0` = Importação
+                          - `1` = Exportação
+                          - `2` = Cabotagem
+                          - `3` = Outros
+                          - `4` = Fechada
+                          - `5` = Fracionada
+                          - `6` = Cadência
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                value:
+                    type: number
+                    example: '250.00'
+                    readOnly: true
+                    description: 'Valor da carga.'
+                total_weight:
+                    type: number
+                    example: '250.00'
+                    readOnly: true
+                    description: 'Peso Bruto (KG).'
+                total_net_weight:
+                    type: number
+                    example: '250.00'
+                    readOnly: true
+                    description: 'Peso Líquido (KG).'
+                cubage:
+                    type: number
+                    example: '250.00'
+                    readOnly: true
+                    description: 'Cubagem (m³).'
+                quantity_volume:
+                    type: number
+                    example: '250.00'
+                    readOnly: true
+                    description: 'Volumes.'
+                order_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Número ou código do pedido junto ao cliente.'
+                    maxLength: 150
+                reference_code:
+                    type: string
+                    nullable: true
+                    example: '234'
+                    description: 'Código de identificação geral.'
+                    pattern: '[0-9]'
+                    maxLength: 500
+                requested_at:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d H:i'
+                    example: '2022-12-27 18:58'
+                    description: 'Data e hora da solicitação da carga.'
+                scheduled_at:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d H:i'
+                    example: '2022-12-27 18:58'
+                    description: 'Data e hora do agendamento da carga.'
+                classifications:
+                    properties:
+                      operation:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                              description: 'ID da operação.'
+                      category1:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                              description: 'ID da categoria 1.'
+                      category2:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                              description: 'ID da categoria 2.'
+                      category3:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                              description: 'ID da categoria 3.'
+                      costcenter:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 2
+                              description: 'ID de centro de custos.'
+                description_operation:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Descritivo da natureza de operação executada e/ou produto predominante da programação.u código do pedido junto ao cliente.'
+                    maxLength: 255
+                description:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Detalhes e observações gerais a serem consideradas na programação de carga.'
+                    maxLength: 255
+                document_type:
+                    type: integer
+                    format: small
+                    nullable: false
+                    example: 4
+                    description: >
+                        Tipo do documento aduaneiro:
+                          - `0` = DI
+                          - `1` = DTA
+                          - `2` = DUE
+                          - `3` = DAT
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                document_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Número ou código do documento.'
+                    pattern: '[0-9]'
+                    maxLength: 255
+                reserve_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Número de reserva de retirada de container vazio.'
+                    pattern: '[0-9]'
+                    maxLength: 255
+                client_reference_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Código interno de referência utilizado no CLIENTE para o processo aduaneiro.'
+                    pattern: '[0-9]'
+                    maxLength: 500
+                reference_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Código interno de referência do despachante aduaneiro.'
+                    pattern: '[0-9]'
+                    maxLength: 255
+                bl_number:
+                    type: string
+                    nullable: true
+                    example: '23230204'
+                    description: 'Número do Bill of Lading.'
+                    pattern: '[0-9]'
+                    maxLength: 255
+                ship_name:
+                    type: string
+                    nullable: true
+                    example: 'Titanic'
+                    description: 'Nome do navio.'
+                    maxLength: 255
+                port_name:
+                    type: string
+                    nullable: true
+                    example: 'Porto de Santos'
+                    description: 'Nome do porto.'
+                    maxLength: 255
+                awb_number:
+                    type: string
+                    nullable: true
+                    example: '43223'
+                    description: 'Número do Air Waybill ou Master Air Waybill.'
+                    pattern: '[0-9]'
+                    maxLength: 255
+                demurrage_date:
+                    type: string
+                    nullable: false
+                    format: 'Y-m-d'
+                    example: '2022-12-27'
+                    description: 'Data máxima para devolução do container vazio nos campos de IMPORTAÇÃO.'
+                collect_deadline:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d H:i'
+                    example: '2022-12-27 18:58'
+                    description: 'Data e hora máxima para coleta do container.'
+                delivery_deadline:
+                    type: string
+                    nullable: true
+                    format: 'Y-m-d H:i'
+                    example: '2022-12-27 18:58'
+                    description: 'Data e hora máxima para entrega do container.'
+                weight_flow:
+                    type: number
+                    example: '250.00'
+                    description: 'Peso cadência. *(weight_flow só pode ser usado quando o service_type for 6.)*'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação.'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação.'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Process:
+            allOf:
+                - $ref: '#/components/schemas/ProcessBase'
+                - type: object
+                  properties:
+                      components:
+                          type: array
+                          description: 'Componentes'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 2
+                                      description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                                  container_number:
+                                      type: string
+                                      nullable: true
+                                      example: '23423423421'
+                                      description: 'Número que identifica um componente.'
+                                      pattern: '[0-9]'
+                                      minLength: 11
+                                      maxLength: 11
+                                  container_type:
+                                      type: object
+                                      description: 'Obrigatório se o container_number estiver presente.'
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do tipo do container*.'
+                                        name:
+                                          type: string
+                                          example: 'CS Refrigerado'
+                                          readOnly: true
+                                          description: 'ID do tipo do container*.'
+                                  shipment:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Número do shipment liberado para o componente.'
+                                      maxLength: 255
+                                  seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Números dos lacres do componente.'
+                                      maxLength: 255
+                                  oea_seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2335'
+                                      description: 'Números dos lacres do OEA do componente.'
+                                      maxLength: 255
+                                  product:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do produto predominante da composição.'
+                                        name:
+                                          type: string
+                                          example: 'Pendrive'
+                                          readOnly: true
+                                          description: 'Nome do produto predominante da composição.'
+                                  value:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Valor monetário do produto predominante ou da composição como um todo.'
+                                  weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso bruto do produto.'
+                                  net_weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso liquido do produto.'
+                                  tare_weight:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'Tara do container (em KG). Obrigatório se o container_number estiver presente.'
+                                  max_gross:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'MGW (em KG). '
+                                  qtd:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Quantidade de volumes do produto.'
+                                  depth:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Comprimento do produto.'
+                                  height:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Altura do produto.'
+                                  width:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Largura do produto.'
+                                  cubage:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Cubagem do produto.'
+                                  temperature:
+                                      type: object
+                                      properties:
+                                          min:
+                                              type: number
+                                              example: '-9'
+                                              nullable: true
+                                              description: 'Temperatura Mínima'
+                                          max:
+                                              type: number
+                                              example: '2.8'
+                                              nullable: true
+                                              description: 'Temperatura Máxima'
+                                  ventilation:
+                                      type: object
+                                      properties:
+                                          min:
+                                              type: number
+                                              example: '15.5'
+                                              nullable: true
+                                              description: 'Temperatura Mínima de Ventilação'
+                                          max:
+                                              type: number
+                                              example: '25.0'
+                                              nullable: true
+                                              description: 'Temperatura Máxima de Ventilação'
+                                  humidity:
+                                      type: number
+                                      example: '65.5'
+                                      nullable: true
+                                      description: 'Umidade Relativa (%)'
+                                  driver:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          nullable: true
+                                          description: 'ID do motorista.'
+                                        cpf:
+                                          type: string
+                                          example: '30423020312'
+                                          description: 'CPF do motorista.'
+                                          pattern: '[0-9]'
+                                          minLength: 11
+                                          maxLength: 11
+                                  vehicles:
+                                    type: object
+                                    properties:
+                                      traction:
+                                          type: string
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa da tração.'
+                                          minLength: 7
+                                          maxLength: 7
+                                      trailer1:
+                                          type: string
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 1.'
+                                          minLength: 7
+                                          maxLength: 7
+                                      trailer2:
+                                          type: string
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 2.'
+                                          minLength: 7
+                                          maxLength: 7
+                                      trailer3:
+                                          type: string
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 3.'
+                                          minLength: 7
+                                          maxLength: 7
+                                  terminal_appointment:
+                                    type: object
+                                    properties:
+                                      type:
+                                        type: object
+                                        properties:
+                                          id:
+                                            type: integer
+                                            example: 3
+                                            description: 'ID do tipo de agendamento.'
+                                          name:
+                                            type: string
+                                            example: 'Agendamento para retirada'
+                                            readOnly: true
+                                            description: 'Nome do tipo de agendamento.'
+                                      date:
+                                        type: string
+                                        nullable: false
+                                        format: 'Y-m-d H:i'
+                                        example: '2024-04-20 11:30'
+                                        description: 'Data do agendamento do terminal'
+                      client:
+                          type: object
+                          nullable: false
+                          description: 'Cliente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do cliente.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do cliente. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do cliente. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      sender:
+                          type: object
+                          nullable: true
+                          description: 'Remetente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do remetente.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do remetente. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do remetente. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      addressee:
+                          type: object
+                          nullable: true
+                          description: 'Destinatário.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do destinatário.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do destinatário. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do destinatário. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      origin:
+                          type: object
+                          nullable: true
+                          description: 'Expedidor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do expedidor.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do expedidor. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do expedidor. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      destination:
+                          type: object
+                          nullable: true
+                          description: 'Recebedor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do recebedor.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do recebedor. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do recebedor. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      agency:
+                          type: object
+                          nullable: true
+                          description: 'Agência.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID da agência.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF da agência. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ da agência. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      terminal:
+                          type: object
+                          nullable: true
+                          description: 'Terminal.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do terminal.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do terminal. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do terminal. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      partner:
+                          type: object
+                          nullable: true
+                          description: 'Parceiro.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do parceiro.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do parceiro. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[0-9]'
+                                  minLength: 11
+                                  maxLength: 11
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do parceiro. *(informar este ou o campo ID ou CNPJ)*'
+                                  pattern: '[A-Z0-9]'
+                                  minLength: 14
+                                  maxLength: 14
+                      route:
+                          type: object
+                          nullable: false
+                          description: 'Linha atrelado à programação de carga *(route precisa ser type 2 e/ou null)*.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha.'
+
+        ## MODEL RETORNADA NA PESQUISA DE VARIOS ITEMS
+        ProcessSimple:
+            allOf:
+                - $ref: '#/components/schemas/ProcessBase'
+                - type: object
+                  properties:
+                      client:
+                          type: object
+                          description: 'Cliente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do cliente.'
+                              name:
+                                  type: string
+                                  example: 'Henrique Zani'
+                                  readOnly: true
+                                  description: 'Nome do cliente.'
+                      sender:
+                          type: object
+                          description: 'Remetente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do remetente.'
+                              name:
+                                  type: string
+                                  example: 'Henrique Zani'
+                                  readOnly: true
+                                  description: 'Nome do remetente.'
+                      addressee:
+                          type: object
+                          nullable: true
+                          description: 'Destinatário.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do destinatário.'
+                              name:
+                                  type: string
+                                  example: 'Henrique ZANi'
+                                  readOnly: true
+                                  description: 'Nome do destinatário.'
+                      origin:
+                          type: object
+                          nullable: true
+                          description: 'Expedidor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do expedidor.'
+                              name:
+                                  type: string
+                                  example: 'Henrique Zani'
+                                  readOnly: true
+                                  description: 'Nome do expedidor.'
+                      destination:
+                          type: object
+                          nullable: true
+                          description: 'Recebedor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do recebedor.'
+                              name:
+                                  type: string
+                                  example: 'Henrique Zani'
+                                  readOnly: true
+                                  description: 'Nome do recebedor.'
+                      agency:
+                          type: object
+                          nullable: true
+                          description: 'Agência.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID da agência.'
+                      terminal:
+                          type: object
+                          nullable: true
+                          description: 'Terminal.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do terminal.'
+                      partner:
+                          type: object
+                          nullable: true
+                          description: 'Parceiro.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do parceiro.'
+                      route:
+                          type: object
+                          nullable: true
+                          description: 'Linha atrelado à programação de carga *(route precisa ser type 2 e/ou null)*.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha.'
+                              name:
+                                  type: string
+                                  example: 'SÃO PAULO X SANTOS'
+                                  readOnly: true
+                                  description: 'Nome da linha.'
+                      quotation:
+                          type: object
+                          nullable: true
+                          description: 'Cotação.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID de cotação.'
+                              number:
+                                  type: string
+                                  example: '2345'
+                                  readOnly: true
+                                  description: 'Número da cotação.'
+
+        ## MODEL RETORNADA NA PESQUISA DE UM ITEM
+        ProcessAll:
+              allOf:
+                - $ref: '#/components/schemas/ProcessSimple'
+                - type: object
+                  properties:
+                      histories:
+                          type: array
+                          description: 'Histórico de programação de carga.'
+                          readOnly: true
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 1
+                                      description: 'ID do histórico.'
+                                  username:
+                                      type: string
+                                      example: 'Henrique Zani'
+                                      description: 'Nome do usuário.'
+                                  message:
+                                      type: string
+                                      example: 'As seguintes composições foram adicionadas: 12413 e 12414'
+                                      description: 'Mensagem do histórico.'
+                                  created_at:
+                                      type: string
+                                      example: '2023-04-26 10:28:37'
+                                      description: 'Data de criação do histórico.'
+                      components:
+                          type: array
+                          description: 'Componentes'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 2
+                                      description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                                  container_number:
+                                      type: string
+                                      nullable: true
+                                      example: '23423423421'
+                                      description: 'Número que identifica um componente.'
+                                  container_type:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do tipo do container*.'
+                                        name:
+                                          type: string
+                                          example: 'CS Refrigerado'
+                                          readOnly: true
+                                          description: 'ID do tipo do container*.'
+                                  shipment:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Número do shipment liberado para o componente.'
+                                  seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Números dos lacres do componente.'
+                                  oea_seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2335'
+                                      description: 'Números dos lacres do OEA do componente.'
+                                      maxLength: 255
+                                  product:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do produto predominante da composição.'
+                                        name:
+                                          type: string
+                                          example: 'Pendrive'
+                                          readOnly: true
+                                          description: 'Nome do produto predominante da composição.'
+                                  value:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Valor monetário do produto predominante ou da composição como um todo.'
+                                  weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso bruto do produto.'
+                                  net_weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso liquido do produto.'
+                                  tare_weight:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'Tara do container (em KG).'
+                                  max_gross:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'MGW (em KG).'
+                                  qtd:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Quantidade de volumes do produto.'
+                                  depth:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Comprimento do produto.'
+                                  height:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Altura do produto.'
+                                  width:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Largura do produto.'
+                                  cubage:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Cubagem do produto.'
+                                  temperature:
+                                      type: object
+                                      properties:
+                                          min:
+                                              type: number
+                                              example: '-9'
+                                              nullable: true
+                                              description: 'Temperatura Mínima'
+                                          max:
+                                              type: number
+                                              example: '2.8'
+                                              nullable: true
+                                              description: 'Temperatura Máxima'
+                                  driver:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          nullable: true
+                                          description: 'ID do motorista.'
+                                        name:
+                                          type: string
+                                          example: 'Henrique'
+                                          readOnly: true
+                                          description: 'Nome do motorista.'
+                                  vehicles:
+                                    type: object
+                                    properties:
+                                      traction:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa da tração.'
+                                      trailer1:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 1.'
+                                      trailer2:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 2.'
+                                      trailer3:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 3.'
+                                  terminal_appointment:
+                                    type: object
+                                    properties:
+                                      type:
+                                        type: object
+                                        properties:
+                                          id:
+                                            type: integer
+                                            example: 3
+                                            description: 'ID do tipo de agendamento.'
+                                          name:
+                                            type: string
+                                            example: 'Agendamento para retirada'
+                                            readOnly: true
+                                            description: 'Nome do tipo de agendamento.'
+                                      date:
+                                        type: string
+                                        nullable: false
+                                        format: 'Y-m-d H:i'
+                                        example: '2024-04-20 11:30'
+                                        description: 'Data do agendamento do terminal'
+
+
+        ## MODEL RETORNADA NA RESPOSTA DE CRIAÇÃO E ATUALIZAÇÃO
+        ProcessResponseCreateUpdate:
+            allOf:
+                - $ref: '#/components/schemas/ProcessBase'
+                - type: object
+                  properties:
+                      client:
+                          type: object
+                          description: 'Cliente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do cliente.'
+                      sender:
+                          type: object
+                          description: 'Remetente.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do remetente.'
+                      addressee:
+                          type: object
+                          nullable: true
+                          description: 'Destinatário.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do destinatário.'
+                      origin:
+                          type: object
+                          nullable: true
+                          description: 'Expedidor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do expedidor.'
+                      destination:
+                          type: object
+                          nullable: true
+                          description: 'Recebedor.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do recebedor.'
+                      agency:
+                          type: object
+                          nullable: true
+                          description: 'Agência.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID da agência.'
+                      terminal:
+                          type: object
+                          nullable: true
+                          description: 'Terminal.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do terminal.'
+                      partner:
+                          type: object
+                          nullable: true
+                          description: 'Parceiro.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do parceiro.'
+                      route:
+                          type: object
+                          nullable: true
+                          description: 'Linha atrelado à programação de carga *(route precisa ser type 2 e/ou null)*.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha.'
+                      quotation:
+                          type: object
+                          nullable: true
+                          description: 'Cotação.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID de cotação.'
+                      histories:
+                          type: array
+                          description: 'Histórico de programação de carga.'
+                          readOnly: true
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 1
+                                      description: 'ID do histórico.'
+                                  username:
+                                      type: string
+                                      example: 'Henrique Zani'
+                                      description: 'Nome do usuário.'
+                                  message:
+                                      type: string
+                                      example: 'As seguintes composições foram adicionadas: 12413 e 12414'
+                                      description: 'Mensagem do histórico.'
+                                  created_at:
+                                      type: string
+                                      example: '2023-04-26 10:28:37'
+                                      description: 'Data de criação do histórico.'
+                      components:
+                          type: array
+                          description: 'Componentes'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 2
+                                      description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                                  container_number:
+                                      type: string
+                                      nullable: true
+                                      example: '23423423421'
+                                      description: 'Número que identifica um componente.'
+                                  container_type:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do tipo do container*.'
+                                        name:
+                                          type: string
+                                          example: 'CS Refrigerado'
+                                          readOnly: true
+                                          description: 'ID do tipo do container*.'
+                                  shipment:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Número do shipment liberado para o componente.'
+                                  seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2345'
+                                      description: 'Números dos lacres do componente.'
+                                  oea_seals:
+                                      type: string
+                                      nullable: true
+                                      example: '2335'
+                                      description: 'Números dos lacres do OEA do componente.'
+                                      maxLength: 255
+                                  product:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          description: 'ID do produto predominante da composição.'
+                                        name:
+                                          type: string
+                                          example: 'Pendrive'
+                                          readOnly: true
+                                          description: 'Nome do produto predominante da composição.'
+                                  value:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Valor monetário do produto predominante ou da composição como um todo.'
+                                  weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso bruto do produto.'
+                                  net_weight:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Peso liquido do produto.'
+                                  tare_weight:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'Tara do container (em KG).'
+                                  max_gross:
+                                      type: number
+                                      example: '1000.00'
+                                      nullable: true
+                                      description: 'MGW (em KG).'
+                                  qtd:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Quantidade de volumes do produto.'
+                                  depth:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Comprimento do produto.'
+                                  height:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Altura do produto.'
+                                  width:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Largura do produto.'
+                                  cubage:
+                                      type: number
+                                      example: '250.00'
+                                      nullable: true
+                                      description: 'Cubagem do produto.'
+                                  temperature:
+                                      type: object
+                                      properties:
+                                          min:
+                                              type: number
+                                              example: '-9'
+                                              nullable: true
+                                              description: 'Temperatura Mínima'
+                                          max:
+                                              type: number
+                                              example: '2.8'
+                                              nullable: true
+                                              description: 'Temperatura Máxima'
+                                  driver:
+                                      type: object
+                                      properties:
+                                        id:
+                                          type: integer
+                                          example: 2
+                                          nullable: true
+                                          description: 'ID do motorista.'
+                                        name:
+                                          type: string
+                                          example: 'Henrique'
+                                          readOnly: true
+                                          description: 'Nome do motorista.'
+                                  vehicles:
+                                    type: object
+                                    properties:
+                                      traction:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa da tração.'
+                                      trailer1:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 1.'
+                                      trailer2:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 2.'
+                                      trailer3:
+                                          type: integer
+                                          example: 'AMD0X12'
+                                          nullable: true
+                                          description: 'Número da placa do reboque 3.'
+                                  terminal_appointment:
+                                    type: object
+                                    properties:
+                                      type:
+                                        type: object
+                                        properties:
+                                          id:
+                                            type: integer
+                                            example: 3
+                                            description: 'ID do tipo de agendamento.'
+                                          name:
+                                            type: string
+                                            example: 'Agendamento para retirada'
+                                            readOnly: true
+                                            description: 'Nome do tipo de agendamento.'
+                                      date:
+                                        type: string
+                                        nullable: false
+                                        format: 'Y-m-d H:i'
+                                        example: '2024-04-20 11:30'
+                                        description: 'Data do agendamento do terminal'

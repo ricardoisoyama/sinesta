@@ -1,0 +1,1094 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: SCT-es
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **SCT-es**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: CargoScheduling
+        description: 'Rota para cadastramento, atualização e inserção de SCT-es'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /cte-generator/search:
+        get:
+            tags:
+                - CargoScheduling
+            description: 'Busca de SCT-es com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/TypeParam'
+                -
+                    $ref: '#/components/parameters/NumberParam'
+                -
+                    $ref: '#/components/parameters/NumberFromParam'
+                -
+                    $ref: '#/components/parameters/NumberToParam'
+                -
+                    $ref: '#/components/parameters/CreateUserIdParam'
+                -
+                    $ref: '#/components/parameters/UpdateUserIdParam'
+                -
+                    $ref: '#/components/parameters/NumberNfParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /cte-generator/create:
+        post:
+            tags:
+                - CargoScheduling
+            description: 'Criação de um SCT-e no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /cte-generator/update:
+        post:
+            tags:
+                - CargoScheduling
+            description: 'Atualização de um SCT-e no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        TypeParam:
+            name: type
+            in: query
+            description: |-
+                Realiza a busca por tipo.
+
+                - `0` = Automático
+                - `1` = Rateio
+                - `2` = EDI
+                - `3` = Automático + Rateio
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        NumberParam:
+            name: number
+            in: query
+            description: 'Realiza a busca por número.'
+            required: false
+            schema:
+                type: integer
+        NumberFromParam:
+            name: number_from
+            in: query
+            description: 'Realiza a busca pelo número inicial.'
+            required: false
+            schema:
+                type: integer
+        NumberToParam:
+            name: number_to
+            in: query
+            description: 'Realiza a busca pelo número final.'
+            required: false
+            schema:
+                type: integer
+        CreateUserIdParam:
+            name: create_user_id
+            in: query
+            description: 'Realiza a busca pelo usuário criador do SCT-e.'
+            required: false
+            schema:
+                type: integer
+        UpdateUserIdParam:
+            name: update_user_id
+            in: query
+            description: 'Realiza a busca pelo usuário editor do SCT-e.'
+            required: false
+            schema:
+                type: integer
+        NumberNfParam:
+            name: number_nf
+            in: query
+            description: 'Realiza a busca pelo número da NF no SCT-e.'
+            required: false
+            schema:
+                type: string
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Cadastrado
+                - `1` = Emitido
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de um SCT-e'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CargoScheduling'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de um SCT-e'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CargoScheduling'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de SCT-es com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de um SCT-e no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de um SCT-e no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/CargoSchedulingSimple'
+                            -
+                                $ref: '#/components/schemas/CargoSchedulingAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CargoScheduling'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CargoScheduling'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        CargoSchedulingBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                owner_id:
+                    type: integer
+                    example: 14523
+                    description: 'Código da empresa emissora do SCT-e'
+                serie:
+                    type: integer
+                    example: 1452
+                    description: 'Serie do SCT-e'
+                number:
+                    type: integer
+                    example: 14236
+                    description: 'Número do SCT-e'
+                    readOnly: true
+                type:
+                    type: integer
+                    example: 0
+                    description: |-
+                        Tipo de um SCT-e .
+
+                        - `0` = Automático
+                        - `1` = Rateio
+                        - `2` = EDI
+                        - `3` = Automático + Rateio
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                status:
+                    type: integer
+                    readOnly: true
+                    example: 2
+                    description: |-
+                        Status do SCT-e .
+
+                        - `0` = Cadastrado
+                        - `1` = Emitido
+                    enum:
+                        - 0
+                        - 1
+        CargoScheduling:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CargoSchedulingBase'
+                -
+                    type: object
+                    properties:
+                        cfop:
+                            type: integer
+                            example: 1423
+                            description: 'CFOP do SCT-e'
+                        product:
+                            type: string
+                            maxLength: 20
+                            example: 'DIVERSOS'
+                            description: 'Descrição dos Produtos do SCT-e'
+                        generator:
+                            type: object
+                            properties:
+                                nfs:
+                                    type: object
+                                    properties:
+                                        group_type:
+                                            type: integer
+                                            example: 2
+                                            description: |-
+                                                Tomador de NF-es.
+
+                                                - `1` = Individual
+                                                - `3` = Remetente/Destinatário
+                                                - `4` = Número de Pedido
+                                                - `5` = NOTFIS
+                                                - `6` = Remetente/Destinatário/Tomador
+                                                - `7` = Único
+                                            enum:
+                                                - 1
+                                                - 3
+                                                - 4
+                                                - 5
+                                                - 6
+                                                - 7
+                                        service_type:
+                                            type: integer
+                                            example: 3
+                                            description: |-
+                                                Tipo de Serviço de NF-es.
+
+                                                - `0` = Normal
+                                                - `1` = Subcontratação
+                                                - `2` = Redespacho
+                                                - `3` = Redespacho Intermediário
+                                                - `4` = Serviço Multimodal
+                                                - `5` = Reentrega
+                                                - `6`  = Devolução
+                                                - `10` = Reentrega (Redespacho)
+                                                - `11` = Reentrega (Red. Intermed.)
+                                            enum:
+                                                - 0
+                                                - 1
+                                                - 2
+                                                - 3
+                                                - 4
+                                                - 5
+                                                - 6
+                                                - 10
+                                                - 11
+                                cte_central:
+                                    type: object
+                                    properties:
+                                        central_cte_group_type:
+                                            type: integer
+                                            example: 2
+                                            description: |-
+                                                Tomador de CT-es.
+
+                                                - `1` = Individual
+                                                - `3` = Remetente/Destinatário
+                                                - `4` = Número de Pedido
+                                                - `5` = NOTFIS
+                                                - `6` = Remetente/Destinatário/Tomador
+                                                - `7` = Único
+                                            enum:
+                                                - 1
+                                                - 3
+                                                - 4
+                                                - 5
+                                                - 6
+                                                - 7
+                                        central_cte_service_type:
+                                            type: integer
+                                            example: 3
+                                            description: |-
+                                                Tipo de Serviço de CT-es.
+
+                                                - `0` = Normal
+                                                - `1` = Subcontratação
+                                                - `2` = Redespacho
+                                                - `3` = Redespacho Intermediário
+                                                - `4` = Serviço Multimodal
+                                                - `5` = Reentrega
+                                                - `6`  = Devolução
+                                                - `10` = Reentrega (Redespacho)
+                                                - `11` = Reentrega (Red. Intermed.)
+                                            enum:
+                                                - 0
+                                                - 1
+                                                - 2
+                                                - 3
+                                                - 4
+                                                - 5
+                                                - 6
+                                                - 10
+                                                - 11
+                                taker_type:
+                                    type: integer
+                                    example: 5
+                                    description: |-
+                                        Tipo de Tomador do SCT-e .
+
+                                        - `0` = Remetente
+                                        - `1` = Expedidor
+                                        - `2` = Recebedor
+                                        - `3` = Destinatário
+                                        - `4` = Outros
+                                    enum:
+                                        - 0
+                                        - 1
+                                        - 2
+                                        - 3
+                                        - 4
+                                force_taker:
+                                    type: integer
+                                    example: 0
+                                    description: |-
+                                        Forçar o Tomador .
+
+                                        - `0` = NÃO
+                                        - `1` = SIM
+                                    enum:
+                                        - 0
+                                        - 1
+                        driver:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        vehicle:
+                            type: object
+                            properties:
+                                traction:
+                                    allOf:
+                                        -   $ref: '#/components/schemas/CargoSchedulingVehicle'
+                                trailer1:
+                                    allOf:
+                                        -   $ref: '#/components/schemas/CargoSchedulingVehicle'
+                                trailer2:
+                                    allOf:
+                                        -   $ref: '#/components/schemas/CargoSchedulingVehicle'
+                                trailer3:
+                                    allOf:
+                                        -   $ref: '#/components/schemas/CargoSchedulingVehicle'
+                        sender:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        addressee:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        dispatcher:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        receiver:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        other:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingPerson'
+                        classifications:
+                            type: object
+                            properties:
+                                costcenter_id:
+                                    type: integer
+                                    example: 1465
+                                    description: 'Responsável do SCT-e'
+                                operation_id:
+                                    type: integer
+                                    example: 12563
+                                    description: 'ID da operação do SCT-e'
+                                category1_id:
+                                    type: integer
+                                    example: 2
+                                    description: 'ID da Categoria 1'
+                                category2_id:
+                                    type: integer
+                                    example: 4
+                                    description: 'ID da Categoria 2'
+                                category3_id:
+                                    type: integer
+                                    example: 2
+                                    description: 'ID da Categoria 3'
+                                transport_product_id:
+                                    type: integer
+                                    example: 1142
+                                    description: 'ID produto do SCT-e'
+                                pallets:
+                                    type: integer
+                                    example: 125
+                                    description: 'Número de Paletes do SCT-e'
+                                kilometers:
+                                    type: number
+                                    example: 145.36
+                                    description: 'Número de quilometragem do SCT-e'
+                        totals:
+                            type: object
+                            properties:
+                                components:
+                                    type: object
+                                    properties:
+                                        freight_value:
+                                            type: number
+                                            example: 145.69
+                                            description: 'Frete valor do SCT-e'
+                                        freight_weight:
+                                            type: number
+                                            example: 45.58
+                                            description: 'Frete peso do SCT-e'
+                                        seccat:
+                                            type: number
+                                            example: 14.25
+                                            description: 'Valor SECCAT do SCT-e'
+                                        insurance:
+                                            type: number
+                                            example: 14.56
+                                            description: 'Valor do Seguro do SCT-e'
+                                        toll:
+                                            type: number
+                                            example: 14.89
+                                            description: 'Valor do Pedágio do SCT-e'
+                                        gris:
+                                            type: number
+                                            example: 14.36
+                                            description: 'Valor do Gris do SCT-e'
+                                        delivery_rate:
+                                            type: number
+                                            example: 36.87
+                                            description: 'Valor da entrega do SCT-e'
+                                        collect_rate:
+                                            type: number
+                                            example: 56.89
+                                            description: 'Valor da coleta do SCT-e'
+                                        total:
+                                            type: number
+                                            example: 36.54
+                                            description: 'Valor total do SCT-e'
+                        nfs:
+                            type: array
+                            description: 'NF-es do SCT-e'
+                            items:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/CargoSchedulingNfs'
+                                    -
+                                        $ref: '#/components/schemas/CargoSchedulingAddressGeneral'
+                                    -   type: object
+                                        properties:
+                                            value:
+                                                type: number
+                                                example: 145.26
+                                                readOnly: true
+                                                description: 'Valor total das NF-es'
+                        central_ctes:
+                            type: array
+                            description: 'CT-es da Central do SCT-e'
+                            items:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/CargoSchedulingCentralCtes'
+
+                        ctes_total_doc:
+                            type: integer
+                            readOnly: true
+                            example: 10
+                            description: 'Total de CT-es'
+                        created_at:
+                            type: string
+                            readOnly: true
+                            format: 'Y-m-d H:i:s'
+                            example: '2023-06-19 09:22:37'
+                            description: 'Data de criação do SCT-e'
+                        updated_at:
+                            type: string
+                            readOnly: true
+                            format: 'Y-m-d H:i:s'
+                            example: '2023-06-19 09:22:37'
+                            description: 'Data de atualização do SCT-e'
+        CargoSchedulingSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CargoSchedulingBase'
+                -
+                    $ref: '#/components/schemas/CargoSchedulingAddressGeneral'
+        CargoSchedulingAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CargoSchedulingBase'
+                -
+                    $ref: '#/components/schemas/CargoSchedulingAddressGeneral'
+                -
+                    type: object
+                    properties:
+                        ctes:
+                            type: array
+                            description: 'CT-es do SCT-e'
+                            nullable: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 14567
+                                        description: 'ID do CT-e'
+                                    serie:
+                                        type: integer
+                                        example: 4
+                                        description: 'Série do CT-e'
+                                    number:
+                                        type: integer
+                                        example: 456328
+                                        description: 'Número do CT-e'
+                                    total:
+                                        type: number
+                                        example: 47856
+                                        description: 'Total de um CT-e'
+                                    sender_name:
+                                        type: string
+                                        maxLength: 100
+                                        example: 'PUMP TECNOLOGY'
+                                        description: 'Nome do Solicitante do CT-e'
+                                    addressee_name:
+                                        type: string
+                                        maxLength: 100
+                                        example: 'TEEHT CUIDADOS GERAIS'
+                                        description: 'Nome do Destinatário do CT-e'
+                        nfs:
+                            type: array
+                            description: 'Central de NF-es do SCT-e'
+                            nullable: true
+                            items:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/CargoSchedulingNfs'
+                        central_ctes:
+                            type: array
+                            description: 'CT-es da Central do SCT-e'
+                            nullable: true
+                            items:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/CargoSchedulingCentralCtes'
+                        nfs_total:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingGeneral'
+                        central_cte_total:
+                            allOf:
+                                -   $ref: '#/components/schemas/CargoSchedulingGeneral'
+        # COMPONENTES DUPLICADOS
+        CargoSchedulingPerson:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 145263
+                    description: 'ID do ator do SCT-e.'
+                cpf:
+                    type: string
+                    example: '14532784136'
+                    maxLength: 11
+                    minLength: 11
+                    description: 'CPF do ator do SCT-e.'
+                cnpj:
+                    type: string
+                    example: '14213698012045'
+                    maxLength: 14
+                    minLength: 14
+                    description: 'CNPJ do ator do SCT-e.'
+        CargoSchedulingVehicle:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 145267
+                    description: 'ID do veículo'
+                license_plate:
+                    type: string
+                    example: 'DAS4152'
+                    maxLength: 7
+                    minLength: 7
+                    description: 'Placa do veículo.'
+        CargoSchedulingAddressGeneral:
+            type: object
+            properties:
+                sender:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+                addressee:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+                dispatcher:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+                receiver:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+                other:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+                driver:
+                    readOnly: true
+                    allOf:
+                        -   $ref: '#/components/schemas/CargoSchedulingAddress'
+        CargoSchedulingAddress:
+            type: object
+            properties:
+                street:
+                    type: string
+                    readOnly: true
+                    maxLength: 50
+                    example: 'AV. JOSE PAULINO'
+                    description: 'Nome da rua.'
+                comp:
+                    type: string
+                    readOnly: true
+                    maxLength: 10
+                    example: '50A'
+                    description: 'Complemento do endereço'
+                district:
+                    type: string
+                    readOnly: true
+                    maxLength: 20
+                    example: 'São José'
+                    description: 'Bairro'
+                cep:
+                    type: string
+                    readOnly: true
+                    minLength: 7
+                    maxLength: 7
+                    example: '41745411'
+                    description: 'Código Postal'
+                number:
+                    type: integer
+                    readOnly: true
+                    example: 145
+                    description: 'Número do endereço'
+                country:
+                    type: object
+                    readOnly: true
+                    properties:
+                        code:
+                            type: integer
+                            example: 412
+                            description: 'Código do País'
+                        name:
+                            type: string
+                            maxLength: 10
+                            example: 'Brasil'
+                            description: 'Nome do País'
+                city:
+                    type: object
+                    readOnly: true
+                    properties:
+                        ibge:
+                            type: string
+                            pattern: '[0-9]'
+                            maxLength: 7
+                            minLength: 7
+                            example: '236545126'
+                            description: 'Código IBGE da cidade'
+                        id:
+                            type: integer
+                            example: 25145
+                            readOnly: true
+                            description: 'ID da Cidade'
+                        name:
+                            type: string
+                            example: 'Americana'
+                            maxLength: 15
+                            readOnly: true
+                            description: 'Nome da cidade'
+                state:
+                    type: object
+                    readOnly: true
+                    properties:
+                        ibge:
+                            type: integer
+                            example: 35
+                            readOnly: true
+                            description: 'Código IBGE do estado'
+                        id:
+                            type: integer
+                            example: 25145
+                            readOnly: true
+                            description: 'ID do Estado'
+                        uf:
+                            type: string
+                            example: 'SP'
+                            maxLength: 2
+                            description: 'UF da cidade *(Preencher a UF antes de inserir o IBGE da cidade)*'
+        CargoSchedulingCategory:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID da Categoria'
+                name:
+                    type: string
+                    maxLength: 20
+                    example: 'TRUCK'
+                    readOnly: true
+                    description: 'Descrição da categoria'
+        CargoSchedulingNfs:
+                type: object
+                properties:
+                    id:
+                        type: integer
+                        example: 415
+                        description: 'ID da NF-e'
+                    serie:
+                        type: integer
+                        readOnly: true
+                        example: 11
+                        description: 'Série da NF-e'
+                    number:
+                        type: integer
+                        readOnly: true
+                        example: 454
+                        description: 'Número da NF-e'
+                    cte_id:
+                        type: integer
+                        readOnly: true
+                        example: 1452
+                        description: 'ID de um CT-e'
+                    taker_id:
+                        type: integer
+                        readOnly: true
+                        example: 3652
+                        description: 'ID do tomador'
+                    income_id:
+                        type: integer
+                        readOnly: true
+                        example: 1478
+                        description: 'ID de uma minuta'
+                    issuer:
+                        type: object
+                        readOnly: true
+                        properties:
+                            id:
+                                type: integer
+                                example: 4123
+                                description: 'ID do emissor'
+                            name:
+                                type: string
+                                maxLength: 100
+                                example: 'SOUZA MANUTENCAO'
+                                description: 'Nome do emissor'
+                    weight:
+                        type: number
+                        readOnly: true
+                        example: 14.47
+                        description: 'Peso Bruto da NF-e'
+                    qtd:
+                        type: integer
+                        readOnly: true
+                        example: 4
+                        description: 'Volumes da NF-e'
+                    net_weight:
+                        type: integer
+                        readOnly: true
+                        example: 45.78
+                        description: 'Peso Líquido da NF-e'
+                    addressee:
+                        type: object
+                        readOnly: true
+                        properties:
+                            id:
+                                type: integer
+                                example: 4123
+                                description: 'ID do destinatário'
+                            uf:
+                                type: string
+                                maxLength: 2
+                                minLength: 2
+                                example: 'SP'
+                                description: 'UF do Estado do destinatário'
+                    total:
+                        type: number
+                        readOnly: true
+                        example: 114.45
+                        description: 'Total de uma NF-e'
+        CargoSchedulingCentralCtes:
+                type: object
+                properties:
+                    id:
+                        type: integer
+                        example: 1423
+                        description: 'ID do CT-e da Central'
+                    cte_id:
+                        type: integer
+                        readOnly: true
+                        example: 36521
+                        description: 'ID do CT-e'
+                    income_id:
+                        type: integer
+                        readOnly: true
+                        example: 6541
+                        description: 'ID da Minuta'
+                    serie:
+                        type: integer
+                        readOnly: true
+                        example: 3698
+                        description: 'Série do CT-e da Central'
+                    number:
+                        type: integer
+                        readOnly: true
+                        example: 14785
+                        description: 'Número do CT-e da Central'
+                    taker:
+                        type: object
+                        readOnly: true
+                        example: 1
+                        description: |-
+                            Tomador do CT-e
+
+                              - `0` = Remetente
+                              - `1` = Expedidor
+                              - `2` = Recebedor
+                              - `3` = Destinatário
+                              - `4` = Outros
+                        enum:
+
+                            - 0
+                            - 1
+                            - 2
+                            - 3
+                            - 4
+                    weight:
+                        type: number
+                        readOnly: true
+                        example: 14.63
+                        description: 'Peso bruto total do CT-es'
+                    total:
+                        type: number
+                        readOnly: true
+                        example: 32.45
+                        description: 'Total de um CT-e'
+                    qty:
+                        type: integer
+                        readOnly: true
+                        example: 65
+                        description: 'Quantidades de produtos'
+                    sender_id:
+                        type: integer
+                        readOnly: true
+                        example: 6541
+                        description: 'ID do remetente'
+                    addressee_id:
+                        type: integer
+                        readOnly: true
+                        example: 6541
+                        description: 'ID do destinatário'
+                    created_at:
+                        type: string
+                        readOnly: true
+                        format: 'Y-m-d H:i:s'
+                        example: '2023-10-20 11:45:37'
+                        description: 'Data de criação do CT-e'
+                    updated_at:
+                        type: string
+                        readOnly: true
+                        format: 'Y-m-d H:i:s'
+                        example: '2023-10-20 11:45:37'
+                        description: 'Data de atualização do CT-e'
+        CargoSchedulingGeneral:
+            type: object
+            readOnly: true
+            properties:
+                value:
+                    type: number
+                    example: 589.96
+                    description: 'Valor da Carga'
+                weight:
+                    type: number
+                    example: 693.45
+                    description: 'Valor do Peso Bruto'
+                net_weight:
+                    type: number
+                    example: 654.74
+                    description: 'Valor do Peso Liquido'
+                doc:
+                    type: integer
+                    example: 5
+                    description: 'Total de notas'
+                qty:
+                    type: integer
+                    example: 5
+                    description: 'Quantidade total de volumes das notas'

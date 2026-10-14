@@ -1,0 +1,974 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: 'Ordens de Transferência'
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Ordens de Transferência**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: transfer-orders
+        description: 'Rota para cadastramento, atualização e inserção de Ordens de Transferência'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /transfer-orders/search:
+        get:
+            tags:
+                - transfer-orders
+            description: 'Busca de Ordens de Transferência com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/TractionIdParam'
+                -
+                    $ref: '#/components/parameters/DriverParam'
+                -
+                    $ref: '#/components/parameters/CategoryParam'
+                -
+                    $ref: '#/components/parameters/OperationIdParam'
+                -
+                    $ref: '#/components/parameters/CostcenterIdParam'
+                -
+                    $ref: '#/components/parameters/CargoNumberParam'
+                -
+                    $ref: '#/components/parameters/ShipmentParam'
+                -
+                    $ref: '#/components/parameters/NfNumberParam'
+                -
+                    $ref: '#/components/parameters/CteNumberParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /transfer-orders/create:
+        post:
+            tags:
+                - transfer-orders
+            description: 'Criação de uma Ordem de Transferência no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /transfer-orders/update:
+        post:
+            tags:
+                - transfer-orders
+            description: 'Atualização de uma Ordem de Transferência no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+    /transfer-orders/add-item:
+        post:
+            tags:
+                - transfer-orders
+            description: 'Adiciona um item de carga dentro de uma Ordem de Transferência.'
+            operationId: add-item
+            requestBody:
+                $ref: '#/components/requestBodies/AddItemBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/AddItemSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        TractionIdParam:
+            name: traction_id
+            in: query
+            description: 'Realiza a busca pela tração.'
+            required: false
+            schema:
+                type: integer
+        DriverParam:
+            name: driver
+            in: query
+            description: 'Realiza a busca pelo CPF ou nome do motorista.'
+            required: false
+            schema:
+                type: string
+        CategoryParam:
+            name: category
+            in: query
+            description: 'Realiza a busca pela categoria 1, 2 ou 3.'
+            required: false
+            schema:
+                type: integer
+        OperationIdParam:
+            name: operation_id
+            in: query
+            description: 'Realiza a busca pelo código da operação.'
+            required: false
+            schema:
+                type: integer
+        CostcenterIdParam:
+            name: costcenter_id
+            in: query
+            description: 'Realiza a busca pelo código do centro de custos.'
+            required: false
+            schema:
+                type: integer
+        CargoNumberParam:
+            name: cargo_number
+            in: query
+            description: 'Realiza a busca pelo código do HU, Rota ou Despacho.'
+            required: false
+            schema:
+                type: string
+        ShipmentParam:
+            name: shipment
+            in: query
+            description: 'Realiza a busca pelo código do Shipment.'
+            required: false
+            schema:
+                type: string
+        NfNumberParam:
+            name: nf_number
+            in: query
+            description: 'Realiza a busca pelo número da nota fiscal.'
+            required: false
+            schema:
+                type: integer
+        CteNumberParam:
+            name: cte_number
+            in: query
+            description: 'Realiza a busca pelo número do CT-e.'
+            required: false
+            schema:
+                type: integer
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Aberta
+                - `1` = Processando
+                - `2` = Processada
+                - `3` = Finalizada
+                - `4` = Cancelada
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de uma Ordem de Transferência'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/TransferOrder'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de uma Ordem de Transferência'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/TransferOrder'
+        AddItemBody:
+            required: true
+            description: 'Este corpo será utilizado para adicionar um item de carga dentro de uma Ordem de Transferência'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/AddItemRequest'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de Ordens de Transferência com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de uma Ordem de Transferência no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de uma Ordem de Transferência no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        AddItemSuccess:
+            description: 'Resposta de sucesso para a inserção de um item de carga dentro de uma Ordem de Transferência.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/AddItemResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/TransferOrderSimple'
+                            -
+                                $ref: '#/components/schemas/TransferOrderAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/TransferOrderAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/TransferOrderAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        AddItemRequest:
+            required:
+                - id
+                - number
+                - type
+            allOf:
+                -
+                    $ref: '#/components/schemas/CargoItem'
+                -
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 12345
+                            description: 'ID da Ordem de Transferência'
+        AddItemResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/SerializedCargoItem'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'HU/Rota/Despacho adicionado com sucesso'
+                    description: 'Mensagem de retorno'
+        TransferOrderBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                owner_id:
+                    type: integer
+                    example: 192734
+                    description: 'Código da empresa transportadora da Ordem de Transferência.'
+                obs:
+                    type: string
+                    nullable: true
+                    example: 'Observações Gerais'
+                    description: 'Observaçõies gerais da Ordem de Transferência.'
+                status:
+                    type: integer
+                    example: 0
+                    default: 0
+                    readOnly: true
+                    description: >
+                        Status da Ordem de Transferência:
+                          - `0` = Aberta
+                          - `1` = Processando
+                          - `2` = Processada
+                          - `3` = Finalizada
+                          - `4` = Cancelada
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-11 12:13:03'
+                    description: 'Data de criação da Ordem de Transferência'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-11 12:13:03'
+                    description: 'Data de atualização da Ordem de Transferência'
+                    readOnly: true
+                driver:
+                    type: object
+                    nullable: true
+                    description: 'Dados do motorista principal da Ordem de Transferência.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '283639'
+                            description: 'ID do motorista principal da Ordem de Transferência.'
+                origin:
+                    type: object
+                    nullable: true
+                    description: 'Dados da empresa de origem da Ordem de Transferência.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '375482'
+                            description: 'ID da empresa de origem da Ordem de Transferência.'
+                destination:
+                    type: object
+                    nullable: true
+                    description: 'Dados da empresa de destino da Ordem de Transferência.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '273534'
+                            description: 'ID da empresa de destino da Ordem de Transferência.'
+                vehicles:
+                    type: object
+                    nullable: true
+                    description: 'Placas de lotação da Ordem de Transferência.'
+                    properties:
+                        traction:
+                            type: object
+                            nullable: true
+                            description: 'Dados da tração vinculada à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: '1234'
+                                    description: 'ID da tração vinculada à Ordem de Transferência'
+                        trailer1:
+                            type: object
+                            nullable: true
+                            description: 'Dados do reboque 1 vinculado à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: '1235'
+                                    description: 'ID do reboque 1 vinculado à Ordem de Transferência'
+                        trailer2:
+                            type: object
+                            nullable: true
+                            description: 'Dados do reboque 2 vinculado à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: '1235'
+                                    description: 'ID do reboque 2 vinculado à Ordem de Transferência'
+                        trailer3:
+                            type: object
+                            nullable: true
+                            description: 'Dados do reboque 3 vinculado à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: '1235'
+                                    description: 'ID do reboque 3 vinculado à Ordem de Transferência'
+                classifications:
+                    type: object
+                    description: 'Classificações de frete da Ordem de Transferência.'
+                    properties:
+                        operation:
+                            type: object
+                            nullable: true
+                            description: 'Dados da operação vinculada à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    nullable: true
+                                    example: 123
+                                    description: 'ID da operação.'
+                        costcenter:
+                            type: object
+                            nullable: true
+                            description: 'Dados do centro de custos vinculado à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    nullable: true
+                                    example: 129
+                                    description: 'ID do centro de custos.'
+                        category1:
+                            type: object
+                            nullable: true
+                            description: 'Dados da categoria 1 vinculada à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    nullable: true
+                                    example: 187
+                                    description: 'ID da categoria 1.'
+                        category2:
+                            type: object
+                            nullable: true
+                            description: 'Dados da categoria 2 vinculada à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    nullable: true
+                                    example: 287
+                                    description: 'ID da categoria 2.'
+                        category3:
+                            type: object
+                            nullable: true
+                            description: 'Dados da categoria 3 vinculada à Ordem de Transferência'
+                            properties:
+                                id:
+                                    type: integer
+                                    nullable: true
+                                    example: 387
+                                    description: 'ID da categoria 3.'
+        TransferOrder:
+            allOf:
+                -
+                    $ref: '#/components/schemas/TransferOrderBase'
+                -
+                    type: object
+                    properties:
+                        origin:
+                            type: object
+                            properties:
+                                cpf:
+                                    type: string
+                                    example: '45612368514'
+                                    description: 'CPF do origem da Ordem de Transferência'
+                                cnpj:
+                                    type: string
+                                    example: '52148629000188'
+                                    description: 'CNPJ do origem da Ordem de Transferência'
+                        destination:
+                            type: object
+                            properties:
+                                cpf:
+                                    type: string
+                                    example: '45612368514'
+                                    description: 'CPF do destino da Ordem de Transferência'
+                                cnpj:
+                                    type: string
+                                    example: '52148629000188'
+                                    description: 'CNPJ do destino da Ordem de Transferência'
+                        driver:
+                            type: object
+                            properties:
+                                cpf:
+                                    type: string
+                                    example: '45612368514'
+                                    description: 'CPF do motorista da Ordem de Transferência'
+                        vehicles:
+                            type: object
+                            nullable: true
+                            description: 'Placas de lotação da Ordem de Transferência.'
+                            properties:
+                                traction:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da tração vinculada à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            nullable: true
+                                            example: 'ABC1234'
+                                            description: 'Placa da tração vinculada à Ordem de Transferência.'
+                                trailer1:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 1 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            nullable: true
+                                            example: 'PAO1836'
+                                            description: 'Placa do reboque 1 vinculado à Ordem de Transferência.'
+                                trailer2:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 2 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            nullable: true
+                                            example: 'IUO0283'
+                                            description: 'Placa do reboque 2 vinculado à Ordem de Transferência.'
+                                trailer3:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 3 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            nullable: true
+                                            example: 'USH9273'
+                                            description: 'Placa do reboque 3 vinculado à Ordem de Transferência.'
+        TransferOrderSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/TransferOrderBase'
+                -
+                    type: object
+                    properties:
+                        driver:
+                            type: object
+                            nullable: true
+                            description: 'Dados do motorista principal da Ordem de Transferência.'
+                            properties:
+                                name:
+                                    type: string
+                                    readOnly: true
+                                    example: 'Gustavo Hernandes'
+                                    description: 'Nome do motorista principal da Ordem de Transferência'
+                        origin:
+                            type: object
+                            nullable: true
+                            description: 'Dados da empresa de origem da Ordem de Transferência.'
+                            properties:
+                                name:
+                                    type: string
+                                    readOnly: true
+                                    example: 'XPTO S.A.'
+                                    description: 'Nome da empresa de origem da Ordem de Transferência'
+                        destination:
+                            type: object
+                            nullable: true
+                            description: 'Dados da empresa de destino da Ordem de Transferência.'
+                            properties:
+                                name:
+                                    type: string
+                                    readOnly: true
+                                    example: 'ABC INDUSTRIAS S.A.'
+                                    description: 'Nome da empresa de destino da Ordem de Transferência'
+                        vehicles:
+                            type: object
+                            nullable: true
+                            description: 'Placas de lotação da Ordem de Transferência.'
+                            properties:
+                                traction:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da tração vinculada à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            readOnly: true
+                                            nullable: true
+                                            example: 'ABC1234'
+                                            description: 'Placa da tração vinculada à Ordem de Transferência.'
+                                trailer1:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 1 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            readOnly: true
+                                            nullable: true
+                                            example: 'PAO1836'
+                                            description: 'Placa do reboque 1 vinculado à Ordem de Transferência.'
+                                trailer2:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 2 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            readOnly: true
+                                            nullable: true
+                                            example: 'IUO0283'
+                                            description: 'Placa do reboque 2 vinculado à Ordem de Transferência.'
+                                trailer3:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do reboque 3 vinculado à Ordem de Transferência'
+                                    properties:
+                                        license_plate:
+                                            type: string
+                                            minLength: 7
+                                            maxLength: 7
+                                            readOnly: true
+                                            nullable: true
+                                            example: 'USH9273'
+                                            description: 'Placa do reboque 3 vinculado à Ordem de Transferência.'
+                        classifications:
+                            type: object
+                            description: 'Classificações de frete da Ordem de Transferência.'
+                            properties:
+                                operation:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da operação vinculada à Ordem de Transferência'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'TRANSFERENCIA'
+                                            description: 'Nome da operação da Ordem de Transferência'
+                                costcenter:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados do centro de custos vinculado à Ordem de Transferência'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'CENTRO DE CUSTO'
+                                            description: 'Nome do centro de custos da Ordem de Transferência'
+                                category1:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da categoria 1 vinculada à Ordem de Transferência'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'CATEGORIA 1'
+                                            description: 'Nome da categoria 1 da Ordem de Transferência'
+                                category2:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da categoria 2 vinculada à Ordem de Transferência'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'CATEGORIA 2'
+                                            description: 'Nome da categoria 2 da Ordem de Transferência'
+                                category3:
+                                    type: object
+                                    nullable: true
+                                    description: 'Dados da categoria 3 vinculada à Ordem de Transferência'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'CATEGORIA 3'
+                                            description: 'Nome da categoria 3 da Ordem de Transferência'
+        TransferOrderAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/TransferOrderBase'
+                -
+                    type: object
+                    properties:
+                        cargoscheduling:
+                            type: object
+                            description: 'Dados do SCT-e vinculado à Ordem de Transferência'
+                            readOnly: true
+                            properties:
+                                id:
+                                    type: integer
+                                    example: '637'
+                                    description: 'ID do SCT-e.'
+                                number:
+                                    type: integer
+                                    example: '1763'
+                                    description: 'Número do SCT-e.'
+                        items:
+                            type: array
+                            description: 'Itens de carga vinculados à Ordem de Transferência'
+                            readOnly: true
+                            items:
+                                $ref: '#/components/schemas/SerializedCargoItem'
+                        histories:
+                            type: array
+                            description: 'Históricos da Ordem de Transferência.'
+                            readOnly: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 1
+                                        description: 'ID do histórico.'
+                                    message:
+                                        type: string
+                                        example: 'Status da Ordem de Transferência alterado para PROCESSANDO.'
+                                        description: 'Descrição da mensagem do histórico.'
+                                    username:
+                                        type: string
+                                        nullable: true
+                                        example: 'siimp.sistemas'
+                                        description: 'Usuário que lançou o histórico.'
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        readOnly: true
+                                        example: '2022-12-27 18:58:09'
+                                        description: 'Data de criação do registro do histórico.'
+        SerializedCargoItem:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CargoItem'
+                -
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: '63562'
+                            description: 'ID do item de carga.'
+                        created_at:
+                            type: string
+                            format: 'Y-m-d H:i:s'
+                            example: '2023-09-11 12:13:03'
+                            description: 'Data de criação do item de carga.'
+                        updated_at:
+                            type: string
+                            format: 'Y-m-d H:i:s'
+                            example: '2023-09-11 12:13:03'
+                            description: 'Data de atualização do item de carga.'
+                        blocks:
+                            type: integer
+                            minimum: 0
+                            example: 1
+                            description: 'Quantidade de blocos capturados do item de carga.'
+                            readOnly: true
+                        shipments:
+                            type: object
+                            description: 'Dados de sincronização de captura de shipments do item de carga.'
+                            properties:
+                                total:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de shipments totais vinculados ao item de carga.'
+                                    readOnly: true
+                                done:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de shipments com sincronização concluída com sucesso.'
+                                    readOnly: true
+                                errors:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de shipments com erros durante a sincronização.'
+                                    readOnly: true
+                        ctes:
+                            type: object
+                            description: 'Dados de sincronização de captura de CT-es do item de carga.'
+                            properties:
+                                total:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de CT-es totais vinculados ao item de carga.'
+                                    readOnly: true
+                                done:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de CT-es com sincronização concluída com sucesso.'
+                                    readOnly: true
+                                errors:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de CT-es com erros durante a sincronização.'
+                                    readOnly: true
+                        nfes:
+                            type: object
+                            description: 'Dados de sincronização de captura de NF-es do item de carga.'
+                            properties:
+                                total:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de NF-es totais vinculados ao item de carga.'
+                                    readOnly: true
+                                done:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de NF-es com sincronização concluída com sucesso.'
+                                    readOnly: true
+                                errors:
+                                    type: integer
+                                    minimum: 0
+                                    example: 1
+                                    description: 'Quantidade de NF-es com erros durante a sincronização.'
+                                    readOnly: true
+        CargoItem:
+            type: object
+            properties:
+                type:
+                    type: integer
+                    example: 0
+                    description: >
+                        Tipo do item de carga:
+                          - `0` = HU
+                          - `1` = Despacho
+                          - `2` = Rota
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                number:
+                    type: string
+                    example: '326734672387'
+                    description: 'Código/Número do item de carga.'

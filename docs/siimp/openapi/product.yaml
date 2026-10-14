@@ -1,0 +1,713 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Produtos
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Produtos**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: product
+      description: Rota para cadastramento, atualização e inserção de Produtos
+security:
+    - ApiKeyAuth: []
+paths:
+    # CRUD
+    /products/search:
+        get:
+            tags:
+                - product
+            description: 'Busca Produtos com base nos filtros informados'
+            operationId: 'search'
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/pageParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/productCodParam'
+                - $ref: '#/components/parameters/isDangerousParam'
+                - $ref: '#/components/parameters/isPoliceControlledParam'
+                - $ref: '#/components/parameters/isArmyControlledParam'
+                - $ref: '#/components/parameters/isIbamaControlledParam'
+                - $ref: '#/components/parameters/dangerPoliceArmyParam'
+                - $ref: '#/components/parameters/allowForPurchasingParam'
+                - $ref: '#/components/parameters/supplierNameParam'
+
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+    /products/create:
+        post:
+            tags:
+                - product
+            description: 'Cria Produto no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+    /products/update:
+        post:
+            tags:
+                - product
+            description: 'Atualiza Produto no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+components:
+    # SEGURANCA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: Realiza a busca pelo **ID** de Produto. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+        idsParam:
+            name: ids
+            in: query
+            description: Realiza a busca pelos **IDS** de Produtos, separados por vírgula
+            schema:
+                type: integer
+        statusParam:
+            name: active
+            in: query
+            description: Realiza a busca pelo status do Produto (ativo, ou não)
+            schema:
+                type: integer
+        createdFromParam:
+            name: created_from
+            in: query
+            description: Realiza a busca pela **DATA INICIAL DE CRIAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: Realiza a busca pela **DATA FINAL DE CRIAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        createdAtParam:
+            name: created_at
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: Realiza a busca pela **DATA INICIAL DE ATUALIZAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: Realiza a busca pela **DATA FINAL DE ATUALIZAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: Realiza a busca pela **DATA DE ATUALIZAÇÃO** do Produto. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        productCodParam:
+            name: cod_product
+            in: query
+            description: Realiza a busca pelo Código do Produto
+            schema:
+                type: string
+        isDangerousParam:
+            name: dangerous
+            in: query
+            description: Realiza a busca por Produtos com a marcação de Perigoso
+            schema:
+                type: integer
+        isPoliceControlledParam:
+            name: controlled_by_police
+            in: query
+            description: Realiza a busca por Produtos com a marcação de Controlado pela Polícia
+            schema:
+                type: integer
+        isArmyControlledParam:
+            name: controlled_by_army
+            in: query
+            description: Realiza a busca por Produtos com a marcação de Controlado pelo Exército
+            schema:
+                type: integer
+        isIbamaControlledParam:
+            name: controlled_by_ibama
+            in: query
+            description: Realiza a busca por Produtos com a marcação de Controlado pelo IBAMA
+            schema:
+                type: integer
+        allowForPurchasingParam:
+            name: allow_for_purchasing
+            in: query
+            description: Realiza a busca por Produtos com a marcação de Permitido para Compra
+            schema:
+                type: integer
+        supplierNameParam:
+            name: supplier
+            in: query
+            description: Realiza a busca pelo **NOME, CPF ou CNPJ DO CLIENTE** do Produto
+            schema:
+                type: string
+        dangerPoliceArmyParam:
+            name: danger_police_army
+            in: query
+            description: Realiza a busca por Produtos controlados
+            schema:
+                type: integer
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados
+            schema:
+                type: integer
+
+
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de Produto'
+            required: true
+            content:
+              application/json:
+                  schema:
+                      $ref: '#/components/schemas/Product'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de Produto'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de Produto'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de Produto'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+
+    # OBJETOS
+    schemas:
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/ProductSimple'
+                            - $ref: '#/components/schemas/ProductAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/ProductAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Product'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+
+        # MODELS
+        ## MODEL BASE
+        ProductBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '250765'
+                    description: 'ID do Produto'
+                name:
+                    type: string
+                    example: 'GLP EM CILINDRO P20-CEST 0601107'
+                    description: 'Nome do Produto'
+                specie:
+                    type: string
+                    example: 'KG'
+                    description: 'Espécie do Produto'
+                cfop:
+                    type: integer
+                    example: '5656'
+                    description: 'CFOP do Produto'
+                ncm:
+                    type: string
+                    example: '27111910'
+                    description: 'NCM do Produto'
+                status:
+                    type: integer
+                    example: '1'
+                    description: 'Status do Produto (Ativo/Inativo)'
+                description:
+                    type: string
+                    example: ''
+                    description: 'Descrição do Produto'
+                code:
+                    type: string
+                    example: '1000141666'
+                    description: 'Código do Produto'
+                batch:
+                    type: string
+                    example: ''
+                    description: 'Lote do Produto'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2019-07-16 17:07:08'
+                    description: 'Data de Criação do Produto'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2021-01-13 09:36:38'
+                    description: 'Data de Atualização do Produto'
+                group:
+                    type: object
+                    nullable: true
+                    description: 'Agrupamento do Produto'
+                    properties:
+                        id:
+                            type: integer
+                            example: ''
+                            description: 'ID do Agrupamento do Produto'
+                costs:
+                    type: object
+                    nullable: true
+                    description: 'Custos do Produto'
+                    properties:
+                        default:
+                            type: number
+                            example: '174.3600'
+                            description: 'Custo padrão do Produto'
+                        real:
+                            type: number
+                            example: '523.0800'
+                            description: 'Custo real do Produto'
+                measurements:
+                    type: object
+                    nullable: true
+                    description: 'Medidas do Produto'
+                    properties:
+                        height:
+                            type: number
+                            example: '0.00'
+                            description: 'Altura do Produto'
+                        width:
+                            type: number
+                            example: '0.00'
+                            description: 'Largura do Produto'
+                        lenght:
+                            type: number
+                            example: '0.00'
+                            description: 'Comprimento do Produto'
+                        units_per_box:
+                            type: number
+                            example: ''
+                            description: 'Quantidade de unidades em uma caixa do Produto'
+                        boxes_per_pallet:
+                            type: number
+                            example: ''
+                            description: 'Quantidade de caixas em um pallet do Produto'
+                quantities:
+                    type: object
+                    nullable: true
+                    description: 'Quantidades do Produto'
+                    properties:
+                        max:
+                            type: integer
+                            example: 0
+                            description: 'Quantidade máxima do Produto'
+                        min:
+                            type: integer
+                            example: 0
+                            description: 'Quantidade mínima do Produto'
+                restrictions:
+                    type: object
+                    nullable: true
+                    description: 'Classificações de Restrição do Produto'
+                    properties:
+                        measurements:
+                            type: object
+                            nullable: true
+                            description: 'Medidas de Restrição do Produto'
+                            properties:
+                                concentration:
+                                    type: number
+                                    example: '0'
+                                    description: 'Concentração da medida do Produto'
+                                density:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Densidade da medida do Produto'
+                                type:
+                                    type: integer
+                                    example: '0'
+                                    description: 'Tipo da medida do Produto'
+                                number:
+                                    type: integer
+                                    example: '0.0000'
+                                    description: 'Quantidade da medida do Produto'
+                        tags:
+                            type: object
+                            nullable: true
+                            description: 'Marcações de Restrição do Produto'
+                            properties:
+                                siproquim_code:
+                                    type: string
+                                    example: ''
+                                    description: >
+                                        Código SIPROQUIM do Produto.
+                                            Informar somente os números, de acordo com a Tabela Oficial. Exemplo: Se o código da tabela é TPN12345678, deve-se informar somente 12345678!
+                                onu_code:
+                                    type: string
+                                    example: '1075'
+                                    description: 'Código ONU do Produto'
+                                danger_class:
+                                    type: string
+                                    example: '2.1'
+                                    description: 'Classe do Produto que é Perigoso'
+                                danger_group:
+                                    type: string
+                                    example: 'NA'
+                                    description: 'Grupo do Produto que é Restrito'
+                        fuel:
+                            type: object
+                            nullable: true
+                            description: 'Propriedades do Produto Restrito que é Combustível'
+                            properties:
+                                anp_code:
+                                    type: string
+                                    example: '210203001'
+                                    description: 'Código ANP do Produto que é Combustivel'
+                                anp_description:
+                                   type: string
+                                   example: 'GLP'
+                                   description: 'Descrição ANP do Produto que é Combustivel'
+                                uf:
+                                   type: string
+                                   example: 'SP'
+                                   description: 'UF de Distribuição do Produto que é Combustivel'
+                classifications:
+                    type: object
+                    nullable: true
+                    description: 'Fornecedor do Produto'
+                    properties:
+                        dangerous:
+                            type: integer
+                            example: '1'
+                            description: 'Indica que o Produto é Perigoso'
+                        export:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é de Exportação'
+                        civil_police:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é controlado pela Polícia'
+                        ibama:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é controlado pelo IBAMA'
+                        police:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é controlado pela Policia Rodoviária'
+                        army:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é contolado pelo Exercito'
+                        tire:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é um Pneu'
+                        purchasing:
+                            type: integer
+                            example: '0'
+                            description: 'Indica que o Produto é disponivel para compra'
+                taxes:
+                    type: object
+                    nullable: true
+                    description: 'Impostos do Produto'
+                    properties:
+                        beneficiary_code:
+                            type: integer
+                            example: 3
+                            description: 'Código do Beneficiário do Produto'
+                        ipi:
+                            type: object
+                            nullable: true
+                            description: 'Imposto IPI do Produto'
+                            properties:
+                                situation:
+                                    type: string
+                                    example: ''
+                                    description: 'Código da Situação do IPI do Produto'
+                                value:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Valor do IPI do Produto'
+                                classification:
+                                    type: string
+                                    example: ''
+                                    description: 'Enquadramento do IPI do Produto'
+                        icms:
+                            type: object
+                            nullable: true
+                            description: 'Imposto ICMS do Produto'
+                            properties:
+                                situation:
+                                    type: string
+                                    example: ''
+                                    description: 'Código da Situação (Enquadramento) ICMS do Produto'
+                                value:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Valor do ICMS do Produto'
+                                origin:
+                                    type: string
+                                    example: ''
+                                    description: 'Origem de Mercadoria, do ICMS do Produto'
+                        pis:
+                            type: object
+                            nullable: true
+                            description: 'Imposto PIS do Produto'
+                            properties:
+                                situation:
+                                    type: string
+                                    example: ''
+                                    description: 'Código da Situação do PIS do Produto'
+                                value:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Valor do PIS do Produto'
+                        cofins:
+                            type: object
+                            nullable: true
+                            description: 'Imposto COFINS do Produto'
+                            properties:
+                                situation:
+                                    type: string
+                                    example: ''
+                                    description: 'Código da Situação do COFINS do Produto'
+                                value:
+                                    type: number
+                                    example: '0.00'
+                                    description: 'Valor do COFINS do Produto'
+                anvisa:
+                    type: object
+                    nullable: true
+                    description: 'Anvisa'
+                    properties:
+                        is_controlled:
+                            type: integer
+                            example: 1
+                            nullable: true
+                            description: >
+                                Realiza o controle do produto.
+                                  - `0` = Não é controlado pela ANVISA
+                                  - `1` = É controlado pela ANVISA
+                            enum:
+                                - 0
+                                - 1
+                        code:
+                            type: string
+                            nullable: true
+                            maxLength: 30
+                            example: '2B4C'
+                            description: 'Código'
+                        description:
+                            type: string
+                            nullable: true
+                            maxLength: 130
+                            example: 'Descrição'
+                            description: 'Descrição'
+                supplier:
+                    type: object
+                    nullable: true
+                    description: 'Fornecedor do Produto'
+                    properties:
+                        id:
+                            type: integer
+                            example: 3
+                            description: 'ID do Fornecedor do Produto'
+                        cpf:
+                            type: string
+                            example: '45612368514'
+                            description: 'CPF do Fornecedor do Produto'
+                        cnpj:
+                            type: string
+                            example: '52148629000188'
+                            description: 'CNPJ do Fornecedor do Produto'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Product:
+            allOf:
+                - $ref: '#/components/schemas/ProductBase'
+
+        ## MODEL RETORNADA NA PESQUISA DE VARIOS ITEMS
+        ProductSimple:
+            allOf:
+                - $ref: '#/components/schemas/ProductBase'
+
+        ## MODEL RETORNADA NA PESQUISA DE SOMENTE 1 ITEMS
+        ProductAll:
+            allOf:
+                - $ref: '#/components/schemas/Product'
+                - type: object
+                  properties:
+                      similar:
+                          type: object
+                          description: 'Exibe os Produtos Similares do Produto'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: ''
+                                  description: 'ID do Produto Similar do Produto'
+                              similar:
+                                  type: integer
+                                  example: ''
+                                  description: 'Código do Produto Similar do Produto'
+                              created_at:
+                                  type: string
+                                  example: ''
+                                  description: 'Data de criação do Produto Similar do Produto'
+                              updated_at:
+                                  type: string
+                                  example: ''
+                                  description: 'Data de atualização do Produto Similar do Produto'
+                      categories:
+                          type: object
+                          description: 'Exibe as categorias do Produto'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: ''
+                                  description: 'ID da Categoria do Produto'
+                              category:
+                                  type: integer
+                                  example: ''
+                                  description: 'Código da Categoria do Produto'
+                              name:
+                                  type: string
+                                  example: ''
+                                  description: 'Nome da Categoria do Produto'
+                              created_at:
+                                  type: string
+                                  example: ''
+                                  description: 'Cata de criação da Categoria do Produto'
+                      warehouse_preferences:
+                          type: object
+                          description: 'Exibe as Armazenagens do Produto'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: ''
+                                  description: 'ID da Armazenagem do Produto'
+                              warehouse:
+                                  type: integer
+                                  example: ''
+                                  description: 'Código do Armazém da Armazenagem do Produto'
+                              name:
+                                  type: string
+                                  example: ''
+                                  description: 'Nome do Armazém da Armazenagem do Produto'
+                              complete_name:
+                                  type: string
+                                  example: ''
+                                  description: 'Nome Completo do Armazém da Armazenagem do Produto'
+                              location:
+                                  type: integer
+                                  example: ''
+                                  description: 'Localidade da Armazenagem do Produto'
+                              type:
+                                  type: integer
+                                  example: ''
+                                  description: 'Tipo da Armazenagem do Produto'
+                              maximum:
+                                  type: number
+                                  example: ''
+                                  description: 'Maximo da Armazenagem do Produto'
+                              created_at:
+                                  type: string
+                                  example: ''
+                                  description: 'Data de criação da Armazenagem do Produto'
+                              updated_at:
+                                  type: string
+                                  example: ''
+                                  description: 'Data de atualização da Armazenagem do Produto'

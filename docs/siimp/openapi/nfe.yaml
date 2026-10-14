@@ -1,0 +1,2003 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: NF-e
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **NF-e**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: nf-emission
+      description: Rota para gerenciamento de notas fiscais eletrônicas.
+security:
+    - ApiKeyAuth: []
+paths:
+
+    # GET
+    /nf-emission/search:
+        get:
+            tags:
+                - 'nf-emission'
+            summary: Filtros de pesquisa para NF-es
+            description: Busca NF-es com base nos filtros informados
+            operationId: search
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/ownerIdParam'
+                - $ref: '#/components/parameters/numberParam'
+                - $ref: '#/components/parameters/keyParam'
+                - $ref: '#/components/parameters/serieParam'
+                - $ref: '#/components/parameters/addresseeIdParam'
+                - $ref: '#/components/parameters/transporterIdParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/issuePurposeParam'
+                - $ref: '#/components/parameters/issuedAtParam'
+                - $ref: '#/components/parameters/issuedFromParam'
+                - $ref: '#/components/parameters/issuedToParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+    #POST
+    /nf-emission/create:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Cria uma NF-e no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+
+    /nf-emission/duplicate:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Duplica uma NF-e no sistema'
+            operationId: 'duplicate'
+            requestBody:
+                $ref: '#/components/requestBodies/duplicateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/DuplicateSuccess'
+
+    /nf-emission/incapacitate:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Inutiliza uma NF-e no sistema'
+            operationId: 'incapacitate'
+            requestBody:
+                $ref: '#/components/requestBodies/IncapacitateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/IncapacitateSuccess'
+
+    /nf-emission/update:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Atualiza uma NF-e no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+
+    /nf-emission/send:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Emite uma NF-e'
+            operationId: 'send'
+            requestBody:
+                $ref: '#/components/requestBodies/SendBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SendSuccess'
+
+    /nf-emission/cancel:
+        post:
+            tags:
+                - 'nf-emission'
+            description: 'Cancela uma NF-e'
+            operationId: 'cancel'
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CancelSuccess'
+
+components:
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARÂMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de uma NF-e.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idRequiredParam:
+            name: id
+            in: query
+            required: true
+            description: >
+                Realiza a busca pelo **ID** de uma NF-e.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** das NF-es, separados por vírgula.
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: >
+                Realiza a busca pelo **CÓDIGO DA EMPRESA**.
+            schema:
+                type: integer
+        numberParam:
+            name: number
+            in: query
+            description: >
+                Realiza a busca pelo **NÚMERO**.
+            schema:
+                type: integer
+        keyParam:
+            name: key
+            in: query
+            description: Realiza a busca pela **CHAVE DE ACESSO**.
+            required: false
+            schema:
+                type: string
+                pattern: '[A-Z0-9]'
+                minLength: 44
+                maxLength: 44
+        serieParam:
+            name: serie
+            in: query
+            description: Realiza a busca pela **SÉRIE** da NF-e.
+            required: false
+            schema:
+                type: integer
+        addresseeIdParam:
+            name: addressee_id
+            in: query
+            description: Realiza a busca pelo **ID DO DESTINATÁRIO** da NF-e.
+            required: false
+            schema:
+                type: integer
+        transporterIdParam:
+            name: transporter_id
+            in: query
+            description: Realiza a busca pelo **ID DO TRANSPORTADOR** da NF-e.
+            required: false
+            schema:
+                type: integer
+        statusParam:
+            name: status
+            in: query
+            description: >
+                Realiza a busca pelo **STATUS** da NF-e:
+                  - `0` = Cadastrado
+                  - `1` = Emitido
+                  - `2` = Cancelado
+                  - `3` = Processando
+                  - `4` = Inutilizado
+            required: false
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+        issuePurposeParam:
+            name: issue_purpose
+            in: query
+            required: false
+            description: >
+                Realiza a busca pela **FINALIDADE** da NF-e:
+                  - `1` = Normal
+                  - `2` = Complementar
+                  - `3` = Nota de Ajuste
+                  - `4` = Devolução
+                  - `5` = Nota de Débito
+                  - `6` = Nota de Crédito
+            schema:
+                type: integer
+                enum:
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+        issuedAtParam:
+            name: issued_at
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        issuedFromParam:
+            name: issued_from
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO INICIAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        issuedToParam:
+            name: issued_to
+            in: query
+            description: Realiza a busca pela **DATA DE EMISSÃO FINAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdAtParam:
+            name: created_at
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO INICIAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO FINAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO INICIAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: Realiza a busca pela **DATA DA ÚLTIMA ATUALIZAÇÃO FINAL** da NF-e.
+                Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados.
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+        danfeLayoutParam:
+            name: layout
+            in: query
+            description: >
+                Especifica o **TIPO DE LAYOUT** do arquivo PDF.
+                Valores possíveis:
+                  - `0`: DANFE Retrato
+                  - `1`: DANFE Paisagem
+                  - `2`: DANFE Simplificado
+            required: true
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+
+    # CORPO DE REQUISIÇÕES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação de uma NF-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Nfe'
+        UpdateBody:
+            description: 'Este corpo será utilizado para atualização de uma NF-e. O campo "id" é obrigatório.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/NfeUpdate'
+        SendBody:
+            description: 'Este corpo será utilizado para emissão de uma NF-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendRequest'
+        duplicateBody:
+            description: 'Este corpo será utilizado para a duplicação de uma NF-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DuplicateRequest'
+        IncapacitateBody:
+            description: 'Este corpo será utilizado para inutilização'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/IncapacitateRequest'
+        CancelBody:
+            description: 'Este corpo será utilizado para o cancelamento de uma NF-e.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        IncapacitateSuccess:
+            description: 'Resposta de sucesso, para inutilização de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/IncapacitateResponse'
+        DuplicateSuccess:
+            description: 'Resposta de sucesso, para duplicação de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        SendSuccess:
+            description: 'Resposta de sucesso, para emissão de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SendResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso, para cancelamento de NF-es.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+
+    # OBJETOS
+    schemas:
+
+        # REQUESTS
+        SendRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da NF-e.'
+        IncapacitateRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da NF-e.'
+                reason:
+                    type: string
+                    example: 'Cancelando por motivos XYZ.'
+                    description: 'Justificativa do cancelamento da NF-e.'
+        DuplicateRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da NF-e.'
+        CancelRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da NF-e.'
+                reason:
+                    type: string
+                    nullable: false
+                    minLength: 20
+                    example: 'Cancelando por motivos XYZ.'
+                    description: 'Justificativa do cancelamento da NF-e.'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/NfeSimple'
+                            - $ref: '#/components/schemas/NfeAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfeResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        IncapacitateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfeResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'NF-e inutilizada com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfeResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        SendResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfeResponseSend'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'NF-e emitida com sucesso!'
+                    description: 'Mensagem de retorno.'
+        CancelResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/NfeResponseCancel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'NF-e cancelada com sucesso!'
+                    description: 'Mensagem de retorno.'
+
+        # MODELS
+        ## MODEL BASE
+        NfeBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID. *(somente informá-lo em caso de atualização de dados)*'
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 192734
+                    description: 'Código da empresa (Empresa).'
+                serie:
+                    type: integer
+                    example: 1
+                    default: 1
+                    description: 'Série da NF-e.'
+                number:
+                    type: integer
+                    readOnly: true
+                    example: 123456789
+                    description: 'Número da NF-e'
+                ncfop:
+                    type: string
+                    example: '2222'
+                    nullable: true
+                    description: 'CFOP predominante da NF-e.'
+                document_type:
+                    type: integer
+                    example: 1
+                    description: >
+                        **TIPO** da NF-e:
+                          - `0` = Entrada
+                          - `1` = Saída
+                    enum:
+                        - 0
+                        - 1
+                status:
+                    type: integer
+                    format: small
+                    readOnly: true
+                    example: 0
+                    description: >
+                        Tipo do Status:
+                          - `0` = Cadastrado
+                          - `1` = Emitido
+                          - `2` = Em Trânsito
+                          - `3` = Entregue
+                          - `4` = Cancelado
+                          - `5` = Não Entregue
+                          - `6` = Inutilizado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                key:
+                    type: string
+                    minLength: 44
+                    maxLength: 44
+                    pattern: '[A-Z0-9]'
+                    example: '35221243256171000199550010002713451756413099'
+                    readOnly: true
+                    description: 'Chave de acesso da NF-e.'
+                description_operation:
+                    type: string
+                    maxLength: 60
+                    example: 'Venda de mercadoria'
+                    description: 'Natureza da Operação.'
+                issue_purpose:
+                    type: integer
+                    example: 1
+                    description: >
+                        **FINALIDADE** da NF-e:
+                          - `1` = Normal
+                          - `2` = Complementar
+                          - `3` = Nota de Ajuste
+                          - `4` = Devolução
+                          - `5` = Nota de Crédito
+                          - `6` = Nota de Débito
+                    enum:
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                freight:
+                    type: integer
+                    example: 0
+                    description: >
+                        **FRETE** (modalidade de frete) da NF-e:
+                          - `0` = Por conta do emitente (CIF)
+                          - `1` = Por conta do destinatário (FOB)
+                          - `2` = Por conta de terceiros
+                          - `3` = Transporte próprio por conta do remetente
+                          - `4` = Transporte próprio por conta do destinatário
+                          - `9` = Sem transporte
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 9
+                payment_form:
+                    type: integer
+                    example: 1
+                    description: >
+                        **FORMA DE PAGAMENTO** da NF-e:
+                          - `1` = Dinheiro
+                          - `2` = Cheque
+                          - `3` = Cartão de Crédito
+                          - `4` = Cartão de Débito
+                          - `5` = Crédito Loja
+                          - `10` = Vale Alimentação
+                          - `11` = Vale Refeição
+                          - `12` = Vale Presente
+                          - `13` = Vale Combustível
+                          - `14` = Duplicata Mercantil
+                          - `15` = Boleto Bancário
+                          - `90` = Sem Pagamento
+                          - `99` = Outros
+                location_type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: >
+                        **INDICADOR DE DESTINO** da operação (Ind. Dest):
+                          - `1` = Operação interna
+                          - `2` = Operação interestadual
+                          - `3` = Operação com exterior
+                    enum:
+                        - 1
+                        - 2
+                        - 3
+                icms_free:
+                    type: integer
+                    default: 0
+                    example: 0
+                    description: >
+                        ICMS Isento/Livre:
+                          - `0` = Não
+                          - `1` = Sim
+                    enum:
+                        - 0
+                        - 1
+                warehouse_allocate:
+                    type: integer
+                    default: 1
+                    example: 1
+                    description: >
+                        Alocar em Depósito:
+                          - `0` = Não
+                          - `1` = Sim
+                    enum:
+                        - 0
+                        - 1
+                debt_type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Tipo de Débito (Reforma Tributária).'
+                credit_type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Tipo de Crédito (Reforma Tributária).'
+                government_type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Ente Governamental (Reforma Tributária).'
+                government_operation_type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Operação Governamental (Reforma Tributária).'
+                government_reductor:
+                    type: number
+                    nullable: true
+                    example: 0.00
+                    description: 'Redutor (percentual) aplicado à operação governamental.'
+                vehicle_traction_license_plate:
+                    type: string
+                    nullable: true
+                    minLength: 7
+                    maxLength: 7
+                    example: 'AMD0X12'
+                    description: 'Placa do veículo de tração vinculado à NF-e.'
+                vehicle_traction_uf:
+                    type: string
+                    nullable: true
+                    minLength: 2
+                    maxLength: 2
+                    example: 'SP'
+                    description: 'UF da placa do veículo de tração vinculado à NF-e.'
+                obs:
+                    type: string
+                    nullable: true
+                    example: 'Observação da NF-e'
+                    description: 'Observações da NF-e.'
+                addressee:
+                    type: object
+                    description: 'Dados do destinatário da NF-e.'
+                    properties:
+                        name:
+                            type: string
+                            readOnly: true
+                            example: 'METSO BRASIL INDUSTRIA E COMERCIO LTDA'
+                            description: 'Nome do destinatário da NF-e.'
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do destinatário da NF-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do destinatário da NF-e *(informar este ou o campo CPF)*'
+                transporter:
+                    type: object
+                    nullable: true
+                    description: 'Dados do transportador da NF-e *(dados opcionais)*'
+                    properties:
+                        cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            description: 'CPF do transportador da NF-e *(informar este ou o campo CNPJ)*'
+                        cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            description: 'CNPJ do transportador da NF-e *(informar este ou o campo CPF)*'
+                issued_at:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2026-07-23'
+                    description: 'Data de emissão da NF-e.'
+                expected_delivery:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2026-07-24'
+                    description: 'Data de previsão de entrega da NF-e.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2026-07-23 14:16:00'
+                    description: 'Data de criação da NF-e'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2026-07-23 14:16:00'
+                    description: 'Data de atualização da NF-e'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Nfe:
+            allOf:
+                - $ref: '#/components/schemas/NfeBase'
+                - type: object
+                  properties:
+                      total_is:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Valor total do Imposto Seletivo (IS).'
+                      total_items:
+                          type: number
+                          nullable: true
+                          example: 1.00
+                          description: 'Quantidade total de itens.'
+                      total_ibs_city_defer:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS Municipal diferido.'
+                      total_ibs_state_defer:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS Estadual diferido.'
+                      total_ibs_mono_withhold:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS retido anteriormente (Monofásica).'
+                      total_cbs:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Valor total da CBS.'
+                      total_ibs_city_devolution:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total de devolução do IBS Municipal.'
+                      total_cbs_cashback:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total de estorno de crédito (Cashback) da CBS.'
+                      total_cbs_devolution:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total de devolução da CBS.'
+                      total_ibs_cashback:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total de estorno de crédito (Cashback) do IBS.'
+                      total_cbs_mono_retention:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total da CBS sujeita a retenção (Monofásica).'
+                      total_ibs:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Valor total do IBS.'
+                      total_ibs_mono_retention:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS sujeito a retenção (Monofásica).'
+                      total_cbs_ibs_bc:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Base de cálculo total para CBS/IBS.'
+                      total_ibs_assumption_credit_condition_value:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do valor suspensivo de crédito presumido do IBS.'
+                      total_cbs_assumption_credit_condition_value:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do valor suspensivo de crédito presumido da CBS.'
+                      total_cbs_assumption_credit_value:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do crédito presumido da CBS.'
+                      total_ibs_state_devolution:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total de devolução do IBS Estadual.'
+                      total_ibs_mono_standard:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total padrão do IBS (Monofásica).'
+                      total_ibs_city:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS Municipal.'
+                      total_ibs_state:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do IBS Estadual.'
+                      total_cbs_mono_standard:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total padrão da CBS (Monofásica).'
+                      total_cbs_defer:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total da CBS diferida.'
+                      total_cbs_mono_withhold:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total da CBS retida anteriormente (Monofásica).'
+                      total_ibs_assumption_credit_value:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Total do crédito presumido do IBS.'
+                      debt_type:
+                          type: integer
+                          nullable: true
+                          example: 1
+                          description: 'Tipo de débito tributário (Reforma Tributária).'
+                      credit_type:
+                          type: integer
+                          nullable: true
+                          example: 1
+                          description: 'Tipo de crédito tributário (Reforma Tributária).'
+                      government_type:
+                          type: integer
+                          nullable: true
+                          example: 1
+                          description: 'Tipo de ente governamental (Reforma Tributária).'
+                      government_reductor:
+                          type: number
+                          nullable: true
+                          example: 0.00
+                          description: 'Percentual redutor de alíquota governamental (Reforma Tributária).'
+                      government_operation_type:
+                          type: integer
+                          nullable: true
+                          example: 1
+                          description: 'Tipo de operação governamental (Reforma Tributária).'
+
+                      volumes:
+                          type: array
+                          nullable: true
+                          description: 'Volumes atrelados à NF-e (aba Volumes).'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      readOnly: true
+                                      example: 1
+                                      description: 'ID do volume.'
+                                  specie:
+                                      type: string
+                                      example: 'Caixa'
+                                      description: 'Espécie do volume. *(obrigatório quando "volumes" for informado)*'
+                                  brand:
+                                      type: string
+                                      nullable: true
+                                      example: 'Marca'
+                                      description: 'Marca do volume.'
+                                  quantity:
+                                      type: integer
+                                      example: 1
+                                      description: 'Quantidade de volumes. *(obrigatório quando "volumes" for informado)*'
+                                  net_weight:
+                                      type: number
+                                      nullable: true
+                                      example: 0.000
+                                      description: 'Peso líquido do volume (kg).'
+                                  weight:
+                                      type: number
+                                      nullable: true
+                                      example: 0.000
+                                      description: 'Peso bruto do volume (kg).'
+                                  number:
+                                      type: string
+                                      nullable: true
+                                      example: '001'
+                                      description: 'Número de identificação do volume.'
+                                  seals:
+                                      type: string
+                                      nullable: true
+                                      example: 'LCR-0001'
+                                      description: 'Lacres do volume.'
+
+                      products:
+                          type: array
+                          nullable: true
+                          description: 'Produtos atrelados à NF-e (aba Produtos).'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: string
+                                      example: '4524'
+                                      description: 'ID do produto cadastrado a ser incluído no item. *(obrigatório quando "products" for informado)*'
+                                  description:
+                                      type: string
+                                      readOnly: true
+                                      example: 'Produto exemplo'
+                                      description: 'Descrição do produto (retornado pela API).'
+                                  quantity:
+                                      type: number
+                                      example: 1
+                                      description: 'Quantidade do produto. *(obrigatório quando "products" for informado)*'
+                                  price:
+                                      type: number
+                                      example: 0.00
+                                      description: 'Valor unitário do produto. *(obrigatório quando "products" for informado)*'
+                                  price_tax:
+                                      type: number
+                                      example: 0.00
+                                      description: 'Valor tributável do produto.'
+                                  total_value:
+                                      type: number
+                                      readOnly: true
+                                      example: 0.00
+                                      description: 'Valor total do produto (calculado).'
+                                  beneficiary_code:
+                                      type: integer
+                                      nullable: true
+                                      description: 'Código do benefício fiscal.'
+                                  icms_origin:
+                                      type: integer
+                                      description: 'Origem da mercadoria (ICMS). *(obrigatório quando "products" for informado)*'
+                                  specie:
+                                      type: string
+                                      example: 'UN'
+                                      description: 'Espécie do produto. *(obrigatório quando "products" for informado)*'
+                                  ncm:
+                                      type: integer
+                                      nullable: true
+                                      minLength: 8
+                                      example: 12345678
+                                      description: 'Código NCM do produto (mínimo 8 dígitos).'
+                                  cest:
+                                      type: integer
+                                      nullable: true
+                                      minLength: 7
+                                      example: 2800100
+                                      description: 'Código CEST do produto (mínimo 7 dígitos).'
+                                  cfop:
+                                      type: integer
+                                      nullable: true
+                                      minLength: 4
+                                      example: 2222
+                                      description: 'CFOP do item (mínimo 4 dígitos).'
+                                  ean:
+                                      type: string
+                                      nullable: true
+                                      description: 'Código EAN/GTIN do produto.'
+                                  fci_number:
+                                      type: string
+                                      nullable: true
+                                      description: 'Número de controle da FCI (Ficha de Conteúdo de Importação).'
+                                  mobile_good_usage:
+                                      type: integer
+                                      description: 'Indicador de uso do bem móvel.'
+                                  referenced_key:
+                                      type: string
+                                      nullable: true
+                                      minLength: 44
+                                      maxLength: 44
+                                      description: 'Chave do item referenciado.'
+                                  referenced_item:
+                                      type: integer
+                                      nullable: true
+                                      minimum: 1
+                                      example: 1
+                                      description: 'Número do item referenciado.'
+                                  icms_tax_situation:
+                                      type: string
+                                      example: '900'
+                                      description: 'Situação tributária do ICMS (CST/CSOSN). '
+                                  ipi_tax_situation:
+                                      type: string
+                                      nullable: true
+                                      example: '99'
+                                      description: 'Situação tributária do IPI. '
+                                  ipi_tax_cod_classification:
+                                      type: integer
+                                      nullable: true
+                                      minLength: 3
+                                      example: 999
+                                      description: 'Código de classificação do IPI (mínimo 3 dígitos).'
+                                  pis_tax_situation:
+                                      type: string
+                                      example: '99'
+                                      description: 'Situação tributária do PIS. '
+                                  cofins_tax_situation:
+                                      type: string
+                                      example: '99'
+                                      description: 'Situação tributária do COFINS. '
+                                  obs:
+                                      type: string
+                                      nullable: true
+                                      example: 'Observação do item'
+                                      description: 'Observações do item.'
+                                  discount:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do desconto do item.'
+                                  insurance_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do seguro do item.'
+                                  other_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Outras despesas acessórias do item.'
+                                  freight_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do frete do item.'
+                                  icms_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do ICMS do item.'
+                                  icms_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do ICMS do item (%). Entre 0 e 100.'
+                                  icms_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do ICMS do item.'
+                                  icms_bc_st_rt:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do ICMS-ST retido anteriormente.'
+                                  icms_value_substitute:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do ICMS substituto.'
+                                  icms_bc_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do ICMS-ST do item.'
+                                  icms_aliquot_tax_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do ICMS-ST do item (%). Entre 0 e 100.'
+                                  icms_value_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do ICMS-ST do item.'
+                                  icms_aliquot_fn:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do Fundo de Combate à Pobreza (FCP) aplicada ao item.'
+                                  icms_reduction_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de redução da base de cálculo do ICMS.'
+                                  icms_value_rt_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do ICMS-ST retido anteriormente.'
+                                  icms_mva_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de MVA (Margem de Valor Agregado) do ICMS-ST.'
+                                  icms_reduction_bc_st:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de redução da base de cálculo do ICMS-ST.'
+                                  icms_modality_bc:
+                                      type: integer
+                                      nullable: true
+                                      description: >
+                                          Modalidade de determinação da base de cálculo do ICMS:
+                                            - `0` = 'Margem Valor Agregado (%)',
+                                            - `1` = 'Pauta (Valor)',
+                                            - `2` = 'Preço Tabelado Máximo (Valor)',
+                                            - `3` = 'Valor da Operação'
+                                      enum:
+                                          - 0
+                                          - 1
+                                          - 2
+                                          - 3
+                                  icms_modality_bc_st:
+                                      type: integer
+                                      nullable: true
+                                      description: >
+                                          Modalidade de determinação da base de cálculo do ICMS-ST.:
+                                            - `0` = 'Preço Tabelado ou Máximo sugerido'
+                                            - `1` = 'Lista Negativa (valor)'
+                                            - `2` = 'Lista Positiva (Valor)'
+                                            - `3` = 'Lista Neutra (Valor)'
+                                            - `4` = 'Margem do Valor Agregado (%)'
+                                            - `5` = 'Pauta (valor)'
+                                            - `6` = 'Valor da Operação'
+                                      enum:
+                                          - 0
+                                          - 1
+                                          - 2
+                                          - 3
+                                          - 4
+                                          - 5
+                                          - 6
+                                  icms_tax_free:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor da isenção/redução do ICMS.'
+                                  icms_tax_free_reason:
+                                      type: integer
+                                      nullable: true
+                                      description: >
+                                          Motivo da desoneração do ICMS:
+                                          - `1`   = 'Táxi',
+                                          - `3`   = 'Produtor Agropecuário',
+                                          - `4`   = 'Frotista/Locadora',
+                                          - `5`   = 'Diplomático/Consular',
+                                          - `6`   = 'Utilitários e motocicletas da Amazônia Ocidental e áreas de livre comércio (resolução 714/88 e 790/94 - CONTRAN e suas alterações)',
+                                          - `7`   = 'SUFRAMA',
+                                          - `9`   = 'Outros',
+                                          - `10`  = 'Deficiente Condutor',
+                                          - `11`  = 'Deficiente não Condutor',
+                                          - `16`  = 'Olimpíadas 2016',
+                                          - `90`  = 'Solicitado pelo Fisco',
+                                      enum:
+                                          - 1
+                                          - 3
+                                          - 4
+                                          - 5
+                                          - 6
+                                          - 7
+                                          - 9
+                                          - 10
+                                          - 11
+                                          - 16
+                                          - 90
+                                  fcp_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do FCP do item.'
+                                  fcp_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do FCP do item (%). Entre 0 e 100.'
+                                  fcp_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do FCP do item.'
+                                  ipi_bc_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do IPI do item.'
+                                  ipi_aliquot_percentage:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do IPI do item (%). Entre 0 e 100.'
+                                  ipi_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do IPI do item.'
+                                  pis_bc_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do PIS do item.'
+                                  pis_aliquot_percentage:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do PIS do item (%). Entre 0 e 100.'
+                                  pis_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do PIS do item.'
+                                  cofins_bc_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de cálculo do COFINS do item.'
+                                  cofins_aliquot_percentage:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do COFINS do item (%). Entre 0 e 100.'
+                                  cofins_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do COFINS do item.'
+                                  cbs_ibs_is_manual:
+                                      type: integer
+                                      nullable: true
+                                      enum: [0, 1]
+                                      example: 1
+                                      description: 'Define se os cálculos de CBS/IBS foram preenchidos manualmente (0 = não, 1 = sim).'
+                                  cbs_ibs_cst:
+                                      type: string
+                                      nullable: true
+                                      minLength: 3
+                                      maxLength: 3
+                                      pattern: '^[0-9]{3}$'
+                                      example: '000'
+                                      description: 'CST de IBS/CBS (3 dígitos).'
+                                  cbs_ibs_classification:
+                                      type: string
+                                      nullable: true
+                                      minLength: 6
+                                      maxLength: 6
+                                      pattern: '^[0-9]{6}$'
+                                      example: '000001'
+                                      description: 'Classificação Tributária de IBS/CBS - cClassTrib (6 dígitos).'
+                                  cbs_ibs_donation:
+                                      type: boolean
+                                      nullable: true
+                                      example: false
+                                      description: 'Indica se é doação.'
+                                  cbs_ibs_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 100.00
+                                      description: 'Base de Cálculo do IBS/CBS.'
+                                  cashback_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de estorno de crédito (Cashback) da CBS.'
+                                  cashback_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de estorno de crédito (Cashback) do IBS.'
+                                  cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.90
+                                      description: 'Alíquota da CBS (%). Entre 0 e 100.'
+                                  cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.90
+                                      description: 'Valor da CBS (R$).'
+                                  cbs_defer_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Diferimento da CBS (%). Entre 0 e 100.'
+                                  cbs_defer_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Diferimento da CBS (R$).'
+                                  cbs_devolution_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de Devolução da CBS (R$).'
+                                  cbs_reduction_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Redução da CBS (%). Entre 0 e 100.'
+                                  cbs_reduction_effective_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.90
+                                      description: 'Alíquota de Redução Efetiva da CBS (%). Entre 0 e 100.'
+                                  ibs_state_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.10
+                                      description: 'Alíquota do IBS Estadual (%). Entre 0 e 100.'
+                                  ibs_state_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.10
+                                      description: 'Valor do IBS Estadual (R$).'
+                                  ibs_state_defer_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Diferimento do IBS Estadual (%). Entre 0 e 100.'
+                                  ibs_state_defer_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Diferimento do IBS Estadual (R$).'
+                                  ibs_state_devolution_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de Devolução do IBS Estadual (R$).'
+                                  ibs_state_reduction_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Redução do IBS Estadual (%). Entre 0 e 100.'
+                                  ibs_state_reduction_effective_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.10
+                                      description: 'Alíquota de Redução Efetiva do IBS Estadual (%). Entre 0 e 100.'
+                                  ibs_city_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota do IBS Municipal (%). Entre 0 e 100.'
+                                  ibs_city_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do IBS Municipal (R$).'
+                                  ibs_city_defer_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Diferimento do IBS Municipal (%). Entre 0 e 100.'
+                                  ibs_city_defer_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Diferimento do IBS Municipal (R$).'
+                                  ibs_city_devolution_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de Devolução do IBS Municipal (R$).'
+                                  ibs_city_reduction_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Redução do IBS Municipal (%). Entre 0 e 100.'
+                                  ibs_city_reduction_effective_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota de Redução Efetiva do IBS Municipal (%). Entre 0 e 100.'
+                                  ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.10
+                                      description: 'Valor total do IBS do item.'
+                                  tax_regular_code:
+                                      type: string
+                                      nullable: true
+                                      minLength: 3
+                                      maxLength: 3
+                                      pattern: '^[0-9]{3}$'
+                                      example: '000'
+                                      description: 'CST da Tributação Regular - CSTReg (3 dígitos).'
+                                  tax_regular_classification:
+                                      type: string
+                                      nullable: true
+                                      minLength: 6
+                                      maxLength: 6
+                                      pattern: '^[0-9]{6}$'
+                                      example: '000001'
+                                      description: 'Classificação Tributária da Tributação Regular - cClassTribReg (6 dígitos).'
+                                  tax_regular_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota CBS da Tributação Regular (%). Entre 0 e 100.'
+                                  tax_regular_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS da Tributação Regular.'
+                                  tax_regular_ibs_state_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota IBS Estadual da Tributação Regular (%). Entre 0 e 100.'
+                                  tax_regular_ibs_state_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS Estadual da Tributação Regular.'
+                                  tax_regular_ibs_city_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota IBS Municipal da Tributação Regular (%). Entre 0 e 100.'
+                                  tax_regular_ibs_city_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS Municipal da Tributação Regular.'
+                                  gov_purchasing_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota CBS para Compra Governamental (%). Entre 0 e 100.'
+                                  gov_purchasing_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS para Compra Governamental.'
+                                  gov_purchasing_ibs_state_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota IBS UF para Compra Governamental (%). Entre 0 e 100.'
+                                  gov_purchasing_ibs_state_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS UF para Compra Governamental.'
+                                  gov_purchasing_ibs_city_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota IBS Mun para Compra Governamental (%). Entre 0 e 100.'
+                                  gov_purchasing_ibs_city_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS Mun para Compra Governamental.'
+                                  mono_standard_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Quantidade Tributada (Monofásica Padrão).'
+                                  mono_standard_ad_rem_ibs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem IBS (Monofásica Padrão).'
+                                  mono_standard_ad_rem_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS (Monofásica Padrão).'
+                                  mono_standard_ad_rem_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem CBS (Monofásica Padrão).'
+                                  mono_standard_ad_rem_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS (Monofásica Padrão).'
+                                  mono_retention_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Quantidade Tributada sujeita a Retenção.'
+                                  mono_retention_ad_rem_ibs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem IBS sujeito a Retenção.'
+                                  mono_retention_ad_rem_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS sujeito a Retenção.'
+                                  mono_retention_ad_rem_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem CBS sujeito a Retenção.'
+                                  mono_retention_ad_rem_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS sujeito a Retenção.'
+                                  mono_withhold_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Quantidade Tributada retirada anteriormente.'
+                                  mono_withhold_ad_rem_ibs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem IBS retirado anteriormente.'
+                                  mono_withhold_ad_rem_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS retirado anteriormente.'
+                                  mono_withhold_ad_rem_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: '% Ad Rem CBS retirado anteriormente.'
+                                  mono_withhold_ad_rem_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS retirado anteriormente.'
+                                  mono_defer_ibs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual IBS Diferido (Monofásica).'
+                                  mono_defer_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS Diferido (Monofásica).'
+                                  mono_defer_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual CBS Diferido (Monofásica).'
+                                  mono_defer_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS Diferido (Monofásica).'
+                                  mono_ibs_total:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Total do IBS (Monofásica).'
+                                  mono_cbs_total:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Total da CBS (Monofásica).'
+                                  transfer_credit_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS de Transferência de Crédito.'
+                                  transfer_credit_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS de Transferência de Crédito.'
+                                  competency_adjustment_competency:
+                                      type: string
+                                      nullable: true
+                                      format: 'Y-m'
+                                      example: '2026-07'
+                                      description: 'Ano/Mês de Competência do Ajuste.'
+                                  competency_adjustment_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS do Ajuste de Competência.'
+                                  competency_adjustment_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor CBS do Ajuste de Competência.'
+                                  assumption_operation_credit_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor da Base de Cálculo do Crédito Presumido.'
+                                  assumption_operation_credit_code:
+                                      type: integer
+                                      nullable: true
+                                      example: 1
+                                      description: 'Classificação de Crédito Presumido.'
+                                  assumption_operation_credit_ibs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual do Crédito Presumido IBS.'
+                                  assumption_operation_credit_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Crédito Presumido IBS.'
+                                  assumption_operation_credit_ibs_condition_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor Suspensivo de Crédito Presumido IBS.'
+                                  assumption_operation_credit_cbs_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual do Crédito Presumido CBS.'
+                                  assumption_operation_credit_cbs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Crédito Presumido CBS.'
+                                  assumption_operation_credit_cbs_condition_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor Suspensivo de Crédito Presumido CBS.'
+                                  assumption_zfm_credit_competency:
+                                      type: string
+                                      nullable: true
+                                      format: 'Y-m'
+                                      example: '2026-07'
+                                      description: 'Ano/Mês de Competência (IBS na ZMF).'
+                                  assumption_zfm_credit_type:
+                                      type: integer
+                                      nullable: true
+                                      example: 1
+                                      description: 'Tipo/Classificação para subapuração do IBS na ZMF.'
+                                  zmf_ibs_type:
+                                      type: integer
+                                      nullable: true
+                                      example: 1
+                                      description: 'Tipo de IBS ZMF.'
+                                  assumption_zfm_credit_ibs_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor IBS na ZMF.'
+                                  is_cst:
+                                      type: string
+                                      nullable: true
+                                      minLength: 3
+                                      maxLength: 3
+                                      pattern: '^[0-9]{3}$'
+                                      example: '000'
+                                      description: 'CST do Imposto Seletivo (3 dígitos).'
+                                  is_classification:
+                                      type: string
+                                      nullable: true
+                                      minLength: 6
+                                      maxLength: 6
+                                      pattern: '^[0-9]{6}$'
+                                      example: '000001'
+                                      description: 'Classificação Tributária do Imposto Seletivo (6 dígitos).'
+                                  is_bc:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Base de Cálculo do Imposto Seletivo.'
+                                  is_aliquot:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota Ad Valorem do Imposto Seletivo.'
+                                  is_aliquot_specific:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Alíquota Específica do Imposto Seletivo.'
+                                  is_taxable_unit:
+                                      type: string
+                                      nullable: true
+                                      example: 'UN'
+                                      description: 'Unidade Tributável do Imposto Seletivo.'
+                                  is_taxable_quantity:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Quantidade Tributável do Imposto Seletivo.'
+                                  is_value:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor do Imposto Seletivo.'
+                                  total_item:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor Total do Item com Impostos.'
+                                  license_plate:
+                                      type: string
+                                      nullable: true
+                                      maxLength: 10
+                                      example: 'ABC1D23'
+                                      description: 'Placa do veículo vinculado (Aba Combustível).'
+                                  fuel_p_glp:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de GLP (% GLP).'
+                                  fuel_p_gnn:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de GNN (% GNN).'
+                                  fuel_p_gni:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Percentual de GNI (% GNI).'
+                                  fuel_vpart:
+                                      type: number
+                                      nullable: true
+                                      example: 0.00
+                                      description: 'Valor de Partida do Combustível.'
+                                  fuel_code_anp:
+                                      type: integer
+                                      nullable: true
+                                      example: 210203001
+                                      description: 'Código de Produto da ANP.'
+                                  fuel_description_anp:
+                                      type: string
+                                      nullable: true
+                                      minLength: 2
+                                      maxLength: 95
+                                      example: 'GASOLINA C COMUM'
+                                      description: 'Descrição do Produto conforme ANP.'
+                                  fuel_uf:
+                                      type: string
+                                      nullable: true
+                                      minLength: 2
+                                      maxLength: 2
+                                      example: 'SP'
+                                      description: 'UF de Consumo do Combustível.'
+
+                      references:
+                          type: array
+                          nullable: true
+                          description: 'Notas de referência atreladas à NF-e (aba Notas de Referência).'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      readOnly: true
+                                      example: 4524
+                                      description: 'ID da NF-e de referência (retornado pela API). Não é validado como campo de entrada em CreateForApiRequest.'
+                                  key:
+                                      type: string
+                                      nullable: true
+                                      maxLength: 100
+                                      example: '35221243256171000199550010002713451756413099'
+                                      description: 'Chave da NF-e de referência.'
+
+                      histories:
+                          type: array
+                          nullable: true
+                          readOnly: true
+                          description: 'Histórico de eventos da NF-e.'
+                          items:
+                              type: object
+                              properties:
+                                  id:
+                                      type: integer
+                                      example: 1
+                                      description: 'ID do evento.'
+                                  message:
+                                      type: string
+                                      example: 'NF-e emitida com sucesso'
+                                      description: 'Mensagem do histórico.'
+                                  username:
+                                      type: string
+                                      nullable: true
+                                      example: 'usuario_exemplo'
+                                      description: 'Nome do usuário que registrou o histórico.'
+                                  created_at:
+                                      type: string
+                                      format: 'Y-m-d H:i:s'
+                                      example: '2026-07-23 14:16:00'
+                                      description: 'Data do evento.'
+
+        ## MODEL DE ATUALIZAÇÃO
+        NfeUpdate:
+            allOf:
+                - $ref: '#/components/schemas/Nfe'
+                - type: object
+                  required:
+                      - id
+                  properties:
+                      id:
+                          type: integer
+                          example: 5835909
+                          description: 'ID da NF-e a ser atualizada. *(obrigatório)*'
+
+        ## MODEL RETORNADA NA PESQUISA DE VÁRIOS ITEMS
+        NfeSimple:
+            allOf:
+                - $ref: '#/components/schemas/Nfe'
+                - type: object
+                  properties:
+                      qtd:
+                          type: number
+                          readOnly: true
+                          example: 14625.37
+                          description: 'Quantidade total de produtos da NF-e.'
+                      weight:
+                          type: number
+                          readOnly: true
+                          example: 1000.00
+                          description: 'Peso bruto total da NF-e.'
+                      issuer_name:
+                          type: string
+                          readOnly: true
+                          example: 'SANTOS - ESTRELA LOGISTICA E TRANSPORTES'
+                          description: 'Nome do emitente da NF-e.'
+                      addressee_name:
+                          type: string
+                          readOnly: true
+                          example: 'METSO BRASIL INDUSTRIA E COMERCIO LTDA'
+                          description: 'Nome do destinatário da NF-e.'
+                      transporter_name:
+                          type: string
+                          nullable: true
+                          readOnly: true
+                          example: 'Transportadora Exemplo LTDA'
+                          description: 'Nome do transportador da NF-e.'
+
+        ## MODEL RETORNADA NA PESQUISA DE UM ITEM
+        NfeAll:
+            allOf:
+                - $ref: '#/components/schemas/NfeSimple'
+
+        ## MODEL RETORNADA NA RESPOSTA DE CRIAÇÃO E ATUALIZAÇÃO
+        NfeResponseCreateUpdate:
+            allOf:
+                - $ref: '#/components/schemas/Nfe'
+
+        ## MODEL RETORNADA NA RESPOSTA DA EMISSÃO DA NF-E
+        NfeResponseSend:
+            allOf:
+                - $ref: '#/components/schemas/Nfe'
+
+        ## MODEL RETORNADA NA RESPOSTA DE CANCELAMENTO DA NF-E
+        NfeResponseCancel:
+            allOf:
+                - $ref: '#/components/schemas/Nfe'

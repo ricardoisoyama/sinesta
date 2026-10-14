@@ -1,0 +1,764 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Abastecimento
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **ABASTECIMENTO**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: fuel-supplies
+      description: Rota para cadastramento, atualização e inserção de abastecimento.
+security:
+    - ApiKeyAuth: []
+paths:
+    # CRUD
+    /fuel-supplies/search:
+        get:
+            tags:
+                - 'fuel-supplies'
+            description: 'Busca abastecimentos com base nos filtros informados.'
+            operationId: 'search'
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/categoryParam'
+                - $ref: '#/components/parameters/licensePlateParam'
+                - $ref: '#/components/parameters/driverNameParam'
+                - $ref: '#/components/parameters/fuelStationNameParam'
+                - $ref: '#/components/parameters/typeFuelParam'
+                - $ref: '#/components/parameters/supplyDateFromParam'
+                - $ref: '#/components/parameters/supplyDateToParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+    /fuel-supplies/create:
+        post:
+            tags:
+                - 'fuel-supplies'
+            description: 'Cria um abastecimento no sistema.'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+    /fuel-supplies/update:
+        post:
+            tags:
+                - 'fuel-supplies'
+            description: 'Atualiza um abastecimento no sistema.'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+    /fuel-supplies/delete:
+        post:
+            tags:
+                - 'fuel-supplies'
+            description: 'Remove um abastecimento no sistema.'
+            operationId: 'delete'
+            requestBody:
+                $ref: '#/components/requestBodies/DeleteBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/DeleteSuccess'
+components:
+    # SEGURANCA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de um abastecimento.
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** de abastecimentos, separados por vírgula.
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        categoryParam:
+            name: category
+            in: query
+            description: >
+                Realiza a busca pela **CATEGORIA** do combustível.
+                  - `0` = Veículos
+                  - `1` = Equipamentos
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+        typeFuelParam:
+            name: type_fuel
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO** do combustível.
+                  - `0` = Álcool
+                  - `1` = Gasolina
+                  - `2` = Diesel S-500
+                  - `3` = Diesel S-1800
+                  - `4` = Diesel S-10
+                  - `5` = GNV
+                  - `7` = Arla 32
+                  - `6` = Outros
+                  - `8` = Gasolina Aditivada
+                  - `9` = Diesel S-10 Aditivado
+                  - `10` = Etanol Aditivado
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+                    - 7
+                    - 8
+                    - 9
+                    - 10
+        driverNameParam:
+            name: driver_name
+            in: query
+            description: >
+                Realiza a busca pelo **NOME DO MOTORISTA E/OU DO OPERADOR** de abastecimento.
+            schema:
+                type: string
+        fuelStationNameParam:
+            name: fuel_station_name
+            in: query
+            description: >
+                Realiza a busca pelo nome do **POSTO** de abastecimento.
+            schema:
+                type: string
+        licensePlateParam:
+            name: license_plate
+            in: query
+            description: >
+                Realiza a busca pela **PLACA DO VEÍCULO** relacionado ao abastecimento.
+            schema:
+                type: string
+        supplyDateFromParam:
+            name: supply_date_from
+            in: query
+            description: >
+                Realiza a busca a partir de uma **DATA DE ABASTECIMENTO** de um abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        supplyDateToParam:
+            name: supply_date_to
+            in: query
+            description: >
+                Realiza a busca até de uma **DATA INICIAL DE ABASTECIMENTO** de um abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdAtParam:
+            name: created_at
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE CRIAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA INICIAL DE CRIAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA FINAL DE CRIAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE ATUALIZAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA INICIAL DE ATUALIZAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA FINAL DE ATUALIZAÇÃO** do abastecimento.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        pageParam:
+            name: page
+            in: query
+            description: >
+                Paginação dos resultados.
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de um abastecimento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/FuelSupply'
+        DeleteBody:
+            description: 'Este corpo será utilizado para exclusão de um abastecimento.'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de abastecimentos.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de um abastecimento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de um abastecimento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        DeleteSuccess:
+            description: 'Resposta de sucesso, para exclusão de um abastecimento.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteResponse'
+
+    # OBJETOS
+    schemas:
+        # DeleteRequest
+        DeleteRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da operação.'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/FuelSupplySimple'
+                            - $ref: '#/components/schemas/FuelSupplyAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados.'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FuelSupplyResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno.'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FuelSupplyResponseCreateUpdate'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno.'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item excluído com sucesso!'
+                    description: 'Mensagem de retorno.'
+
+        # MODELS
+        ## MODEL BASE
+        FuelSupplyBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID. *(somente informá-lo em caso de atualização de dados)*'
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 192734
+                    description: 'Código da empresa.'
+                supply_date:
+                    type: string
+                    nullable: false
+                    format: 'Y-m-d'
+                    example: '2022-12-27'
+                    description: 'Data de abastecimento.'
+                type:
+                    type: integer
+                    format: small
+                    nullable: false
+                    example: 0
+                    description: >
+                        Tipo do Abastecimento:
+                          - `0` = Interno
+                          - `1` = Externo
+                          - `2` = Convênio
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                category:
+                    type: integer
+                    format: small
+                    nullable: false
+                    example: 0
+                    description: >
+                        Tipo do Abastecimento:
+                          - `0` = Veículo
+                          - `1` = Equipamentos
+                    enum:
+                        - 0
+                        - 1
+                liters:
+                    type: number
+                    nullable: false
+                    example: '800.00'
+                    description: 'A litragem que foi abastecida.'
+                value:
+                    type: number
+                    nullable: false
+                    example: '500.00'
+                    description: 'O valor total do abastecimento.'
+                current_km:
+                    type: number
+                    nullable: false
+                    example: '400.00'
+                    description: 'Valor do hodômetro do veículo no momento do abastecimento.'
+                warehouse_equipment_id:
+                    type: number
+                    nullable: false
+                    example: '10'
+                    description: 'Código do equipamento que foi abastecido. *(somente informá-lo em caso da categoria for do tipo 1)*'
+                hour_meter:
+                    type: number
+                    nullable: true
+                    example: '300'
+                    description: 'Valor do horímetro do equipamento no momento do abastecimento. *(somente informá-lo em caso da categoria for do tipo 1)*'
+                unit_value:
+                    type: number
+                    nullable: false
+                    example: '1600.00'
+                    description: 'Em reais, o valor por litro.'
+                obs:
+                    type: string
+                    nullable: true
+                    example: 'Observações Gerais'
+                    description: 'Observações gerais do abastecimento.'
+                type_fuel:
+                    type: integer
+                    format: small
+                    nullable: false
+                    example: 0
+                    description: >
+                        Tipo do combustível.
+                          - `0` = Álcool
+                          - `1` = Gasolina
+                          - `2` = Diesel S-500
+                          - `3` = Diesel S-1800
+                          - `4` = Diesel S-10
+                          - `5` = GNV
+                          - `7` = Arla 32
+                          - `6` = Outros
+                          - `8` = Gasolina Aditivada
+                          - `9` = Diesel S-10 Aditivado
+                          - `10` = Etanol Aditivado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                        - 7
+                        - 8
+                        - 9
+                        - 10
+                is_full:
+                    type: integer
+                    example: 0
+                    nullable: false
+                    description: >
+                        O tanque ficou cheio após o abastecimento?:
+                          - `0` = NÃO
+                          - `1` = SIM
+                    enum:
+                        - 0
+                        - 1
+                weight:
+                    type: number
+                    nullable: true
+                    example: '500.00'
+                    description: 'Peso.'
+                diff_last_km:
+                    type: number
+                    readOnly: true
+                    example: '500.00'
+                    description: 'Diferença entre o último KM.'
+                fuel_average:
+                    type: number
+                    readOnly: true
+                    example: '250.00'
+                    description: 'Média de combustível.'
+                fiscal:
+                    type: object
+                    nullable: true
+                    description: 'Informações fiscais.'
+                    properties:
+                        serie:
+                            type: integer
+                            example: 2351235
+                            description: 'Serie do documento que esta atrelado ao veículo no momento do abastecimento.'
+                        number:
+                            type: integer
+                            example: 11223434
+                            description: 'Número do documento relacionado ao veículo durante o abastecimento.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação do abastecimento.'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação do abastecimento.'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        FuelSupply:
+            allOf:
+                - $ref: '#/components/schemas/FuelSupplyBase'
+                - type: object
+                  properties:
+                      driver:
+                          type: object
+                          nullable: true
+                          description: 'Motorista.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do motorista.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do motorista. *(informar este ou o campo ID)*'
+                      operator:
+                          type: object
+                          nullable: true
+                          description: 'Operador.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do operador.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do operador. *(informar este ou o campo ID)*'
+                      fuel_station:
+                          type: object
+                          nullable: true
+                          description: 'Posto atrelado ao abastecimento. *(fuel_station não pode ser usado quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do posto.'
+                              cpf:
+                                  type: string
+                                  example: '45612368514'
+                                  description: 'CPF do posto. *(informar este ou o campo ID ou CNPJ)*'
+                              cnpj:
+                                  type: string
+                                  example: '52148629000188'
+                                  description: 'CNPJ do posto. *(informar este ou o campo ID ou CNPJ)*'
+                      vehicle:
+                          type: object
+                          nullable: false
+                          description: 'Veículo atrelado ao abastecimento.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID do veículo atrelado ao abastecimento.'
+                              license_plate:
+                                  type: string
+                                  example: 'AMD0X12'
+                                  description: 'Placa do Veículo atrelado ao abastecimento. *(informar este ou o campo ID)*'
+                      fuel_pump:
+                          type: object
+                          nullable: false
+                          description: 'Bomba atrelado ao abastecimento. *(fuel_pump só pode ser usada quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da bomba atrelado ao abastecimento.'
+                      route:
+                          type: object
+                          nullable: false
+                          description: 'Linha atrelado ao abastecimento. *(route precisa ser type 2 e/ou null)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha atrelado ao abastecimento.'
+
+        ## MODEL RETORNADA NA PESQUISA DE VARIOS ITEMS
+        FuelSupplySimple:
+            allOf:
+                - $ref: '#/components/schemas/FuelSupplyBase'
+                - type: object
+                  properties:
+                      driver:
+                          type: object
+                          description: 'Motorista.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do motorista.'
+                              name:
+                                  type: string
+                                  example: 'Henrique Zani'
+                                  description: 'Nome do motorista.'
+                      operator:
+                          type: object
+                          nullable: true
+                          description: 'Operador.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do operador.'
+                              name:
+                                  type: string
+                                  example: 'SIIMP SISTEMAS LTDA ME'
+                                  description: 'Nome do operador.'
+                      fuel_station:
+                          type: object
+                          nullable: true
+                          description: 'Posto atrelado ao abastecimento. *(fuel_station não pode ser usado quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 3
+                                  description: 'ID do posto.'
+                              name:
+                                  type: string
+                                  example: 'SIIMP SISTEMAS LTDA ME'
+                                  description: 'Nome do posto.'
+                      vehicle:
+                          type: object
+                          nullable: false
+                          description: 'Veículo atrelado ao abastecimento.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID do veículo atrelado ao abastecimento.'
+                              license_plate:
+                                  type: string
+                                  example: 'AMD0X12'
+                                  description: 'Placa do Veículo atrelado ao abastecimento.'
+                      fuel_pump:
+                          type: object
+                          nullable: true
+                          description: 'Bomba atrelado ao abastecimento. *(fuel_pump só pode ser usada quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da bomba atrelado ao abastecimento.'
+                      route:
+                          type: object
+                          nullable: true
+                          description: 'Linha atrelado ao abastecimento. *(route precisa ser type 2 e/ou null)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha atrelado ao abastecimento.'
+
+        ## MODEL RETORNADA NA PESQUISA DE UM ITEM
+        FuelSupplyAll:
+              allOf:
+                - $ref: '#/components/schemas/FuelSupplySimple'
+                - type: object
+
+        ## MODEL RETORNADA NA RESPOSTA DE CRIAÇÃO E ATUALIZAÇÃO
+        FuelSupplyResponseCreateUpdate:
+            allOf:
+                - $ref: '#/components/schemas/FuelSupplyBase'
+                - type: object
+                  properties:
+                      driver:
+                          type: object
+                          nullable: true
+                          description: 'Motorista.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do motorista.'
+                      operator:
+                          type: object
+                          nullable: true
+                          description: 'Operador.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do operador.'
+                      fuel_station:
+                          type: object
+                          nullable: true
+                          description: 'Posto atrelado ao abastecimento. *(fuel_station não pode ser usado quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 4524
+                                  description: 'ID do posto.'
+                      vehicle:
+                          type: object
+                          nullable: false
+                          description: 'Veículo atrelado ao abastecimento.'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID do veículo atrelado ao abastecimento.'
+                      fuel_pump:
+                          type: object
+                          nullable: false
+                          description: 'Bomba atrelado ao abastecimento. *(fuel_pump só pode ser usada quando o type for 0)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da bomba atrelado ao abastecimento.'
+                      route:
+                          type: object
+                          nullable: false
+                          description: 'Linha atrelado ao abastecimento. *(route precisa ser type 2 e/ou null)*'
+                          properties:
+                              id:
+                                  type: integer
+                                  example: 8152
+                                  description: 'ID da linha atrelado ao abastecimento.'

@@ -1,0 +1,1393 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: 'Ordens de Coleta'
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Ordens de Coleta**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: collections
+        description: 'Rota para cadastramento, atualização e inserção de Ordens de Coleta'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /collections/search:
+        get:
+            tags:
+                - collections
+            description: 'Busca de Ordens de Coleta com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/NumberFilterParam'
+                -
+                    $ref: '#/components/parameters/OutcomeParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+                -
+                    $ref: '#/components/parameters/ClientNameParam'
+                - 
+                    $ref: '#/components/parameters/DriverNameParam'
+                -
+                    $ref: '#/components/parameters/VehicleIDParam'
+                - 
+                    $ref: '#/components/parameters/MineParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /collections/create:
+        post:
+            tags:
+                - collections
+            description: 'Criação de uma Ordem de Coleta no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /collections/update:
+        post:
+            tags:
+                - collections
+            description: 'Atualização de uma Ordem de Coleta no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+    /collections/cancel:
+        post:
+            tags:
+                - collections
+            description: 'Cancelamento de uma Ordem de Coleta.'
+            operationId: cancel
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+              200:
+                    $ref : '#/components/responses/CancelSuccess'
+    /collections/status:
+        post:
+            tags:
+                - collections
+            description: 'Alterando o status de uma Ordem de Coleta'
+            operationId: status
+            requestBody:
+                $ref: '#/components/requestBodies/StatusBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/StatusSuccess'
+    /collections/assign:
+        post:
+            tags:
+                - collections
+            description: 'Atrelando uma Nota Fiscal em uma Ordem de Coleta'
+            operationId: assign
+            requestBody:
+                $ref: '#/components/requestBodies/AssignBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/AssignSuccess'
+    /collections/revoke:
+        post:
+            tags:
+                - collections
+            description: 'Revoga o atrelamento de uma Nota Fiscal em uma Ordem de Coleta'
+            operationId: revoke
+            requestBody: 
+                $ref: '#/components/requestBodies/RevokeBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/RevokeSuccess'
+
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        NumberFilterParam:
+            name: number_filter
+            in: query
+            description: 'Realiza a busca pelo número da Ordem de Coleta.'
+            required: false
+            schema:
+                type: integer
+        OutcomeParam:
+            name: outcome
+            in: query
+            description: 'Realiza a busca pelo número do Romaneio que está vinculado na Ordem de Coleta.'
+            required: false
+            schema:
+                type: integer
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Não coletada
+                - `1` = Agendada
+                - `2` = Tentativa
+                - `3` = Coleta parcial
+                - `4` = Coletada
+                - `5` = Problema
+                - `6` = Cancelada
+                - `7` = Inutilizada
+                - `8` = Em Transito
+                - `9` = Aguardando
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+                    - 7
+                    - 8
+                    - 9
+        ClientNameParam:
+            name: any_name
+            in: query
+            description: 'Realiza a busca pelo nome da empresa solicitante/retirada/destinatário'
+            required: false
+            schema:
+                type: string
+        DriverNameParam:
+            name: driver_name
+            in: query
+            description: 'Realiza a busca pelo nome do Motorista.'
+            required: false
+            schema: 
+                type: string
+        VehicleIDParam:
+            name: vehicle_license_plate
+            in: query
+            description: 'Realiza a busca pelo número da placa do veículo.'
+            required: false
+            schema:
+                type: string
+        MineParam:
+            name: mine
+            in: query
+            description: 'Realiza a busca pelas ordens de coletas cadastradas pelo usuário.'
+            required: false
+            schema: 
+                type: boolean
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca pela data de criação de uma Ordem de Coleta.'
+            required: false
+            schema:
+                type: string
+                format: 'Y-m-d'
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Collection'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Collection'
+        CancelBody:
+            required: true
+            description: 'Este corpo será utilizado para o cancelamento de uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 2
+                                description: 'ID da Ordem de Coleta'
+                            reason: 
+                                type: string
+                                minLength: 15
+                                example: 'Cancelando a ordem de coleta para o teste.'
+                                description: 'Motivo para o cancelamento de uma ordem de coleta'
+        StatusBody:
+            required: true
+            description: 'Alterando o status de uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id: 
+                                type: integer
+                                example: 5
+                                description: 'ID da Ordem de Coleta'
+                            status:
+                                type: integer
+                                example: 6
+                                description: 'ID do Status'
+        AssignBody:
+            required: true
+            description: 'Atrela uma Nota Fiscal em uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id: 
+                                type: integer
+                                example: 1254
+                                description: 'ID da Ordem de Coleta'
+                            key:
+                                type: string
+                                minLength: 44
+                                maxLength: 44
+                                example: '14879852236547893103249799520365789485059526'
+                                description: 'Chave de uma Nota Fiscal'
+                            owner_id:
+                                type: integer
+                                example: 145267
+                                description: 'ID da empresa emissora da Nota Fiscal'
+                            serie:
+                                type: integer
+                                example: 15
+                                description: 'Série da Nota Fiscal'
+                            number:
+                                type: integer
+                                example: 1452
+                                description: 'Número da Nota Fiscal'
+        RevokeBody:
+            required: true
+            description: 'Revoga o atrelamento de uma Nota Fiscal em uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id: 
+                                type: integer
+                                example: 14526
+                                description: 'ID da Ordem de Coleta'
+                            nf:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 14523614
+                                        description: 'ID de uma Nota Fiscal'
+                                    key:
+                                        type: string
+                                        example: '14523697845136975147862147854175227898625486'
+                                        maxLength: 44
+                                        description: 'Chave de uma Nota Fiscal'
+                            ids:
+                                type: array
+                                description: 'Items da Ordem de Coleta'
+                                nullable: true
+                                items:
+                                    allOf:
+                                    -   
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 14523688
+                                                description: 'ID de uma Nota Fiscal'
+                            keys:
+                                type: array
+                                description: 'Items da Ordem de Coleta'
+                                nullable: true
+                                items:
+                                    allOf:
+                                    -   
+                                        type: object
+                                        properties:
+                                            key:
+                                                type: string
+                                                example: '14793286402874513698742503697512483698745213'
+                                                maxLength: 44
+                                                description: 'Chave de uma Nota Fiscal'
+
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de Ordens de Coleta com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de uma Ordem de Coleta no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de uma Ordem de Coleta no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso para o cancelamento de uma Ordem de Coleta.'
+            content:
+              application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+        StatusSuccess:
+            description: 'Resposta de sucesso para a alteração de status de uma Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/StatusResponse'
+        AssignSuccess:
+            description: 'Resposta de sucesso para o atrelamento de uma Nota Fiscal na Ordem de Coleta'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/AssignResponse'
+        RevokeSuccess:
+            description: 'Resposta de sucesso para a revogação do atrelamento de uma Nota Fiscal na Ordem de Coleta.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/RevokeResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/CollectionSimple'
+                            -
+                                $ref: '#/components/schemas/CollectionAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Collection'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Collection'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        CancelResponse:
+            type: object
+            properties:
+                status:
+                    type: integer
+                    example: 6
+                    description: 'Status de cancelamento da Ordem de Coleta'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Status da Coleta modificado com sucesso'
+                    description: 'Mensagem de retorno'
+        StatusResponse:
+            type: object
+            properties:
+                data: 
+                    type: array
+                    items:
+                        type: object
+                        properties:
+                            status:
+                                type: integer
+                                example: 3
+                                description: 'Status da Ordem de Coleta'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Status da Coleta modificado com sucesso'
+                    description: 'Mensagem de retorno'
+        AssignResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CollectionAssignBase'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Nota encontrada com sucesso'
+                    description: 'Mensagem de retorno'
+        RevokeResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    example: []
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Nota removidas com sucesso/Ordem de coleta desvinculada com sucesso'
+                    description: 'Mensagem de retorno'
+        
+        CollectionBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-04-16 19:21:01'
+                    description: 'Data de criação da Ordem de Coleta'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-04-16 19:21:01'
+                    description: 'Data de atualização da Ordem de Coleta'
+                    readOnly: true
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 142563
+                    description: 'Código da empresa emissora da Ordem de Coleta.'
+                taker:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Tomador da Ordem de Coleta.'
+                serie:
+                    type: integer
+                    nullable: false
+                    example: 1
+                    description: 'Série da Ordem de Coleta'
+                goods:
+                    allOf:
+                        -
+                            $ref: '#/components/schemas/CollectionGoods'
+                        -
+                            type: object
+                            nullable: true
+                            description: 'Dados da mercadoria na ordem de coleta'
+                            properties:
+                                length:
+                                    type: number
+                                    example: '0.4'
+                                    description: 'Comprimento da Mercadoria'
+                                esp:
+                                    type: string
+                                    maxLength: 10
+                                    example: 'CXS'
+                                    description: 'Espécie de Mercadoria'
+                                nf:
+                                    type: integer
+                                    example: 154236
+                                    description: 'Número da nota fisca da Mercadoria'
+                                order_number:
+                                    type: integer
+                                    example: 14526
+                                    description: 'Número da ordem do pedido da Mercadoria' 
+        Collection:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CollectionBase'
+                -
+                    $ref: '#/components/schemas/CollectionCategory'
+                -
+                    type: object
+                    properties:
+                        requestor:
+                            type: object
+                            description: 'Solicitante da Ordem de Coleta.'
+                            nullable: true
+                            properties:
+                                id: 
+                                    type: integer
+                                    example: 14526
+                                    description: 'ID do Solicitante da Ordem de Coleta.'
+                                cpf:
+                                    type: string
+                                    example: '14532798412'
+                                    maxLength: 11
+                                    description: 'CPF do Solicitante da Ordem de Coleta.'
+                                cnpj:
+                                    type: string
+                                    example: '03247815649801'
+                                    maxLength: 14
+                                    description: 'CNPJ do Solicitante da Ordem de Coleta.'
+                            $ref: '#/components/schemas/CollectionPersons'
+                        retired:
+                            type: object
+                            description: 'Dados da Retirada da Ordem de Coleta'
+                            nullable: false
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 145236
+                                    description: 'ID da empresa de Retirada da Ordem de Coleta.'
+                                cpf:
+                                    type: string
+                                    maxLength: 11
+                                    example: '14523678910'
+                                    description: 'CPF da empresa de Retirada da Ordem de Coleta.'
+                                cnpj:
+                                    type: string
+                                    maxLength: 14
+                                    example: '14897456013698'
+                                    description: 'CNPJ da empresa de Retirada da Ordem de Coleta.'
+                            $ref: '#/components/schemas/CollectionPersons'
+                                        
+                        addressee:
+                            type: object
+                            description: 'Destinatário da Ordem de Coleta'
+                            nullable: true
+                            properties:
+                                id: 
+                                    type: integer
+                                    example: 32100
+                                    description: 'ID do Destinatário da Ordem de Coleta.'
+                                cpf:
+                                    type: string
+                                    example: '36781005983'
+                                    maxLength: 11
+                                    description: 'CPF do Destinatário da Ordem de Coleta.'
+                                cnpj:
+                                    type: string
+                                    example: '78965200148479'
+                                    maxLength: 14
+                                    description: 'CNPJ do Destinatário da Ordem de Coleta.'
+                            $ref: '#/components/schemas/CollectionPersons'
+                        gnre:
+                            type: integer
+                            example: 1256
+                            description: 'Número da guia nacional de recolhimento de tributos *(informar esse número quando quando a empresa realizar uma coleta fora da sua UF fiscal)*'
+                        created_at:
+                                type: string
+                                format: 'Y-m-d H:i:s'
+                                example: '2023-04-16 19:21:01'
+                                description: 'Data de criação da Ordem de Coleta'
+                                readOnly: true
+                        scheduling:
+                            type: object
+                            nullable: true
+                            description: 'Dados de agendamento da coleta no local da retirada.'
+                            properties:
+                                retired:
+                                    allOf:
+                                      -
+                                            $ref: '#/components/schemas/CollectionScheduling'  
+                        
+                        driver: 
+                            type: object
+                            nullable: true
+                            description: 'Dados do Motorista'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 14236
+                                    description: 'ID do Motorista'
+                                cpf:
+                                    type: string
+                                    maxLength: 11
+                                    example: '36578412078'
+                                    description: 'CPF do Motorista'
+                            $ref: '#/components/schemas/CollectionPersons'
+                        vehicle:
+                            type: object
+                            nullable: true
+                            description: 'Dados do veículo'
+                            properties:
+                                traction:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: integer
+                                            example: 5214
+                                            description: 'ID do veículo'
+                                        license_plate:
+                                            type: string
+                                            example: 'ACF4Y78'
+                                            maxLength: 7
+                                            minLength: 7
+                                            description: 'Placa da tração do veículo'
+                                trailer1:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: integer
+                                            example: 2146
+                                            description: 'ID do Reboque 1'
+                                        license_plate:
+                                            type: string
+                                            example: 'AQS1T96'
+                                            maxLength: 7
+                                            minLength: 7
+                                            description: 'Placa do reboque 1'
+                                trailer2:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: integer
+                                            example: 7562
+                                            description: 'ID do Reboque 2'
+                                        license_plate:
+                                            type: string
+                                            example: 'TRA7C56'
+                                            maxLength: 7
+                                            minLength: 7
+                                            description: 'Placa da reboque 2'
+                                trailer3:
+                                    type: object
+                                    properties:
+                                        id:
+                                            type: integer
+                                            example: 2301
+                                            description: 'ID do Reboque 3'
+                                        license_plate:
+                                            type: string
+                                            example: 'WAS9D6AS'
+                                            maxLength: 7
+                                            minLength: 7
+                                            description: 'Placa do reboque 3'
+                        obs:
+                            type: string
+                            example: 'Coleta efetuada'
+                            maxLength: 255
+                            description: 'Observação sobre a Ordem de Coleta'
+                        items:
+                            type: array
+                            description: 'Items da Ordem de Coleta'
+                            nullable: true
+                            items:
+                                allOf:
+                                - 
+                                    $ref: '#/components/schemas/CollectionGoods'
+                                -  
+                                    type: object
+                                    properties:
+                                        length: 
+                                            type: number
+                                            example: '0.0'
+                                            description: 'Profundidade do item da ordem de coleta'
+                                        description:
+                                            type: string
+                                            example: 'Item'
+                                            description: 'Descrição do item da ordem de coleta'
+                                        nf_number:
+                                            type: integer
+                                            example: 4125
+                                            description: 'Número da nota fiscal do item'
+        CollectionSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CollectionBase'
+                -
+                    type: object
+                    properties:
+                        status:
+                            type: integer
+                            example: 2
+                            description: 'Status da Ordem de Coleta'
+                        user_name:
+                            type: string
+                            maxLength: 30
+                            example: 'suportesiimp'
+                            description: 'Usuário responsável pela criação da Ordem de Coleta'
+                        requestor:
+                            type: object
+                            description: 'Solicitante da Ordem de Coleta'
+                            properties:
+                                name:
+                                    type: string
+                                    maxLength: 255
+                                    example: 'SUPORTE EXPORTACAO IMPORTACAO LTDA'
+                                    description: 'Nome do Solicitante da Ordem de Coleta'
+                                phone:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 11
+                                    minLength: 11
+                                    example: '11999999999'
+                                    description: 'Telefone do Solicitante da Ordem de Coleta'
+                        retired:
+                            type: object
+                            description: 'Retirada da Ordem de Coleta'
+                            allOf:
+                              - 
+                                    $ref: '#/components/schemas/CollectionFieldsRetiredAddressee'
+                              -     
+                                    type: object
+                                    properties:
+                                        limit_date:
+                                            type: string
+                                            format: 'Y-m-d'
+                                            example: '2023-04-20'
+                                            description: 'Data limite para a retirada da coleta'
+                        addressee:
+                            type: object
+                            description: 'Destinatário da Ordem de Coleta'
+                            allOf:
+                              - 
+                                    $ref: '#/components/schemas/CollectionFieldsRetiredAddressee'
+                        category:
+                            type: object
+                            nullable: true
+                            description: 'Categoria da Ordem de Coleta'
+                            properties:
+                                id_1: 
+                                    type: integer
+                                    example: 4
+                                    description: 'ID da Categoria 1'
+                                name_1:
+                                    type: string
+                                    example: 'espuma'
+                                    description: 'Nome da Categoria 1'
+                                id_2: 
+                                    type: integer
+                                    example: 4
+                                    description: 'ID da Categoria 2'
+                                name_2:
+                                    type: string
+                                    example: 'vaículo'
+                                    description: 'Nome da Categoria 2'
+                                id_3: 
+                                    type: integer
+                                    example: 4
+                                    description: 'ID da Categoria 3'
+                                name_3:
+                                    type: string
+                                    example: 'redespacho'
+                                    description: 'Nome da Categoria 3'
+                                id_4: 
+                                    type: integer
+                                    example: 4
+                                    description: 'ID da Categoria 4'
+                                name_4:
+                                    type: string
+                                    example: 'borracha'
+                                    description: 'Nome da Categoria 4'
+                        outcome:
+                            type: object
+                            description: 'Romaneio vinculado a Ordem de Coleta'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 5
+                                    description: 'ID do Romaneio vinculado à Ordem de Coleta'
+                                number:
+                                    type: integer
+                                    example: 12598
+                                    description: 'Número do Romaneio Vinculado à Ordem de Coleta'
+                                type:
+                                    type: integer
+                                    example: 1
+                                    description: 'Tipo do Romaneio vinculado à Ordem de Coleta'
+                        quotation:
+                            type: object
+                            description: 'Cotação da Ordem de Coleta *(informar a cotação quando quiser preencher os campos com base na cotação)*'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 51236
+                                    description: 'ID da Cotação'
+                                number:
+                                    type: integer
+                                    example: 5
+                                    description: 'Número da Cotação'
+                        email:
+                            type: string
+                            format: email
+                            nullable: true
+                            maxLength: 255
+                            description: 'E-mail principal'
+                        driver_name:
+                            type: string
+                            maxLength: 50
+                            example: 'Andre Souza'
+                            description: 'Nome do Motorista'
+                        print:
+                            type: object
+                            nullable: true
+                            description: 'Impressão da Ordem de Coleta'
+                            properties:
+                                last:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2023-04-20 15:00:00'
+                                    description: 'Horário da última impressão da ordem de coleta'
+                                user:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'suportesiimp'
+                                    description: 'Usuário que fez a última impressão'
+                        trailer:
+                            type: object
+                            nullable: true
+                            description: 'Placas dos reboques da ordem de coleta'
+                            properties:
+                                plate1:
+                                    type: string
+                                    maxLength: 7
+                                    example: 'ACB4578'
+                                    description: 'Placa do reboque 1 da ordem de coleta'
+                                plate2:
+                                    type: string
+                                    maxLength: 7
+                                    example: 'PFD9630'
+                                    description: 'Placa do reboque 2 da ordem de coleta'
+                                plate3:
+                                    type: string
+                                    maxLength: 7
+                                    example: 'AQR7801'
+                                    description: 'Placa do reboque 3 da ordem de coleta'       
+        CollectionAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CollectionBase'
+                -
+                    $ref: '#/components/schemas/CollectionPersons'
+                -
+                    $ref: '#/components/schemas/CollectionAggregates'
+                -
+                    $ref: '#/components/schemas/CollectionCategory'
+
+        CollectionAggregates:    
+            type: object
+            properties:
+                histories:
+                    type: array
+                    description: 'Histórico de alterações dos dados da Ordem de Coleta'
+                    nullable: true
+                    items:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 1425
+                                description: 'ID do histórico'
+                            message:
+                                type: string
+                                maxLength: 255
+                                example: 'Status da Ordem de Coleta modificado'
+                                description: 'Mensagem relacionada com a ação na ordem de coleta'
+                            collection_id:
+                                type: integer
+                                example: 2536
+                                description: 'ID da ordem de coleta'
+                            username:
+                                type: string
+                                maxLength: 20
+                                example: 'suportesiimp'
+                                description: 'Nome do usuário que realizou a alteração na ordem de coleta'
+                            created_at:
+                                type: string
+                                format: 'Y-m-d H:i:s'
+                                example: '2023-04-16 19:21:01'
+                                description: 'Data de criação do histórico da Ordem de Coleta'
+                                readOnly: true
+                            updated_at:
+                                type: string
+                                format: 'Y-m-d H:i:s'
+                                example: '2023-04-16 19:21:01'
+                                description: 'Data de atualização do histórico da Ordem de Coleta'
+                                readOnly: true
+                items:
+                    type: array
+                    nullable: true
+                    description: 'Items da Ordem de Coleta'
+                    items:
+                        allOf:
+                          - 
+                                $ref: '#/components/schemas/CollectionGoods'
+                          -  
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 152
+                                    description: 'ID do item da Ordem de Coleta'
+                                length: 
+                                    type: number
+                                    example: '0.0'
+                                    description: 'Profundidade do item da ordem de coleta'
+                                description:
+                                    type: string
+                                    example: 'Item'
+                                    description: 'Descrição do item da ordem de coleta'
+                                nf_number:
+                                    type: integer
+                                    example: 4125
+                                    description: 'Número da nota fiscal do item'
+                                collection_id:
+                                    type: integer
+                                    example: 15
+                                    description: 'ID da ordem de coleta vinculada ao item'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2023-05-19 18:30:01'
+                                    description: 'Data de criação do item.'
+                                    readOnly: true
+                                updated_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    example: '2023-05-19 18:30:01'
+                                    description: 'Data de atualização do item'
+                                    readOnly: true
+                driver:
+                    allOf:
+                        -     
+                            $ref: '#/components/schemas/CollectionPersons'
+                requestor:
+                    allOf:
+                        -
+                            $ref: '#/components/schemas/CollectionPersons'
+                retired:
+                    allOf:  
+                        - 
+                            $ref: '#/components/schemas/CollectionPersons'
+                        -
+                            $ref: '#/components/schemas/CollectionScheduling'      
+                addressee:
+                    allOf:
+                        -   
+                            $ref: '#/components/schemas/CollectionPersons'
+        
+        # COMPONENTES DUPLICADOS
+        CollectionFieldsRetiredAddressee:
+            type: object
+            properties:
+                complement:
+                    type: string
+                    maxLength: 255
+                    example: 'Andar 25/Sala30'
+                    description: 'Complemento do local retirada/destinatário'
+                district:
+                    type: string
+                    maxLength: 255
+                    example: 'Av. Jose Souza'
+                    description: 'Distrito do local retirada/destinatario'
+                number:
+                    type: string
+                    maxLength: 10
+                    example: '2365'
+                    description: 'Número do local retirada/destinatário'
+                city_name:
+                    type: string
+                    maxLength: 20
+                    example: 'Arapongas'
+                    description: 'Cidade do local retirada/destinatário'
+                name:
+                    type: integer
+                    example: 'TESTE MOVEIS LTDA'
+                    description: 'Descrição do Nome da empresa para retirada/destinatário'
+        CollectionCategoryBase:
+            type: object
+            properties:
+                id: 
+                    type: integer
+                    example: 4
+                    description: 'ID da categoria'
+        CollectionGoods:
+            type: object
+            properties:
+                quantity:
+                    type: integer
+                    example: 4
+                    description: 'Quantidade de Mercadoria/Items'
+                width:
+                    type: number
+                    example: '1.5'
+                    description: 'Largura da Mercadoria/Items'
+                height:
+                    type: number
+                    example: '2.5'
+                    description: 'Altura da Mercadoria/Items'
+                cubage:
+                    type: number
+                    example: '0.50'
+                    description: 'Metros cubicos da Mercadoria/Items *(não informa-lo durante a criação)*.'
+                weight:
+                    type: number
+                    example: '22.4'
+                    description: 'Peso Bruto(KG) da Mercadoria/Items'
+                net_weight:
+                    type: number
+                    example: '11.5'
+                    description: 'Peso Líquido(KG) da Mercadoria/Items'
+                value:
+                    type: number
+                    example: '225.70'
+                    description: 'Valor da Mercadoria/Items'
+        CollectionPersons:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 152
+                    description: 'ID '
+                cnpj:
+                    type: string
+                    example: '36987250369416'
+                    maxLength: 14
+                    description: 'CNPJ  *(irá aparecer quando o personagem for uma empresa)*'
+                cpf:
+                    type: string
+                    maxLength: 11
+                    example: '17845601298'
+                    description: 'CPF  *(irá aparecer quando o personagem for uma pessoa fisíca)*'
+                address:
+                    type: object
+                    properties:
+                        cep:
+                            type: string
+                            pattern: '[0-9]'
+                            maxLength: 8
+                            minLength: 8
+                            example: '19745300'
+                            description: 'CEP '
+                        city:
+                            type: object
+                            properties:
+                                id: 
+                                    type: integer
+                                    example: 12546
+                                    description: 'ID da cidade'
+                                ibge:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '236545126'
+                                    description: 'Código IBGE da cidade'
+                                name:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'Americana'
+                                    description: 'Nome da cidade'
+
+                        complement:
+                            type: string
+                            maxLength: 250
+                            example: 'Sala 25'
+                            description: 'Complemento do local '
+                        
+                        district:
+                            type: string
+                            maxLength: 100
+                            example: 'PQ Industrial'
+                            description: 'Distrito '
+                        number:
+                            type: integer
+                            example: 2546
+                            description: 'Número do endereço '
+                        state:
+                            type: object
+                            properties:
+                                id: 
+                                    type: integer
+                                    example: 25
+                                    description: 'ID do Estado '
+                                uf: 
+                                    type: string
+                                    maxLength: 2
+                                    minLength: 2
+                                    example: 'SP'
+                                    description: 'Sigla do estado'
+                                name:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'São Paulo'
+                                    description: 'Nome do estado'
+                                ibge:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 2
+                                    minLength: 2
+                                    example: '30'
+                                    description: 'Código IBGE do estado'     
+                        street:
+                            type: string
+                            maxLength: 20
+                            example: 'Rua Da Serra'
+                            description: 'Nome da rua'
+                name:
+                    type: string
+                    maxLength: 100
+                    example: 'GIRASSOL IMPORTACOES LTDA'
+                    description: 'Nome da empresa'
+                phone:
+                    type: string
+                    pattern: '[0-9]'
+                    example: '7451398754'
+                    maxLength: 11
+                    minLength: 11
+                    description: 'Número do telefone'
+                latitude:
+                    type: string
+                    example: '-99.99999999999'
+                    maxLength: 15
+                    minLength: 15
+                    description: 'Latitude'
+                longitude:
+                    type: string
+                    example: '-11.11111111111'
+                    maxLength: 15
+                    minLength: 15
+                    description: 'Longitude'
+        CollectionScheduling:
+            type: object
+            properties:
+                limit_date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-25'
+                    description: 'Data para a retirada da coleta'
+                available:
+                    type: object
+                    nullable: true
+                    description: 'Dados do horário'
+                    properties:
+                        from:
+                            type: string
+                            format: 'H:i'
+                            example: '11:30'
+                            description: 'Horário de início da retirada'
+                        to:
+                            type: string
+                            format: 'H:i'
+                            example: '21:30'
+                            description: 'Horário final da retirada'
+                lunch:
+                    type: object
+                    nullable: true
+                    description: 'Dados do horário do almoço'
+                    properties:
+                        from:
+                            type: string
+                            format: 'H:i'
+                            example: '12:00'
+                            description: 'Horário de início do almoço'
+                        to:
+                            type: string
+                            format: 'H:i'
+                            example: '13:00'
+                            description: 'Horário final do almoço'
+                diary_obs:
+                    type: string
+                    maxLength: 255
+                    example: 'Observação diária'
+                    description: 'Observação diária'
+        CollectionAssignBase:
+            type: object
+            properties:
+                nfs:
+                    allOf:
+                        -
+                            $ref: '#/components/schemas/CollectionAssign'
+                        - 
+                            type: object
+                            description: 'Atores de uma Nota Fiscal'
+                            properties:
+                                issuer:
+                                    $ref: '#/components/schemas/CollectionPersons'
+                                addressee:
+                                    $ref: '#/components/schemas/CollectionPersons'
+        CollectionAssign:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1253
+                    description: 'ID da Nota Fiscal'
+                owner_id:
+                    type: integer
+                    example: 125744
+                    description: 'ID da empresa emissora da Nota Fiscal'
+                serie:
+                    type: integer
+                    example: 2
+                    description: 'Serie da Nota Fiscal'
+                key:
+                    type: string
+                    minLength: 44
+                    maxLength: 44
+                    example: '14879852236547893103249799520365789485059526'
+                    description: 'Chave de uma Nota Fiscal'
+                number:
+                    type: integer
+                    example: 125634
+                    description: 'Número de uma Nota Fiscal'
+                total:
+                    type: number
+                    example: '150.88'
+                    description: 'Valor total de uma Nota Fiscal'
+        CollectionCategory:
+            type: object
+            description: 'Dados relacionados a categoria'
+            properties:
+                category1:
+                    $ref: '#/components/schemas/CollectionCategoryBase'
+                category2:
+                    $ref: '#/components/schemas/CollectionCategoryBase'
+                category3:
+                    $ref: '#/components/schemas/CollectionCategoryBase'
+                category4:
+                    $ref: '#/components/schemas/CollectionCategoryBase'

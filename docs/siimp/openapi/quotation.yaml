@@ -1,0 +1,1234 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Cotações
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Cotações**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: quotations
+        description: 'Rota para cadastramento, atualização e inserção de Cotações'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /quotations/search:
+        get:
+            tags:
+                - quotations
+            description: 'Busca de Cotações com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/MineParam'
+                -
+                    $ref: '#/components/parameters/ReferenceParam'
+                -
+                    $ref: '#/components/parameters/RequestorNameParam'
+                -
+                    $ref: '#/components/parameters/WithdrawalNameParam'
+                -
+                    $ref: '#/components/parameters/DeliveryNameParam'
+                -
+                    $ref: '#/components/parameters/OriginParam'
+                -
+                    $ref: '#/components/parameters/DestinationParam'
+                -
+                    $ref: '#/components/parameters/NumberCteParam'
+                -
+                    $ref: '#/components/parameters/NumberIncomeParam'
+                -
+                    $ref: '#/components/parameters/AnyNameParam'
+                -
+                    $ref: '#/components/parameters/MaturityFromParam'
+                -
+                    $ref: '#/components/parameters/MaturityToParam'
+                -
+                    $ref: '#/components/parameters/ValidityFromParam'
+                -
+                    $ref: '#/components/parameters/ValidityToParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/NumberParam'
+                -
+                    $ref: '#/components/parameters/NumberFromParam'
+                -
+                    $ref: '#/components/parameters/NumberToParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /quotations/create:
+        post:
+            tags:
+                - quotations
+            description: 'Criação de uma Cotação no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /quotations/update:
+        post:
+            tags:
+                - quotations
+            description: 'Atualização de uma Cotação no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        MineParam:
+            name: mine
+            in: query
+            description: 'Realiza a busca pelo usuário logado.'
+            required: false
+            schema:
+                type: string
+        ReferenceParam:
+            name: reference
+            in: query
+            description: 'Realiza a busca pela referência.'
+            required: false
+            schema:
+                type: string
+        RequestorNameParam:
+            name: requestor_name
+            in: query
+            description: 'Realiza a busca pelo nome, CPF ou CNPJ do solicitante.'
+            required: false
+            schema:
+                type: string
+        WithdrawalNameParam:
+            name: withdrawal_name
+            in: query
+            description: 'Realiza a busca pelo nome, CPF ou CNPJ da retirada.'
+            required: false
+            schema:
+                type: string
+        DeliveryNameParam:
+            name: delivery_name
+            in: query
+            description: 'Realiza a busca pelo nome, CPF ou CNPJ do destinatário.'
+            required: false
+            schema:
+                type: string
+        OriginParam:
+            name: origin
+            in: query
+            description: 'Realiza a busca pela UF/Cidade de origem.'
+            required: false
+            schema:
+                type: string
+        DestinationParam:
+            name: destination
+            in: query
+            description: 'Realiza a busca pela UF/Cidade de destino.'
+            required: false
+            schema:
+                type: string
+        NumberCteParam:
+            name: number_cte
+            in: query
+            description: 'Realiza a busca pelo número do CT-e vinculado na Cotação.'
+            required: false
+            schema:
+                type: integer
+        NumberIncomeParam:
+            name: number_income
+            in: query
+            description: 'Realiza a busca pelo número da Minuta vinculada na Cotação.'
+            required: false
+            schema:
+                type: integer
+        AnyNameParam:
+            name: any_name
+            in: query
+            description: 'Realiza a busca pelo nome, CPF e/ou CNPJ de qualquer pessoa envolvida.'
+            required: false
+            schema:
+                type: string
+        MaturityFromParam:
+            name: maturity_from
+            in: query
+            description: 'Realiza a busca por início de data de vencimento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        MaturityToParam:
+            name: maturity_to
+            in: query
+            description: 'Realiza a busca por fim de data de vencimento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        ValidityFromParam:
+            name: validity_from
+            in: query
+            description: 'Realiza a busca por início de data de vencimento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        ValidityToParam:
+            name: validity_to
+            in: query
+            description: 'Realiza a busca por fim de data de vencimento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Cadastrada
+                - `1` = Aprovada
+                - `2` = Não Aprovada
+                - `3` = Cancelada
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        NumberParam:
+            name: number
+            in: query
+            description: 'Realiza a busca por número.'
+            required: false
+            schema:
+                type: integer
+        NumberFromParam:
+            name: number_from
+            in: query
+            description: 'Realiza a busca pelo número inicial.'
+            required: false
+            schema:
+                type: integer
+        NumberToParam:
+            name: number_to
+            in: query
+            description: 'Realiza a busca pelo número final.'
+            required: false
+            schema:
+                type: integer
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de uma Cotação'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Quotation'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de uma Cotação'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Quotation'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de Cotações com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de uma Cotação no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de uma Cotação no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/QuotationSimple'
+                            -
+                                $ref: '#/components/schemas/QuotationAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Quotation'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Quotation'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        QuotationBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-04-20 09:24:18'
+                    description: 'Data de criação da Cotação'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-04-20 09:24:18'
+                    description: 'Data de atualização da Cotação'
+                    readOnly: true
+                owner_id:
+                    type: integer
+                    example: 192734
+                    nullable: true
+                    description: 'Código da empresa transportadora da Cotação.'
+                number:
+                    type: integer
+                    example: '100'
+                    readOnly: true
+                    description: 'Número da Cotação, sequencial por empresa transportadora.'
+                obs:
+                    type: string
+                    nullable: true
+                    example: 'Observações Gerais'
+                    description: 'Observaçõies gerais da Cotação.'
+                status:
+                    type: integer
+                    example: 0
+                    default: 0
+                    readOnly: true
+                    description: |-
+                        Status da Cotação:
+                          - `0` = Cadastrada
+                          - `1` = Aprovada
+                          - `2` = Não Aprovada
+                          - `3` = Cancelada
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                reference:
+                    type: string
+                    nullable: true
+                    maxLength: 50
+                    example: '898772X-CP'
+                    description: 'Código de referência da Cotação. Pode ser utilizado para armazenamento de códigos de identificação externos, que precisam ser espelhados para o sistema.'
+                taker:
+                    type: integer
+                    example: 3
+                    description: >
+                        Tomador da Cotação:
+                          - `0` = Retirada
+                          - `1` = Destino
+                          - `3` = Solicitante
+                    enum:
+                        - 0
+                        - 1
+                        - 3
+                totals:
+                    type: object
+                    description: 'Valores de cobrança da Cotação.'
+                    properties:
+                        total:
+                            type: number
+                            readOnly: true
+                            description: 'Total'
+                            example: 1928.39
+                        components:
+                            type: object
+                            description: 'Componentes de cobrança do frete da Cotação.'
+                            properties:
+                                freight_value:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 10.57
+                                    description: 'Frete-Valor'
+                                freight_weight:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 9.32
+                                    description: 'Frete-Peso'
+                                seccat:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 3.29
+                                    description: 'SEC/CAT'
+                                insurance:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 17.02
+                                    description: 'Seguro'
+                                gris:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 89.97
+                                    description: 'GRIS'
+                                delivery_rate:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 1293.11
+                                    description: 'Taxa de Entrega'
+                                collect_rate:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 0.89
+                                    description: 'Taxa de Coleta'
+                cargo:
+                    type: object
+                    description: 'Dados da carga da Cotação.'
+                    properties:
+                        weight:
+                            type: number
+                            example: 1924.92
+                            minimum: 0
+                            description: 'Peso bruto da carga.'
+                        value:
+                            type: number
+                            example: 15924.92
+                            minimum: 0
+                            description: 'Valor da carga.'
+                        net_weight:
+                            type: number
+                            example: 1178.82
+                            nullable: true
+                            minimum: 0
+                            description: 'Peso líquido da carga.'
+                        volumes:
+                            type: integer
+                            example: 3
+                            nullable: true
+                            minimum: 0
+                            description: 'Quantidade de volumes da carga.'
+                        product_quantity:
+                            type: integer
+                            example: 2
+                            nullable: true
+                            minimum: 0
+                            description: 'Quantidade de produtos da carga.'
+                        cubage:
+                            type: number
+                            example: 3.22
+                            nullable: true
+                            minimum: 0
+                            description: 'Cubagem total da carga.'
+                        pallets:
+                            type: integer
+                            example: 2
+                            nullable: true
+                            minimum: 0
+                            description: 'Quantidade de paletes da carga.'
+                requestor:
+                    type: object
+                    description: 'Dados do Solicitante da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID do solicitante da Cotação.'
+                        address:
+                            type: object
+                            description: 'Dados do endereço de solicitação da Cotação.'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                city:
+                                    type: object
+                                    description: 'Dados da cidade de solicitação da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da cidade.'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            description: 'Nome da cidade.'
+                                            example: 'São Paulo'
+                                state:
+                                    type: object
+                                    description: 'Dados do Estado de solicitação da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da UF.'
+                                        uf:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            maxLength: 2
+                                            description: 'Sigla da UF.'
+                                            example: 'SP'
+                                country:
+                                    type: object
+                                    description: 'Dados do país de solicitação.'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'Brasil'
+                                            default: 'Brasil'
+                                            description: 'Nome do país.'
+                withdrawal:
+                    type: object
+                    description: 'Dados da Retirada da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID da retirada da Cotação.'
+                        address:
+                            type: object
+                            description: 'Dados do endereço de origem da Cotação.'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                city:
+                                    type: object
+                                    description: 'Dados da cidade de origem da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da cidade.'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            description: 'Nome da cidade.'
+                                            example: 'São Paulo'
+                                state:
+                                    type: object
+                                    description: 'Dados do Estado de origem da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da UF.'
+                                        uf:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            maxLength: 2
+                                            description: 'Sigla da UF.'
+                                            example: 'SP'
+                                country:
+                                    type: object
+                                    description: 'Dados do país de origem.'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'Brasil'
+                                            default: 'Brasil'
+                                            description: 'Nome do país.'
+                delivery:
+                    type: object
+                    description: 'Dados do Destinatário da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID do destinatário da Cotação.'
+                        address:
+                            type: object
+                            description: 'Dados do endereço de destino da Cotação.'
+                            properties:
+                                street:
+                                    type: string
+                                    maxLength: 250
+                                    example: 'Avenida Roma'
+                                    description: 'Endereço'
+                                number:
+                                    type: string
+                                    maxLength: 20
+                                    example: '1722'
+                                    description: 'Número'
+                                complement:
+                                    type: string
+                                    maxLength: 100
+                                    nullable: true
+                                    example: 'Sala 2'
+                                    description: 'Complemento'
+                                zipcode:
+                                    type: string
+                                    pattern: '[0-9]'
+                                    maxLength: 8
+                                    minLength: 8
+                                    example: '13478860'
+                                    description: 'CEP'
+                                city:
+                                    type: object
+                                    description: 'Dados da cidade de destino da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da cidade.'
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            description: 'Nome da cidade.'
+                                            example: 'São Paulo'
+                                state:
+                                    type: object
+                                    description: 'Dados do Estado de destino da Cotação.'
+                                    properties:
+                                        id:
+                                            type: integer
+                                            nullable: true
+                                            example: 1234
+                                            description: 'ID da UF.'
+                                        uf:
+                                            type: string
+                                            readOnly: true
+                                            nullable: true
+                                            maxLength: 2
+                                            description: 'Sigla da UF.'
+                                            example: 'SP'
+                                country:
+                                    type: object
+                                    description: 'Dados do país de destino.'
+                                    properties:
+                                        name:
+                                            type: string
+                                            readOnly: true
+                                            example: 'Brasil'
+                                            default: 'Brasil'
+                                            description: 'Nome do país.'
+        Quotation:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                owner_id:
+                    type: integer
+                    example: 192734
+                    nullable: true
+                    description: 'Código da empresa transportadora da Cotação.'
+                taker:
+                    type: integer
+                    example: 3
+                    description: >
+                        Tomador da Cotação:
+                          - `0` = Retirada
+                          - `1` = Destino
+                          - `3` = Solicitante
+                    enum:
+                        - 0
+                        - 1
+                        - 3
+                reference:
+                    type: string
+                    nullable: true
+                    maxLength: 50
+                    example: '898772X-CP'
+                    description: 'Código de referência da Cotação. Pode ser utilizado para armazenamento de códigos de identificação externos, que precisam ser espelhados para o sistema.'
+                calculate:
+                    type: integer
+                    nullable: true
+                    description: 'Flag que identifica que o valor da Minuta deverá ser calculado via tabela de frete _(enviar `1` para calcular)_.'
+                    enum:
+                        - 0
+                        - 1
+                validity:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2022-12-27'
+                    description: 'Data de validade da cotação.'
+                maturity:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2022-12-27'
+                    description: 'Data de vencimento da cotação.'
+                delivery_forecast:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2022-12-27'
+                    description: 'Previsão da data de entrega do pedido da cotação.'
+                requestor:
+                    type: object
+                    description: 'Dados do Solicitante da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID do solicitante da Cotação *(informar este ou `cpf` ou `cnpj`)*'
+                        cpf:
+                            type: string
+                            example: '26377788899'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[0-9]'
+                            description: 'CPF do solicitante da Cotação *(informar este ou `id` ou `cnpj`)*'
+                        cnpj:
+                            type: string
+                            example: '15473712000101'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[A-Z0-9]'
+                            description: 'CNPJ do solicitante da Cotação *(informar este ou `id` ou `cpf`)*'
+                withdrawal:
+                    type: object
+                    description: 'Dados da Retirada da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID da retirada da Cotação *(informar este ou `cpf` ou `cnpj`)*'
+                        cpf:
+                            type: string
+                            example: '26377788899'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[0-9]'
+                            description: 'CPF da retirada da Cotação *(informar este ou `id` ou `cnpj`)*'
+                        cnpj:
+                            type: string
+                            example: '15473712000101'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[A-Z0-9]'
+                            description: 'CNPJ da retirada da Cotação *(informar este ou `id` ou `cpf`)*'
+                delivery:
+                    type: object
+                    description: 'Dados do Destinatário da Cotação.'
+                    properties:
+                        id:
+                            type: integer
+                            example: '826749'
+                            description: 'ID do destinatário da Cotação *(informar este ou `cpf` ou `cnpj`)*'
+                        cpf:
+                            type: string
+                            example: '26377788899'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[0-9]'
+                            description: 'CPF do destinatário da Cotação *(informar este ou `id` ou `cnpj`)*'
+                        cnpj:
+                            type: string
+                            example: '15473712000101'
+                            minLength: 11
+                            maxLength: 11
+                            pattern: '[A-Z0-9]'
+                            description: 'CNPJ do destinatário da Cotação *(informar este ou `id` ou `cpf`)*'
+                totals:
+                    type: object
+                    description: 'Valores de cobrança da Cotação.'
+                    properties:
+                        components:
+                            type: object
+                            description: 'Componentes de cobrança do frete da Cotação.'
+                            properties:
+                                freight_value:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 10.57
+                                    description: 'Frete-Valor'
+                                freight_weight:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 9.32
+                                    description: 'Frete-Peso'
+                                seccat:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 3.29
+                                    description: 'SEC/CAT'
+                                insurance:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 17.02
+                                    description: 'Seguro'
+                                gris:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 89.97
+                                    description: 'GRIS'
+                                delivery_rate:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 1293.11
+                                    description: 'Taxa de Entrega'
+                                collect_rate:
+                                    type: number
+                                    nullable: true
+                                    minimum: 0
+                                    example: 0.89
+                                    description: 'Taxa de Coleta'
+                classifications:
+                    type: object
+                    description: 'Classificações de frete da Cotação.'
+                    properties:
+                        operation:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'ID da operação.'
+                        costcenter:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'ID do centro de custos.'
+                        category1:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'ID da categoria 1.'
+                        category2:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'ID da categoria 2.'
+                        category3:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'ID da categoria 3.'
+                        kilometers:
+                            type: integer
+                            nullable: true
+                            example: 123
+                            description: 'Quilometragem da Cotação.'
+                items:
+                            type: array
+                            description: 'Itens de transporte da Cotação.'
+                            readOnly: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 1
+                                        description: 'ID do item.'
+                                    description:
+                                        type: string
+                                        example: 'Caixa de Sapatos'
+                                        description: 'Descrição do item.'
+                                    depth:
+                                        type: number
+                                        description: 'Comprimento do item, em metros.'
+                                        example: 0.2
+                                        nullable: true
+                                    width:
+                                        type: number
+                                        description: 'Largura do item, em metros.'
+                                        nullable: true
+                                        example: 1
+                                    height:
+                                        type: number
+                                        description: 'Altura do item, em metros.'
+                                        nullable: true
+                                        example: 1
+                                    quantity:
+                                        type: number
+                                        description: 'Quantidade de volumes.'
+                                        nullable: true
+                                        example: 1
+                                    qtd_products:
+                                        type: number
+                                        description: 'Quantidade de produtos.'
+                                        nullable: true
+                                        example: 1
+                                    nf_number:
+                                        type: string
+                                        maxLength: 9
+                                        description: 'Número da nota fiscal.'
+                                        nullable: true
+                                        example: 2837
+                                    weight:
+                                        type: number
+                                        description: 'Peso bruto do item, em quilos.'
+                                        example: 298.39
+                                        nullable: true
+                                    net_weight:
+                                        type: number
+                                        description: 'Peso líquido do item, em quilos.'
+                                        example: 298.39
+                                        nullable: true
+                                    total:
+                                        type: number
+                                        description: 'Total da mercadoria.'
+                                        nullable: true
+                                        example: 3489.28
+        QuotationSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/QuotationBase'
+                -
+                    type: object
+                    properties:
+                        requestor:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do solicitante da Cotação.'
+                                    example: 'Empresa Legal'
+                                    readOnly: true
+                        withdrawal:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome da retirada da Cotação.'
+                                    example: 'Empresa Legal'
+                                    readOnly: true
+                        delivery:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do destinatário da Cotação.'
+                                    example: 'Empresa Legal'
+                                    readOnly: true
+        QuotationAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/QuotationBase'
+                -
+                    type: object
+                    properties:
+                        histories:
+                            type: array
+                            description: 'Históricos da Cotação.'
+                            readOnly: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 1
+                                        description: 'ID do histórico.'
+                                    message:
+                                        type: string
+                                        example: 'Cotação reprovada pelo seguinte motivo: XXX'
+                                        description: 'Descrição da mensagem do histórico.'
+                                    username:
+                                        type: string
+                                        nullable: true
+                                        example: 'siimp.sistemas'
+                                        description: 'Usuário que lançou o histórico.'
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        readOnly: true
+                                        example: '2022-12-27 18:58:09'
+                                        description: 'Data de criação do registro do histórico.'
+                        items:
+                            type: array
+                            description: 'Itens de transporte da Cotação.'
+                            readOnly: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 1
+                                        description: 'ID do item.'
+                                    description:
+                                        type: string
+                                        example: 'Caixa de Sapatos'
+                                        description: 'Descrição do item.'
+                                    depth:
+                                        type: number
+                                        description: 'Comprimento do item, em metros.'
+                                        example: 0.2
+                                        nullable: true
+                                    width:
+                                        type: number
+                                        description: 'Largura do item, em metros.'
+                                        nullable: true
+                                        example: 1
+                                    height:
+                                        type: number
+                                        description: 'Altura do item, em metros.'
+                                        nullable: true
+                                        example: 1
+                                    quantity:
+                                        type: number
+                                        description: 'Quantidade de volumes.'
+                                        nullable: true
+                                        example: 1
+                                    qtd_products:
+                                        type: number
+                                        description: 'Quantidade de produtos.'
+                                        nullable: true
+                                        example: 1
+                                    nf_number:
+                                        type: string
+                                        maxLength: 9
+                                        description: 'Número da nota fiscal.'
+                                        nullable: true
+                                        example: 2837
+                                    weight:
+                                        type: number
+                                        description: 'Peso bruto do item, em quilos.'
+                                        example: 298.39
+                                        nullable: true
+                                    net_weight:
+                                        type: number
+                                        description: 'Peso líquido do item, em quilos.'
+                                        example: 298.39
+                                        nullable: true
+                                    total:
+                                        type: number
+                                        description: 'Total da mercadoria.'
+                                        nullable: true
+                                        example: 3489.28

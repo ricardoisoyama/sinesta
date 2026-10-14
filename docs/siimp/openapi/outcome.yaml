@@ -1,0 +1,1594 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Romaneios
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Romaneios**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: outcomes
+        description: 'Rota para cadastramento, atualização e inserção de Romaneios'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /outcomes/search:
+        get:
+            tags:
+                - outcomes
+            description: 'Busca de Romaneios com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/TypeParam'
+                -
+                    $ref: '#/components/parameters/NumberParam'
+                -
+                    $ref: '#/components/parameters/NumberFromParam'
+                -
+                    $ref: '#/components/parameters/NumberToParam'
+                -
+                    $ref: '#/components/parameters/ScheduledDateFromParam'
+                -
+                    $ref: '#/components/parameters/ScheduledDateToParam'
+                -
+                    $ref: '#/components/parameters/VehicleIdParam'
+                -
+                    $ref: '#/components/parameters/StartedFromParam'
+                -
+                    $ref: '#/components/parameters/StartedToParam'
+                -
+                    $ref: '#/components/parameters/FinishedFromParam'
+                -
+                    $ref: '#/components/parameters/FinishedToParam'
+                -
+                    $ref: '#/components/parameters/CreateUserIdParam'
+                -
+                    $ref: '#/components/parameters/UpdateUserIdParam'
+                -
+                    $ref: '#/components/parameters/CrmIdParam'
+                -
+                    $ref: '#/components/parameters/OperationIdParam'
+                -
+                    $ref: '#/components/parameters/StartBranchOfficeIdParam'
+                -
+                    $ref: '#/components/parameters/FinishBranchOfficeIdParam'
+                -
+                    $ref: '#/components/parameters/FinishBranchParam'
+                -
+                    $ref: '#/components/parameters/DriverIdParam'
+                -
+                    $ref: '#/components/parameters/DriverParam'
+                -
+                    $ref: '#/components/parameters/NumberCteParam'
+                -
+                    $ref: '#/components/parameters/NumberIncomeParam'
+                -
+                    $ref: '#/components/parameters/NumberCollectionParam'
+                -
+                    $ref: '#/components/parameters/NumberNfParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/StatusParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /outcomes/create:
+        post:
+            tags:
+                - outcomes
+            description: 'Criação de um Romaneio no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /outcomes/update:
+        post:
+            tags:
+                - outcomes
+            description: 'Atualização de um Romaneio no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+    /outcomes/start:
+        post:
+            tags:
+                - outcomes
+            description: 'Inicialização de um Romaneio no sistema.'
+            operationId: start
+            requestBody:
+                $ref: '#/components/requestBodies/StartBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/StartSuccess'
+    /outcomes/cancel:
+        post:
+            tags:
+                - outcomes
+            description: 'Cancelamento de um Romaneio no sistema.'
+            operationId: cancel
+            requestBody:
+                $ref: '#/components/requestBodies/CancelBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CancelSuccess'
+    /outcomes/finish:
+        post:
+            tags:
+                - outcomes
+            description: 'Finalização de um Romaneio no sistema.'
+            operationId: finish
+            requestBody:
+                $ref: '#/components/requestBodies/FinishBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/FinishSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        TypeParam:
+            name: type
+            in: query
+            description: |-
+                Realiza a busca por tipo.
+
+                - `0` = Manifesto de Entrega
+                - `1` = Manifesto de Transferência
+                - `2` = Outros
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+        NumberParam:
+            name: number
+            in: query
+            description: 'Realiza a busca por número.'
+            required: false
+            schema:
+                type: integer
+        NumberFromParam:
+            name: number_from
+            in: query
+            description: 'Realiza a busca pelo número inicial.'
+            required: false
+            schema:
+                type: integer
+        NumberToParam:
+            name: number_to
+            in: query
+            description: 'Realiza a busca pelo número final.'
+            required: false
+            schema:
+                type: integer
+        ScheduledDateFromParam:
+            name: scheduled_date_from
+            in: query
+            description: 'Realiza a busca pela data de agendamento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        ScheduledDateToParam:
+            name: scheduled_date_to
+            in: query
+            description: 'Realiza a busca pela data de agendamento. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        VehicleIdParam:
+            name: vehicle_id
+            in: query
+            description: 'Realiza a busca pelo veículo.'
+            required: false
+            schema:
+                type: integer
+        StartedFromParam:
+            name: started_from
+            in: query
+            description: 'Realiza a busca pela data inicial do início da viagem. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StartedToParam:
+            name: started_to
+            in: query
+            description: 'Realiza a busca pela data final do início da viagem. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        FinishedFromParam:
+            name: finished_from
+            in: query
+            description: 'Realiza a busca pela data inicial do fim da viagem. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        FinishedToParam:
+            name: finished_to
+            in: query
+            description: 'Realiza a busca pela data final do fim da viagem. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreateUserIdParam:
+            name: create_user_id
+            in: query
+            description: 'Realiza a busca pelo usuário criador do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        UpdateUserIdParam:
+            name: update_user_id
+            in: query
+            description: 'Realiza a busca pelo usuário editor do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        CrmIdParam:
+            name: crm_id
+            in: query
+            description: 'Realiza a busca pelo usuário CRM do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        OperationIdParam:
+            name: operation_id
+            in: query
+            description: 'Realiza a busca pela operação do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        StartBranchOfficeIdParam:
+            name: start_branch_office_id
+            in: query
+            description: 'Realiza a busca pela filial inicial do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        FinishBranchOfficeIdParam:
+            name: finish_branch_office_id
+            in: query
+            description: 'Realiza a busca pela filial final do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        FinishBranchParam:
+            name: finish_branch
+            in: query
+            description: 'Realiza a busca pelo nome, CPF ou CNPJ da filial final do Romaneio.'
+            required: false
+            schema:
+                type: string
+        DriverIdParam:
+            name: driver_id
+            in: query
+            description: 'Realiza a busca pelos motoristas e ajudantes do Romaneio.'
+            required: false
+            schema:
+                type: integer
+        DriverParam:
+            name: driver
+            in: query
+            description: 'Realiza a busca pelo nome do motorista no Romaneio.'
+            required: false
+            schema:
+                type: string
+        NumberCteParam:
+            name: number_cte
+            in: query
+            description: 'Realiza a busca pelo número do CT-e no Romaneio.'
+            required: false
+            schema:
+                type: integer
+        NumberIncomeParam:
+            name: number_income
+            in: query
+            description: 'Realiza a busca pelo número da Minuta no Romaneio.'
+            required: false
+            schema:
+                type: string
+        NumberCollectionParam:
+            name: number_collection
+            in: query
+            description: 'Realiza a busca pelo número da Ordem de Coleta no Romaneio.'
+            required: false
+            schema:
+                type: string
+        NumberNfParam:
+            name: number_nf
+            in: query
+            description: 'Realiza a busca pelo número da NF no Romaneio.'
+            required: false
+            schema:
+                type: string
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        StatusParam:
+            name: status
+            in: query
+            description: |-
+                Realiza a busca por status.
+
+                - `0` = Cadastrado
+                - `1` = Em Trânsito
+                - `2` = Encerrado
+                - `3` = Cancelado
+            required: false
+            schema:
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de um Romaneio'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Outcome'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de um Romaneio'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/Outcome'
+        StartBody:
+            required: true
+            description: 'Este corpo será utilizado para a inicialização de um Romaneio'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 321565
+                                description: 'ID de um romaneio'
+                            start:
+                                type: object
+                                properties:
+                                    date:
+                                        type: string
+                                        format: 'Y-m-d'
+                                        example: '2023-06-21'
+                                        description: 'Data de inicialização do Romaneio'
+                                    time:
+                                        type: string
+                                        format: 'H:i:s'
+                                        example: '15:15:00'
+                                        description: 'Hora de inicialização do romaneio'
+
+        CancelBody:
+            required: true
+            description: 'Este corpo será utilizado para o cancelamento de um Romaneio'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 456766
+                                description: 'ID do romaneio'
+                            reason:
+                                type: string
+                                example: 'teste de cancelamento'
+                                minLength: 15
+                                maxLength: 250
+                                description: 'Motivo do cancelamento do romaneio'
+        FinishBody:
+            required: true
+            description: 'Este corpo será utilizado para a finalização de um romaneio'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 321565
+                                description: 'ID de um romaneio'
+                            finish:
+                                type: object
+                                properties:
+                                    date:
+                                        type: string
+                                        format: 'Y-m-d'
+                                        example: '2023-06-21'
+                                        description: 'Data de inicialização do Romaneio'
+                                    time:
+                                        type: string
+                                        format: 'H:i:s'
+                                        example: '15:15:00'
+                                        description: 'Hora de inicialização do romaneio'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de Romaneios com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de um Romaneio no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de um Romaneio no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        StartSuccess:
+            description: 'Resposta de sucesso para a inicialização de um Romaneio no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/StartResponse'
+        CancelSuccess:
+            description: 'Resposta de sucesso para o cancelamento de um Romaneio no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CancelResponse'
+        FinishSuccess:
+            description: 'Resposta de sucesso para a finalização de um Romaneio no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/FinishResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/OutcomeSimple'
+                            -
+                                $ref: '#/components/schemas/OutcomeAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Outcome'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Outcome'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        StartResponse:
+            type: object
+            properties:
+                status:
+                    type: integer
+                    example: 1
+                    description: 'Status de romaneio em trânsito'
+                start_date:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-06-25 10:00:00'
+                    description: 'Data de inicialização do romaneio'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Romaneio modificado para EM TRÂNSITO'
+                    description: 'Mensagem de retorno'
+        CancelResponse:
+            type: object
+            properties:
+                status:
+                    type: integer
+                    example: 3
+                    description: 'Status de cancelamento do romaneio'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Romaneio cancelado com sucesso'
+                    description: 'Mensagem de retorno'
+        FinishResponse:
+            type: object
+            properties:
+                status:
+                    type: integer
+                    example: 1
+                    description: 'Status de romaneio finalizado'
+                start_date:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-06-30 12:00:00'
+                    description: 'Data de inicialização do romaneio'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Romaneio modificado para ENCERRADO'
+                    description: 'Mensagem de retorno'
+        OutcomeBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                status:
+                    type: integer
+                    readOnly: true
+                    example: 2
+                    description: |-
+                        Status do romaneio .
+
+                        - `0` = Cadastrado
+                        - `1` = Em Trânsito
+                        - `2` = Encerrado
+                        - `3` = Cancelado
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                type:
+                    type: integer
+                    example: 5
+                    description: |-
+                        Tipo de Romaneio.
+
+                        - `0` = Manifesto Entrega
+                        - `1` = Manifesto transferência
+                        - `2` = Outros
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                number:
+                    type: integer
+                    readOnly: true
+                    example: 456317
+                    description: 'Número do romaneio'
+                ciot:
+                    type: object
+                    nullable: true
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: 156347
+                            description: 'ID do CIOT vinculado ao romaneio'
+                        number:
+                            type: integer
+                            example: 21451
+                            description: 'Número do CIOT vinculado ao romaneio'
+                total:
+                    type: number
+                    example: '1452.47'
+                    description: 'Valor total do romaneio'
+                vehicle:
+                    type: object
+                    properties:
+                        traction:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeVehicle'
+                        trailer1:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeVehicle'
+                        trailer2:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeVehicle'
+                        trailer3:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeVehicle'
+                operation:
+                    type: object
+                    nullable: true
+                    properties:
+                        id:
+                            type: integer
+                            example: 126
+                            description: 'ID da operação do romaneio'
+                        name:
+                            type: string
+                            example: 'LOTAÇÃO'
+                            readOnly: true
+                            maxLength: 15
+                            description: 'Descrição da operação feita pelo romaneio'
+                crm:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 25416
+                            description: 'ID do usuário'
+                        username:
+                            type: string
+                            maxLength: 50
+                            readOnly: true
+                            example: 'suporte.siimp'
+                            description: 'Nome do usuário responsável pelo CRM'
+                total_docs:
+                    type: integer
+                    readOnly: true
+                    example: 12
+                    description: 'Total de documentos no romaneio'
+                created_at:
+                    type: string
+                    readOnly: true
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-06-19 09:22:37'
+                    description: 'Data de criação do Romaneio'
+                updated_at:
+                    type: string
+                    readOnly: true
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-06-19 09:22:37'
+                    description: 'Data de atualização do Romaneio'
+        Outcome:
+            allOf:
+                -
+                    $ref: '#/components/schemas/OutcomeBase'
+                -
+                    type: object
+                    properties:
+                        owner_id:
+                            type: integer
+                            example: 145885
+                            description: 'ID da empresa emissora do romaneio'
+                        scheduling:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeScheduling'
+                        obs:
+                            type: string
+                            maxLength: 255
+                            example: 'Romaneio iniciado'
+                            description: 'Observação do romaneio'
+                        documents:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeDocs'
+                        drivers:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeGroupingDriver'
+                        scheduled:
+                                allOf:
+                                    - $ref: '#/components/schemas/OutcomeScheduled'
+                        options:
+                            allOf:
+                                - $ref: '#/components/schemas/OutcomeOptions'
+                        baits:
+                            type: array
+                            items:
+                                allOf:
+                                    - $ref: '#/components/schemas/OutcomeBaits'
+        OutcomeSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/OutcomeBase'
+                -
+                    type: object
+                    properties:
+                        owner:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 447945
+                                    description: 'Código da empresa emissora do romaneio'
+                                name:
+                                    type: string
+                                    maxLength: 55
+                                    example: 'COMERCIAL LTDA'
+                                    description: 'Nome da empresa emissora do romaneio'
+                        documents:
+                            type: object
+                            properties:
+                                done:
+                                    type: integer
+                                    example: 5
+                                    description: 'Documentos finalizados dentro do romaneio'
+                                total:
+                                    type: integer
+                                    example: 5
+                                    description: 'Total de documentos dentro do romaneio'
+                        created_user:
+                            type: string
+                            example: 'silva.ester'
+                            maxLength: 20
+                            description: 'Nome do usuário que criou o romaneio'
+                        updated_user:
+                            type: string
+                            example: 'silva.davi'
+                            maxLength: 20
+                            description: 'Nome do usuário que atualizou o romaneio'
+                        total:
+                            type: number
+                            example: '14565.78'
+                            description: 'Total dos documentos de um romaneio'
+                        driver:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'ROBERTO ARAUJO'
+                                    description: 'Nome do Motorista do Romaneio'
+                        crm:
+                            type: object
+                            properties:
+                                user:
+                                    type: string
+                                    maxLength: 20
+                                    example: 'siimp.sistemas'
+                                    description: 'Nome do usuário responsável pelo CRM'
+                        scheduling:
+                            type: object
+                            properties:
+                                route:
+                                    allOf:
+                                        -
+                                            $ref: '#/components/schemas/OutcomeStartFinish'
+                        route:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeLine'
+                        scheduled:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeScheduled'
+                        options:
+                            allOf:
+                                - $ref: '#/components/schemas/OutcomeOptions'
+        OutcomeAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/OutcomeBase'
+                -
+                    type: object
+                    properties:
+                        histories:
+                            type: array
+                            description: 'Histórico de alterações dos dados do romaneio'
+                            nullable: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 14523
+                                        description: 'ID do histórico'
+                                    message:
+                                        type: string
+                                        maxLength: 255
+                                        description: 'Mensagem adicionada no histórico'
+                                    username:
+                                        type: string
+                                        maxLength: 20
+                                        example: 'suportesiimp'
+                                        description: 'Nome do usuário que realizou a alteração no romaneio'
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2023-04-16 19:21:01'
+                                        description: 'Data de criação do histórico do romaneio'
+                                        readOnly: true
+                                    updated_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2023-04-16 19:21:01'
+                                        description: 'Data de atualização do histórico do romaneio'
+                        documents:
+                            type: array
+                            description: 'Documentos de um romaneio'
+                            nullable: true
+                            items:
+                                type: object
+                                properties:
+                                    collection_id:
+                                        type: integer
+                                        example: 1452369
+                                        description: 'ID de uma coleção'
+                                    cte_id:
+                                        type: integer
+                                        example: 359854
+                                        description: 'ID de um CT-e'
+                                    nf_id:
+                                        type: integer
+                                        example:
+                                        description: 'ID de uma NF'
+                                    income_id:
+                                        type: integer
+                                        example:
+                                        description: 'ID de uma Minuta'
+                                    owner_id:
+                                        type: integer
+                                        example: 874555
+                                        description: 'ID da empresa emissora do documento'
+                                    type:
+                                        type: integer
+                                        example: 0
+                                        description: |-
+                                            Tipo do documento.
+
+                                            - `1` = CT-e
+                                            - `2` = Minuta
+                                            - `3` = Coleta
+                                            - `4` = NF-e
+                                        enum:
+                                            - 1
+                                            - 2
+                                            - 3
+                                            - 4
+                                    sender:
+                                        allOf:
+                                            -
+                                                $ref: '#/components/schemas/OutcomeAddress'
+                                    addressee:
+                                        allOf:
+                                            -
+                                                $ref: '#/components/schemas/OutcomeAddress'
+                                    serie:
+                                        type: integer
+                                        example: 2
+                                        description: 'Série do documento'
+                                    number:
+                                        type: integer
+                                        example: 14526
+                                        description: 'Número do documento'
+                                    total:
+                                        type: object
+                                        properties:
+                                            total:
+                                                type: number
+                                                example: '125.45'
+                                                description: 'Total do documento'
+                                            cargo:
+                                                type: number
+                                                example: '145.78'
+                                                description: 'Total da carga'
+                                            weight:
+                                                type: number
+                                                example: '36.97'
+                                                description: 'Peso dos produtos no documento'
+                                    quantity:
+                                        type: number
+                                        example: '4.00'
+                                        description: 'Quantidade de produto em um documento'
+                                    cubage:
+                                        type: number
+                                        example: '5.45'
+                                        nullable: true
+                                        description: 'Cubagem do documento'
+                                    last_occurrence:
+                                        type: string
+                                        maxLength: 255
+                                        example: 'Assinatura do cliente (Adicionado via minha carga)'
+                                        description: 'Descrição da última ocorrência do documento'
+                                    vehicle:
+                                        type: object
+                                        nullable: true
+                                        properties:
+                                          traction:
+                                            allOf:
+                                              - $ref: '#/components/schemas/OutcomeVehicle'
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2023-06-28 15:30:00'
+                                        description: 'Data de criação do custo do romaneio'
+                                        readOnly: true
+                        payments:
+                            type: array
+                            description: 'Pagamentos de um romaneio'
+                            nullable: true
+                            items:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 100651
+                                        description: 'ID de um pagamento'
+                                    outsourced:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 191881
+                                                description: 'ID do motorista'
+                                            name:
+                                                type: string
+                                                maxLength: 200
+                                                example: 'Maria da Silva Dias'
+                                                description: 'Nome do motorista'
+                                    classification:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 201
+                                                description: 'ID da classificação do pagamento'
+                                            name:
+                                                type: string
+                                                maxLength: 100
+                                                example: 'Agregados - Pagamento'
+                                                description: 'Nome da classificação do pagamento'
+                                    beneficiary:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 201
+                                                description: 'ID do contratado'
+                                            name:
+                                                type: string
+                                                maxLength: 200
+                                                example: 'Luís Henrique de Oliveira'
+                                                description: 'Nome do contratado'
+                                    type:
+                                        type: integer
+                                        example: 1
+                                        description: |-
+                                            Tipo do pagamento.
+
+                                            - `1` = Débito
+                                            - `2` = Crédito
+                                        enum:
+                                            - 1
+                                            - 2
+                                    value:
+                                        type: number
+                                        example: 125.45
+                                        description: 'Valor do pagamento'
+                                    obs:
+                                        type: string
+                                        maxLength: 255
+                                        example: 'Pagamento de frete'
+                                        description: 'Observação do pagamento'
+                                    outsourced_payorder:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 34885
+                                                description: 'ID da ordem de pagamento'
+                                            number:
+                                                type: integer
+                                                example: 977
+                                                description: 'Número da ordem de pagamento'
+                                    transaction_number:
+                                        type: string
+                                        maxLength: 255
+                                        example: '24957'
+                                        description: 'Número da movimentação'
+                                    wallet:
+                                        type: object
+                                        properties:
+                                            id:
+                                                type: integer
+                                                example: 319
+                                                description: 'ID da carteira'
+                                    payment_form:
+                                        type: integer
+                                        example: 5
+                                        description: |-
+                                            Forma de pagamento.
+
+                                            - `1` = Dinheiro
+                                            - `2` = Cheque
+                                            - `3` = Transferência
+                                            - `4` = Depósito
+                                            - `5` = Cartão
+                                            - `7` = Débito em conta
+                                            - `8` = PIX
+                                        enum:
+                                            - 1
+                                            - 2
+                                            - 3
+                                            - 4
+                                            - 5
+                                            - 7
+                                            - 8
+                                    maturity:
+                                        type: string
+                                        format: 'Y-m-d'
+                                        example: '2024-05-04'
+                                        description: 'Data de vencimento do pagamento'
+                                        readOnly: true
+                                    competency_date:
+                                        type: string
+                                        format: 'Y-m-d'
+                                        example: '2024-06-29'
+                                        description: 'Data de competência do pagamento'
+                                        readOnly: true
+                                    paid_at:
+                                        type: string
+                                        format: 'Y-m-d'
+                                        example: '2024-06-29'
+                                        description: 'Data em que o pagamento foi realizado'
+                                        readOnly: true
+                                    created_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2023-06-28 15:30:00'
+                                        description: 'Data de criação do pagamento do romaneio'
+                                        readOnly: true
+                                    updated_at:
+                                        type: string
+                                        format: 'Y-m-d H:i:s'
+                                        example: '2023-06-28 15:30:00'
+                                        description: 'Data de atualização do pagamento do romaneio'
+                                        readOnly: true
+                                    created_username:
+                                        type: string
+                                        maxLength: 20
+                                        example: 'suportesiimp'
+                                        description: 'Nome do usuário que criou o pagamento'
+                                        readOnly: true
+                                    updated_username:
+                                        type: string
+                                        maxLength: 20
+                                        example: 'suportesiimp'
+                                        description: 'Nome do usuário que atualizou o pagamento'
+                                        readOnly: true
+                        drivers:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeGroupingDriver'
+                        scheduling:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeScheduling'
+                        scheduled:
+                            allOf:
+                                - $ref: '#/components/schemas/OutcomeScheduled'
+                        options:
+                            type: object
+                            properties:
+                                initial_km:
+                                    type: string
+                                    example: '76.6'
+                                    description: 'Quilometragem inicial'
+                                final_km:
+                                    type: string
+                                    example: '90.99'
+                                    description: 'Quilometragem final'
+        # COMPONENTES DUPLICADOS
+        OutcomeVehicle:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 1455575
+                    description: 'ID do veículo'
+                license_plate:
+                    type: string
+                    minLength: 7
+                    maxLength: 7
+                    example: 'ABC4D96'
+                    description: 'Placa do veículo'
+        OutcomeAddress:
+            type: object
+            properties:
+                name:
+                    type: string
+                    maxLength: 100
+                    example: 'COMERCIO LTDA'
+                    description: 'Nome da empresa remetente/destinatário do documento.'
+                city:
+                    type: string
+                    maxLength: 20
+                    example: 'Ameriana/SP'
+                    description: 'Cidade da empresa remetente/destinatário do documento.'
+                district:
+                    type: string
+                    maxLength: 100
+                    example: 'Joao Aranha'
+                    description: 'Bairro do remetente/destinatário'
+        OutcomeStartFinish:
+            type: object
+            properties:
+                start:
+                    type: object
+                    properties:
+                        state:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeRouteState'
+                        city:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeRouteCity'
+                finish:
+                    type: object
+                    properties:
+                        state:
+                            allOf:
+                            -
+                                $ref: '#/components/schemas/OutcomeRouteState'
+                        city:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeRouteCity'
+        OutcomeRouteCity:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 25145
+                    readOnly: true
+                    description: 'ID da Cidade'
+                ibge:
+                    type: string
+                    pattern: '[0-9]'
+                    maxLength: 7
+                    minLength: 7
+                    example: '236545126'
+                    description: 'Código IBGE da cidade'
+                city:
+                    type: string
+                    example: 'Americana'
+                    maxLength: 15
+                    readOnly: true
+                    description: 'Nome da cidade de partida/chegada do romaneio'
+        OutcomeRouteState:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 25145
+                    readOnly: true
+                    description: 'ID da Cidade'
+                uf:
+                    type: string
+                    example: 'SP'
+                    maxLength: 2
+                    description: 'UF da cidade de partida/chegada do romaneio *(Preencher a UF antes de inserir o IBGE da cidade)*'
+                ibge:
+                    type: integer
+                    example: 35
+                    readOnly: true
+                    description: 'Código IBGE do estado'
+        OutcomePerson:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 25458
+                    description: 'ID do motorista/assistente'
+                name:
+                    type: string
+                    maxLength: 100
+                    readOnly: true
+                    example: 'VINICIUS SOUZA JOSE'
+                    description: 'Nome do motorista/assistente'
+                cpf:
+                    type: string
+                    maxLength: 11
+                    minLength: 11
+                    example: '14963207815'
+                    description: 'CPF do motorista/assistente'
+        OutcomeDocs:
+            type: object
+            properties:
+                cte:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 211654
+                            description: 'ID do CT-e'
+                        key:
+                            type: string
+                            minLength: 44
+                            maxLength: 44
+                            example: '51349283374528369719371987028492376104857653'
+                            description: 'Chave do CT-e'
+                nf:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 156188
+                            description: 'ID da Nota Fiscal'
+                        key:
+                            type: string
+                            minLength: 44
+                            maxLength: 44
+                            example: '31549283028674508396917452048719965743851236'
+                            description: 'Chave da Nota Fiscal'
+                income:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 31468
+                            description: 'ID da Minuta'
+                collection:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 445568
+                            description: 'ID da Coleta'
+        OutcomeOffice:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 161656
+                    description: 'ID da Filial/Parceiro'
+                cnpj:
+                    type: string
+                    minLength: 14
+                    maxLength: 14
+                    example: '14587620369841'
+                    description: 'CNPJ da filial/parceiro'
+        OutcomeLine:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 426
+                    description: 'ID da linha'
+                name:
+                    type: string
+                    maxLength: 50
+                    readOnly: true
+                    example: 'CAPIVARI X AMERICANA'
+                    description: 'Descrição da Linha do romaneio'
+        OutcomeGroupingDriver:
+                        type: object
+                        properties:
+                            driver:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/OutcomePerson'
+                            driver2:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/OutcomePerson'
+                            assistant1:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/OutcomePerson'
+                            assistant2:
+                                allOf:
+                                    -
+                                        $ref: '#/components/schemas/OutcomePerson'
+        OutcomeScheduling:
+            type: object
+            properties:
+                route:
+                    allOf:
+                        -
+                            $ref: '#/components/schemas/OutcomeStartFinish'
+                    type: object
+                    properties:
+                        line:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeLine'
+                branch_office:
+                    type: object
+                    properties:
+                        start:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeOffice'
+                        finish:
+                            allOf:
+                                -
+                                    $ref: '#/components/schemas/OutcomeOffice'
+        DateAndTime:
+            type: object
+            properties:
+                date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-06-15'
+                    description: 'Data'
+                time:
+                    type: string
+                    format: 'H:i'
+                    example: '10:00'
+                    description: 'Hora'
+        OutcomeScheduled:
+            type: object
+            properties:
+                start:
+                    allOf:
+                        - $ref: '#/components/schemas/DateAndTime'
+                finish:
+                    allOf:
+                        - $ref: '#/components/schemas/DateAndTime'
+        OutcomeOptions:
+            type: object
+            properties:
+                initial_km:
+                    type: string
+                    example: '76.6'
+                    description: 'Quilometragem inicial'
+                final_km:
+                    type: string
+                    example: '90.99'
+                    description: 'Quilometragem final'
+                transportation_type:
+                    type: integer
+                    example: 2
+                    description: >
+                        Tipo de transporte.
+                        
+                        `1` => Transferência
+                        `2` => Distribuição
+                        `3` => Matéria Prima
+                        `4` => Mista
+                        `5` => Retorno
+                        `6` => Nacional
+                        `7` => Exportação
+                        `8` => Importação
+                        `9` => Circuito
+                    enum:
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                        - 5
+                        - 6
+                        - 7
+                        - 8
+                        - 9
+                route_type:
+                    type: integer
+                    example: 1
+                    description: >
+                        Tipo de percurso
+                        
+                        `1` => RODOVIÁRIO
+                        `2` => URBANO
+                    enum:
+                        - 1
+                        - 2
+                seal:
+                    type: string
+                    example: 'ABC123'
+                    description: 'Código do Lacre'
+                escort:
+                    type: object
+                    properties:
+                        agent1_name:
+                            type: string
+                            maxLength: 50
+                            example: 'James Silva Bond'
+                            description: 'Nome do primeiro agente'
+                        agent2_name:
+                            type: string
+                            maxLength: 50
+                            example: 'Michael Scarn'
+                            description: 'Nome do segundo agente'
+                        agent_phone:
+                            type: string
+                            maxLength: 15
+                            example: '+553287443312'
+                            description: 'Número do agente'
+                        equipment_number:
+                            type: string
+                            maxLength: 20
+                            example: 'AG01'
+                            description: 'Número do equipamento'
+                        company_name:
+                            type: string
+                            maxLength: 50
+                            example: 'Global Agent Sec'
+                            description: 'Nome da empresa'
+                        company_phone:
+                            type: string
+                            maxLength: 50
+                            example: '+5511987654321'
+                            description: 'Número da empresa'
+                        license_plate:
+                            type: string
+                            example: 'ABC1234'
+                            maxLength: 7
+                            description: 'Placa do veículo'
+                        equipment_system:
+                            type: string
+                            maxLength: 20
+                            example: 'SECEQP1'
+                            description: 'Nome do equipamento'
+        OutcomeBaits:
+            type: object
+            properties:
+                bait_name:
+                  type: string
+                  maxLength: 150
+                  example: 'Satellite'
+                  description: 'Nome (Tecnologia)'
+                bait_number:
+                  type: string
+                  maxLength: 150
+                  example: 'ST001'
+                  description: 'Número'
+                bait_emergency_contact:
+                  type: string
+                  maxLength: 150
+                  nullable: true
+                  example: '+5540028922'
+                  description: 'Contato de Emergência'
+                bait_brand:
+                  type: string
+                  maxLength: 150
+                  nullable: true
+                  example: 'NDA'
+                  description: 'Marca'

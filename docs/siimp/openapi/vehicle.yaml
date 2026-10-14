@@ -1,0 +1,1311 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Veículos
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **VEÍCULOS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: vehicles
+      description: Rota para cadastramento, atualização e inserção de veículos
+paths:
+    /vehicles/search:
+        get:
+            tags:
+                - vehicles
+            description: Busca veículos com base nos filtros informados
+            operationId: search
+            parameters:
+                -   name: id
+                    in: query
+                    description: Realiza a busca pelo **ID** de um veículo
+                    required: false
+                    schema:
+                        type: integer
+
+                -   name: ids
+                    in: query
+                    description: Realiza a busca pelos **IDS** de veículos, separados por vírgula
+                    required: false
+                    style: form
+                    explode: false
+                    schema:
+                        type: array
+                        items:
+                            type: integer
+
+                -   name: license_plate
+                    in: query
+                    description: Realiza a busca pela **PLACA DO VEÍCULO**.
+                    required: false
+                    schema:
+                        type: string
+
+                -   name: fleet_id
+                    in: query
+                    description: Realiza a busca pela **FROTA**.
+                    required: false
+                    schema:
+                        type: string
+
+                -   name: type
+                    in: query
+                    description: >
+                        Realiza a busca pelo **TIPO**.
+                          - `00` = Tração
+                          - `01` = Reboque
+                    required: false
+                    schema:
+                        type: string
+                        enum:
+                            - 00
+                            - 01
+
+                -   name: wheel_type
+                    in: query
+                    description: >
+                        Realiza a busca pelo tipo do **RODADO**.
+                          - `00` = Não Aplicável
+                          - `01` = Truck
+                          - `02` = Toco
+                          - `03` = Cavalo Mecânico
+                          - `04` = VAN
+                          - `05` = Utilitário
+                          - `06` = Outros
+                    required: false
+                    schema:
+                        type: string
+                        enum:
+                            - '00'
+                            - '01'
+                            - '02'
+                            - '03'
+                            - '04'
+                            - '05'
+                            - '06'
+
+                -   name: body_type
+                    in: query
+                    description: >
+                         Realiza a busca pelo tipo da **CARROCERIA**.
+                          - `00` = Não Aplicável
+                          - `01` = Aberta
+                          - `02` = Fechada/Baú
+                          - `03` = Granelera
+                          - `04` = Porta Container
+                          - `05` = Sider
+                    required: false
+                    schema:
+                        type: string
+                        enum:
+                            - '00'
+                            - '01'
+                            - '02'
+                            - '03'
+                            - '04'
+                            - '05'
+
+                -   name: active
+                    in: query
+                    description: >
+                        Flag que identifica se o veículo está marcada como **ATIVO**:
+                          - `on` = SIM
+                          - `off` = NÃO
+                    required: false
+                    schema:
+                        type: string
+                        enum:
+                            - on
+                            - off
+
+                -   name: renavam
+                    in: query
+                    description: Realiza a busca pelo **RENAVAM**.
+                    required: false
+                    schema:
+                        type: string
+
+                -   name: created_at
+                    in: query
+                    description: Data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: created_from
+                    in: query
+                    description: Data de criação inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: created_to
+                    in: query
+                    description: Data de criação final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: updated_at
+                    in: query
+                    description: Data da última atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: updated_from
+                    in: query
+                    description: Data da última atualização inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: updated_to
+                    in: query
+                    description: Data da última atualização final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                    schema:
+                        type: string
+                        format: 'Y-m-d|relative'
+
+                -   name: page
+                    in: query
+                    description: Paginação dos resultados
+                    required: false
+                    schema:
+                        type: integer
+                        minimum: 1
+                        default: 1
+
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+
+    /vehicles/create:
+        post:
+            tags:
+                - vehicles
+            description: Cria um veículo no sistema
+            operationId: create
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/VehicleModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /vehicles/update:
+        post:
+            tags:
+                - vehicles
+            description: Atualiza um veículo no sistema
+            operationId: update
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/VehicleModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateResponse'
+    /vehicles/new-connection:
+        post:
+            tags:
+                - vehicles
+            description: Realiza o atrelamento de uma tração à reboques, motoristas e auxiliares
+            operationId: newConnection
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/NewConnectionModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/NewConnectionResponse'
+    /vehicles/remove-connection:
+        post:
+            tags:
+                - vehicles
+            description: Realiza o desatrelamento de uma tração à reboques, motoristas e auxiliares
+            operationId: removeConnection
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/RemoveConnectionModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/RemoveConnectionResponse'
+components:
+    securitySchemes:
+        x-api-key:
+            type: apiKey
+            name: x-api-key
+            in: header
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/VehicleModelResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/VehicleModelResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/VehicleModelResponse'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        NewConnectionResponse:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        traction:
+                            type: object
+                            properties:
+                                license_plate:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    description: 'Placa da tração'
+                                    example: 'XXX0000'
+                        trailer1:
+                            type: object
+                            properties:
+                                license_plate:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    description: 'Placa do reboque 1'
+                                    example: 'XXX0001'
+                        trailer2:
+                            type: object
+                            properties:
+                                license_plate:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    description: 'Placa do reboque 2'
+                                    example: 'XXX0002'
+                        trailer3:
+                            type: object
+                            properties:
+                                license_plate:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    description: 'Placa do reboque 3'
+                                    example: 'XXX0003'
+                        driver:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do motorista principal'
+                                    example: 'José Luis Saviano'
+                        driver2:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do motorista secundário'
+                                    example: 'José Augusto Saviano'
+                        assistant1:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do auxiliar primário'
+                                    example: 'Luis Augusto Saviano'
+                        assistant2:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: 'Nome do auxiliar secundário'
+                                    example: 'Benício Augusto Saviano'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Atrelamento criado com sucesso!'
+                    description: 'Mensagem de retorno'
+        RemoveConnectionResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Desatrelamento realizado com sucesso!'
+                    description: 'Mensagem de retorno'
+        RemoveConnectionModel:
+            type: object
+            properties:
+                traction:
+                    type: object
+                    required: true
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador da tração (informar este campo ou license_plate)'
+                            example: 7398
+                        license_plate:
+                            type: string
+                            description: 'Placa da tração (informar este campo ou id)'
+                            example: 'XTY9374'
+                obs:
+                    type: string
+                    maxLength: 2000
+                    description: 'Observações gerais de desatrelamento'
+                    example: 'Teste de desatrelamento de veículo'
+        NewConnectionModel:
+            type: object
+            required:
+                - traction
+            properties:
+                traction:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador da tração (informar este campo ou license_plate)'
+                            example: 7398
+                        license_plate:
+                            type: string
+                            maxLength: 7
+                            minLength: 7
+                            description: 'Placa da tração (informar este campo ou id)'
+                            example: 'XTY9374'
+                trailer1:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do reboque 1 (informar este campo ou license_plate)'
+                            example: 7395
+                        license_plate:
+                            type: string
+                            maxLength: 7
+                            minLength: 7
+                            description: 'Placa do reboque 1 (informar este campo ou id)'
+                            example: 'NXV7533'
+                trailer2:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do reboque 2 (informar este campo ou license_plate)'
+                            example: 7390
+                        license_plate:
+                            type: string
+                            maxLength: 7
+                            minLength: 7
+                            description: 'Placa do reboque 2 (informar este campo ou id)'
+                            example: 'GDF3A11'
+                trailer3:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do reboque 3 (informar este campo ou license_plate)'
+                            example: 7391
+                        license_plate:
+                            type: string
+                            maxLength: 7
+                            minLength: 7
+                            description: 'Placa do reboque 3 (informar este campo ou id)'
+                            example: 'RTA4234'
+                driver:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do motorista principal (informar este campo ou cpf)'
+                            example: 1223
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            minLength: 11
+                            description: 'CPF do motorista principal (informar este campo ou id)'
+                            example: '16865222091'
+                driver2:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do motorista secundário (informar este campo ou cpf)'
+                            example: 1685
+                        cpf:
+                            type: string
+                            description: 'CPF do motorista secundário (informar este campo ou id)'
+                            maxLength: 11
+                            minLength: 11
+                            example: '14855272012'
+                assistant1:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do auxiliar primário (informar este campo ou cpf)'
+                            example: 1785
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            minLength: 11
+                            description: 'CPF do auxiliar primário (informar este campo ou id)'
+                            example: '41565277789'
+                assistant2:
+                    type: object
+                    minProperties: 1
+                    properties:
+                        id:
+                            type: integer
+                            description: 'Código identificador do auxiliar secundário (informar este campo ou cpf)'
+                            example: 1789
+                        cpf:
+                            type: string
+                            maxLength: 11
+                            minLength: 11
+                            description: 'CPF do auxiliar secundário (informar este campo ou id)'
+                            example: '97933352701'
+                obs:
+                    type: string
+                    maxLength: 2000
+                    description: 'Observações gerais de atrelamento'
+                    example: 'Teste de atrelamento de veículo'
+        VehicleModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    format: int
+                    example: 2
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*'
+                license_plate:
+                    type: string
+                    maxLength: 7
+                    required: true
+                    description: 'Placa do Veículo'
+                    example: 'XXX0000'
+                axles:
+                    type: integer
+                    format: int
+                    nullable: true
+                    description: 'Eixo'
+                    example: 2
+                purchased_at:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    description: 'Data de Compra'
+                    example: '2022-12-28'
+                purchase_receipt:
+                    type: string
+                    nullable: true
+                    maxLength: 100
+                    description: 'Recibo'
+                    example: '31233'
+                renavam:
+                    type: string
+                    pattern: '[0-9]'
+                    maxLength: 11
+                    minLength: 9
+                    required: true
+                    description: 'Renavam'
+                    example: '54196922533'
+                chassi:
+                    type: string
+                    nullable: true
+                    maxLength: 80
+                    description: 'Chassi'
+                    example: 'IH43J4K34H23K4K4K'
+                type:
+                    type: integer
+                    required: true
+                    description: >
+                        Tipo:
+                          - `0` = Tração *(padrão)*
+                          - `1` = Reboque
+                    enum:
+                        - 0
+                        - 1
+                    example: 0
+                wheel_type:
+                    type: string
+                    required: true
+                    example: '01'
+                    description: >
+                        Tipo do Rodado:
+                          - `00` = Não Aplicável
+                          - `01` = Truck
+                          - `02` = Toco
+                          - `03` = Cavalo Mecânico
+                          - `04` = VAN
+                          - `05` = Utilitário
+                          - `06` = Outros
+                    enum:
+                        - '00'
+                        - '01'
+                        - '02'
+                        - '03'
+                        - '04'
+                        - '05'
+                        - '06'
+                body_type:
+                    type: string
+                    required: true
+                    example: '02'
+                    description: >
+                        Tipo da Carroceria:
+                          - `00` = Não Aplicável
+                          - `01` = Aberta
+                          - `02` = Fechada/Baú
+                          - `03` = Granelera
+                          - `04` = Porta Container
+                          - `05` = Sider
+                    enum:
+                        - '00'
+                        - '01'
+                        - '02'
+                        - '03'
+                        - '04'
+                        - '05'
+                active:
+                    type: string
+                    example: 'on'
+                    description: >
+                        Ativo:
+                          - `on` = SIM *(padrão)*
+                          - `off` = NÃO
+                    enum:
+                        - off
+                        - on
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-28 13:01:20'
+                    description: 'Data de criação do registro'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-28 14:10:02'
+                    description: 'Data de atualização do registro'
+                obs:
+                    type: string
+                    nullable: true
+                    maxLength: 1000
+                    description: 'Observações Gerais'
+                license_category:
+                    type: integer
+                    format: int
+                    nullable: true
+                    example: 2
+                    description: >
+                        Categ. da Habilitação:
+                          - `0` = A
+                          - `1` = B
+                          - `2` = C
+                          - `3` = D
+                          - `4` = E
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                properties:
+                    type: object
+                    description: 'Propriedade usada para armazenar informações das integrações'
+                    properties:
+                        sap:
+                            properties:
+                                id:
+                                    type: string
+                                    example: "C31233"
+                                    description: 'ID da integração com o SAP'
+                fleet:
+                    type: string
+                    maxLength: 200
+                    nullable: true
+                    description: 'Frota'
+                    example: 'B2050'
+                address:
+                    type: object
+                    description: 'Endereço do Veículo'
+                    properties:
+                        state:
+                            type: object
+                            description: 'Informações do Estado'
+                            properties:
+                                uf:
+                                    type: string
+                                    required: true
+                                    maxLength: 2
+                                    description: 'Unidades federativas do Brasil'
+                                    example: 'SP'
+                        city:
+                            type: object
+                            description: 'Informações da Cidade'
+                            properties:
+                                ibge:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    required: true
+                                    description: 'Cod. IBGE da Cidade'
+                                    example: '3501608'
+                belongs:
+                    type: object
+                    description: 'Informações de propriedade'
+                    properties:
+                        own:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Proprio?:
+                                  - `off` = NÃO
+                                  - `on`  = SIM
+                            enum:
+                                - off
+                                - on
+                        owner_cpf:
+                            type: string
+                            pattern: '[0-9]'
+                            minLength: 11
+                            maxLength: 11
+                            example: '34359114095'
+                            description: 'CPF do proprietário *(informar este ou o campo owner_cnpj, caso o campo own seja igual a on)*'
+                        owner_cnpj:
+                            type: string
+                            pattern: '[A-Z0-9]'
+                            minLength: 14
+                            maxLength: 14
+                            example: '69648576000166'
+                            description: 'CNPJ do proprietário *(informar este ou o campo owner_cnpj, caso o campo own seja igual a on)*'
+                expiration:
+                    type: object
+                    description: 'Vencimentos'
+                    properties:
+                        ipva:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento IPVA'
+                            example: '2022-12-28'
+                        aet:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento AET'
+                            example: '2022-12-28'
+                        gris:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Gris'
+                            example: '2022-12-28'
+                        checklist:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Checklist'
+                            example: '2022-12-28'
+                        renting:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Arrendamento'
+                            example: '2022-12-28'
+                        tachograph:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Tacógrafo'
+                            example: '2022-12-28'
+                        dangerous_product:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Perigoso'
+                            example: '2022-12-28'
+                        insurance:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Seguro'
+                            example: '2022-12-28'
+                gris:
+                    type: object
+                    description: 'Gris'
+                    properties:
+                        model_code:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Cod. Modelo'
+                            example: 'ONIXSAT'
+                        vehicle_type:
+                            type: string
+                            nullable: true
+                            maxLength: 7
+                            description: 'Cod. Tipo'
+                            example: '2317383'
+                vehicle_specification:
+                    type: object
+                    description: 'Especificação do Veículo'
+                    properties:
+                        model:
+                            type: string
+                            nullable: true
+                            maxLength: 100
+                            description: 'Modelo'
+                            example: 'HR HDB'
+                        model_year:
+                            type: string
+                            nullable: true
+                            maxLength: 4
+                            description: 'Ano do Modelo'
+                            example: '2009'
+                        manufacturer:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Marca'
+                            example: 'HYUNDAI'
+                        color:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Cor'
+                            example: 'vermelho'
+                measurements_specification:
+                    type: object
+                    description: 'Especificação de medidas'
+                    properties:
+                        max_weight:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Cap. Kg'
+                            example: 16
+                        max_volume:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Cap. m³'
+                            example: 44
+                        tara:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Tara'
+                            example: 34
+                        length:
+                            type: number
+                            nullable: true
+                            description: 'Comprimento'
+                            example: '14.000'
+                        width:
+                            type: number
+                            nullable: true
+                            description: 'Largura'
+                            example: '2.400'
+                        height:
+                            type: number
+                            nullable: true
+                            description: 'Altura'
+                            example: '2.800'
+                supply_specification:
+                    type: object
+                    description: 'Especificação de Abastecimento'
+                    properties:
+                        minimum:
+                            type: number
+                            nullable: true
+                            description: '% Min abast.'
+                            example: '10.00'
+                        maximum:
+                            type: number
+                            nullable: true
+                            description: '% Max abast.'
+                            example: '100.00'
+                        tank_capacity:
+                            type: number
+                            nullable: true
+                            description: 'Cap.Tanque/Lts'
+                            example: '500.00'
+                        expected_average:
+                            type: number
+                            nullable: true
+                            description: 'Média esperada'
+                            example: '2.20'
+                classification:
+                    type: object
+                    description: 'Classificação do Veículo'
+                    properties:
+                        id:
+                            type: integer
+                            nullable: true
+                            description: 'ID da classificação'
+                            example: 33
+        VehicleModelResponse:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    format: int
+                    example: 2
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*'
+                license_plate:
+                    type: string
+                    maxLength: 7
+                    required: true
+                    description: 'Placa do Veículo'
+                    example: 'XXX0000'
+                axles:
+                    type: integer
+                    format: int
+                    nullable: true
+                    description: 'Eixo'
+                    example: 2
+                purchased_at:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    description: 'Data de Compra'
+                    example: '2022-12-28'
+                purchase_receipt:
+                    type: string
+                    nullable: true
+                    maxLength: 100
+                    description: 'Recibo'
+                    example: '31233'
+                renavam:
+                    type: string
+                    pattern: '[0-9]'
+                    maxLength: 11
+                    minLength: 9
+                    required: true
+                    description: 'Renavam'
+                    example: '54196922533'
+                chassi:
+                    type: string
+                    nullable: true
+                    maxLength: 80
+                    description: 'Chassi'
+                    example: 'IH43J4K34H23K4K4K'
+                type:
+                    type: integer
+                    required: true
+                    description: >
+                        Tipo:
+                          - `0` = Tração *(padrão)*
+                          - `1` = Reboque
+                    enum:
+                        - 0
+                        - 1
+                    example: 0
+                wheel_type:
+                    type: string
+                    required: true
+                    example: '01'
+                    description: >
+                        Tipo do Rodado:
+                          - `00` = Não Aplicável
+                          - `01` = Truck
+                          - `02` = Toco
+                          - `03` = Cavalo Mecânico
+                          - `04` = VAN
+                          - `05` = Utilitário
+                          - `06` = Outros
+                    enum:
+                        - '00'
+                        - '01'
+                        - '02'
+                        - '03'
+                        - '04'
+                        - '05'
+                        - '06'
+                body_type:
+                    type: string
+                    required: true
+                    example: '02'
+                    description: >
+                        Tipo da Carroceria:
+                          - `00` = Não Aplicável
+                          - `01` = Aberta
+                          - `02` = Fechada/Baú
+                          - `03` = Granelera
+                          - `04` = Porta Container
+                          - `05` = Sider
+                    enum:
+                        - '00'
+                        - '01'
+                        - '02'
+                        - '03'
+                        - '04'
+                        - '05'
+                active:
+                    type: string
+                    example: 'on'
+                    description: >
+                        Ativo:
+                          - `on` = SIM *(padrão)*
+                          - `off` = NÃO
+                    enum:
+                        - off
+                        - on
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-28 13:01:20'
+                    description: 'Data de criação do registro'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-28 14:10:02'
+                    description: 'Data de atualização do registro'
+                obs:
+                    type: string
+                    nullable: true
+                    maxLength: 1000
+                    description: 'Observações Gerais'
+                license_category:
+                    type: integer
+                    format: int
+                    nullable: true
+                    example: 2
+                    description: >
+                        Categ. da Habilitação:
+                          - `0` = A
+                          - `1` = B
+                          - `2` = C
+                          - `3` = D
+                          - `4` = E
+                    enum:
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                        - 4
+                properties:
+                    type: object
+                    description: 'Propriedade usada para armazenar informações das integrações'
+                    properties:
+                        sap:
+                            properties:
+                                id:
+                                    type: string
+                                    example: "C31233"
+                                    description: 'ID da integração com o SAP'
+                fleet:
+                    type: string
+                    maxLength: 200
+                    nullable: true
+                    description: 'Frota'
+                    example: 'B2050'
+                address:
+                    type: object
+                    description: 'Endereço do Veículo'
+                    properties:
+                        state:
+                            type: object
+                            description: 'Informações do Estado'
+                            properties:
+                                uf:
+                                    type: string
+                                    required: true
+                                    maxLength: 2
+                                    description: 'Unidades federativas do Brasil'
+                                    example: 'SP'
+                        city:
+                            type: object
+                            description: 'Informações da Cidade'
+                            properties:
+                                ibge:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    required: true
+                                    description: 'Cod. IBGE da Cidade'
+                                    example: '3501608'
+                belongs:
+                    type: object
+                    description: 'Informações de propriedade'
+                    properties:
+                        own:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Proprio?:
+                                  - `off` = NÃO
+                                  - `on`  = SIM
+                            enum:
+                                - off
+                                - on
+                        owner_id:
+                            type: integer
+                            format: int
+                            example: 2323
+                            description: 'ID do proprietário'
+                expiration:
+                    type: object
+                    description: 'Vencimentos'
+                    properties:
+                        ipva:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento IPVA'
+                            example: '2022-12-28'
+                        aet:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento AET'
+                            example: '2022-12-28'
+                        gris:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Gris'
+                            example: '2022-12-28'
+                        checklist:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Checklist'
+                            example: '2022-12-28'
+                        renting:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Arrendamento'
+                            example: '2022-12-28'
+                        tachograph:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Tacógrafo'
+                            example: '2022-12-28'
+                        dangerous_product:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Perigoso'
+                            example: '2022-12-28'
+                        insurance:
+                            type: string
+                            format: 'Y-m-d'
+                            nullable: true
+                            description: 'Vencimento Seguro'
+                            example: '2022-12-28'
+                gris:
+                    type: object
+                    description: 'Gris'
+                    properties:
+                        model_code:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Cod. Modelo'
+                            example: 'ONIXSAT'
+                        vehicle_type:
+                            type: string
+                            nullable: true
+                            maxLength: 7
+                            description: 'Cod. Tipo'
+                            example: '2317383'
+                vehicle_specification:
+                    type: object
+                    description: 'Especificação do Veículo'
+                    properties:
+                        model:
+                            type: string
+                            nullable: true
+                            maxLength: 100
+                            description: 'Modelo'
+                            example: 'HR HDB'
+                        model_year:
+                            type: string
+                            nullable: true
+                            maxLength: 4
+                            description: 'Ano do Modelo'
+                            example: '2009'
+                        manufacturer:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Marca'
+                            example: 'HYUNDAI'
+                        color:
+                            type: string
+                            nullable: true
+                            maxLength: 255
+                            description: 'Cor'
+                            example: 'vermelho'
+                measurements_specification:
+                    type: object
+                    description: 'Especificação de medidas'
+                    properties:
+                        max_weight:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Cap. Kg'
+                            example: 16
+                        max_volume:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Cap. m³'
+                            example: 44
+                        tara:
+                            type: integer
+                            format: int
+                            required: true
+                            description: 'Tara'
+                            example: 34
+                        length:
+                            type: number
+                            nullable: true
+                            description: 'Comprimento'
+                            example: '14.000'
+                        width:
+                            type: number
+                            nullable: true
+                            description: 'Largura'
+                            example: '2.400'
+                        height:
+                            type: number
+                            nullable: true
+                            description: 'Altura'
+                            example: '2.800'
+                supply_specification:
+                    type: object
+                    description: 'Especificação de Abastecimento'
+                    properties:
+                        minimum:
+                            type: number
+                            nullable: true
+                            description: '% Min abast.'
+                            example: '10.00'
+                        maximum:
+                            type: number
+                            nullable: true
+                            description: '% Max abast.'
+                            example: '100.00'
+                        tank_capacity:
+                            type: number
+                            nullable: true
+                            description: 'Cap.Tanque/Lts'
+                            example: '500.00'
+                        expected_average:
+                            type: number
+                            nullable: true
+                            description: 'Média esperada'
+                            example: '2.20'
+                classification:
+                    type: object
+                    description: 'Classificação do Veículo'
+                    properties:
+                        id:
+                            type: integer
+                            nullable: true
+                            description: 'ID da classificação'
+                            example: 33
+                        name:
+                            type: string
+                            description: 'Nome da classificação'
+                            example: 'Truck Refrigerado'
+                            readOnly: true

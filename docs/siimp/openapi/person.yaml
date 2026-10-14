@@ -1,0 +1,1357 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Pessoas
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **PESSOAS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: people
+      description: Rota para cadastramento, atualização e inserção de pessoas de quaisquer classificação *(clientes, fornecedores, motoristas, funcionários, vendedores, etc)*
+security:
+    - x-api-key: [ ]
+paths:
+    /people/search:
+        get:
+            tags:
+                - people
+            description: Busca pessoas com base nos filtros informados
+            operationId: search
+            parameters:
+                - name: id
+                  in: query
+                  description: >
+                      Realiza a busca pelo **ID** de uma pessoa. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: ids
+                  in: query
+                  description: Realiza a busca pelos **IDS** de pessoas, separados por vírgula
+                  required: false
+                  style: form
+                  explode: false
+                  schema:
+                      type: array
+                      items:
+                          type: integer
+
+                - name: name
+                  in: query
+                  description: Realiza a busca pelo **NOME**, podendo ser parcial.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: cpf
+                  in: query
+                  description: Realiza a busca pelo **CPF**. Informar somente dígitos.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: cnpj
+                  in: query
+                  description: Realiza a busca pelo **CNPJ**. Informar somente dígitos.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: phone
+                  in: query
+                  description: Realiza a busca pelo **TELEFONE PRINCIPAL** da pessoa.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: addr_uf
+                  in: query
+                  description: Realiza a busca pela **UF** do endereço principal da pessoa.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: addr_city_name
+                  in: query
+                  description: Realiza a busca pelo nome da **CIDADE** do endereço principal da pessoa.
+                  required: false
+                  schema:
+                      type: string
+
+                - name: is_customer
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **CLIENTE**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: is_supplier
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **FORNECEDOR**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: is_seller
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **VENDEDOR**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+                - name: is_mechanic
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **MECÂNICO**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+                - name: is_outsourced
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **TERCEIRO**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: is_driver
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **MOTORISTA**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: is_employee
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **FUNCIONÁRIO**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: is_driver_or_is_outsourced
+                  in: query
+                  description: >
+                      Flag que identifica se a pessoa está marcada como **MOTORISTA** ou **TERCEIRO**:
+                        - `on` = SIM
+                        - `off` = NÃO
+                  required: false
+                  schema:
+                      type: string
+                      enum:
+                          - on
+                          - off
+
+                - name: created_at
+                  in: query
+                  description: Data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_from
+                  in: query
+                  description: Data de criação inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_to
+                  in: query
+                  description: Data de criação final. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: updated_at
+                  in: query
+                  description: Data da última atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: updated_from
+                  in: query
+                  description: Data da última atualização inicial. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: page
+                  in: query
+                  description: Paginação dos resultados
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+                      default: 1
+
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+    /people/create:
+        post:
+            tags:
+                - people
+            description: Cria uma pessoa no sistema
+            operationId: create
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PersonModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /people/update:
+        post:
+            tags:
+                - people
+            description: Atualiza uma pessoa no sistema
+            operationId: update
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/PersonModel'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateResponse'
+components:
+    securitySchemes:
+        x-api-key:
+            type: apiKey
+            name: x-api-key
+            in: header
+    schemas:
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/PersonModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/PersonModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/PersonModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+
+        # MODELS
+        PersonModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    format: int
+                    example: 2
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*'
+                owner_id:
+                    type: integer
+                    example: 14523
+                    nullable: true
+                    description: 'Código da empresa dona do cadastro da pessoa'
+                cpf:
+                    type: string
+                    pattern: '[0-9]'
+                    minLength: 11
+                    maxLength: 11
+                    description: 'CPF *(informar este ou o campo CNPJ)*'
+                    example: '2827809011'
+                cnpj:
+                    type: string
+                    pattern: '[A-Z0-9]'
+                    minLength: 14
+                    maxLength: 14
+                    description: 'CNPJ *(informar este ou o campo CPF)*'
+                    example: '41091725861'
+                rntrc:
+                    type: string
+                    pattern: '[0-9]'
+                    nullable: true
+                    minLength: 8
+                    maxLength: 8
+                    description: 'RNTRC'
+                    example: '12345678'
+                name:
+                    type: string
+                    maxLength: 200
+                    example: 'Siimp Sistemas LTDA ME'
+                    description: 'Nome/Razão Social'
+                fancy_name:
+                    type: string
+                    nullable: true
+                    maxLength: 200
+                    example: 'Siimp'
+                    description: 'Apelido/Nome Fantasia'
+                pis:
+                    type: string
+                    nullable: true
+                    minLength: 11
+                    maxLength: 11
+                    example: '11111111111'
+                    description: 'Programa de Integração Social *(não informar se for CNPJ)*'
+                email:
+                    type: string
+                    format: email
+                    nullable: true
+                    maxLength: 255
+                    description: 'E-mail principal'
+                website:
+                    type: string
+                    format: url
+                    nullable: true
+                    maxLength: 255
+                    description: 'URL do website'
+                nationality:
+                    type: integer
+                    example: '1'
+                    description: >
+                        Nacionalidade:
+                          - `1` = Brasileiro *(padrão)*
+                          - `2` = Estrangeiro
+                    enum:
+                        - 1
+                        - 2
+                birthdate:
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '1970-05-03'
+                    description: 'Data de Nascimento/Fundação'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de criação do registro'
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-12-27 18:58:09'
+                    description: 'Data de atualização do registro'
+                ie:
+                    type: string
+                    pattern: '[0-9]'
+                    nullable: true
+                    maxLength: 20
+                    example: '123456789'
+                    description: 'Inscrição Estadual *(informar se for CNPJ)*'
+                ie_free:
+                    type: string
+                    example: 'off'
+                    description: >
+                        Isento de Inscrição Estadual:
+                          - `on` = SIM
+                          - `off` = NÃO *(padrão)*
+                    enum:
+                        - off
+                        - on
+                phone:
+                    type: string
+                    pattern: '[0-9]'
+                    nullable: true
+                    maxLength: 20
+                    example: '1122222222'
+                    description: 'Telefone'
+                cellphone:
+                    type: string
+                    pattern: '[0-9]'
+                    nullable: true
+                    maxLength: 20
+                    example: '11922222222'
+                    description: 'Celular'
+                fax:
+                    type: string
+                    nullable: true
+                    pattern: '[0-9]'
+                    maxLength: 20
+                    example: '11922222222'
+                    description: 'Fax'
+                im:
+                    type: string
+                    nullable: true
+                    pattern: '[0-9]'
+                    maxLength: 30
+                    example: '2839273926'
+                    description: 'Inscrição Municipal'
+                obs:
+                    type: string
+                    nullable: true
+                    maxLength: 1000
+                    description: 'Observações Gerais'
+                isuf:
+                    type: string
+                    maxLength: 9
+                    nullable: true
+                    pattern: '[0-9]'
+                    description: 'ISUF'
+                abbreviation:
+                    type: string
+                    nullable: true
+                    maxLength: 10
+                    description: 'Abreviação'
+                fiscal_nature:
+                    type: number
+                    nullable: true
+                    example: 'off'
+                    description: >
+                        Natureza Fiscal:
+                          - `5351` = Armazenagem ou transporte
+                          - `5352` = Indústria
+                          - `5353` = Comércio
+                          - `5354` = Prestador de serviços de comunicação
+                          - `5355` = Gerador ou distribuidor de energia
+                          - `5356` = Produtor Rural
+                          - `5357` = Prestador não contribuinte
+                          - `5359` = Prestador sem nota-fiscal
+                          - `5360` = Prestador contribuinte
+                    enum:
+                        - 5351
+                        - 5352
+                        - 5353
+                        - 5354
+                        - 5355
+                        - 5356
+                        - 5357
+                        - 5359
+                        - 5360
+                classifications:
+                    type: object
+                    description: 'Classificações de pessoas'
+                    properties:
+                        supplier:
+                            type: string
+                            example: 'on'
+                            description: >
+                                Fornecedor:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        customer:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Cliente:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        employee:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Funcionário:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        driver:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Motorista:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        partner:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Parceiro:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        seller:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Vendedor:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        mechanic:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Mecânico:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        outsourced:
+                            type: string
+                            example: 'off'
+                            description: >
+                                Terceiro:
+                                  - `on` = SIM
+                                  - `off` = NÃO *(padrão)*
+                            enum:
+                                - off
+                                - on
+                        outsourced_type:
+                            type: integer
+                            example: 0
+                            description: >
+                                Tipo de Terceiro *(obrigatório se `is_outsourced` = `on`)*
+                                  - `0` = TAC Agregado
+                                  - `1` = TAC Independente
+                                  - `2` = Outros
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                department:
+                    type: object
+                    description: 'Dados do departamento (somente leitura)'
+                    readOnly: true
+                    properties:
+                        id:
+                            type: integer
+                            example: 123
+                            readOnly: true
+                            description: 'Código do departamento'
+                        name:
+                            type: string
+                            readOnly: true
+                            example: 'ADMINISTRATIVO'
+                            description: 'Nome do departamento'
+                main_address:
+                    type: object
+                    description: 'Dados do endereço principal'
+                    properties:
+                        street:
+                            type: string
+                            maxLength: 250
+                            example: 'Avenida Roma'
+                            description: 'Endereço'
+                        number:
+                            type: string
+                            maxLength: 20
+                            example: '1722'
+                            description: 'Número'
+                        complement:
+                            type: string
+                            maxLength: 100
+                            nullable: true
+                            example: 'Sala 2'
+                            description: 'Complemento'
+                        zipcode:
+                            type: string
+                            pattern: '[0-9]'
+                            maxLength: 8
+                            minLength: 8
+                            example: '13478860'
+                            description: 'CEP'
+                        district:
+                            type: string
+                            maxLength: 250
+                            example: 'Antônio Zanaga'
+                            description: 'Bairro'
+                        city:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    maxLength: 255
+                                    readOnly: true
+                                    example: 'Americana'
+                                    description: 'Nome da Cidade'
+                                ibge:
+                                    type: string
+                                    maxLength: 7
+                                    minLength: 7
+                                    pattern: '[0-9]'
+                                    example: '3501608'
+                                    description: 'Código IBGE da Cidade'
+                        state:
+                            type: object
+                            properties:
+                                uf:
+                                    type: string
+                                    maxLength: 2
+                                    minLength: 2
+                                    example: 'SP'
+                                    description: 'Unidades federativas do Brasil'
+                        country:
+                            type: object
+                            properties:
+                                code:
+                                    type: integer
+                                    example: 1058
+                                    default: 1058
+                                    description: 'Código do País'
+                                name:
+                                    type: string
+                                    maxLength: 60
+                                    readOnly: true
+                                    default: 'BRASIL'
+                                    example: 'BRASIL'
+                                    description: 'Nome do País'
+                        location:
+                            type: object
+                            properties:
+                                latitude:
+                                    type: number
+                                    nullable: true
+                                    example: '-23.48589'
+                                    description: 'Latitude'
+                                longitude:
+                                    type: number
+                                    nullable: true
+                                    example: '-46.56237'
+                                    description: 'Longitude'
+                                delivery_radius:
+                                    type: integer
+                                    nullable: true
+                                    example: 100
+                                    description: 'Raio de entrega em metros'
+                driver_license:
+                    type: object
+                    description: 'Dados da CNH *(informar somente se CPF, motorista e/ou terceiro)*'
+                    properties:
+                        number:
+                            type: string
+                            pattern: '[0-9]'
+                            maxLength: 30
+                            nullable: true
+                            example: '11111111111'
+                            description: 'Número da CNH'
+                        record:
+                            type: string
+                            pattern: '[0-9]'
+                            maxLength: 30
+                            nullable: true
+                            example: '11111111111'
+                            description: 'Registro da CNH'
+                        category:
+                            type: string
+                            nullable: true
+                            description: >
+                                Categoria da CNH:
+                                  - `0` = A
+                                  - `1` = B
+                                  - `3` = C
+                                  - `4` = D
+                                  - `5` = E
+                                  - `2` = AB
+                                  - `8` = AC
+                                  - `6` = AD
+                                  - `7` = AE
+                            example: '4'
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                                - 3
+                                - 4
+                                - 5
+                                - 6
+                                - 7
+                                - 8
+                        expiration:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            example: '2027-04-14'
+                            description: 'Data de Vencimento'
+                        current_emission:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            example: '2022-08-01'
+                            description: 'Data de Emissão'
+                        first_emission:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            example: '2020-08-01'
+                            description: 'Data da Primeira Emissão'
+                        uf:
+                            type: string
+                            maxLength: 2
+                            minLength: 2
+                            nullable: true
+                            example: 'SP'
+                            description: 'UF de Emissão'
+                rg:
+                    type: object
+                    description: 'Dados do RG *(informar somente se for CPF)*'
+                    properties:
+                        number:
+                            type: string
+                            maxLength: 30
+                            nullable: true
+                            example: '29830839-8'
+                            description: 'Número do RG'
+                        issuer:
+                            type: string
+                            maxLength: 10
+                            nullable: true
+                            example: 'SSP'
+                            description: 'Órgão Emissor do RG'
+                        issued_at:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            example: '2022-08-01'
+                            description: 'Data de Emissão'
+                        uf:
+                            type: string
+                            maxLength: 2
+                            minLength: 2
+                            nullable: true
+                            example: 'SP'
+                            description: 'UF de Emissão'
+                hr:
+                    type: object
+                    description: 'Dados relacionados a RH'
+                    properties:
+                        education_level:
+                            type: integer
+                            nullable: true
+                            example: 6
+                            description: >
+                                Nível de Escolaridade:
+
+                                `1`  = Fundamental - Incompleto
+                                `2`  = Fundamental - Completo
+                                `3`  = Médio - Incompleto
+                                `4`  = Médio - Completo
+                                `5`  = Superior - Incompleto
+                                `6`  = Superior - Completo
+                                `7`  = Pós-graduação - Incompleto
+                                `8`  = Pós-graduação - Completo
+                                `9`  = Mestrado - Incompleto
+                                `10` = Mestrado - Completo
+                                `11` = Doutor - Incompleto
+                                `12` = Doutor - Completo
+                            enum:
+                                - 1
+                                - 2
+                                - 3
+                                - 4
+                                - 5
+                                - 6
+                                - 7
+                                - 8
+                                - 9
+                                - 10
+                                - 11
+                                - 12
+                        gender:
+                            type: string
+                            nullable: true
+                            example: 'M'
+                            description: >
+                                Gênero:
+                                `M` - Masculino
+                                `F` - Feminino
+                            enum:
+                                - M
+                                - F
+                        blood_type:
+                            type: integer
+                            nullable: true
+                            description: >
+                                Tipo sanguíneo:
+
+                                `1` = A+
+                                `2` = A-
+                                `3` = B+
+                                `4` = B-
+                                `5` = AB+
+                                `6` = AB-
+                                `8` = O+
+                                `7` = O-
+                            enum:
+                                - 1
+                                - 2
+                                - 3
+                                - 4
+                                - 5
+                                - 6
+                                - 8
+                                - 7
+                        height:
+                            type: number
+                            nullable: true
+                            description: 'Altura'
+                            example: 1.79
+                        weight:
+                            type: number
+                            nullable: true
+                            description: 'Peso'
+                            example: 70.5
+                        registered:
+                            type: boolean
+                            nullable: true
+                            description: 'Registrado?'
+                            example: 1
+                        dependents:
+                            type: integer
+                            nullable: true
+                            description: 'Nº de Dependentes'
+                        spouse:
+                            type: object
+                            description: 'Dados relacionados ao conjunge'
+                            properties:
+                                name:
+                                    type: string
+                                    nullable: true
+                                    description: 'Nome completo'
+                                    maxLength: 200
+                                    example: 'Ayla Alice Aparecida Teixeira'
+                                cpf:
+                                    type: string
+                                    nullable: true
+                                    description: 'Número de CPF'
+                                    maxLength: 11
+                                    example: '99999999999'
+                                birthdate:
+                                    type: string
+                                    nullable: true
+                                    description: 'Data de nascimento'
+                                    format: 'Y-m-d'
+                                    example: '1989-09-26'
+                        voter_registration:
+                            type: string
+                            nullable: true
+                            description: 'Número do titulo de eleitor'
+                            maxLength: 12
+                            example: '123456789482'
+                        ctps:
+                            type: object
+                            description: 'Carteira de Trabalho e Previdência Social'
+                            properties:
+                                serie:
+                                    type: string
+                                    nullable: true
+                                    description: 'Série'
+                                    maxLength: 5
+                                    example: '91825'
+                                number:
+                                    type: string
+                                    nullable: true
+                                    description: 'Número'
+                                    maxLength: 15
+                                    example: '192837465918273'
+                        civil_status:
+                            type: integer
+                            nullable: true
+                            example: 1
+                            description: >
+                                Estado Civil:
+
+                                `0` = Solteiro
+                                `1` = Casado
+                                `2` = Separado
+                                `3` = Divorciado
+                                `4` = Viúvo
+                                `5` = Amasiado
+                            enum:
+                                - 0
+                                - 1
+                                - 2
+                                - 3
+                                - 4
+                                - 5
+                        birthday:
+                            type: object
+                            description: 'Complemento dos dados de aniversário'
+                            properties:
+                                uf:
+                                    type: string
+                                    description: 'Estado'
+                                    example: 'SP'
+                                    nullable: true
+                                city:
+                                    type: object
+                                    properties:
+                                        ibge:
+                                            type: string
+                                            maxLength: 7
+                                            minLength: 7
+                                            pattern: '[0-9]'
+                                            example: '3501608'
+                                            description: 'Código IBGE da Cidade'
+                                            nullable: false
+                        is_naturalized:
+                            type: boolean
+                            nullable: true
+                            example: '0'
+                            description: >
+                                É Naturalizado?:
+                                  - `0` = Não
+                                  - `1` = Sim
+                            enum:
+                                - 0
+                                - 1
+                        arrival_date:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            description: 'Data de Chegada no Brasil'
+                            example: '2025-04-01'
+                        id_card_number:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Registro Geral'
+                            example: '504437306'
+                        birth_place:
+                            type: string
+                            nullable: true
+                            maxLength: 60
+                            description: 'Local de Nascimento'
+                            example: 'São Paulo'
+                        military_service_number:
+                            type: string
+                            nullable: true
+                            minLength: 12
+                            maxLength: 15
+                            description: 'Número do Certificado de Reservista'
+                            example: '123456789012'
+                        military_service_category:
+                            type: string
+                            nullable: true
+                            example: '1'
+                            description: >
+                                Categoria de Serviço Militar:
+                                  - `1` = Dispensado com instrução militar suficiente
+                                  - `2` = Dispensado com instrução militar insuficiente
+                                  - `3` = Dispensado sem instrução militar
+                            enum:
+                                - 1
+                                - 2
+                                - 3
+                        cbo_code:
+                            type: string
+                            nullable: true
+                            maxLength: 6
+                            description: 'Código CBO'
+                            example: '521110'
+                        work_card_model_19:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Carteira Modelo 19'
+                            example: 'A123456-7'
+                        pis_registered_at:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            description: 'Data de Registro do PIS'
+                            example: '2024-08-01'
+                        pis_bank_name:
+                            type: string
+                            nullable: true
+                            maxLength: 100
+                            description: 'Banco do PIS'
+                            example: 'Banco do Brasil'
+                        pis_bank_address:
+                            type: string
+                            nullable: true
+                            maxLength: 100
+                            description: 'Endereço do Banco do PIS'
+                            example: 'Rua dos Três Irmãos, 1234'
+                        pis_account:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Conta do PIS'
+                            example: '32948967372'
+                        pis_agency:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Agência do PIS'
+                            example: '4832'
+                        fgts_opt_in:
+                            type: string
+                            nullable: true
+                            example: '1'
+                            description: >
+                                Optante FGTS?:
+                                  - `0` = Não
+                                  - `1` = Sim
+                            enum:
+                                - 0
+                                - 1
+                        fgts_opt_in_date:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            description: 'Data de Opção FGTS'
+                            example: '2024-12-13'
+                        fgts_withdraw_date:
+                            type: string
+                            nullable: true
+                            format: 'Y-m-d'
+                            description: 'Data de Saque FGTS'
+                            example: '2024-05-13'
+                        fgts_depositary_bank_name:
+                            type: string
+                            nullable: true
+                            maxLength: 100
+                            description: 'Banco Depositário FGTS'
+                            example: 'Banco da Gente'
+                        skin_color:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Cor da Pele'
+                            example: 'Branca'
+                        hair_color:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Cor do Cabelo'
+                            example: 'Loiro'
+                        eye_color:
+                            type: string
+                            nullable: true
+                            maxLength: 20
+                            description: 'Cor dos Olhos'
+                            example: 'Verde'
+                        distinctive_marks:
+                            type: string
+                            nullable: true
+                            maxLength: 40
+                            description: 'Sinais Distintivos'
+                            example: 'Cicatriz na mão direita'
+                        father_name_nationality:
+                            type: string
+                            nullable: true
+                            example: '2'
+                            description: >
+                                Nacionalidade do Pai:
+                                  - `1` = Brasileiro *(padrão)*
+                                  - `2` = Estrangeiro
+                            enum:
+                                - 1
+                                - 2
+                        mother_name_nationality:
+                            type: string
+                            nullable: true
+                            example: '1'
+                            description: >
+                                Nacionalidade da Mãe:
+                                  - `1` = Brasileira *(padrão)*
+                                  - `2` = Estrangeira
+                            enum:
+                                - 1
+                                - 2
+                        spouse_name_nationality:
+                            type: string
+                            nullable: true
+                            example: '1'
+                            description: >
+                                Nacionalidade do Cônjuge:
+                                  - `1` = Brasileiro *(padrão)*
+                                  - `2` = Estrangeiro
+                            enum:
+                                - 1
+                                - 2
+                        mannequin:
+                            type: object
+                            description: 'Dados relacionado a vestimenta'
+                            properties:
+                                shirt_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho da Camisa'
+                                    nullable: true
+                                    example: 'G'
+                                tshirt_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho da Camiseta'
+                                    nullable: true
+                                    example: 'G'
+                                pant_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho da Calça'
+                                    nullable: true
+                                    example: '42BR'
+                                dress_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho do Vestido'
+                                    nullable: true
+                                    example: 'NDA'
+                                skirt_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho da Saia'
+                                    nullable: true
+                                    example: 'NDA'
+                                shoe_size:
+                                    type: string
+                                    maxLength: 5
+                                    description: 'Tamanho do Calçado'
+                                    nullable: true
+                                    example: '41BR'
+                        benefits:
+                            type: object
+                            description: 'Salário e Benefício'
+                            properties:
+                                wage_amount:
+                                    type: number
+                                    description: 'Salário Bruto'
+                                    example: 123.56
+                                    nullable: true
+                                life_insurance_amount:
+                                    type: number
+                                    description: 'Seguro de vida'
+                                    example: 564.12
+                                    nullable: true
+                                health_insurance_amount:
+                                    type: number
+                                    description: 'Convênio Médico'
+                                    example: 876.45
+                                    nullable: true
+                                dental_insurance_amount:
+                                    type: number
+                                    description: 'Convênio Odontológico'
+                                    example: 789.16
+                                    nullable: true
+                                meal_ticket_amount:
+                                    type: number
+                                    description: 'Vale Refeição'
+                                    example: 1597
+                                    nullable: true
+                                transit_pass_amount:
+                                    type: number
+                                    description: 'Vale Transporte'
+                                    example: 150
+                                    nullable: true
+                                transit_pass:
+                                    type: boolean
+                                    description: 'É optante do Vale Transporte?'
+                                    default: 0
+                                commissions:
+                                    type: number
+                                    nullable: true
+                                    description: 'Comissões'
+                                    example: '1500'
+                                task:
+                                    type: string
+                                    nullable: true
+                                    maxLength: 40
+                                    description: 'Tarefa'
+                                    example: 'Montagem e Desmontagem de Veículos'
+                                payment_method:
+                                    type: string
+                                    nullable: true
+                                    maxLength: 40
+                                    description: 'Forma de Pagamento'
+                                    example: 'Depósito Bancário'
+                        operational:
+                            type: object
+                            description: 'Operacional'
+                            properties:
+                                workload_amount:
+                                    type: number
+                                    description: 'Carga Horária'
+                                    example: 176
+                                    nullable: true
+                                work_schedule_start:
+                                    type: string
+                                    description: 'Hora de entrada'
+                                    format: 'H:i'
+                                    example: '09:00'
+                                    nullable: true
+                                break_start:
+                                    type: string
+                                    description: 'Saída para o Almoço'
+                                    format: 'H:i'
+                                    example: '12:00'
+                                    nullable: true
+                                break_end:
+                                    type: string
+                                    description: 'Retorno do Almoço'
+                                    format: 'H:i'
+                                    example: '13:00'
+                                    nullable: true
+                                work_schedule_end:
+                                    type: string
+                                    description: 'Hora de saída'
+                                    format: 'H:i'
+                                    example: '18:00'
+                                    nullable: true
+                                uniform_handout_date:
+                                    type: string
+                                    description: 'Data de entrega do uniforme'
+                                    format: 'Y-m-d'
+                                    example: '2023-09-22'
+                                    nullable: true
+                                aso_expiration:
+                                    type: string
+                                    description: 'Data de vencimento ASO'
+                                    format: 'Y-m-d'
+                                    example: '2023-09-21'
+                                    nullable: true
+                                vacation_expiration:
+                                    type: string
+                                    description: 'Data de vencimento das férias'
+                                    format: 'Y-m-d'
+                                    example: '2023-12-31'
+                                    nullable: true
+                                admission_date:
+                                    type: string
+                                    description: 'Data de admissão'
+                                    format: 'Y-m-d'
+                                    example: '2023-01-05'
+                                    nullable: true
+                                resignation_date:
+                                    type: string
+                                    description: 'Data de demissão'
+                                    format: 'Y-m-d'
+                                    example: '2024-01-05'
+                                    nullable: true
+                                occupation:
+                                    type: string
+                                    description: 'Cargo'
+                                    nullable: true
+                                    example: 'TI'
+                                epi_handout_date:
+                                    type: string
+                                    description: 'Data de entrega do EPI'
+                                    format: 'Y-m-d'
+                                    example: '2023-01-06'
+                                    nullable: true
+                                section:
+                                    type: string
+                                    nullable: true
+                                    maxLength: 40
+                                    description: 'Seção'
+                                    example: 'Manutenção de Veículos'
+                                registration_date:
+                                    type: string
+                                    nullable: true
+                                    format: 'Y-m-d'
+                                    description: 'Data de Registro'
+                                    example: '2025-01-06'
+                                dismissal_reason:
+                                    type: string
+                                    nullable: true
+                                    maxLength: 40
+                                    description: 'Motivo da Demissão'
+                                    example: 'Pedido de Demissão por Motivos Pessoais'

@@ -1,0 +1,315 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Categorizações de Serviço
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Categorizações de Serviço**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: service-categorization
+      description: Rota para cadastramento, atualização e inserção de Categorizações de Serviço
+security:
+    - ApiKeyAuth: []
+paths:
+    # CRUD
+    /service-categorizations/search:
+        get:
+            tags:
+                - service-categorization
+            description: 'Busca Categorizações de Serviço com base nos filtros informados'
+            operationId: 'search'
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/nameParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/createdFromParam'
+                - $ref: '#/components/parameters/createdToParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/updatedFromParam'
+                - $ref: '#/components/parameters/updatedToParam'
+                - $ref: '#/components/parameters/pageParam'
+
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+    /service-categorizations/create:
+        post:
+            tags:
+                - service-categorization
+            description: 'Cria Categorização de Serviço no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+    /service-categorizations/update:
+        post:
+            tags:
+                - service-categorization
+            description: 'Atualiza Categorização de Serviço no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+components:
+    # SEGURANCA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: 'Realiza a busca pelo **ID** de Categorização de Serviço. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            schema:
+                type: integer
+        idsParam:
+            name: id
+            in: query
+            description: 'Realiza a busca pelos **IDS** de Categorização de Serviço, separados por vírgula'
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        nameParam:
+            name: name
+            in: query
+            description: 'Realiza a busca pelo **NOME** da Categorização de Serviço.'
+            schema:
+                type: string
+        statusParam:
+            name: status
+            in: query
+            description: 'Realiza a busca pelo **STATUS** da Categorização de Serviço.'
+            schema:
+                type: integer
+        createdAtParam:
+            name: created_at
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE CRIAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        createdFromParam:
+            name: created_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA INICIAL DE CRIAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        createdToParam:
+            name: created_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA FINAL DE CRIAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: >
+                Realiza a busca pela **DATA DE ATUALIZAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d H:i:s|relative'
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: >
+                Realiza a busca pela **DATA INICIAL DE ATUALIZAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: >
+                Realiza a busca pela **DATA FINAL DE ATUALIZAÇÃO** da Categorização de Serviço.
+                  Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        pageParam:
+            name: page
+            in: query
+            description: >
+                Paginação dos resultados
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de Categorização de Serviço'
+            required: true
+            content:
+              application/json:
+                  schema:
+                      $ref: '#/components/schemas/Categorization'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de Categorização de Serviço'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de Categorização de Serviço'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de Categorização de Serviço'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+
+    # OBJETOS
+    schemas:
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/CategorizationSimple'
+                            - $ref: '#/components/schemas/CategorizationAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CategorizationAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/Categorization'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+
+        # MODELS
+        ## MODEL BASE
+        CategorizationBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '3'
+                    description: 'ID *(somente informá-lo em caso de atualização de dados)*.'
+                name:
+                    type: string
+                    example: 'SERVIÇOS DE BORRACHARIA'
+                    description: 'Nome da Categorização de Serviço'
+                description:
+                    type: string
+                    example: 'Aqui são listados dodos os serviços do setor de Borracharia'
+                    description: 'Descrição da Categorização de Serviço'
+                status:
+                    type: integer
+                    example: '1'
+                    description: >
+                        Status da Categorização de Serviço
+                          - `0`: Ativo
+                          - `1`: Inativo
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-03-30 11:00:00'
+                    description: 'Data de Criação da Categorização de Serviço'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-03-30 11:30:30'
+                    description: 'Data de Atualização da Categorização de Serviço'
+                    readOnly: true
+
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Categorization:
+            allOf:
+                - $ref: '#/components/schemas/CategorizationBase'
+                - type: object
+                  # {{TODO}} ESCREVER OS OBJETOS AGREGADOS
+
+        ## MODEL RETORNADA NA PESQUISA DE VARIOS ITEMS
+        CategorizationSimple:
+            allOf:
+                - $ref: '#/components/schemas/CategorizationBase'
+                - type: object
+                  # {{TODO}} ESCREVER OS OBJETOS AGREGADOS
+
+        ## MODEL RETORNADA NA PESQUISA DE SOMENTE 1 ITEMS
+        CategorizationAll:
+            allOf:
+                - $ref: '#/components/schemas/Categorization'
+                - type: object
+                  # {{TODO}} ESCREVER OS OBJETOS AGREGADOS

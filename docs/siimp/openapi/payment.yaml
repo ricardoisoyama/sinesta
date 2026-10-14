@@ -1,0 +1,720 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: 'Pagamentos de Motoristas'
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Pagamentos**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**.
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    - name: outsourced-payments
+      description: Rota para gerenciamento do Pagamento de Motoristas.
+security:
+    - x-api-key: []
+paths:
+    /outsourced-payments/search:
+        get:
+            tags:
+                - outsourced-payments
+            description: Busca os pagamentos registrados com base nos filtros informados.
+            operationId: search
+            parameters:
+                - name: id
+                  in: query
+                  description: >
+                      Realiza a busca pelo **ID** de um Pagamento de Motorista. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*.
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: ids
+                  in: query
+                  description: Realiza a busca por IDs pré-definidos.
+                  required: false
+                  style: form
+                  explode: false
+                  schema:
+                      type: array
+                      items:
+                          type: integer
+
+                - name: document_number
+                  in: query
+                  description: >
+                      Realiza a busca pelo número do Documento.
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: document_type
+                  in: query
+                  description: |-
+                    Realiza a busca pelo tipo do documento do pagamento.
+
+                    - `1` = Minuta
+                    - `2` = CT-e
+                    - `3` = PV/Romaneio
+                    - `4` = Coleta
+                    - `5` = Avulso
+                  schema:
+                    type: integer
+                    enum:
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                - name: classification_id
+                  in: query
+                  description: >
+                      Realiza a busca pelo id da Classificação do Pagamento.
+                  required: false
+                  schema:
+                      type: integer
+                      minimum: 1
+
+                - name: beneficiary_name
+                  in: query
+                  description: >
+                      Realiza a busca pelo nome do Contratado.
+                  required: false
+                  schema:
+                      type: string
+                      minimum: 1
+
+                - name: created_from
+                  in: query
+                  description: Data inicial para filtrar os pagamentos. Os pagamentos criados a partir desta data serão incluídos. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**.
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: created_to
+                  in: query
+                  description: Data final para filtrar os pagamentos. Os pagamentos criados até esta data serão incluídos. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**.
+                  schema:
+                      type: string
+                      format: 'Y-m-d|relative'
+
+                - name: container_number
+                  in: query
+                  description: Realiza a busca pelo número do container.
+                  required: false
+                  schema:
+                      type: string
+                      minimum: 1
+
+            responses:
+                '200':
+                    description: Sucesso.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/SearchResponse'
+    /outsourced-payments/create:
+        post:
+            tags:
+                - outsourced-payments
+            description: Cria um pagamento no sistema.
+            operationId: create
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/CreateBody'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/CreateResponse'
+    /outsourced-payments/update:
+        post:
+            tags:
+                - outsourced-payments
+            description: Atualiza um pagamento no sistema.
+            operationId: update
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/UpdateBody'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UpdateResponse'
+    /outsourced-payments/delete:
+        post:
+            tags:
+                - outsourced-payments
+            description: Remove um pagamento.
+            operationId: delete
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/DeleteBody'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/DeleteResponse'
+    /outsourced-payments/generate-payorder:
+        post:
+            tags:
+                - outsourced-payments
+            description: Gera uma Ordem de Pagamento a partir de um ou mais pagamentos.
+            operationId: generate-payorder
+            requestBody:
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/GeneratePayOrderBody'
+                required: true
+            responses:
+                '200':
+                    description: Sucesso.
+                    content:
+                        application/json:
+                            schema:
+                               $ref: '#/components/schemas/GeneratePayOrderResponse'
+components:
+    securitySchemes:
+        x-api-key:
+            type: apiKey
+            name: x-api-key
+            in: header
+    schemas:
+
+        #RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                        $ref: '#/components/schemas/Payment'
+
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                total:
+                    type: integer
+                    example: 1
+                    description: 'Quantidade total de resultados.'
+
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/Payment'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso no pagamento.'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno.'
+
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/Payment'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso no pagamento.'
+                message:
+                    type: string
+                    example: 'Item alterado com sucesso'
+                    description: 'Mensagem de retorno.'
+
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso no pagamento.'
+                message:
+                    type: string
+                    example: 'Item removido com sucesso'
+                    description: 'Mensagem de retorno.'
+
+        GeneratePayOrderResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/PayOrder'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'OP 959 gerada com sucesso!'
+                    description: 'Mensagem de retorno.'
+
+        #MODELS
+        PayOrder:
+            type: object
+            properties:
+                payorder:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            example: 208
+                            description: 'Id da Ordem de Pagamento.'
+                        number:
+                            type: integer
+                            example: 208
+                            description: 'Número da Ordem de Pagamento.'
+                        status:
+                            type: integer
+                            example: 208
+                            description: 'Status da Ordem de Pagamento.'
+        Payment:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    description: ID único do pagamento.
+                    example: 170654
+                group_id:
+                    type: integer
+                    description: ID do grupo associado ao pagamento.
+                type:
+                    type: integer
+                    description: Tipo do pagamento.
+                        - `1` = Débito
+                        - `2` = Crédito
+                    enum:
+                    - 1
+                    - 2
+                    example: 2
+                payment_form:
+                    type: integer
+                    description: |-
+                        Forma de Pagamento.
+
+                        - `1` = Dinheiro
+                        - `2` = Cheque
+                        - `3` = Transferência
+                        - `4` = Depósito
+                        - `5` = Cartão
+                        - `7` = Débito em Conta
+                        - `8` = PIX
+                    enum:
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 6
+                    - 7
+                value:
+                    type: string
+                    description: Valor do pagamento.
+                    example: "50.00"
+                obs:
+                    type: string
+                    description: Observações adicionais sobre o pagamento.
+                    example: "CHAPEADO - 9829"
+                maturity:
+                    type: string
+                    format: date
+                    description: Data de vencimento do pagamento.
+                    example: "2024-05-28"
+                paid_at:
+                    type: string
+                    format: date
+                    description: Data de pagamento.
+                    example: "2024-05-28"
+                created_at:
+                    type: string
+                    format: date-time
+                    description: Data e hora de criação do registro.
+                    example: "2024-05-28 01:16:43"
+                updated_at:
+                    type: string
+                    format: date-time
+                    description: Data e hora da última atualização do registro.
+                    example: "2024-05-28 01:16:52"
+                net_value:
+                    type: string
+                    description: Valor líquido do pagamento.
+                    example: "50.00"
+                created_username:
+                    type: string
+                    description: Nome de usuário que criou o registro.
+                    example: "eduardo.silva"
+                updated_username:
+                    type: string
+                    description: Nome de usuário que atualizou o registro pela última vez.
+                    example: "eduardo.silva"
+                is_advance:
+                    type: integer
+                    description: Indica se o pagamento é antecipado (1) ou não (0).
+                    enum:
+                    - 0
+                    - 1
+                    example: 1
+                document:
+                    type: object
+                    properties:
+                        cte:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 175326
+                                    description: 'Código do CT-e do Pagamento.'
+                        income:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 175326
+                                    description: 'Código da Minuta do Pagamento.'
+                        outcome:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 175326
+                                    description: 'Código do Romaneio do Pagamento.'
+                        collection:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 175326
+                                    description: 'Código da Coleta do Pagamento.'
+                deduct_taxes:
+                    type: integer
+                    description: Valor das taxas deduzidas.
+                    example: 0
+                composition_1:
+                    type: string
+                    description: Composição 1.
+                    example: "99323 | EITU9590658"
+                composition_2:
+                    type: string
+                    description: Composição 2.
+                    example: "99323 | EITU9590658"
+                composition_3:
+                    type: string
+                    description: Composição 3.
+                    example: "99323 | EITU9590658"
+                people:
+                    type: object
+                    properties:
+                        beneficiary:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    description: ID do beneficiário associado ao pagamento.
+                                    example: 142563
+                                name:
+                                    type: string
+                                    description: Nome do beneficiário associado ao pagamento.
+                                    example: "JONAS VIEIRA DE JESUS"
+                        outsourced:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    description: ID do motorista associado ao pagamento.
+                                    example: 107514
+                                name:
+                                    type: string
+                                    description: Nome do motorista associado ao pagamento.
+                                    example: "JONAS VIEIRA DE JESUS"
+                wallet:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            description: ID da carteira associada ao pagamento.
+                            example: 401
+                        name:
+                            type: string
+                            description: Nome da carteira associada ao pagamento.
+                            example: "BANCO SUPERDIGITAL"
+                classification:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            description: ID da classificação do pagamento.
+                        name:
+                            type: string
+                            description: Nome da classificação do pagamento.
+                            example: "TW - REEMBOLSO VIAGEM"
+                transaction:
+                    type: object
+                    properties:
+                        id:
+                            type: integer
+                            description: ID da transação relacionada ao pagamento.
+                        number:
+                            type: string
+                            description: Número da transação associada ao pagamento.
+                            example: "24707"
+                        status:
+                            type: integer
+                            description: Status da transação.
+                            enum:
+                            - 1
+                            - 2
+                            - 3
+                            - 4
+                            example: 1
+                taxes:
+                    type: object
+                    properties:
+                        inss:
+                            type: string
+                            description: Valor de INSS retido.
+                            example: "0.00"
+                        irrf:
+                            type: string
+                            description: Valor de IRRF retido.
+                            example: "0.00"
+                        sest:
+                            type: string
+                            description: Valor de SEST retido.
+                            example: "0.00"
+
+        #BODYS
+        CreateBody:
+            type: object
+            properties:
+                type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Tipo do Pagamento. [1 -> Débito, 2-> Crédito].'
+                value:
+                    type: number
+                    nullable: false
+                    example: 100
+                    description: 'Valor do Pagamento.'
+                obs:
+                    type: string
+                    example: 'Pagamento referente à estacionamento no RJ.'
+                    description: 'Observação.'
+                payment_form:
+                    type: number
+                    example: 2
+                    description: 'Forma de Pagamento. [1 -> Dinheiro, 2-> Cheque, 3 -> Transferência, 4-> Depósito, 5 -> Cartão, 6-> Débito em Conta, 7-> PIX]'
+                maturity:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data do Vencimento do Pagamento.'
+                competency_date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data da Competência do Pagamento.'
+                paid_at:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data em que foi efetuado o pagamento.'
+                classification:
+                    type: object
+                    properties:
+                        id:
+                            type: number
+                            example: 408
+                            description: 'Código do Classificação do Pagamento.'
+                wallet:
+                    type: object
+                    properties:
+                      id:
+                        type: number
+                        example: 401
+                        description: 'Código da Carteira do Pagamento.'
+                people:
+                    type: object
+                    properties:
+                        beneficiary:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 142563
+                                    description: 'Código do Contratado do Pagamento.'
+                        outsourced:
+                            type: object
+                            properties:
+                                id:
+                                    type: number
+                                    example: 107514
+                                    description: 'Código do Contratado do Pagamento.'
+                document:
+                    oneOf:
+                        - type: object
+                          properties:
+                            cte:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        example: 175326
+                                        description: 'Código do CT-e do Pagamento.'
+                        - type: object
+                          properties:
+                            outcome_id:
+                                type: integer
+                                example: 225933
+                                description: 'Código do Romaneio do Pagamento.'
+                        - type: object
+                          properties:
+                            income_id:
+                                type: integer
+                                example: 987654
+                                description: 'Código da Minuta do Pagamento.'
+                        - type: object
+                          properties:
+                            collection_id:
+                                type: integer
+                                example: 987654
+                                description: 'Código do Coleta do Pagamento.'
+
+        UpdateBody:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    nullable: false
+                    example: 170654
+                    description: 'ID do Pagamento.'
+                type:
+                    type: integer
+                    nullable: true
+                    example: 1
+                    description: 'Tipo do Pagamento. [1 -> Débito, 2-> Crédito].'
+                value:
+                    type: number
+                    nullable: false
+                    example: 100
+                    description: 'Valor do Pagamento.'
+                obs:
+                    type: string
+                    example: 'Pagamento referente à estacionamento no RJ.'
+                    description: 'Observação.'
+                payment_form:
+                    type: number
+                    example: 2
+                    description: 'Forma de Pagamento. [1 -> Dinheiro, 2-> Cheque, 3 -> Transferência, 4-> Depósito, 5 -> Cartão, 6-> Débito em Conta, 7-> PIX]'
+                maturity:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data do Vencimento do Pagamento.'
+                competency_date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data da Competência do Pagamento.'
+                paid_at:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-04-16'
+                    description: 'Data em que foi efetuado o pagamento.'
+                classification:
+                    type: object
+                    properties:
+                        id:
+                            type: number
+                            example: 408
+                            description: 'Código do Classificação do Pagamento.'
+                wallet:
+                    type: object
+                    properties:
+                      id:
+                        type: number
+                        example: 401
+                        description: 'Código da Carteira do Pagamento.'
+                people:
+                    type: object
+                    properties:
+                        beneficiary:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 142563
+                                    description: 'Código do Contratado do Pagamento.'
+                        outsourced:
+                            type: object
+                            properties:
+                                id:
+                                    type: number
+                                    example: 107514
+                                    description: 'Código do Contratado do Pagamento.'
+
+        DeleteBody:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '123456'
+                    description: 'ID da ocorrência.'
+
+        GeneratePayOrderBody:
+            type: object
+            properties:
+                ids:
+                    type: array
+                    minItems: 1
+                    example: [10475, 10564, 15478]
+                    description: 'Lista de IDs do Pagamento.'
+                    items:
+                        type: integer
+                        maxLength: 20
+                        minLength: 20
+                        pattern: '[0-9]'

@@ -1,0 +1,1259 @@
+openapi: 3.0.3
+info:
+  version: '1.0'
+  title: Programação de Viagem
+  description: |-
+    Esta integração documenta todos os endpoints disponíveis para o módulo de **Programação de Viagem**.
+
+    Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+    Além disso, selecione o `ambiente` desejado para a API, onde:
+    - `lannister` significa **PRODUÇÃO**
+    - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+    Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+  - url: 'https://{subdominio}.{ambiente}.emitir.me'
+    variables:
+      subdominio:
+        default: subdominio_da_transportadora
+      ambiente:
+        default: dev-lannister
+        enum:
+          - lannister
+          - dev-lannister
+tags:
+  - name: trip-programmings
+    description: 'Rota para cadastramento, atualização e inserção de uma Programação de Viagem'
+security:
+  - ApiKeyAuth: [ ]
+paths:
+  /trip-programmings/search:
+    get:
+      tags:
+        - trip-programmings
+      description: 'Busca as programações de viagem com base nos filtros informados.'
+      operationId: search
+      parameters:
+        - $ref: '#/components/parameters/IdsParam'
+        - $ref: '#/components/parameters/OwnerIdParam'
+        - $ref: '#/components/parameters/NumberParam'
+        - $ref: '#/components/parameters/ProcessNumberParam'
+        - $ref: '#/components/parameters/CostcenterIdParam'
+        - $ref: '#/components/parameters/ClientNameParam'
+        - $ref: '#/components/parameters/SenderNameParam'
+        - $ref: '#/components/parameters/AddresseeNameParam'
+        - $ref: '#/components/parameters/DispatcherNameParam'
+        - $ref: '#/components/parameters/ReceiverNameParam'
+        - $ref: '#/components/parameters/OperationIdParam'
+        - $ref: '#/components/parameters/DriverIdParam'
+        - $ref: '#/components/parameters/CreatedFromParam'
+        - $ref: '#/components/parameters/CreatedToParam'
+        - $ref: '#/components/parameters/UpdatedFromParam'
+        - $ref: '#/components/parameters/UpdatedToParam'
+        - $ref: '#/components/parameters/StatusParam'
+        - $ref: '#/components/parameters/PageParam'
+      responses:
+        200:
+          $ref: '#/components/responses/SearchSuccess'
+  /trip-programmings/create:
+    post:
+      tags:
+        - trip-programmings
+      description: 'Criação de uma programação de viagem no sistema.'
+      operationId: create
+      requestBody:
+        $ref: '#/components/requestBodies/CreateBody'
+      responses:
+        200:
+          $ref: '#/components/responses/CreateSuccess'
+  /trip-programmings/update:
+    post:
+      tags:
+        - trip-programmings
+      description: 'Atualização de uma programação de viagem no sistema.'
+      operationId: update
+      requestBody:
+        $ref: '#/components/requestBodies/UpdateBody'
+      responses:
+        200:
+          $ref: '#/components/responses/UpdateSuccess'
+  /trip-programmings/start:
+    post:
+      tags:
+        - trip-programmings
+      description: 'Inicialização de uma programação de viagem no sistema.'
+      operationId: start
+      requestBody:
+        $ref: '#/components/requestBodies/StartBody'
+      responses:
+        200:
+          $ref: '#/components/responses/StartSuccess'
+  /trip-programmings/cancel:
+    post:
+      tags:
+        - trip-programmings
+      description: 'Cancelamento de uma programação de viagem no sistema.'
+      operationId: cancel
+      requestBody:
+        $ref: '#/components/requestBodies/CancelBody'
+      responses:
+        200:
+          $ref: '#/components/responses/CancelSuccess'
+  /trip-programmings/finish:
+    post:
+      tags:
+        - trip-programmings
+      description: 'Finalização de uma programação de viagem no sistema.'
+      operationId: finish
+      requestBody:
+        $ref: '#/components/requestBodies/FinishBody'
+      responses:
+        200:
+          $ref: '#/components/responses/FinishSuccess'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      name: x-api-key
+      in: header
+  parameters:
+    OwnerIdParam:
+      name: owner_id
+      in: query
+      description: 'Realiza a busca pela empresa.'
+      required: false
+      schema:
+        type: integer
+    NumberParam:
+      name: number
+      in: query
+      description: 'Realiza a busca por número.'
+      required: false
+      schema:
+        type: integer
+    ProcessNumberParam:
+      name: process_number
+      in: query
+      description: 'Realiza a busca pelo número da programação de carga.'
+      required: false
+      schema:
+        type: integer
+    StatusParam:
+      name: status
+      in: query
+      description: |-
+        Realiza a busca por status.
+
+        - `0` = Cadastrado
+        - `1` = Em Trânsito
+        - `2` = Encerrado
+        - `3` = Cancelado
+      required: false
+      schema:
+        enum:
+          - 0
+          - 1
+          - 2
+          - 3
+    ClientNameParam:
+      name: client_name
+      in: query
+      description: 'Realiza a busca utilizando o nome, CPF ou CNPJ do cliente.'
+      required: false
+      schema:
+        type: string
+    CostcenterIdParam:
+      name: costcenter_id
+      in: query
+      description: 'Realiza a busca utilizando a identificação do centro de custo.'
+      required: false
+      schema:
+        type: integer
+    OperationIdParam:
+      name: operation_id
+      in: query
+      description: 'Realiza a busca utilizando a identificação da operação.'
+      required: false
+      schema:
+        type: integer
+    DriverIdParam:
+      name: driver_id
+      in: query
+      description: 'Realiza a busca pelos motoristas e ajudantes.'
+      required: false
+      schema:
+        type: integer
+    VehicleIdParam:
+      name: vehicle_id
+      in: query
+      description: 'Realiza a busca pelos veículos relacionados.'
+      required: false
+      schema:
+        type: integer
+    SenderNameParam:
+      name: sender_name
+      in: query
+      description: 'Realiza a busca utilizando o nome, CPF ou CNPJ do remetente.'
+      required: false
+      schema:
+        type: string
+    AddresseeNameParam:
+      name: addressee_name
+      in: query
+      description: 'Realiza a busca utilizando o nome, CPF ou CNPJ do destinatário.'
+      required: false
+      schema:
+        type: string
+    DispatcherNameParam:
+      name: dispatcher_name
+      in: query
+      description: 'Realiza a busca utilizando o nome, CPF ou CNPJ do expedidor.'
+      required: false
+      schema:
+        type: string
+    ReceiverNameParam:
+      name: receiver_name
+      in: query
+      description: 'Realiza a busca utilizando o nome, CPF ou CNPJ do recebedor.'
+      required: false
+      schema:
+        type: string
+    IdsParam:
+      name: ids
+      in: query
+      description: 'Realiza a busca por IDs pré-definidos.'
+      required: false
+      schema:
+        type: array
+        items:
+          type: integer
+      explode: false
+      style: form
+    UpdatedFromParam:
+      name: updated_from
+      in: query
+      description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+      required: false
+      schema:
+        type: string
+        format: Y-m-d|relative
+    UpdatedToParam:
+      name: updated_to
+      in: query
+      description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+      required: false
+      schema:
+        type: string
+        format: Y-m-d|relative
+    CreatedFromParam:
+      name: created_from
+      in: query
+      description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+      required: false
+      schema:
+        type: string
+        format: Y-m-d|relative
+    CreatedToParam:
+      name: created_to
+      in: query
+      description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+      required: false
+      schema:
+        type: string
+        format: Y-m-d|relative
+    PageParam:
+      name: page
+      in: query
+      description: 'Página dos resultados'
+      schema:
+        type: integer
+  requestBodies:
+    CreateBody:
+      required: true
+      description: 'Este corpo será utilizado para criação de uma programação de viagem'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TripProgrammingCreate'
+    UpdateBody:
+      required: true
+      description: 'Este corpo será utilizado para atualização de uma programação de viagem'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TripProgramming'
+    StartBody:
+      required: true
+      description: 'Este corpo será utilizado para a inicialização de uma programação de viagem'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 321565
+                description: 'ID da programação'
+              start:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-06-21'
+                    description: 'Data de inicialização da programação'
+                  time:
+                    type: string
+                    format: 'H:i:i'
+                    example: '15:15:59'
+                    description: 'Hora de inicialização da programação'
+    FinishBody:
+      required: true
+      description: 'Este corpo será utilizado para o encerramento de uma programação de viagem'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 321565
+                description: 'ID da programação'
+              finish:
+                type: object
+                properties:
+                  date:
+                    type: string
+                    format: 'Y-m-d'
+                    example: '2023-06-21'
+                    description: 'Data de encerramento da programação de viagem'
+                  time:
+                    type: string
+                    format: 'H:i:i'
+                    example: '15:15:59'
+                    description: 'Hora de encerramento da programação de viagem'
+    CancelBody:
+      required: true
+      description: 'Este corpo será utilizado para o cancelamento de uma programação de viagem'
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              id:
+                type: integer
+                example: 321565
+                description: 'ID da programação'
+              reason:
+                type: string
+                minLength: 15
+                example: 'MOTIVO DO CANCELAMENTO'
+                description: 'Motivo do cancelamento'
+  responses:
+    SearchSuccess:
+      description: 'Resposta de sucesso para a busca de programação de viagem com base nos filtros informados.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SearchResponse'
+    CreateSuccess:
+      description: 'Resposta de sucesso para a criação de uma programação de viagem no sistema.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CreateResponse'
+    UpdateSuccess:
+      description: 'Resposta de sucesso para a atualização de uma programação de viagem no sistema.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UpdateResponse'
+    StartSuccess:
+      description: 'Resposta de sucesso para a inicialização de uma programação de viagem no sistema.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StartResponse'
+    FinishSuccess:
+      description: 'Resposta de sucesso para a finalização de uma programação de viagem no sistema.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FinishResponse'
+    CancelSuccess:
+      description: 'Resposta de sucesso para o cancelamento da programação de viagem no sistema.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CancelResponse'
+  schemas:
+    SearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/TripProgrammingResponse'
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        total:
+          type: integer
+          example: 90
+          description: 'Quantidade total de resultados'
+    CreateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TripProgrammingResponse'
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        message:
+          type: string
+          example: 'Item criado com sucesso'
+          description: 'Mensagem de retorno'
+    UpdateResponse:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/TripProgrammingResponse'
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        message:
+          type: string
+          example: 'Item editado com sucesso'
+          description: 'Mensagem de retorno'
+    StartResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        message:
+          type: string
+          example: 'Romaneio modificado para EM TRÂNSITO'
+          description: 'Mensagem de retorno'
+        data:
+          type: object
+          properties:
+            status:
+              type: boolean
+              example: 1
+              description: 'Novo status do documento'
+            start:
+              type: object
+              properties:
+                date:
+                  type: string
+                  example: '2023-09-11 08:48:34'
+                  format: 'Y-m-d H:i:s'
+                  description: 'Data e hora do inicio do documento'
+    FinishResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        message:
+          type: string
+          example: 'Romaneio modificado para ENCERRADO'
+          description: 'Mensagem de retorno'
+        data:
+          type: object
+          properties:
+            status:
+              type: boolean
+              example: 2
+              description: 'Novo status do documento'
+    CancelResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+          description: 'Flag de sucesso na operação'
+        message:
+          type: string
+          example: 'Romaneio cancelado com sucesso!'
+          description: 'Mensagem de retorno'
+        data:
+          type: object
+          properties:
+            status:
+              type: boolean
+              example: 3
+              description: 'Novo status do documento'
+    TripProgrammingRequired:
+      type: object
+      properties:
+        owner_id:
+          type: integer
+          example: 202308
+          description: 'Identificação da empresa proprietária do documento'
+        client:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        loading_date:
+          type: string
+          format: 'Y-m-d'
+          example: '2023-09-05'
+          description: 'Data de Carregamento'
+    TripProgrammingIdentification:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+          description: 'ID *(não informá-lo durante a criação)*.'
+    TripProgrammingAutomaticFields:
+      type: object
+      properties:
+        created_at:
+          type: string
+          format: 'Y-m-d H:i:s'
+          example: '2023-09-01 11:13:39'
+          description: 'Data de criação da Programação de Viagem'
+          readOnly: true
+        updated_at:
+          type: string
+          format: 'Y-m-d H:i:s'
+          example: '2023-09-01 11:13:39'
+          description: 'Data de atualização da Programação de Viagem'
+          readOnly: true
+    TripProgrammingCommon:
+      type: object
+      properties:
+        sender:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        addressee:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        dispatcher:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        receiver:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        drivers:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingDrivers'
+        vehicles:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingVehicles'
+        scheduling:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingScheduling'
+        classifications:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingClassifications'
+        annotation:
+          type: string
+          example: "Sou uma Observação"
+          description: "Descrição do documento"
+        options:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingOptions'
+        baits:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TripProgrammingBaits'
+    TripProgrammingOptions:
+      type: object
+      properties:
+        crm:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 755
+              description: "ID do USUÁRIO"
+        initial_km:
+          type: string
+          example: '76.6'
+          description: 'Quilometragem inicial'
+        final_km:
+          type: string
+          example: '90.99'
+          description: 'Quilometragem final'
+        transportation_type:
+          type: integer
+          example: 2
+          description: >
+            Tipo de transporte.
+
+            `1` => Transferência
+            `2` => Distribuição
+            `3` => Matéria Prima
+            `4` => Mista
+            `5` => Retorno
+            `6` => Nacional
+            `7` => Exportação
+            `8` => Importação
+            `9` => Circuito
+          enum:
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+            - 7
+            - 8
+            - 9
+        route_type:
+          type: integer
+          example: 1
+          description: >
+            Tipo de percurso
+
+            `1` => RODOVIÁRIO
+            `2` => URBANO
+          enum:
+            - 1
+            - 2
+        travel_forecast:
+          type: string
+          format: 'Y-m-d H:i:s'
+          example: '2024-10-10 10:30:00'
+          description: 'Data da Previsão de Viagem'
+        seal:
+          type: string
+          example: 'ABC123'
+          description: 'Código do Lacre'
+        gris:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 12675
+              description: 'ID do GRIS'
+        merchandise_nature:
+          type: integer
+          example: 90823674
+          description: 'Natureza'
+        merchandise_type:
+          type: string
+          example: 'ABC987'
+          description: 'Tipo de Mercadoria'
+        route_number:
+          type: string
+          example: 'UYT678'
+          description: 'Nº da Rota'
+        priority:
+          type: integer
+          example: 2
+          description: >
+            Prioridade
+
+            `10` => Acompanhamento
+            `3`  => Coleta
+            `7`  => Distribuição
+            `11` => DTA - Trânsito Aduaneiro
+            `9`  => Exportação
+            `1`  => Expresso Sem Paradas
+            `8`  => Importação
+            `4`  => Normal
+            `5`  => Telemonitoramento
+            `2`  => Transferência
+            `12` => DAT - Acompanhamento de Trânsito
+          enum:
+            - 10
+            - 3
+            - 7
+            - 11
+            - 9
+            - 1
+            - 8
+            - 4
+            - 5
+            - 2
+            - 12
+        insurance_responsability:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        escort:
+          type: object
+          properties:
+            agent1_name:
+              type: string
+              maxLength: 50
+              example: 'James Silva Bond'
+              description: 'Nome do primeiro agente'
+            agent2_name:
+              type: string
+              maxLength: 50
+              example: 'Michael Scarn'
+              description: 'Nome do segundo agente'
+            agent_phone:
+              type: string
+              maxLength: 15
+              example: '+553287443312'
+              description: 'Número do agente'
+            equipment_number:
+              type: string
+              maxLength: 20
+              example: 'AG01'
+              description: 'Número do equipamento'
+            company_name:
+              type: string
+              maxLength: 50
+              example: 'Global Agent Sec'
+              description: 'Nome da empresa'
+            company_phone:
+              type: string
+              maxLength: 50
+              example: '+5511987654321'
+              description: 'Número da empresa'
+            license_plate:
+              type: string
+              example: 'ABC1234'
+              maxLength: 7
+              description: 'Placa do veículo'
+            equipment_system:
+              type: string
+              maxLength: 20
+              example: 'SECEQP1'
+              description: 'Nome do equipamento'
+    TripProgrammingBaits:
+      type: object
+      properties:
+        bait_name:
+          type: string
+          maxLength: 150
+          example: 'Satellite'
+          description: 'Nome (Tecnologia)'
+        bait_number:
+          type: string
+          maxLength: 150
+          example: 'ST001'
+          description: 'Número'
+        bait_emergency_contact:
+          type: string
+          maxLength: 150
+          nullable: true
+          example: '+5540028922'
+          description: 'Contato de Emergência'
+        bait_brand:
+          type: string
+          maxLength: 150
+          nullable: true
+          example: 'NDA'
+          description: 'Marca'
+    TripProgrammingOptionsResponse:
+      type: object
+      properties:
+        crm:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 755
+              description: "ID do USUÁRIO"
+        initial_km:
+          type: string
+          example: '76.6'
+          description: 'Quilometragem inicial'
+        final_km:
+          type: string
+          example: '90.99'
+          description: 'Quilometragem final'
+        transportation_type:
+          type: integer
+          example: 2
+          description: >
+            Tipo de transporte.
+
+            `1` => Transferência
+            `2` => Distribuição
+            `3` => Matéria Prima
+            `4` => Mista
+            `5` => Retorno
+            `6` => Nacional
+            `7` => Exportação
+            `8` => Importação
+            `9` => Circuito
+          enum:
+            - 1
+            - 2
+            - 3
+            - 4
+            - 5
+            - 6
+            - 7
+            - 8
+            - 9
+        route_type:
+          type: integer
+          example: 1
+          description: >
+            Tipo de percurso
+
+            `1` => RODOVIÁRIO
+            `2` => URBANO
+          enum:
+            - 1
+            - 2
+        travel_forecast:
+          type: string
+          format: 'Y-m-d H:i:s'
+          example: '2024-10-10 10:30:00'
+          description: 'Data da Previsão de Viagem'
+        seal:
+          type: string
+          example: 'ABC123'
+          description: 'Código do Lacre'
+        gris:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 12675
+              description: 'ID do GRIS'
+        merchandise_nature:
+          type: integer
+          example: 90823674
+          description: 'Natureza'
+        route_number:
+          type: string
+          example: 'UYT678'
+          description: 'Nº da Rota'
+        merchandise_type:
+          type: string
+          example: 'ABC987'
+          description: 'Tipo de Mercadoria'
+        priority:
+          type: integer
+          example: 2
+          description: >
+            Prioridade
+
+            `10` => Acompanhamento
+            `3`  => Coleta
+            `7`  => Distribuição
+            `11` => DTA - Trânsito Aduaneiro
+            `9`  => Exportação
+            `1`  => Expresso Sem Paradas
+            `8`  => Importação
+            `4`  => Normal
+            `5`  => Telemonitoramento
+            `2`  => Transferência
+            `12` => DAT - Acompanhamento de Trânsito
+          enum:
+            - 10
+            - 3
+            - 7
+            - 11
+            - 9
+            - 1
+            - 8
+            - 4
+            - 5
+            - 2
+            - 12
+        insurance_responsability:
+          properties:
+            id:
+              type: integer
+              example: 456789
+        escort:
+          type: object
+          properties:
+            agent1_name:
+              type: string
+              maxLength: 50
+              example: 'James Silva Bond'
+              description: 'Nome do primeiro agente'
+            agent2_name:
+              type: string
+              maxLength: 50
+              example: 'Michael Scarn'
+              description: 'Nome do segundo agente'
+            agent_phone:
+              type: string
+              maxLength: 15
+              example: '+553287443312'
+              description: 'Número do agente'
+            equipment_number:
+              type: string
+              maxLength: 20
+              example: 'AG01'
+              description: 'Número do equipamento'
+            company_name:
+              type: string
+              maxLength: 50
+              example: 'Global Agent Sec'
+              description: 'Nome da empresa'
+            company_phone:
+              type: string
+              maxLength: 50
+              example: '+5511987654321'
+              description: 'Número da empresa'
+            license_plate:
+              type: string
+              example: 'ABC1234'
+              maxLength: 7
+              description: 'Placa do veículo'
+            equipment_system:
+              type: string
+              maxLength: 20
+              example: 'SECEQP1'
+              description: 'Nome do equipamento'
+    TripProgrammingScheduling:
+      type: object
+      properties:
+        process:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 2983
+              description: "ID da Programação de Carga"
+        route:
+          properties:
+            line:
+              allOf:
+                - $ref: '#/components/schemas/Line'
+            use_route_commercially:
+              type: boolean
+              example: 1
+              description: 'USAR LINHA COMERCIALMENTE. Se este campo for enviado como VERDADEIRO, ao gerar um CT-e a
+                              partir desta programação de viagem, o sistema irá copiar a LINHA selecionada no campo
+                              anterior para dentro do CT-e, forçando o uso das cidades de origem e destino
+                              marcadas na linha para calcular o CT-e demais endereços vinculados no CT-e serão ignorados
+                              para cálculo.'
+        operation:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 127
+              description: "ID da Operação"
+        branch_office:
+          type: object
+          properties:
+            start:
+              allOf:
+                - $ref: '#/components/schemas/Person'
+            finish:
+              allOf:
+                - $ref: '#/components/schemas/Person'
+        scheduled:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingScheduled'
+        order_number:
+          type: string
+          example: 'numero 1'
+          maxLength: 255
+        reference_code:
+          type: string
+          example: 'referencia 1'
+          maxLength: 500
+    TripProgrammingScheduled:
+      type: object
+      properties:
+        start:
+          allOf:
+            - $ref: '#/components/schemas/DateAndTime'
+        finish:
+          allOf:
+            - $ref: '#/components/schemas/DateAndTime'
+    TripProgrammingClassifications:
+      type: object
+      properties:
+        category1:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1234
+              description: 'ID da PRIMEIRA categoria'
+        category2:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1235
+              description: 'ID da SEGUNDA categoria'
+        category3:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1236
+              description: 'ID da TERCEIRA categoria'
+        costcenter:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1237
+              description: 'ID do centro de custo'
+    TripProgrammingDrivers:
+      type: object
+      properties:
+        driver:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        driver2:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        assistant1:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+        assistant2:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+    TripProgrammingVehicles:
+      type: object
+      properties:
+        traction:
+          allOf:
+            - $ref: '#/components/schemas/Vehicle'
+        trailer1:
+          allOf:
+            - $ref: '#/components/schemas/Vehicle'
+        trailer2:
+          allOf:
+            - $ref: '#/components/schemas/Vehicle'
+        trailer3:
+          allOf:
+            - $ref: '#/components/schemas/Vehicle'
+    DateAndTime:
+      type: object
+      properties:
+        date:
+          type: string
+          format: 'Y-m-d'
+          example: '2023-06-15'
+          description: 'Data'
+        time:
+          type: string
+          format: 'H:i'
+          example: '10:00'
+          description: 'Hora'
+    Line:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 47328
+          description: 'ID da linha'
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 25458
+          description: 'ID do usuário'
+        cpf:
+          type: string
+          maxLength: 11
+          minLength: 11
+          example: '14963207815'
+          description: 'CPF do usuário'
+        cnpj:
+          type: string
+          maxLength: 14
+          minLength: 14
+          example: "02556711000172"
+          description: "CNPJ da empresa"
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 25468
+          description: 'ID do veículo'
+        license_plate:
+          type: string
+          example: 'CHV1234'
+          maxLength: 7
+          description: 'Placa do veículo'
+    TripProgramming:
+      allOf:
+        - $ref: '#/components/schemas/TripProgrammingIdentification'
+        - $ref: '#/components/schemas/TripProgrammingAutomaticFields'
+        - $ref: '#/components/schemas/TripProgrammingRequired'
+        - $ref: '#/components/schemas/TripProgrammingCommon'
+    TripProgrammingCreate:
+      allOf:
+        - $ref: '#/components/schemas/TripProgrammingRequired'
+        - $ref: '#/components/schemas/TripProgrammingCommon'
+    TripProgrammingUpdate:
+      allOf:
+        - $ref: '#/components/schemas/TripProgrammingIdentification'
+        - $ref: '#/components/schemas/TripProgrammingRequired'
+        - $ref: '#/components/schemas/TripProgrammingCommon'
+    TripProgrammingResponse:
+      type: object
+      properties:
+        id:
+          example: 184913
+          description: 'Código de identificação do documento'
+        created_at:
+          type: string
+          description: 'Data e hora da criação da programação de viagem'
+          example: '2023-11-06 17:04:43'
+          format: 'Y-m-d H:i:s'
+        updated_at:
+          type: string
+          description: 'Data e hora da ultima atualização do documento'
+          example: '2023-11-06 17:35:55'
+          format: 'Y-m-d H:i:s'
+        annotation:
+          type: string
+          example: "Sou uma Observação"
+          description: "Descrição do documento"
+        loading_date:
+          type: string
+          format: 'Y-m-d'
+          example: '2023-09-05'
+          description: 'Data de Carregamento'
+        owner_id:
+          type: integer
+          example: 168430
+          description: 'Código de identificação da empresa proprietária do documento'
+        client:
+          properties:
+            id:
+              type: integer
+              example: 391073
+              description: 'Código de identificação do Cliente'
+        sender:
+          properties:
+            id:
+              type: integer
+              example: 391074
+              description: 'Código de identificação do remetente'
+        addressee:
+          properties:
+            id:
+              type: integer
+              example: 391072
+              description: 'Código de identificação do destinatário'
+        dispatcher:
+          properties:
+            id:
+              type: integer
+              example: 391074
+              description: 'Código de identificação do expedidor'
+        receiver:
+          properties:
+            id:
+              type: integer
+              example: 391074
+              description: 'Código de identificação do recebedor'
+        drivers:
+          properties:
+            driver:
+              properties:
+                id:
+                  type: integer
+                  example: 391065
+                  description: 'Código de identificação do motorista'
+            driver2:
+              properties:
+                id:
+                  type: integer
+                  example: 375947
+                  description: 'Código de identificação do segundo motorista'
+            assistant1:
+              properties:
+                id:
+                  type: integer
+                  example: 390761
+                  description: 'Código de identificação do primeiro assistente'
+            assistant2:
+              properties:
+                id:
+                  type: integer
+                  example: 390760
+                  description: 'Código de identificação do segundo assistente'
+        vehicles:
+          properties:
+            traction:
+              properties:
+                id:
+                  type: integer
+                  example: 19820
+                  description: 'Código de identificação do veículo tração'
+            trailer1:
+              properties:
+                id:
+                  type: integer
+                  example: 19820
+                  description: 'Código de identificação do primeiro reboque'
+            trailer2:
+              properties:
+                id:
+                  type: integer
+                  example: 19701
+                  description: 'Código de identificação do segundo reboque'
+            trailer3:
+              properties:
+                id:
+                  type: integer
+                  example: 18583
+                  description: 'Código de identificação do terceiro reboque'
+        scheduling:
+          properties:
+            route:
+              properties:
+                line:
+                  properties:
+                    id:
+                      type: integer
+                      example: 406
+                      description: 'Código de identificação da rota'
+                use_route_commercially:
+                  type: boolean
+                  example: 0
+                  description: 'Uso de linha comercial.'
+            operation:
+              properties:
+                id:
+                  type: integer
+                  example: 129
+                  description: 'Código de identificação da operação'
+            branch_office:
+              properties:
+                start:
+                  properties:
+                    id:
+                      type: integer
+                      example: 123465
+                      description: 'Código de identificação da filial inicial'
+                finish:
+                  properties:
+                    id:
+                      type: integer
+                      example: 379133
+                      description: 'Código de identificação da filial final'
+            scheduled:
+              allOf:
+                - $ref: '#/components/schemas/TripProgrammingScheduled'
+            order_number:
+              type: string
+              example: 'Pedido número 1'
+              description: 'Número do pedido'
+            reference_code:
+              type: string
+              example: 'Documento 1'
+              description: 'Código de identificação'
+        classifications:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingClassifications'
+        options:
+          allOf:
+            - $ref: '#/components/schemas/TripProgrammingOptionsResponse'

@@ -1,0 +1,589 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Tanques
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Tanques**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: fuel-tanks
+      description: Rota para gerenciamento do tanque de combustível
+security:
+    - ApiKeyAuth: []
+paths:
+
+    # GET
+    /fuel-tanks/search:
+        get:
+            tags:
+                - 'fuel-tanks'
+            description: Busca tanques com base nos filtros informados
+            operationId: 'search'
+            parameters:
+                -   $ref: '#/components/parameters/idParam'
+                -   $ref: '#/components/parameters/idsParam'
+                -   $ref: '#/components/parameters/ownerIdParam'
+                -   $ref: '#/components/parameters/fuelTypeParam'
+                -   $ref: '#/components/parameters/descriptionParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+    # GET
+    /fuel-tanks/get-histories:
+        get:
+            tags:
+                - 'fuel-tanks'
+            description: Busca as entradas/históricos dos tanques com base no tanque e no tipo do histórico informado
+            operationId: 'get-histories'
+            parameters:
+                -   $ref: '#/components/parameters/idGetHistoriesParam'
+                -   $ref: '#/components/parameters/typeGetHistoriesParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/GetHistorieSuccess'
+
+    # POST
+    /fuel-tanks/create:
+        post:
+            tags:
+                - 'fuel-tanks'
+            description: 'Cria um tanque no sistema'
+            operationId: 'create'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+
+    # POST
+    /fuel-tanks/update:
+        post:
+            tags:
+                - 'fuel-tanks'
+            description: 'Atualiza um tanque no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+
+    # POST
+    /fuel-tanks/delete:
+        post:
+            tags:
+                - 'fuel-tanks'
+            description: 'Deleta um tanque no sistema'
+            operationId: 'delete'
+            requestBody:
+                $ref: '#/components/requestBodies/DeleteBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/DeleteSuccess'
+
+    # POST
+    /fuel-tanks/create-fuel-tank-stock-input:
+        post:
+            tags:
+                - 'fuel-tanks'
+            description: 'Cria uma entrada de estoque no tanque'
+            operationId: 'create-stock-input'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateStockInputBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateStockInputSuccess'
+
+    # POST
+    /fuel-tanks/remove-fuel-tank-stock-input:
+        post:
+            tags:
+                - 'fuel-tanks'
+            description: 'Remove uma entrada de estoque no tanque'
+            operationId: 'remove-stock-input'
+            requestBody:
+                $ref: '#/components/requestBodies/RemoveStockInputBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/RemoveStockInputSuccess'
+
+components:
+
+    # SEGURANCA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de um tanque
+                  *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: >
+                Realiza a busca pelos **IDS** de tanques, separados por vírgula
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: >
+                Realiza a busca pelo **CÓDIGO DA EMPRESA**
+            schema:
+                type: integer
+        fuelTypeParam:
+            name: fuel_type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DO COMBUSTÍVEL**
+                 - `0` = Álcool
+                 - `1` = Gasolina
+                 - `2` = Diesel S-500
+                 - `3` = Diesel S-1800
+                 - `4` = Diesel S-10
+                 - `5` = GNV
+                 - `7` = Arla 32
+                 - `6` = Outros
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+                    - 4
+                    - 5
+                    - 7
+                    - 6
+        descriptionParam:
+            name: description
+            in: query
+            description: >
+                Realiza a busca pela **DESCRIÇÃO DO TANQUE**
+            schema:
+                type: string
+        idGetHistoriesParam:
+            name: id
+            in: query
+            description: >
+                Informe o **ID** de um tanque para buscar seu histórico
+            schema:
+                type: integer
+                minimum: 1
+        typeGetHistoriesParam:
+            name: type
+            in: query
+            description: >
+                Realiza a busca pelo **HISTÓRICO** desejado
+                 - `fuel_stock_inputs` = Entrada de Estoque
+                 - `histories` = Histórico Geral
+            schema:
+                type: string
+                enum:
+                    - fuel_stock_inputs
+                    - histories
+
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de um tanque'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/FuelTankBase'
+        DeleteBody:
+            description: 'Este corpo será utilizado para exclusão de um tanque'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteRequest'
+        CreateStockInputBody:
+            description: 'Este corpo será utilizado para a criação de entradas de estoque no tanque'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateStockInputRequest'
+        RemoveStockInputBody:
+            description: 'Este corpo será utilizado para a remoção de entradas de estoque no tanque'
+            required: true
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/RemoveStockInputRequest'
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas dos tanques'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        GetHistorieSuccess:
+            description: 'Resposta de sucesso, para consultas dos históricos do tanque'
+            content:
+                application/json:
+                    schema:
+                        oneOf:
+                            -   $ref: '#/components/schemas/GetFuelStockInputResponse'
+                            -   $ref: '#/components/schemas/GetHistorieResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de um tanque'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de um tanque'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        DeleteSuccess:
+            description: 'Resposta de sucesso, para exclusão de um tanque'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteResponse'
+        CreateStockInputSuccess:
+            description: 'Resposta de sucesso, para criação de entrada no tanque'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateStockInputResponse'
+        RemoveStockInputSuccess:
+            description: 'Resposta de sucesso, para remoção de entrada no tanque'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/RemoveStockInputResponse'
+
+    # OBJETOS
+    schemas:
+
+        # REQUESTS
+        DeleteRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '2'
+                    description: 'ID do tanque'
+        CreateStockInputRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '2'
+                    description: 'ID do tanque'
+                stock_input_value:
+                    type: number
+                    example: '15000.222'
+                    description: 'Valor da entrada'
+        RemoveStockInputRequest:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: '2'
+                    description: 'ID do tanque'
+                fuel_stock_input_id:
+                    type: integer
+                    example: '22'
+                    description: 'ID da entrada'
+
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -   $ref: '#/components/schemas/FuelTankBase'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        GetFuelStockInputResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -   $ref: '#/components/schemas/FuelStockInputModel'
+                message:
+                    type: string
+                    example: 'Histórico carregado com sucesso!'
+                    description: 'Mensagem de retorno'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 1
+                    description: 'Quantidade total de resultados'
+        GetHistorieResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -   $ref: '#/components/schemas/HistorieModel'
+                message:
+                    type: string
+                    example: 'Histórico carregado com sucesso!'
+                    description: 'Mensagem de retorno'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 1
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FuelTankBase'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FuelTankBase'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item excluído com sucesso!'
+                    description: 'Mensagem de retorno'
+        CreateStockInputResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/FuelStockInputModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Entrada de estoque criada com sucesso!'
+                    description: 'Mensagem de retorno'
+        RemoveStockInputResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Entrada de estoque removida com sucesso!'
+                    description: 'Mensagem de retorno'
+
+        # MODELS
+        ## MODEL BASE
+        FuelTankBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 2
+                    description: 'ID. *(somente informá-lo em caso de atualização de dados)*'
+                name:
+                    type: string
+                    example: 'Tanque 1'
+                    description: 'Nome de identificação do tanque'
+                owner_id:
+                    type: integer
+                    example: 23123
+                    description: 'Empresa do tanque'
+                fuel_type:
+                    type: integer
+                    example: 2
+                    description: >
+                        **TIPO DE COMBUSTÍVEL** do Tanque:
+                              - `0` = Álcool
+                              - `1` = Gasolina
+                              - `2` = Diesel S-500
+                              - `3` = Diesel S-1800
+                              - `4` = Diesel S-10
+                              - `5` = GNV
+                              - `7` = Arla 32
+                              - `6` = Outros
+                        enum:
+                            - 0
+                            - 1
+                            - 2
+                            - 3
+                            - 4
+                            - 5
+                            - 7
+                            - 6
+                current_stock:
+                    type: number
+                    example: '15000.222'
+                    description: 'Estoque atual do tanque'
+                    readOnly: true
+                min_capacity:
+                    type: number
+                    example: '20000.555'
+                    description: 'Capacidade mínima do tanque'
+                capacity:
+                    type: number
+                    example: '20000.555'
+                    description: 'Capacidade máxima do tanque'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de criação'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de atualização'
+                    readOnly: true
+        FuelStockInputModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 22
+                    description: 'ID da entrada do estoque'
+                    readOnly: true
+                fuel_tank_id:
+                    type: integer
+                    example: 2
+                    description: 'ID do tanque'
+                    readOnly: true
+                current_value:
+                    type: number
+                    example: '15000.222'
+                    description: 'Valor da entrada'
+                    readOnly: true
+                total:
+                    type: number
+                    example: '15000.222'
+                    description: 'Valor total da entrada'
+                    readOnly: true
+                username:
+                    type: string
+                    example: 'gilbertoreais'
+                    description: 'Usuário que realizou a criação'
+                    readOnly: true
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de criação'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de atualização'
+                    readOnly: true
+        HistorieModel:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 22
+                    description: 'ID do histórico'
+                    readOnly: true
+                fuel_tank_id:
+                    type: integer
+                    example: 2
+                    description: 'ID do tanque'
+                    readOnly: true
+                username:
+                    type: string
+                    example: 'gilbertoreais'
+                    description: 'Usuário que realizou a ação'
+                    readOnly: true
+                message:
+                    type: string
+                    example: 'A entrada com o valor de 1.500,222 foi removida com sucesso!'
+                    description: 'Mensagem do histórico'
+                    readOnly: true
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de criação do histórico'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:53'
+                    description: 'Data de atualização do histórico'
+                    readOnly: true

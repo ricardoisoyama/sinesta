@@ -1,0 +1,597 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Pneus
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **PNEUS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    - url: https://{subdominio}.{ambiente}.emitir.me
+      variables:
+          subdominio:
+              default: subdominio_da_transportadora
+          ambiente:
+              default: lannister
+              enum:
+                  - 'lannister'
+                  - 'dev-lannister'
+tags:
+    - name: tires
+      description: Rota para cadastramento, atualização e inserção de pneus de transporte
+security: 
+    - ApiKeyAuth: []
+paths:
+    /tires/search:
+        get:
+            tags:
+                - tires
+            description: Busca pneus com base nos filtros informados
+            operationId: search
+            parameters:
+                - $ref: '#/components/parameters/idParam'
+                - $ref: '#/components/parameters/idsParam'
+                - $ref: '#/components/parameters/ownerIdParam'
+                - $ref: '#/components/parameters/fireMarkParam'
+                - $ref: '#/components/parameters/vehicleIdParam'
+                - $ref: '#/components/parameters/serviceOrderNumberParam'
+                - $ref: '#/components/parameters/statusParam'
+                - $ref: '#/components/parameters/createdAtParam'
+                - $ref: '#/components/parameters/updatedAtParam'
+                - $ref: '#/components/parameters/pageParam'
+
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+    /tires/create:
+        post:
+            tags:
+                - tires
+            description: Cria um pneu no sistema
+            operationId: create
+            requestBody:
+                    $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/CreateSuccess'
+    /tires/update:
+        post:
+            tags:
+                - 'tires'
+            description: 'Atualiza um pneu no sistema'
+            operationId: 'update'
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                '200':
+                    $ref: '#/components/responses/UpdateSuccess'
+components:
+
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARAMETROS
+    parameters:
+        idParam:
+            name: id
+            in: query
+            description: >
+                Realiza a busca pelo **ID** de um pneu.
+
+                *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados. Algumas informações de listagem somente serão exibidas se este parâmetro estiver preenchido*
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+        idsParam:
+            name: ids
+            in: query
+            description: Realiza a busca pelos **IDS** de pneus, separados por vírgula
+            required: false
+            style: form
+            explode: false
+            schema:
+                type: array
+                items:
+                    type: integer
+        ownerIdParam:
+            name: owner_id
+            in: query
+            description: Realiza a busca pela **EMPRESA**.
+            required: false
+            schema:
+                type: integer
+        fireMarkParam:
+            name: fire_mark
+            in: query
+            description: Realiza a busca pela **MARCA DE FOGO**.
+            required: false
+            schema:
+                type: integer
+        vehicleIdParam:
+            name: vehicle_id
+            in: query
+            description: Realiza busca pela **ID DO VEÍCULO**.
+            required: false
+            schema:
+                type: string
+        serviceOrderNumberParam:        
+            name: service_order_number
+            in: query
+            description: Realiza a busca pelo **NÚMERO DA ORDEM DE SERVIÇO**.
+            required: false
+            schema: 
+                type: integer
+        statusParam:        
+            name: status
+            in: query
+            description: >
+                    **STATUS**:
+                    
+                      - `0` = Disponível
+                      - `1` = Em Atividade
+                      - `2` = Em Reforma
+                      - `3` = Descartado
+            required: false
+            schema:
+                type: integer
+                enum:
+                    - 0
+                    - 1
+                    - 2
+                    - 3
+        createdAtParam:
+            name: created_at
+            in: query
+            description: >
+                Data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        updatedAtParam:
+            name: updated_at
+            in: query
+            description: >
+                Data da última atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**
+            schema:
+                type: string
+                format: 'Y-m-d|relative'
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+
+    # CORPO DE REQUISICOES
+    requestBodies:
+        CreateBody:
+            description: 'Este corpo será utilizado para criação ou atualização de um Pneu.'
+            required: true
+            content:
+              application/json:
+                  schema:
+                      $ref: '#/components/schemas/Tire'            
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de Pneus'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso, para criação de um Pneu.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso, para atualização de um Pneu.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+    # OBJETOS
+    schemas: 
+        # RESPONSES
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            - $ref: '#/components/schemas/TireSimple'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/TireSimple'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/TireSimple'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        # MODELS
+        ## MODEL BASE
+        TireBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 15
+                    description: 'ID *(somente informa-lo em caso de atualização de dados)*.'
+                owner_id:
+                    type: integer
+                    nullable: false
+                    example: 155236
+                    description: 'Código da Empresa emissora do Pneu.'
+                entry_type:
+                    type: integer
+                    nullable: false
+                    example: 0
+                    description: >
+                        Tipo de Entrada do Pneu:
+                        - `0` = Novo
+                        - `1` = Usado
+                    enum:
+                        - 0
+                        - 1
+                status:
+                    type: integer
+                    example: 0
+                    default: 0
+                    readOnly: true
+                    description: >
+                        **STATUS** do pneu.
+                        - 0 = Disponível
+                        - 1 = Em Atividade
+                        - 2 = Em Reforma
+                        - 3 = Descartado
+                    enum: 
+                        - 0
+                        - 1
+                        - 2
+                        - 3
+                km_before:
+                    type: integer
+                    nullable: true
+                    example: 14536
+                    description: 'Quilometragem anterior do Pneu'
+                serial_number:
+                    type: string
+                    maxLength: 50
+                    nullable: true
+                    example: '50'
+                    description: 'Número da Série do Pneu.'
+                dot_number: 
+                    type: string
+                    maxLength: 13
+                    nullable: true
+                    example: 'DDE1236987453'
+                    description: 'Número DOT do Pneu.'
+                nf_number:
+                    type: string
+                    nullable: true
+                    maxLength: 9
+                    example: '1523647'
+                    description: 'Número da Nota Fiscal do Pneu.'
+                purchased_at: 
+                    type: string
+                    format: 'Y-m-d'
+                    nullable: true
+                    example: '2022-12-15'
+                    description: 'Data de compra do Pneu.'
+                unit_value:
+                    type: number
+                    nullable: true
+                    example: '150.00'
+                    description: 'Valor unitário do Pneu.'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-11-30 10:45:31'
+                    description: 'Data de criação do Pneu.'
+                updated_at: 
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    readOnly: true
+                    example: '2022-11-30 10:45:31'
+                    description: 'Data de atualização do Pneu.'
+
+        ## MODEL PARA CRIAÇÃO E ATUALIZAÇÃO
+        Tire:
+            allOf:
+                - $ref: '#/components/schemas/TireBase'
+                - type: object
+                  properties:
+                    brand:
+                        type: object
+                        nullable: false
+                        description: 'Marca do Pneu.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 5
+                                description: 'ID da marca do Pneu.'
+                    measurement:
+                        type: object
+                        nullable: false
+                        description: 'Medida do Pneu.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 3
+                                description: 'ID da Medida do Pneu.'
+                    drawing:
+                        type: object
+                        nullable: true
+                        description: 'Banda de Rodagem do Pneu.'
+                        properties:
+                            id: 
+                                type: integer
+                                example: 2
+                                description: 'ID da Banda de Rodagem do Pneu.'
+                    supplier:
+                        type: object
+                        nullable: true
+                        description: 'Fornecedor do Pneu.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 154266
+                                description: 'ID do Fornecedor do Pneu.'
+                            cpf:
+                                type: string
+                                example: '14523678412'
+                                maxLength: 11
+                                description: 'CPF do Fornecedor do Pneu.'
+                            cnpj:
+                                type: string
+                                example: '78123048000136'
+                                maxLength: 14
+                                description: 'CPNJ do Fornecedor do Pneu.'
+                    marks:
+                        type: object
+                        description: 'Marcas do Pneu.'
+                        properties:
+                            custom: 
+                                type: string
+                                maxLength: 50
+                                nullable: true
+                                example: '5484848'
+                                description: 'Marca de Fogo Personalizada do Pneu.'        
+        
+        ## MODEL RETORNADA NA PESQUISA DE VARIOS ITEMS
+        TireSimple:
+            allOf:
+                - $ref: '#/components/schemas/TireBase'
+                - $ref: '#/components/schemas/TireAggregates'
+                - type: object
+                  properties:
+                    supplier:
+                            type: object
+                            nullable: true
+                            description: 'Fornecedor do Pneu.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 154266
+                                    description: 'ID do Fornecedor do Pneu.'
+                    serviceOrder:
+                        type: object
+                        nullable: true
+                        description: 'Ordem de Serviço atrelado ao Pneu.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 14789
+                                description: 'ID do Ordem de Serviço atrelado ao Pneu.'
+                    measurement:
+                        type: object
+                        nullable: false
+                        description: 'Medida do Pneu.'
+                        properties:
+                            id:
+                                type: integer
+                                example: 3
+                                description: 'ID da Medida do Pneu.'
+                    drawing:
+                        type: object
+                        nullable: true
+                        description: 'Banda de Rodagem do Pneu.'
+                        properties:
+                            id: 
+                                type: integer
+                                example: 2
+                                description: 'ID da Banda de Rodagem do Pneu.'
+        
+        ## MODEL RETORNADA NA PESQUISA DE SOMENTE 1 ITEMS
+        TireAll:
+            allOf:
+                - $ref: '#/components/schemas/TireBase'
+                - $ref: '#/components/schemas/TireAggregates'
+                - type: object
+                  properties:
+                    serviceOrder:
+                            type: object
+                            nullable: true
+                            description: 'Ordem de Serviço atrelado ao Pneu.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 14789
+                                    description: 'ID do Ordem de Serviço atrelado ao Pneu.'
+                    supplier:
+                            type: object
+                            nullable: true
+                            description: 'Fornecedor do Pneu.'
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 154266
+                                    description: 'ID do Fornecedor do Pneu.'
+                    histories:
+                        type: array
+                        nullable: true
+                        description: 'Histórico do Pneu.'
+                        items:
+                            type: object
+                            properties:
+                                id: 
+                                    type: integer
+                                    example: 5
+                                    description: 'ID do histórico do Pneu.'
+                                username:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'siimp.sistemas'
+                                    description: 'Usuário responsável pela alteração do pneu'
+                                message:
+                                    type: string
+                                    example: 'Modificações efetuadas pelo usuário:<br /><br /><b>MARCA PERSONALIZADA:</b> 12 => 10'
+                                    description: 'Mensagem do Histórico de Pneu.'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    readOnly: true
+                                    example: '2022-05-30 11:25:10'
+                                    description: 'Data de criação do Pneu.'
+                    kilometers:
+                        type: array
+                        nullable: true
+                        description: 'Quilometragem do Pneu.'
+                        items:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 8
+                                    description: 'ID da quilometragem do Pneu'
+                                km: 
+                                    type: integer
+                                    example: 1452368
+                                    description: 'Quilometragem do Pneu.'
+                                username:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'siimp.sistemas'
+                                    description: 'Usuário responsável pela alteração da quilometragem'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d H:i:s'
+                                    readOnly: true
+                                    example: '2022-05-30 11:25:10'
+                                    description: 'Data de criação da quilometragem.'
+                    treaddepths:
+                        type: array
+                        nullable: true
+                        description: 'Profundidade de Piso do Pneu.'
+                        items:
+                            type: object
+                            properties:
+                                id:
+                                    type: integer
+                                    example: 10
+                                    description: 'ID da produndidade do piso do Pneu'
+                                life_number:
+                                    type: integer
+                                    example: 15
+                                    description: 'Número de vida de um pneu.'
+                                tread_depth:
+                                    type: integer
+                                    example: 8
+                                    description: 'Valor da profundidade de piso do pneu.'
+                                username:
+                                    type: string
+                                    maxLength: 50
+                                    example: 'suporte'
+                                    description: 'Usuário responsável pelo cadastro da produndidade de piso'
+                                created_at:
+                                    type: string
+                                    format: 'Y-m-d'
+                                    example: '2023-02-15'
+                                    description: 'Data de criação da profundidade do pneu.'
+                                            
+        TireAggregates:
+          type: object
+          properties:
+            life_number:
+                  type: integer
+                  example: 0
+                  default: 0
+                  description: 'Vida do Pneu.'
+            current:
+                type: object
+                properties: 
+                    vehicle_id:
+                        type: integer
+                        example: 15236
+                        nullable: true
+                        description: 'ID do veículo do Pneu.'
+                    km:
+                        type: integer
+                        example: 0
+                        nullable: true
+                        description: 'Quilometragem atual do Pneu.'
+                    tread_depth:
+                        type: number
+                        nullable: true
+                        example: '150.00'
+                        description: 'Sulco Inicial do Pneu.'
+                    layout_id:
+                        type: integer
+                        nullable: true
+                        example: 5
+                        description: 'Layout atual do veículo atrelado ao pneu.'
+                    layout_axle:
+                        type: integer
+                        nullable: true
+                        example: 5
+                        description: 'Layout atual do eixo do veículo atrelado ao pneu.'
+                    slot:
+                        type: integer
+                        example: 4
+                        nullable: true
+                        description: 'Slot atual do Pneu.'

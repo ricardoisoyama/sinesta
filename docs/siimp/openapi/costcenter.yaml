@@ -1,0 +1,371 @@
+openapi: 3.0.3
+info:
+    version: '2.0'
+    title: Centro de Custos
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **Centro de Custos**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp.
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API, verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -
+        url: 'https://{subdominio}.{ambiente}.emitir.me'
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: dev-lannister
+                enum:
+                    - lannister
+                    - dev-lannister
+tags:
+    -
+        name: cost-centers
+        description: 'Rota para cadastramento, atualização e inserção de Centro de Custos'
+security:
+    -
+        ApiKeyAuth: []
+paths:
+    /cost-centers/search:
+        get:
+            tags:
+                - cost-centers
+            description: 'Busca de Centro de Custos com base nos filtros informados.'
+            operationId: search
+            parameters:
+                -
+                    $ref: '#/components/parameters/IdParam'
+                -
+                    $ref: '#/components/parameters/IdsParam'
+                -
+                    $ref: '#/components/parameters/CreatedAtParam'
+                -
+                    $ref: '#/components/parameters/CreatedFromParam'
+                -
+                    $ref: '#/components/parameters/CreatedToParam'
+                -
+                    $ref: '#/components/parameters/UpdatedAtParam'
+                -
+                    $ref: '#/components/parameters/UpdatedFromParam'
+                -
+                    $ref: '#/components/parameters/UpdatedToParam'
+                -
+                    $ref: '#/components/parameters/NameParam'
+                -
+                    $ref: '#/components/parameters/OwnerIdParam'
+                -
+                    $ref: '#/components/parameters/PageParam'
+            responses:
+                200:
+                    $ref: '#/components/responses/SearchSuccess'
+    /cost-centers/create:
+        post:
+            tags:
+                - cost-centers
+            description: 'Criação de um Centro de Custo no sistema.'
+            operationId: create
+            requestBody:
+                $ref: '#/components/requestBodies/CreateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/CreateSuccess'
+    /cost-centers/update:
+        post:
+            tags:
+                - cost-centers
+            description: 'Atualização de um Centro de Custo no sistema.'
+            operationId: update
+            requestBody:
+                $ref: '#/components/requestBodies/UpdateBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/UpdateSuccess'
+    /cost-centers/delete:
+        post:
+            tags:
+                - cost-centers
+            description: 'Remoção de um Centro de Custo.'
+            operationId: delete
+            requestBody:
+                $ref: '#/components/requestBodies/DeleteBody'
+            responses:
+                200:
+                    $ref: '#/components/responses/DeleteSuccess'
+components:
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+    parameters:
+        IdParam:
+            name: id
+            in: query
+            description: 'Realiza a busca por um ID específico. *A existência deste parâmetro funciona como um `find` para retorno de um único registro no banco de dados*'
+            required: false
+            schema:
+                type: integer
+        IdsParam:
+            name: ids
+            in: query
+            description: 'Realiza a busca por IDs pré-definidos.'
+            required: false
+            schema:
+                type: array
+                items:
+                    type: integer
+            explode: false
+            style: form
+        CreatedAtParam:
+            name: created_at
+            in: query
+            description: 'Realiza a busca por uma data de criação específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedFromParam:
+            name: created_from
+            in: query
+            description: 'Realiza a busca por início de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        CreatedToParam:
+            name: created_to
+            in: query
+            description: 'Realiza a busca por fim de data de criação. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedAtParam:
+            name: updated_at
+            in: query
+            description: 'Realiza a busca por uma data de atualização específica. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedFromParam:
+            name: updated_from
+            in: query
+            description: 'Realiza a busca por início de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        UpdatedToParam:
+            name: updated_to
+            in: query
+            description: 'Realiza a busca por fim de data de atualização. Aceita **[formatos de datas relativas](https://siimp.youtrack.cloud/articles/SUP-A-382#parametros-de-datas-de-formatos-relativos)**'
+            required: false
+            schema:
+                type: string
+                format: Y-m-d|relative
+        NameParam:
+            name: name
+            in: query
+            description: 'Realiza a busca por nome.'
+            required: false
+            schema:
+                type: string
+        OwnerIdParam:
+            name: owner_id
+            in: query
+            description: 'Realiza a busca pela empresa.'
+            required: false
+            schema:
+                type: integer
+        PageParam:
+            name: page
+            in: query
+            description: 'Página dos resultados'
+            schema:
+                type: integer
+    requestBodies:
+        CreateBody:
+            required: true
+            description: 'Este corpo será utilizado para criação de um item'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CostCenter'
+        UpdateBody:
+            required: true
+            description: 'Este corpo será utilizado para atualização de um item'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CostCenter'
+        DeleteBody:
+            required: true
+            description: 'Este corpo será utilizado para remoção de um item'
+            content:
+                application/json:
+                    schema:
+                        type: object
+                        properties:
+                            id:
+                                type: integer
+                                example: 1234
+                                description: 'ID do item'
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso para a busca de itens com base nos filtros informados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+        CreateSuccess:
+            description: 'Resposta de sucesso para a criação de um item no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/CreateResponse'
+        UpdateSuccess:
+            description: 'Resposta de sucesso para a atualização de um item no sistema.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/UpdateResponse'
+        DeleteSuccess:
+            description: 'Resposta de sucesso para a remoção de um item.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/DeleteResponse'
+    schemas:
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        oneOf:
+                            -
+                                $ref: '#/components/schemas/CostCenterSimple'
+                            -
+                                $ref: '#/components/schemas/CostCenterAll'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                total:
+                    type: integer
+                    example: 90
+                    description: 'Quantidade total de resultados'
+        CreateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CostCenter'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item criado com sucesso'
+                    description: 'Mensagem de retorno'
+        UpdateResponse:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/CostCenter'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item editado com sucesso'
+                    description: 'Mensagem de retorno'
+        DeleteResponse:
+            type: object
+            properties:
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação'
+                message:
+                    type: string
+                    example: 'Item removido com sucesso'
+                    description: 'Mensagem de retorno'
+        CostCenterBase:
+            type: object
+            properties:
+                id:
+                    type: integer
+                    example: 3
+                    description: 'ID *(não informá-lo durante a criação)*.'
+                owner_id:
+                    type: integer
+                    example: 145264
+                    description: 'Código da empresa.'
+                name:
+                    type: string
+                    example: 'ROBERVAL'
+                    maxLength: 50
+                    description: 'Nome do Centro de Custo.'
+                customer:
+                    allOf:
+                        -
+                            $ref: '#/components/schemas/CostCenterCustomer'
+                created_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:32'
+                    description: 'Data de criação do item.'
+                    readOnly: true
+                updated_at:
+                    type: string
+                    format: 'Y-m-d H:i:s'
+                    example: '2023-09-15 08:17:32'
+                    description: 'Data de atualização do item.'
+                    readOnly: true
+        CostCenter:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CostCenterBase'
+        CostCenterSimple:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CostCenterBase'
+        CostCenterAll:
+            allOf:
+                -
+                    $ref: '#/components/schemas/CostCenterBase'
+                -
+                    $ref: '#/components/schemas/CostCenterCustomer'
+        CostCenterCustomer:
+            type: object
+            properties:
+                id:
+                    type: number
+                    example: 14523
+                    description: 'ID do cliente central.'
+                cpf:
+                    type: string
+                    maxLength: 11
+                    minLength: 11
+                    example: '14532578412'
+                    description: 'CPF do Cliente.'
+                cnpj:
+                    type: string
+                    maxLength: 14
+                    minLength: 14
+                    example: '14325846144256'
+                    description: 'CNPJ do Cliente.'
+                name:
+                    type: string
+                    maxLength: 100
+                    example: 'GRUPO RODEO LTDA'
+                    description: 'Nome do Cliente.'
+                    readOnly: true

@@ -1,0 +1,602 @@
+openapi: 3.0.3
+info:
+    version: '1.0'
+    title: Gestão de Containers
+    description: |-
+        Esta integração documenta todos os endpoints disponíveis para o módulo de **GESTÃO DE CONTAINERS**.
+
+        Você deve preencher o campo `subdominio` com o nome do domínio da transportadora providenciado pela equipe da Siimp
+
+        Além disso, selecione o `ambiente` desejado para a API, onde:
+        - `lannister` significa **PRODUÇÃO**
+        - `dev-lannister` significa **HOMOLOGAÇÃO**
+
+        Caso possua dúvidas sobre a configuração e parametrização de tokens e URLs da API,
+        verifique a página principal da documentação em **[API REST](https://siimp.youtrack.cloud/articles/SUP-A-383)**
+servers:
+    -   url: https://{subdominio}.{ambiente}.emitir.me
+        variables:
+            subdominio:
+                default: subdominio_da_transportadora
+            ambiente:
+                default: lannister
+                enum:
+                    - 'lannister'
+                    - 'dev-lannister'
+tags:
+    -   name: terminal-stock
+        description: 'Rota para consulta dos containers armazenados no terminal.'
+security:
+    -   ApiKeyAuth: [ ]
+paths:
+
+    # GET
+    /terminal-stock/search:
+        get:
+            tags:
+                - 'terminal-stock'
+            summary: 'Busca os containers armazenados no terminal'
+            description: 'Busca os containers armazenados no terminal'
+            operationId: search
+            parameters:
+
+                -   $ref: '#/components/parameters/containerNumberParam'
+                -   $ref: '#/components/parameters/containerTypeParam'
+                -   $ref: '#/components/parameters/productNameParam'
+                -   $ref: '#/components/parameters/situationParam'
+                -   $ref: '#/components/parameters/processTypeParam'
+
+                -   $ref: '#/components/parameters/issuerIdParam'
+                -   $ref: '#/components/parameters/incomeOwnerIdParam'
+
+                -   $ref: '#/components/parameters/warehouseIdParam'
+                -   $ref: '#/components/parameters/warehouseNameParam'
+                -   $ref: '#/components/parameters/locationIdParam'
+                -   $ref: '#/components/parameters/locationNameParam'
+
+                -   $ref: '#/components/parameters/incomeNumberParam'
+                -   $ref: '#/components/parameters/operationIdParam'
+                -   $ref: '#/components/parameters/blNumberParam'
+                -   $ref: '#/components/parameters/diNumberParam'
+                -   $ref: '#/components/parameters/dtaNumberParam'
+                -   $ref: '#/components/parameters/dueNumberParam'
+                -   $ref: '#/components/parameters/reserveNumberParam'
+                -   $ref: '#/components/parameters/separationOrderNumberParam'
+                -   $ref: '#/components/parameters/referenceNumberParam'
+                -   $ref: '#/components/parameters/agencyNameParam'
+                -   $ref: '#/components/parameters/transportProductIdParam'
+                -   $ref: '#/components/parameters/transportProductCodeParam'
+                -   $ref: '#/components/parameters/transportProductNameParam'
+
+                -   $ref: '#/components/parameters/deadlineParam'
+                -   $ref: '#/components/parameters/deadlineFromParam'
+                -   $ref: '#/components/parameters/deadlineToParam'
+                -   $ref: '#/components/parameters/demurrageDateParam'
+                -   $ref: '#/components/parameters/demurrageFromParam'
+                -   $ref: '#/components/parameters/demurrageToParam'
+                -   $ref: '#/components/parameters/allocationMaturityFromParam'
+                -   $ref: '#/components/parameters/allocationMaturityToParam'
+                -   $ref: '#/components/parameters/productMaturityFromParam'
+                -   $ref: '#/components/parameters/productMaturityToParam'
+
+                -   $ref: '#/components/parameters/pageParam'
+            responses:
+                '200':
+                    $ref: '#/components/responses/SearchSuccess'
+
+components:
+
+    # SEGURANÇA
+    securitySchemes:
+        ApiKeyAuth:
+            type: apiKey
+            name: x-api-key
+            in: header
+
+    # PARÂMETROS
+    parameters:
+        containerNumberParam:
+            name: container_number
+            in: query
+            description: Realiza a busca pelo **Nº DO CONTAINER**. Aceita o valor com ou sem máscara.
+            schema:
+                type: string
+        containerTypeParam:
+            name: container_type
+            in: query
+            description: Realiza a busca pelo **TIPO DO CONTAINER**. Pode ser parcial.
+            schema:
+                type: string
+        productNameParam:
+            name: product_name
+            in: query
+            description: Realiza a busca pelo **NOME DO PRODUTO** (container). Pode ser parcial.
+            schema:
+                type: string
+        situationParam:
+            name: situation
+            in: query
+            description: >
+                Realiza a busca pela **SITUAÇÃO** do container.
+                  - `0` = Vazio
+                  - `1` = Cheio
+            schema:
+                enum:
+                    - 0
+                    - 1
+                type: integer
+        processTypeParam:
+            name: process_type
+            in: query
+            description: >
+                Realiza a busca pelo **TIPO DO PROCESSO** do agendamento.
+                  - `0` = Importação
+                  - `1` = Exportação
+            schema:
+                enum:
+                    - 0
+                    - 1
+                type: integer
+
+        issuerIdParam:
+            name: issuer_id
+            in: query
+            description: Realiza a busca pelo **CLIENTE** dono do container armazenado.
+            schema:
+                type: integer
+                minimum: 1
+        incomeOwnerIdParam:
+            name: income_owner_id
+            in: query
+            description: Realiza a busca pela **EMPRESA DO AGENDAMENTO**.
+            schema:
+                type: integer
+                minimum: 1
+
+        warehouseIdParam:
+            name: warehouse_id
+            in: query
+            description: Realiza a busca pelo **ID DO TERMINAL** onde o container está armazenado.
+            schema:
+                type: integer
+                minimum: 1
+        warehouseNameParam:
+            name: warehouse_name
+            in: query
+            description: Realiza a busca pelo **NOME DO TERMINAL**. Pode ser parcial.
+            schema:
+                type: string
+        locationIdParam:
+            name: location_id
+            in: query
+            description: Realiza a busca pelo **ID DA LOCALIZAÇÃO** dentro do terminal.
+            schema:
+                type: integer
+                minimum: 1
+        locationNameParam:
+            name: location_name
+            in: query
+            description: Realiza a busca pelo **NOME DA LOCALIZAÇÃO** dentro do terminal. Pode ser parcial.
+            schema:
+                type: string
+
+        incomeNumberParam:
+            name: income_number
+            in: query
+            description: Realiza a busca pelo **Nº DO AGENDAMENTO**.
+            schema:
+                type: integer
+        operationIdParam:
+            name: operation_id
+            in: query
+            description: Realiza a busca pela **OPERAÇÃO** do agendamento.
+            schema:
+                type: integer
+                minimum: 1
+        blNumberParam:
+            name: bl_number
+            in: query
+            description: Realiza a busca pelo **Nº DA BL**. Pode ser parcial.
+            schema:
+                type: string
+        diNumberParam:
+            name: di_number
+            in: query
+            description: Realiza a busca pelo **Nº DA DI**. Pode ser parcial.
+            schema:
+                type: string
+        dtaNumberParam:
+            name: dta_number
+            in: query
+            description: Realiza a busca pelo **Nº DA DTA/DAT**. Pode ser parcial.
+            schema:
+                type: string
+        dueNumberParam:
+            name: due_number
+            in: query
+            description: Realiza a busca pelo **Nº DA DUE**. Pode ser parcial.
+            schema:
+                type: string
+        reserveNumberParam:
+            name: reserve_number
+            in: query
+            description: Realiza a busca pelo **Nº DA RESERVA**. Pode ser parcial.
+            schema:
+                type: string
+        separationOrderNumberParam:
+            name: separation_order_number
+            in: query
+            description: Realiza a busca pelo **Nº DA O.S/E** vinculada ao container. Pode ser parcial.
+            schema:
+                type: string
+        referenceNumberParam:
+            name: reference_number
+            in: query
+            description: Realiza a busca pelo **Nº DE REFERÊNCIA DO DESPACHANTE**. Pode ser parcial.
+            schema:
+                type: string
+        agencyNameParam:
+            name: agency_name
+            in: query
+            description: Realiza a busca pelo **ARMADOR / AGÊNCIA**. Pode ser parcial.
+            schema:
+                type: string
+        transportProductIdParam:
+            name: transport_product_id
+            in: query
+            description: Realiza a busca pelo **ID DO PRODUTO PREDOMINANTE**.
+            schema:
+                type: integer
+                minimum: 1
+        transportProductCodeParam:
+            name: transport_product_code
+            in: query
+            description: Realiza a busca pelo **CÓDIGO DO PRODUTO PREDOMINANTE**. Pode ser parcial.
+            schema:
+                type: string
+        transportProductNameParam:
+            name: transport_product_name
+            in: query
+            description: Realiza a busca pelo **NOME DO PRODUTO PREDOMINANTE**. Pode ser parcial.
+            schema:
+                type: string
+        deadlineParam:
+            name: deadline
+            in: query
+            description: Realiza a busca pela **DEADLINE** exata do agendamento.
+            schema:
+                type: string
+                format: date
+        deadlineFromParam:
+            name: deadline_from
+            in: query
+            description: Realiza a busca pela **DEADLINE** do agendamento, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        deadlineToParam:
+            name: deadline_to
+            in: query
+            description: Realiza a busca pela **DEADLINE** do agendamento, até a data informada.
+            schema:
+                type: string
+                format: date
+        demurrageDateParam:
+            name: demurrage_date
+            in: query
+            description: Realiza a busca pela data exata de **DEMURRAGE / DETENTION**.
+            schema:
+                type: string
+                format: date
+        demurrageFromParam:
+            name: demurrage_from
+            in: query
+            description: Realiza a busca pela data de **DEMURRAGE / DETENTION**, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        demurrageToParam:
+            name: demurrage_to
+            in: query
+            description: Realiza a busca pela data de **DEMURRAGE / DETENTION**, até a data informada.
+            schema:
+                type: string
+                format: date
+        allocationMaturityFromParam:
+            name: allocation_maturity_from
+            in: query
+            description: Realiza a busca pelo **VENCIMENTO** do armazenamento, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        allocationMaturityToParam:
+            name: allocation_maturity_to
+            in: query
+            description: Realiza a busca pelo **VENCIMENTO** do armazenamento, até a data informada.
+            schema:
+                type: string
+                format: date
+        productMaturityFromParam:
+            name: product_maturity_from
+            in: query
+            description: Realiza a busca pelo **VENCIMENTO DO PRODUTO**, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        productMaturityToParam:
+            name: product_maturity_to
+            in: query
+            description: Realiza a busca pelo **VENCIMENTO DO PRODUTO**, até a data informada.
+            schema:
+                type: string
+                format: date
+
+        createdFromParam:
+            name: created_from
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO** do armazenamento, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        createdToParam:
+            name: created_to
+            in: query
+            description: Realiza a busca pela **DATA DE CRIAÇÃO** do armazenamento, até a data informada.
+            schema:
+                type: string
+                format: date
+        updatedFromParam:
+            name: updated_from
+            in: query
+            description: Realiza a busca pela **DATA DE ATUALIZAÇÃO** do armazenamento, a partir da data informada.
+            schema:
+                type: string
+                format: date
+        updatedToParam:
+            name: updated_to
+            in: query
+            description: Realiza a busca pela **DATA DE ATUALIZAÇÃO** do armazenamento, até a data informada.
+            schema:
+                type: string
+                format: date
+
+        pageParam:
+            name: page
+            in: query
+            description: Paginação dos resultados
+            required: false
+            schema:
+                type: integer
+                minimum: 1
+                default: 1
+
+    # RESPOSTAS
+    responses:
+        SearchSuccess:
+            description: 'Resposta de sucesso, para consultas de containers armazenados.'
+            content:
+                application/json:
+                    schema:
+                        $ref: '#/components/schemas/SearchResponse'
+
+    # OBJETOS
+    schemas:
+
+        SearchResponse:
+            type: object
+            properties:
+                data:
+                    type: array
+                    items:
+                        $ref: '#/components/schemas/TerminalStockModel'
+                success:
+                    type: boolean
+                    example: true
+                    description: 'Flag de sucesso na operação.'
+                total:
+                    type: integer
+                    example: 124
+                    description: 'Quantidade total de resultados'
+
+        TerminalStockModel:
+            type: object
+            description: >
+                Container armazenado no terminal.
+
+                *Campos sem valor são omitidos do retorno.*
+            properties:
+                created_at:
+                    type: string
+                    format: date-time
+                    example: '2026-05-26 14:31:07'
+                    description: 'Data de entrada do container no terminal.'
+                updated_at:
+                    type: string
+                    format: date-time
+                    example: '2026-08-20 09:12:44'
+                    description: 'Data da última movimentação do armazenamento.'
+                allocation_maturity:
+                    type: string
+                    format: date
+                    example: '2026-09-30'
+                    description: 'Vencimento do armazenamento.'
+                product_maturity:
+                    type: string
+                    format: date
+                    example: '2027-01-15'
+                    description: 'Vencimento do produto.'
+                container:
+                    type: object
+                    description: 'Dados do container armazenado.'
+                    properties:
+                        number:
+                            type: string
+                            example: 'MSCU4827316'
+                            description: 'Nº do container.'
+                        type:
+                            type: string
+                            example: "20' DRY"
+                            description: 'Tipo do container.'
+                        is_full:
+                            type: integer
+                            enum: [ 0, 1 ]
+                            example: 0
+                            description: >
+                                 Situação do container:
+                                    - `0` = Vazio,
+                                    - `1` = Cheio
+                        average_total:
+                            type: number
+                            format: float
+                            example: 130000.00
+                            description: 'Valor da carga armazenada.'
+                        seal_number:
+                            type: string
+                            example: 'EX-31233'
+                            description: 'Lacres do container.'
+                        transport_product:
+                            type: string
+                            example: '1102 - RESINA PLASTICA'
+                            description: 'Produto predominante, no formato `código - nome`.'
+                        tare:
+                            type: number
+                            format: float
+                            example: 2100.00
+                            description: 'Tara do container.'
+                        last_final_total_weight:
+                            type: number
+                            format: float
+                            example: 24380.500
+                            description: 'Peso da última pesagem.'
+                issuer:
+                    type: object
+                    description: 'Cliente dono do container.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 592495
+                            description: 'ID do cliente dono do container.'
+                        name:
+                            type: string
+                            example: 'CLIENTE EXEMPLO S.A.'
+                            description: 'Nome do cliente dono do container.'
+                location:
+                    type: object
+                    description: 'Localização do container no terminal.'
+                    properties:
+                        terminal_name:
+                            type: string
+                            example: 'TERMINAL 1'
+                            description: 'Terminal onde o container está armazenado.'
+                        name:
+                            type: string
+                            example: 'P01 > A01 > 2'
+                            description: 'Localização do container dentro do terminal.'
+                        days:
+                            type: integer
+                            example: 92
+                            description: 'Dias armazenado.'
+                appointment:
+                    type: object
+                    description: 'Agendamento vinculado ao container.'
+                    properties:
+                        id:
+                            type: integer
+                            example: 88214
+                            description: 'ID do agendamento vinculado.'
+                        number:
+                            type: integer
+                            example: 4571
+                            description: 'Nº do agendamento vinculado.'
+                        owner:
+                            type: string
+                            example: 'Empresa Exemplo S.A.'
+                            description: 'Empresa do agendamento.'
+                        process_type:
+                            type: integer
+                            enum: [ 0, 1 ]
+                            example: 0
+                            description: >
+                                 Tipo do processo:
+                                    - `0` = Importação,
+                                    - `1` = Exportação
+                        operation_name:
+                            type: string
+                            example: 'IMPORTAÇÃO MARÍTIMA'
+                            description: 'Operação do agendamento.'
+                        client_reference_number:
+                            type: string
+                            example: 'REF-12345'
+                            description: 'Referência do cliente informada no agendamento.'
+                document:
+                    type: object
+                    description: 'Documentos vinculados ao container.'
+                    properties:
+                        bl_number:
+                            type: string
+                            description: 'Nº da BL.'
+                            example: 'BL123456789'
+                        di_number:
+                            type: string
+                            description: 'Nº da DI.'
+                            example: 'DI123456789'
+                        dta_number:
+                            type: string
+                            description: 'Nº da DTA/DAT.'
+                            example: 'DTA123456789'
+                        due_number:
+                            type: string
+                            description: 'Nº da DUE.'
+                            example: 'DUE123456789'
+                        reserve_number:
+                            type: string
+                            description: 'Nº da reserva.'
+                            example: 'RES123456789'
+                        separation_order_number:
+                            type: string
+                            description: 'Nº da O.S/E vinculada ao container.'
+                            example: 'OSE123456789'
+                ship:
+                    type: object
+                    description: 'Navio vinculado ao agendamento.'
+                    properties:
+                        name:
+                            type: string
+                            example: 'MSC ALTAIR'
+                            description: 'Navio.'
+                        docking_date:
+                            type: string
+                            format: date
+                            example: '2026-05-24'
+                            description: 'Data de atracação do navio.'
+                agency:
+                    type: object
+                    description: 'Armador / agência vinculado ao agendamento.'
+                    properties:
+                        name:
+                            type: string
+                            example: 'MSC'
+                            description: 'Armador / agência.'
+                demurrage:
+                    type: object
+                    description: 'Prazos e demurrage do agendamento.'
+                    properties:
+                        date:
+                            type: string
+                            format: date
+                            example: '2026-09-15'
+                            description: 'Data de demurrage / detention.'
+                        value:
+                            type: number
+                            format: float
+                            example: 1850.00
+                            description: 'Valor de demurrage calculado na data da consulta.'
+                        currency:
+                            type: string
+                            example: 'USD'
+                            description: 'Moeda do valor de demurrage.'
+                        deadline:
+                            type: string
+                            format: date
+                            example: '2026-11-30'
+                            description: 'Deadline do agendamento.'
