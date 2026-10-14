@@ -1,0 +1,4708 @@
+openapi: 3.0.3
+info:
+  title: API Banking
+  version: ''
+  description: >-
+    ## Gerais
+
+
+    Esta seção reúne erros que poderiam ser retornados por quaisquer endpoints
+    listados na API Banking.
+
+
+    ### `RequisicaoInvalida`
+
+
+    * __Significado__: Requisição inválida.
+
+    * __HTTP Status Code__: [ 400 Bad Request
+    ](https://tools.ietf.org/html/rfc7231#section-6.5.1).
+
+
+    ### `AcessoNegado`
+
+
+    * __Significado__: Requisição de participante autenticado que viola alguma
+    regra de autorização.
+
+    * __HTTP Status Code__: [ 403 Forbidden
+    ](https://tools.ietf.org/html/rfc7231#section-6.5.3).
+
+
+    ### `NaoEncontrado`
+
+
+    * __Significado__: Entidade não encontrada.
+
+    * __HTTP Status Code__: [ 404 Not Found
+    ](https://tools.ietf.org/html/rfc7231#section-6.5.4).
+
+
+    ### `PermanentementeRemovido`
+
+
+    * __Significado__: Indica que a entidade existia, mas foi permanentemente
+    removida.
+
+    * __HTTP Status Code__: [ 410 Gone
+    ](https://tools.ietf.org/html/rfc7231#section-6.5.9).
+
+
+    ### `ErroInternoDoServidor`
+
+
+    * __Significado__: Condição inesperada ao processar requisição.
+
+    * __HTTP Status Code__: [ 500 Internal Server Error
+    ](https://tools.ietf.org/html/rfc7231#section-6.6.1).
+
+
+    ### `ServicoIndisponivel`
+
+
+    * __Significado__: Serviço não está disponível no momento. Serviço
+    solicitado pode estar em manutenção ou fora da janela de funcionamento.
+
+    * __HTTP Status Code__: [ 503 Service Unavailable
+    ](https://tools.ietf.org/html/rfc7231#section-6.6.4).
+
+
+    ### `IndisponibilidadePorTempoEsgotado`
+
+
+    * __Significado__: Indica que o serviço demorou além do esperado para
+    retornar.
+
+    * __HTTP Status Code__: [ 504 Gateway Timeout
+    ](https://tools.ietf.org/html/rfc7231#section-6.6.5).
+servers:
+  - url: https://cdpj.partners.bancointer.com.br/banking/v2
+    description: Servidor de Produção
+  - url: https://cdpj-sandbox.partners.uatinter.co/banking/v2
+    description: Servidor de Sandbox
+paths:
+  /extrato:
+    get:
+      summary: Consultar extrato
+      description: >
+        Método utilizado para consultar o extrato por um período específico. O
+        período máximo entre as datas é de 90 dias.
+
+
+        * Escopo requerido: extrato.read
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="consultarExtratoBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/extrato</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/extrato</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        *Obs.: os dados retornados no ambiente **Sandbox** são fictícios. São
+        utilizados apenas para validação da requisição.*
+      tags:
+        - Extrato
+      operationId: Extrato
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - in: query
+          name: dataInicio
+          required: true
+          schema:
+            type: string
+            format: date
+          description: |
+            Data início da consulta de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2021-01-01'
+        - in: query
+          name: dataFim
+          required: true
+          schema:
+            type: string
+            format: date
+          description: |
+            Data fim da consulta de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2021-01-02'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListaTransacoes'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaExtrato'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /extrato/exportar:
+    get:
+      summary: Recuperar extrato em PDF
+      description: >
+        Método utilizado para recuperar o extrato em pdf por um período
+        específico. O período máximo entre as datas é de 90 dias.
+
+
+        * Escopo requerido: extrato.read
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="recuperarExtratoPdfBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/extrato/exportar</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/extrato/exportar</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        *Obs. 1: os dados retornados no ambiente **Sandbox** são fictícios. São
+        utilizados apenas para validação da requisição.*
+
+
+        *Obs. 2: a data referência será retornada quando a consulta for
+        realizada em um dia não útil. Visto que o saldo não é sensibilizado em
+        dias não úteis, será retornada à data referência do saldo, sendo o
+        último dia útil.*
+      tags:
+        - Extrato
+      operationId: ExtratoExport
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - in: query
+          name: dataInicio
+          required: true
+          schema:
+            type: string
+            format: date
+          description: |
+            Data inicio da exportação de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2021-01-01'
+        - in: query
+          name: dataFim
+          required: true
+          schema:
+            type: string
+            format: date
+          description: |
+            Data fim da exportação de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2021-01-02'
+      responses:
+        '200':
+          description: Arquivo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PdfModel'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaExtrato'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /extrato/completo:
+    get:
+      summary: Consultar extrato enriquecido
+      description: >
+        Método utilizado para consultar extrato enriquecido com informações
+
+        detalhadas de cada transação dado um período específico.
+
+
+
+        O período máximo entre as datas é de 90 dias.
+
+
+
+        **Temos dois modos de paginação disponíveis:**
+
+
+        **Paginação Tradicional**<br />
+
+
+        * Utilize os parâmetros `pagina` e `tamanhoPagina` para navegar pelos
+
+        resultados.
+
+        * Ideal para consultas de volumes menores.
+
+        * Máximo de 10.000 transações.
+
+
+
+        **Paginação por Scroll**<br />
+
+
+        * Para consultar grandes volumes com mais de 10.000 transações no
+
+        período.
+
+        * Utilize os parâmetros `scrollEnabled` e `scrollId`.
+
+        * Navegação mais eficiente para grandes volumes de dados sem as
+
+        limitações da paginação tradicional.
+
+
+        Características da paginação por scroll:
+
+
+        * Máximo de 10.000 transações por página<br />
+
+        * Apenas um scroll ativo por conta corrente<br />
+
+        * Expira automaticamente após 6 minutos de inatividade<br />
+
+        * Encerramento automático quando retornar `hasMore: false`<br />
+
+
+        <details style="background-color: #FEF3ED; border: 1px solid #FF8C00;
+
+        border-radius: 4px; padding: 8px; margin: 8px 0;">
+          <summary>Como usar o Scroll</summary>
+
+        1. **Iniciar Scroll**: Envie `scrollEnabled: true` na primeira
+
+        requisição
+
+
+        <details style="background-color: #F5E6D6; border: 1px solid #FF8C00;
+
+        border-radius: 4px; padding: 8px; margin: 8px 0;">
+          <summary>Exemplo de iniciação</summary>
+
+        A resposta com scroll trará a quantidade de transações definida em
+
+        `tamanhoPagina` e  dois novos campos: `hasMore` e `scrollId`.
+
+
+        ```bash
+
+        curl -X GET \
+
+        'https://cdpj.partners.bancointer.com.br/banking/v2/extrato/completo' \
+
+        -G \
+
+        -d 'dataInicio=2026-01-01' \
+
+        -d 'dataFim=2026-02-10' \
+
+        -d 'tamanhoPagina=10000' \
+
+        -d 'scrollEnabled=true' \
+
+        -H 'x-inter-conta-corrente: 12345678'
+
+
+        # Resposta inicial:
+
+        # {
+
+        #   "totalElementos": 25000,
+
+        #   "numeroDeElementos": 10000,
+
+        #   "scrollId": "550e8400-e29b-41d4-a716-446655440000",
+
+        #   "hasMore": true,
+
+        #   "transacoes": [... 10000 primeiras transações]
+
+        # }
+
+        ```
+
+        </details>
+
+
+        2. **Continuar Scroll**: Use o `scrollId` retornado na requisição
+
+        subsequente.
+
+
+        <details style="background-color: #F5E6D6; border: 1px solid #FF8C00;
+
+        border-radius: 4px; padding: 8px; margin: 8px 0;">
+          <summary>Exemplo continuação</summary>
+
+        Envie o `scrollId` retornado para solicitar a próxima página do extrato.
+
+        Enquanto `hasMore` = true as chamadas enviando o `scrollId` continuam
+
+        buscando as páginas subsequentes.
+
+
+        ```bash
+
+        curl -X GET \
+
+        'https://cdpj.partners.bancointer.com.br/banking/v2/extrato/completo' \
+
+        -G \
+
+        -d 'dataInicio=2026-01-01' \
+
+        -d 'dataFim=2026-02-10' \
+
+        -d 'scrollId=550e8400-e29b-41d4-a716-446655440000' \
+
+        -H 'x-inter-conta-corrente: 12345678'
+
+
+        # 2. Resposta intermediária
+
+        # {
+
+        #   "totalElementos": 25000,
+
+        #   "numeroDeElementos": 10000,
+
+        #   "scrollId": "550e8400-e29b-41d4-a716-446655440000",
+
+        #   "hasMore": true,
+
+        #   "transacoes": [... 10000 transações subsequentes]
+
+        # }
+
+        ```
+
+        </details>
+
+
+        3. **Finalizar**: Quando `hasMore: false`, não há mais transações.
+
+
+        <details style="background-color: #F5E6D6; border: 1px solid #FF8C00;
+
+        border-radius: 4px; padding: 8px; margin: 8px 0;">
+          <summary>Exemplo fim do scroll</summary>
+
+        Na última página será retornado hasMore = false, indicando que as
+
+        transações do período selecionado terminaram. Nesse momento o scrollId
+
+        é automaticamente expirado.
+
+
+        ```bash
+
+        curl -X GET \
+
+        'https://cdpj.partners.bancointer.com.br/banking/v2/extrato/completo' \
+
+        -G \
+
+        -d 'dataInicio=2026-01-01' \
+
+        -d 'dataFim=2026-02-10' \
+
+        -d 'scrollId=550e8400-e29b-41d4-a716-446655440000' \
+
+        -H 'x-inter-conta-corrente: 12345678'
+
+
+        # 3. Resposta final
+
+        # {
+
+        #   "totalElementos": 25000,
+
+        #   "numeroDeElementos": 5000,
+
+        #   "hasMore": false,
+
+        #   "transacoes": [... 5000 últimas transações]
+
+        # }
+
+        ```
+
+        </details>
+
+        </details>
+
+        </details>
+
+
+        * Escopo requerido: extrato.read
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token ](
+
+        https://developers.inter.co/references/token#tag/Token/operation/Token)
+
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div">
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="consultarExtratoEnriquecidoBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/extrato/completo</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/extrato/completo</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        *Obs.: os dados retornados no ambiente **Sandbox** são fictícios. São
+        utilizados apenas para validação da requisição.*
+      tags:
+        - Extrato
+      operationId: ExtratoComplete
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - in: query
+          name: dataInicio
+          schema:
+            type: string
+            format: date
+          required: true
+          description: |
+            Data inicio da exportação de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2022-06-12'
+        - in: query
+          name: dataFim
+          schema:
+            type: string
+            format: date
+          required: true
+          description: |
+            Data fim da exportação de extrato.
+
+            Formato: YYYY-MM-DD
+          example: '2022-07-14'
+        - in: query
+          name: pagina
+          required: false
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: |
+            Posição da página na lista de movimentações.<br />
+            **Apenas para paginação tradicional**.
+          example: '0'
+        - in: query
+          name: tamanhoPagina
+          required: false
+          schema:
+            type: integer
+            default: 50
+            maximum: 10000
+          description: |
+            Tamanho da página na lista de movimentações.<br />
+            **Para paginação tradicional**: Define o tamanho da página
+            atual.<br />
+            **Para scroll**: Define o tamanho de cada página do scroll.<br />
+            Máximo de 10.000 registros por página em ambos os modos.
+          example: '5'
+        - in: query
+          name: tipoOperacao
+          example: D
+          description: |
+            values:
+              * `D` - Débito(Saída)
+              * `C` - Crédito(Entrada)
+          required: false
+          schema:
+            type: string
+            enum:
+              - D
+              - C
+        - in: query
+          name: tipoTransacao
+          example: >-
+            PIX, CAMBIO, ESTORNO, INVESTIMENTO, TRANSFERENCIA, PAGAMENTO,
+            BOLETO_COBRANCA, OUTROS
+          description: transação vinculada a movimentacao
+          required: false
+          schema:
+            type: string
+        - in: query
+          $ref: '#/components/parameters/xInterScrollEnabled'
+        - in: query
+          $ref: '#/components/parameters/xInterScrollId'
+      responses:
+        '200':
+          description: |
+            Sucesso. O formato da resposta varia dependendo do modo de
+            paginação utilizado, **padrão** ou **scroll**
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ListaTransacoesCompletaPadrao'
+                  - $ref: '#/components/schemas/ListaTransacoesCompletaScroll'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaExtratoCompleto'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /saldo:
+    get:
+      summary: Consultar saldo
+      description: >
+        Método utilizado para consultar o saldo por um período específico.
+
+
+        * Escopo requerido: extrato.read
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="consultarSaldoBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/saldo</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/saldo</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        *Obs.: os dados retornados no ambiente **Sandbox** são fictícios. São
+        utilizados apenas para validação da requisição.*
+      tags:
+        - Saldo
+      operationId: Saldo
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - in: query
+          name: dataSaldo
+          required: false
+          schema:
+            type: string
+            format: date
+          description: >
+            Data de consulta para o saldo posicional.
+
+
+            Formato: YYYY-MM-DD
+
+
+            Obs: Caso uma data não seja informada, será utilizada a data atual,
+            e os valores retornados serão: o saldo atual (disponível), 
+
+            o bloqueado em cheque, o bloqueado judicialmente, o bloqueado
+            administrativo e o limite, até o momento da consulta. 
+
+            Caso seja informada uma data, o retorno será somente o valor do
+            saldo naquele dia (disponível). Se a data for a atual, 
+
+            o valor do saldo até o momento da consulta.
+          example: '2021-01-01'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Saldo'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaSaldo'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pagamento:
+    post:
+      summary: Incluir pagamento com código de barras
+      description: >
+
+        Método para inclusão de um pagamento imediato ou agendamento do
+
+        pagamento de boleto, convênio ou tributo com código de barras.
+
+
+
+        **Importante**: Dependendo das configurações da conta, este pagamento
+
+        pode exigir aprovação manual antes da execução.<br />
+
+        As configurações de aprovação podem ser ajustadas pelo usuário master
+
+        via Internet Banking. Menu Superior > Aprovar > Gestão de Aprovações.
+
+
+        * Escopo requerido: pagamento-boleto.write
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="incluirPagamentoComCodigoBarrasBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        Para o ambiente do **Sandbox**, poderão ser utilizados os seguintes
+        códigos de barras:
+
+        * 03395988500000666539201493990000372830030102
+
+        * 82670000000653301602023123106000000002830894
+      tags:
+        - Pagamento
+      operationId: pagarBoleto
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/EfetuarPagamentoBody'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EfetuarPagamentoResponse'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaPagamento'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '406':
+          $ref: '#/components/responses/NaoAceito'
+        '409':
+          $ref: '#/components/responses/Conflito'
+    get:
+      summary: Buscar pagamentos
+      description: >
+
+        Método para obter uma coleção de pagamentos de boletos.
+
+
+        * Escopo requerido: pagamento-boleto.read
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="buscarPagamentosBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container"> 
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        Para o ambiente do **Sandbox**, poderão ser utilizados os seguintes
+        códigos de barras:
+
+        * 03395988500000666539201493990000372830030102
+
+        * 82670000000653301602023123106000000002830894
+      tags:
+        - Pagamento
+      operationId: buscarInformacoesPagamentos
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - name: codBarraLinhaDigitavel
+          in: query
+          description: Código de barras ou Linha digitável do boleto
+          schema:
+            type: string
+            minLength: 44
+            maxLength: 48
+            example: 6.539000353864661e+46
+        - name: codigoTransacao
+          in: query
+          description: Código de transação UUID
+          schema:
+            type: string
+            minLength: 36
+            maxLength: 36
+            example: a928f403-0076-419b-9c99-432d52083d0a
+        - name: dataInicio
+          in: query
+          description: >
+            Data inicio, em acordo com o campo "filtrarDataPor"
+
+
+            Formato aceito: YYYY-MM-DD
+
+
+            * O campo dataInicio é opcional, mas, caso seja informado, o campo
+            dataFim se torna obrigatório para determinar o intervalo da busca.
+
+
+            * Caso data inicio e fim seja nula, por default será consultado os
+            últimos 30 dias por data de inclusão.
+
+
+            * Período máximo entre as datas inicio e fim é de 90 dias.
+          schema:
+            type: string
+          example: '2022-08-11'
+        - name: dataFim
+          in: query
+          description: >
+            Data Fim, em acordo com o campo "filtrarDataPor"
+
+
+            * O campo dataFim é opcional, mas, caso seja informado, o campo
+            dataInicio se torna obrigatório para determinar o intervalo da
+            busca.
+
+
+            Formato aceito: YYYY-MM-DD
+          schema:
+            type: string
+          example: '2022-08-12'
+        - name: filtrarDataPor
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - INCLUSAO
+              - PAGAMENTO
+              - VENCIMENTO
+            default: INCLUSAO
+          description: >
+            Os filtros de data inicial e data final se aplicarão a:
+
+            * `INCLUSAO` - Data da operação que foi solicitado o pagamento do
+            título. (Default)
+
+            * `PAGAMENTO` - Data em que foi efetuado o pagamento do título
+
+            * `VENCIMENTO` - Data do vencimento do título de pagamento.
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InformacoesPagamento'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaPagamento'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pagamento/darf:
+    post:
+      summary: Incluir pagamento de DARF
+      description: >
+
+        Método para inclusão de um pagamento imediato de DARF sem código de
+
+        barras.
+
+
+
+        **Importante**: Dependendo das configurações da conta, este pagamento
+
+        pode exigir aprovação manual antes da execução.<br />
+
+        As configurações de aprovação podem ser ajustadas pelo usuário master
+
+        via Internet Banking. Menu Superior > Aprovar > Gestão de Aprovações.
+
+
+        * Escopo requerido: pagamento-darf.write
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="incluirPagamentoDarfBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento/darf</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento/darf</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pagamento
+      operationId: pagamentosDarf
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/DarfRequestBody'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DarfResponse'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaIncluirDarf'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+    get:
+      summary: Buscar pagamentos de DARF
+      description: >
+
+        Método para obter informações de pagamento de DARF.
+
+
+        * Escopo requerido: pagamento-boleto.read
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="buscarPagamentosDarfBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento/darf</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento/darf</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pagamento
+      operationId: buscarInformacoesPagamentoDarf
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - name: codigoSolicitacao
+          in: query
+          description: Código de solicitação UUID
+          schema:
+            type: string
+            minLength: 36
+            maxLength: 36
+            example: a928f403-0076-419b-9c99-432d52083d0a
+        - name: codigoReceita
+          in: query
+          description: Código da receita
+          schema:
+            type: string
+            example: '0211'
+        - name: dataInicio
+          in: query
+          description: >
+            Data inicio, em acordo com a data de pagamento da DARF.
+
+
+            * O campo dataInicio é opcional, mas, caso seja informado, o campo
+            dataFim se torna obrigatório para determinar o intervalo da busca.
+
+
+            * Caso data inicio ou fim seja nula, por default será consultado os
+            últimos 30 dias por data de inclusão.
+
+
+            Formato aceito: YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+          example: '2022-08-11'
+        - name: dataFim
+          in: query
+          description: >
+            Data Fim, em acordo com a data de pagamento da DARF.
+
+
+            * O campo dataFim é opcional, mas, caso seja informado, o campo
+            dataInicio se torna obrigatório para determinar o intervalo da
+            busca.
+
+
+            Formato aceito: YYYY-MM-DD
+          schema:
+            type: string
+            format: date
+          example: '2022-08-12'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InformacoesPagamentoDarf'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaBuscarDarf'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pagamento/lote:
+    post:
+      summary: Incluir pagamentos em lote
+      description: >
+
+        Método para inclusão de um lote de pagamentos.
+
+
+        * Escopo requerido: pagamento-lote.write
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="incluirPagamentosEmLoteBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento/lote</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento/lote</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        Para o ambiente do **Sandbox**, poderão ser utilizados os seguintes
+        códigos de barras:
+
+        * 03395988500000666539201493990000372830030102
+
+        * 82670000000653301602023123106000000002830894
+      tags:
+        - Pagamento
+      operationId: pagamentosLote
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/PagarLoteRequestBody'
+      responses:
+        '202':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagarLoteResponse'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaPagamento'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pagamento/lote/{idLote}:
+    get:
+      summary: Buscar lote de pagamentos
+      description: >
+
+        Método para obter informações de um lote de pagamentos.
+
+
+        * Escopo requerido: pagamento-lote.read
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 20 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="buscarLotePagamentosBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento/lote/{idLote}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento/lote/{idLote}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pagamento
+      operationId: buscarInformacoesPagamentoLote
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - $ref: '#/components/parameters/idLoteParam'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ObterLoteResponse'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+  /pagamento/{codigoTransacao}:
+    delete:
+      summary: Cancelar agendamento do pagamento
+      description: >
+
+        Método utilizado para cancelar o agendamento do pagamento de um boleto.
+
+
+        * Escopo requerido: pagamento-boleto.write
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 20 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="cancelarAgendamentoPagamentoBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pagamento/{codigoTransacao}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pagamento/{codigoTransacao}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pagamento
+      operationId: cancelarAgendamentoBoleto
+      parameters:
+        - $ref: '#/components/parameters/xContaCorrente'
+        - $ref: '#/components/parameters/CodigoTransacao'
+      responses:
+        '204':
+          description: Sucesso
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '422':
+          $ref: '#/components/responses/EntidadeImprocessavel'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pix:
+    post:
+      summary: Incluir Pagamento Pix
+      description: >
+
+        Método para inclusão de um pagamento/transferência Pix utilizando
+
+        dados bancários, chave ou código Copia e Cola.
+
+
+        **Importante**: Dependendo das configurações da conta, este pagamento
+
+        pode exigir aprovação manual antes da execução.<br />
+
+        As configurações de aprovação podem ser ajustadas pelo usuário master
+
+        via Internet Banking. Menu Superior > Aprovar > Gestão de Aprovações.
+
+
+        * Escopo requerido: pagamento-pix.write
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 60 chamadas por minuto (Limitado a 1 chamada por segundo) <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="incluirPagamentoPixBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pix</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pix</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pix Pagamento
+      operationId: realizarPagamentoPix
+      parameters:
+        - $ref: '#/components/parameters/xIdIdempotente'
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/PagamentoPixRequestBody'
+      responses:
+        '200':
+          description: Pagamento realizado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagamentoPixResponse'
+              examples:
+                retornoAguardandoAprovacao:
+                  $ref: >-
+                    #/components/examples/PagamentoPixResponseAguardandoAprovacao
+                retornoEfetivado:
+                  $ref: '#/components/examples/PagamentoPixResponseEfetivado'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaIncluirPix'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '422':
+          $ref: '#/components/responses/ErroValidacao'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /pix/{codigoSolicitacao}:
+    get:
+      summary: Consultar Pagamento Pix
+      description: >
+
+        Método para consulta de um pagamento/transferência Pix utilizando o
+        codigo solicitação.
+
+
+        <strong>O período máximo para consulta é de 90 dias.</strong>
+
+
+        * Escopo requerido: pagamento-pix.read
+
+        * Rate limite: <br />
+          * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 20 chamadas por minuto <br />
+          * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas por minuto
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="consultarPagamentoPixBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24"/>
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/pix/{codigoSolicitacao}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/pix/{codigoSolicitacao}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Pix Pagamento
+      operationId: consultarPagamentoPix
+      parameters:
+        - $ref: '#/components/parameters/CodigoSolicitacao'
+        - $ref: '#/components/parameters/xContaCorrente'
+      responses:
+        '200':
+          description: Consulta realizada com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsultaPixAsyncResponse'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaConsultarPix'
+        '401':
+          $ref: '#/components/responses/NaoAutorizado'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '422':
+          $ref: '#/components/responses/ErroValidacao'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /webhooks/{tipoWebhook}:
+    put:
+      summary: Criar webhook
+      description: >
+
+        Método destinado a criar um webhook para receber notificações
+        (callbacks). O tipo de notificação recebida depende do "tipo webhook"
+        (sessão PATH PARAMS)
+
+        selecionado no cadastro. Para cada tipo será necessário um cadastro em
+        separado.
+
+
+        Caso o servidor de webhook retorne erro de recebimento do callback,
+        serão realizadas até 4 tentativas com intervalos de 5, 10, 30 e 60
+        minutos.
+
+
+        * Escopo requerido: webhook-banking.write
+
+        * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas
+        por minuto <br />
+
+        * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas
+        por minuto
+
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="criarWebhookBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+          <button class="button-yaml" data-category="VALIDATE_WEBHOOK" data-value=''>
+            <img src="/img/icons/webhook.svg" alt="Ícone" width="24" height="24" />
+            Validar webhook
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/PUT-purple"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/PUT-purple"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: putWebhookBanking
+      tags:
+        - Webhook
+      parameters:
+        - $ref: '#/components/parameters/tipoWebhookPath'
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/WebhookRequestBody'
+      callbacks:
+        pixPagamentoList:
+          '{$request.body#/webhookUrl/pix-pagamento}':
+            summary: Retorno de callbacks para o tipoWebhook pix-pagamento.
+            post:
+              parameters:
+                - in: header
+                  name: x-conta-corrente
+                  schema:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                    example: '13525622'
+                  description: >-
+                    Conta corrente relacionada ao callback. Enviar apenas
+                    números(incluindo o dígito), e não enviar zeros a esquerda.
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CallbackPixPagamentoModel'
+                    examples:
+                      CallbackPixPagamentoChave:
+                        $ref: '#/components/examples/CallbackPixPagamentoChave'
+                      CallbackPixPagamentoDadosBancarios:
+                        $ref: >-
+                          #/components/examples/CallbackPixPagamentoDadosBancarios
+              responses:
+                '200':
+                  description: Notificação recebida com sucesso
+        pagamentoBoletoList:
+          '{$request.body#/webhookUrl/boleto-pagamento}':
+            summary: Retorno de callbacks para o tipoWebhook boleto-pagamento.
+            post:
+              parameters:
+                - in: header
+                  name: x-conta-corrente
+                  schema:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                    example: '13525622'
+                  description: >-
+                    Conta corrente relacionada ao callback. Enviar apenas
+                    números(incluindo o dígito), e não enviar zeros a esquerda.
+              requestBody:
+                content:
+                  application/json:
+                    schema:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/CallbackPagamentoBoletoModel'
+                    examples:
+                      CallbackPagamentoBoletoRealizado:
+                        $ref: '#/components/examples/CallbackPagamentoBoletoRealizado'
+                      CallbackPagamentoBoletoAgendado:
+                        $ref: '#/components/examples/CallbackPagamentoBoletoAgendado'
+                      CallbackPagamentoBoletoComErro:
+                        $ref: '#/components/examples/CallbackPagamentoBoletoComErro'
+                      CallbackPagamentoBoletoCancelado:
+                        $ref: '#/components/examples/CallbackPagamentoBoletoCancelado'
+              responses:
+                '200':
+                  description: Notificação recebida com sucesso
+      responses:
+        '204':
+          description: Sucesso
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaIncluirWebhook'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+    get:
+      summary: Obter webhook cadastrado
+      description: >
+
+        Obtém o webhook cadastrado, caso exista.
+
+
+        * Escopo requerido: webhook-banking.read
+
+        * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas
+        por minuto <br />
+
+        * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas
+        por minuto
+
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="obterWebhookBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Webhook
+      operationId: getWebhookBanking
+      parameters:
+        - $ref: '#/components/parameters/tipoWebhookPath'
+        - $ref: '#/components/parameters/xContaCorrente'
+      responses:
+        '200':
+          description: Objeto de retorno do webhoo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookModel'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+    delete:
+      summary: Excluir webhook
+      description: >
+
+        Exclui o webhook.
+
+
+        * Escopo requerido: webhook-banking.write
+
+        * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas
+        por minuto <br />
+
+        * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas
+        por minuto
+
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="excluirWebhookBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/webhooks/{tipoWebhook}</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: deleteWebhookBanking
+      tags:
+        - Webhook
+      parameters:
+        - $ref: '#/components/parameters/tipoWebhookPath'
+        - $ref: '#/components/parameters/xContaCorrente'
+      responses:
+        '204':
+          description: Sucesso
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /webhooks/{tipoWebhook}/callbacks:
+    get:
+      summary: Consultar callbacks
+      description: >-
+
+        Retorna as requisições de callbacks ordenadas pela data de disparo
+        (decrescente).
+
+        Permite consultar erros no envio de callbacks.
+
+
+        * Escopo requerido: webhook-banking.read
+
+        * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 10 chamadas
+        por minuto <br />
+
+        * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 10 chamadas
+        por minuto
+
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="consultarCallbacksBanking">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/webhooks/{tipoWebhook}/callbacks</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/banking/v2<span class="url">/webhooks/{tipoWebhook}/callbacks</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      tags:
+        - Webhook
+      operationId: callbacksFilter
+      parameters:
+        - $ref: '#/components/parameters/tipoWebhookPath'
+        - $ref: '#/components/parameters/xContaCorrente'
+        - name: dataHoraInicio
+          in: query
+          required: true
+          description: 'Formato aceito: yyyy-MM-dd''T''HH:mm[:ss][.SSS]XXX'
+          example: 2023-06-01T00:00Z ou 2023-06-01T00:00:00.000Z
+          x-arch-date-time-pattern: yyyy-MM-dd'T'HH:mm[:ss][.SSS]XXX
+          schema:
+            type: string
+            format: date-time
+            nullable: false
+        - name: dataHoraFim
+          description: 'Formato aceito: yyyy-MM-dd''T''HH:mm[:ss][.SSS]XXX'
+          in: query
+          example: 2023-06-01T00:00Z ou 2023-06-01T00:00:00.000Z
+          required: true
+          x-arch-date-time-pattern: yyyy-MM-dd'T'HH:mm[:ss][.SSS]XXX
+          schema:
+            type: string
+            format: date-time
+            nullable: false
+        - name: pagina
+          in: query
+          schema:
+            type: integer
+            description: Posição da página na lista de dados
+            default: 0
+            nullable: false
+        - name: tamanhoPagina
+          in: query
+          schema:
+            type: integer
+            description: Tamanho da página
+            default: 20
+            maximum: 50
+            minimum: 10
+            nullable: false
+        - name: endToEnd
+          in: query
+          schema:
+            type: string
+            description: >-
+              EndToEnd do callback, caso queira filtrar as notificações de algum
+              Pix Pagamento específico. **Exclusivo para o PATH PARAMETERS
+              pix-pagamento**.
+        - name: codigoTransacao
+          in: query
+          schema:
+            type: string
+            description: >-
+              CodigoTransacao do callback, caso queira filtrar as notificações
+              de algum Pagamento Boleto específico. **Exclusivo para o PATH
+              PARAMETERS boleto-pagamento**.
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallbackAttemptPage'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaConsultarCallback'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+  /webhooks/{tipoWebhook}/callbacks/retry:
+    post:
+      tags:
+        - Webhook
+      summary: Reenviar callbacks
+      description: >-
+
+        Método utilizado para reenviar uma mensagem de callback de um pagamento
+        de boleto ou pagamento pix, através de seu código identificador:
+
+        * <b>boleto-pagamento</b> - codigoTransacao
+
+        * <b>pix-pagamento</b> - codigoSolicitacao
+
+
+        A funcionalidade permite o envio de até 50 codigos identificadores, por
+        tipo de webhook, para o reenvio de seus respectivos callbacks.
+
+
+        * Escopo requerido: webhook-banking.write
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 5 chamadas por minuto 
+
+        *Obs: O [ token
+        ](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="reenviarCallbackBankingRecipe">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/banking/v2<span class="url">/webhooks/{tipoWebhook}/callbacks/retry</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: retryCallback
+      servers:
+        - url: https://cdpj.partners.bancointer.com.br/banking/v2
+          description: Servidor de Produção
+      parameters:
+        - $ref: '#/components/parameters/tipoWebhookPath'
+        - $ref: '#/components/parameters/xContaCorrente'
+      requestBody:
+        $ref: '#/components/requestBodies/RetryCallbacksRequest'
+      responses:
+        '200':
+          description: Sucesso
+          content:
+            aplication/json:
+              schema:
+                $ref: '#/components/schemas/RetryCallbackResponse'
+              examples:
+                exemplo1:
+                  $ref: '#/components/examples/ExemploRetryCallbackResponse'
+        '400':
+          $ref: '#/components/responses/RequisicaoInvalidaRetryCallback'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '500':
+          $ref: '#/components/responses/ServicoIndisponivel'
+components:
+  responses:
+    RequisicaoInvalidaExtrato:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaExtratoExample'
+    RequisicaoInvalidaExtratoCompleto:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida:
+              $ref: '#/components/examples/RequisicaoInvalidaExtratoExample'
+            scroll-ja-ativo:
+              $ref: '#/components/examples/ScrollJaAtivoExample'
+            scroll-expirado-inexistente:
+              $ref: '#/components/examples/ScrollExpiradoExample'
+    RequisicaoInvalidaSaldo:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaSaldoExample'
+    RequisicaoInvalidaPagamento:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaPagamentoExample'
+    RequisicaoInvalidaIncluirDarf:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaIncluirDarfExample'
+    RequisicaoInvalidaBuscarDarf:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaBuscarDarfExample'
+    RequisicaoInvalidaIncluirPix:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaIncluirPixExample'
+    RequisicaoInvalidaIncluirWebhook:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaIncluirWebhookExample'
+    RequisicaoInvalidaConsultarPix:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaConsultarPixExample'
+    RequisicaoInvalidaConsultarCallback:
+      description: Requisição com formato inválido.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            requisicao-invalida-example:
+              $ref: '#/components/examples/RequisicaoInvalidaConsultarCallbackExample'
+    NaoEncontrado:
+      description: Recurso solicitado não foi encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            nao-encontrado-example:
+              $ref: '#/components/examples/NaoEncontradoExample'
+    ErroValidacao:
+      description: Erro de validação
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EntidadeNaoProcessavel'
+    AcessoNegado:
+      description: >-
+        Requisição de participante autenticado que viola alguma regra de
+        autorização.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            acesso-negado-example:
+              $ref: '#/components/examples/AcessoNegadoExample'
+    ServicoIndisponivel:
+      description: >-
+        Serviço não está disponível no momento. Serviço solicitado pode estar em
+        manutenção ou fora da janela de funcionamento.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            servico-indisponivel-example:
+              $ref: '#/components/examples/ServicoIndisponivelExample'
+    NaoAutorizado:
+      description: Requisição não autorizada.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            nao-autorizado-example:
+              $ref: '#/components/examples/NaoAutorizadoExample'
+    NaoAceito:
+      description: Requisição não aceita.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            nao-aceito-example:
+              $ref: '#/components/examples/NaoAceitoExample'
+    Conflito:
+      description: Conflito com o recurso do servidor.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            conflito-example:
+              $ref: '#/components/examples/ConflitoExample'
+    FalhaDependencia:
+      description: Falha de dependência.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+    EntidadeImprocessavel:
+      description: Não foi possível processar a requisição.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            entidade-improcessavel-example:
+              $ref: '#/components/examples/EntidadeImprocessavelExample'
+    RequisicaoInvalidaRetryCallback:
+      description: Problemas na requisição.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Problema'
+          examples:
+            exemplos1:
+              $ref: '#/components/examples/RequisicaoInvalidaExampleRetryCallback'
+  parameters:
+    xIdIdempotente:
+      in: header
+      name: x-id-idempotente
+      description: >-
+        Id informado para garantir idempotência nos pagamentos Pix. Representado
+        de acordo com a [RFC4122](https://www.rfc-editor.org/rfc/rfc4122)
+      schema:
+        type: string
+        pattern: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    xContaCorrente:
+      name: x-conta-corrente
+      in: header
+      description: >-
+        Conta corrente que será utilizada na operação. Necessário somente quando
+        a aplicação estiver associada a mais de uma conta corrente. Enviar
+        apenas números(incluindo o dígito), e não enviar zeros a esquerda.
+      schema:
+        type: string
+        pattern: ^[1-9][0-9]*$
+    idLoteParam:
+      required: true
+      in: path
+      name: idLote
+      schema:
+        type: string
+        minLength: 24
+        maxLength: 24
+    tipoWebhookPath:
+      name: tipoWebhook
+      required: true
+      in: path
+      schema:
+        $ref: '#/components/schemas/TipoWebhookEnum'
+    CodigoTransacao:
+      name: codigoTransacao
+      in: path
+      required: true
+      schema:
+        type: string
+        pattern: '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'
+    CodigoSolicitacao:
+      name: codigoSolicitacao
+      in: path
+      required: true
+      description: Codigo único da transaçao
+      schema:
+        type: string
+        format: uuid
+    xInterScrollEnabled:
+      name: scrollEnabled
+      in: query
+      description: >-
+        Opcional, habilita o modo de paginação scroll para grandes volumes de
+        transações.
+
+        Use `true` para iniciar um novo scroll. É permitido apenas um scroll
+        ativo  por conta.
+      schema:
+        type: string
+        enum:
+          - 'true'
+    xInterScrollId:
+      name: scrollId
+      in: query
+      description: >-
+        ID do scroll, use este parâmetro para continuar a paginação. O scrollId
+        expira automaticamente após hasMore retornar`false` ou 6 minutos.
+      schema:
+        type: string
+        format: uuid
+      example: 550e8400-e29b-41d4-a716-446655440000
+  schemas:
+    EfetuarPagamento:
+      type: object
+      required:
+        - codBarraLinhaDigitavel
+        - valorPagar
+        - dataVencimento
+      properties:
+        codBarraLinhaDigitavel:
+          type: string
+          description: Código de barras ou linha digitável.
+          example: '07797000000000000004501008460019310001802680'
+        valorPagar:
+          type: string
+          description: |
+            Valor a ser pago.
+          example: '26.80'
+        dataPagamento:
+          type: string
+          description: >
+            Data para efetivar o pagamento. Se não informada, o pagamento será
+            feito no mesmo dia.
+
+            Formato aceito: YYYY-MM-DD
+          example: '2023-08-18'
+        dataVencimento:
+          type: string
+          description: |
+            Data de vencimento do título.
+            Formato aceito: YYYY-MM-DD
+          example: '2021-07-27'
+        cpfCnpjBeneficiario:
+          type: string
+          pattern: ^[0-9]{11}$|^[0-9]{14}$
+          description: >
+            CPF/CNPJ do beneficiário! Caso informado, será realizada a validação
+            do campo em questão. Formato aceito: 12345678912345
+          example: '12345678912345'
+    EfetuarPagamentoResponse:
+      title: EfetuarPagamentoResponse
+      type: object
+      properties:
+        quantidadeAprovadores:
+          type: integer
+          format: int32
+          example: 2
+        dataAgendamento:
+          type: string
+          example: '2019-10-10 13:00:00'
+        statusPagamento:
+          $ref: '#/components/schemas/SituacaoPagamento'
+        codigoTransacao:
+          example: 8bbdede4-35db-4ec9-b652-e176841e62c8
+          type: string
+    SituacaoPagamento:
+      type: string
+      enum:
+        - EMPROCESSAMENTO
+        - AGENDADO_CANCELADO
+        - AGUARDANDO_APROVACAO
+        - APROVADO
+        - CANCELADO
+        - AGENDADO
+        - REALIZADO
+        - ERRO
+        - APROVACAO_EXPIRADA
+        - REPROVADO
+        - NAO_COMPENSADO
+    BoletoResponse:
+      title: DadosBoleto
+      type: object
+      properties:
+        beneficiario:
+          $ref: '#/components/schemas/Pessoa'
+        pagador:
+          $ref: '#/components/schemas/Pessoa'
+        valorNominal:
+          type: number
+          format: double
+          example: 120.5
+        desconto:
+          type: number
+          format: double
+          example: 10
+        multa:
+          type: number
+          format: double
+          example: 13.2
+        juros:
+          type: number
+          format: double
+          example: 3
+        valorPagar:
+          type: number
+          format: double
+          example: 120.5
+        valorMinimo:
+          type: number
+          format: double
+          example: 50
+        valorMaximo:
+          type: number
+          format: double
+          example: 1500
+        vencimento:
+          type: string
+          format: date
+          example: '2030-05-10'
+        statusPagamento:
+          $ref: '#/components/schemas/StatusPagamento'
+        convenio:
+          $ref: '#/components/schemas/Convenio'
+        dataLimitePagamento:
+          example: '2019-10-10'
+          format: date
+          type: string
+        instituicaoEmissora:
+          example: Banco Inter
+          type: string
+        pagamentoParcial:
+          example: false
+          type: boolean
+        totalEncargos:
+          type: number
+          format: double
+          example: 20
+        permiteAgendamento:
+          example: false
+          type: boolean
+        linhaDigitavel:
+          example: '846600000026266702962017910100130004000625169925'
+          type: string
+        codigoBarra:
+          example: '81670000001283647972020063000000000294909999'
+          type: string
+        codigoEspecie:
+          example: 31
+          type: string
+        pagamentoBloqueado:
+          example: false
+          type: boolean
+        boletoVencido:
+          example: false
+          type: boolean
+        horarioLimitePagamento:
+          example: '16:00'
+          type: string
+        alerta:
+          $ref: '#/components/schemas/Alerta'
+        codigoBanco:
+          example: '077'
+          type: string
+        situacaoTituloPagamento:
+          example: Aberto
+          type: string
+    Pessoa:
+      title: Pessoa
+      type: object
+      properties:
+        nome:
+          description: Nome Pessoa/Empresa
+          example: Banco Loren
+          type: string
+        cpfCnpj:
+          description: CPF/CNPJ
+          example: 27395669000186
+          type: string
+        nomeFantasia:
+          example: banco inter
+          type: string
+        razaoSocial:
+          example: Banco Loren
+          type: string
+    StatusPagamento:
+      title: StatusPagamento
+      type: object
+      properties:
+        pago:
+          description: Se o título já foi pago ou não
+          example: true
+          type: boolean
+        data:
+          description: Data do pagamento (String formatada)
+          example: '2019-03-27'
+          type: string
+        permitePagamentoMultiplo:
+          description: Se permite mais de um pagamento
+          example: true
+          type: boolean
+        valor:
+          example: 133
+          type: number
+          format: double
+    Convenio:
+      title: Convenio
+      type: object
+      properties:
+        descricao:
+          description: Descrição
+          example: 123
+          type: string
+        debitoAutomatico:
+          description: Se o título esta habilitado para cadastro debito automatico
+          example: true
+          type: boolean
+        segmento:
+          description: Segmento do Convênio
+          example: ENERGIA_ELETRICA_GAS
+          type: string
+        codigoEmpresa:
+          description: Código da empresa
+          type: string
+        tipoConvenio:
+          description: Tipo de convênio configurado
+          example: IS2B
+          type: string
+        abrangenciaConvenio:
+          description: Abrangência do convênio. Nacional ou Municipal
+          example: NACIONAL
+          type: string
+        codigoMunicipio:
+          description: Código do Município
+          example: '123456'
+          type: string
+    InformacoesPagamento:
+      title: InformacoesPagamento
+      type: object
+      properties:
+        codigoTransacao:
+          example: 3414f226-36fb-4d87-811e-cfd99911d845
+          type: string
+        codigoBarra:
+          type: string
+          example: 2.3791908400000545e+43
+        tipo:
+          type: string
+          example: Pagamento Xpto
+        dataVencimentoDigitada:
+          type: string
+          example: '2019-10-10 13:00:00'
+        dataVencimentoTitulo:
+          type: string
+          example: '2019-10-10 13:00:00'
+        dataInclusao:
+          type: string
+          example: '2019-10-10 13:00:00'
+        dataPagamento:
+          type: string
+          example: '2019-10-10 13:00:00'
+        valorPago:
+          type: number
+          example: 85.9
+        valorNominal:
+          type: number
+          example: 85.9
+        statusPagamento:
+          $ref: '#/components/schemas/SituacaoPagamento'
+        aprovacoesNecessarias:
+          type: number
+          example: 2
+          description: Aprovações necessárias para o pagamento ser aprovado.
+        aprovacoesRealizadas:
+          type: number
+          example: 2
+          description: Aprovações já realizadas.
+        cpfCnpjBeneficiario:
+          type: string
+          example: 123456789-01
+        nomeBeneficiario:
+          type: string
+          example: João 123
+        autenticacao:
+          type: string
+          example: 3.1408993599359996e+29
+        nsu:
+          type: string
+          example: '82127399'
+          description: Número sequencial único, exclusivo para uso no Inter.
+    InformacoesPagamentoDarf:
+      title: InformacoesPagamento
+      type: object
+      properties:
+        codigoSolicitacao:
+          example: 3414f226-36fb-4d87-811e-cfd99911d845
+          type: string
+        tipoDarf:
+          type: string
+          example: PRETO
+        valor:
+          type: number
+          example: 50.96
+        valorMulta:
+          type: number
+          example: 0
+        valorJuros:
+          type: number
+          example: 0
+        valorTotal:
+          type: number
+          example: 50.96
+        tipo:
+          type: string
+          example: Darf
+        periodoApuracao:
+          type: string
+          example: '2019-10-10 13:00:00'
+        dataPagamento:
+          type: string
+          example: '2019-10-10 13:00:00'
+        referencia:
+          type: string
+          example: 424562562565
+        dataVencimento:
+          type: string
+          example: '2019-10-10 13:00:00'
+        codigoReceita:
+          type: string
+          example: 190
+          minLength: 4
+          maxLength: 4
+        statusPagamento:
+          $ref: '#/components/schemas/SituacaoPagamento'
+        dataInclusao:
+          type: string
+          example: '2019-10-10 13:00:00'
+        cnpjCpf:
+          type: string
+          example: '84668147010'
+        aprovacoesNecessarias:
+          type: integer
+          example: 4
+          description: Aprovações necessárias para o pagamento ser aprovado.
+        aprovacoesRealizadas:
+          type: integer
+          example: 2
+          description: Aprovações já realizadas.
+    Alerta:
+      title: Alerta
+      type: object
+      properties:
+        titulo:
+          description: Titulo do alerta
+          example: Titulo
+          type: string
+        mensagem:
+          description: Mensagem do alerta
+          example: Mensagem
+          type: string
+    Saldo:
+      type: object
+      properties:
+        bloqueadoCheque:
+          type: number
+          format: int64
+          example: 240.25
+          description: >-
+            Saldo bloqueado (cheque). Retornando apenas quando **não** é
+            informado a "dataSaldo" na requisição.
+        disponivel:
+          type: number
+          format: int64
+          example: 2850.55
+          description: Saldo líquido
+        bloqueadoJudicialmente:
+          type: number
+          format: int64
+          example: 510.35
+          description: >-
+            Saldo bloqueado (justiça). Retornando apenas quando **não** é
+            informado a "dataSaldo" na requisição.
+        bloqueadoAdministrativo:
+          type: number
+          format: int64
+          example: 510.35
+          description: >-
+            Saldo bloqueado (justiça). Retornando apenas quando **não** é
+            informado a "dataSaldo" na requisição.
+        limite:
+          type: number
+          format: int64
+          example: 510.35
+          description: >-
+            Limite de credito da conta. Retornando apenas quando **não** é
+            informado a "dataSaldo" na requisição.
+        dataReferencia:
+          type: string
+          description: >-
+            A data referência será retornada quando a consulta for realizada em
+            um dia não útil. Visto que o saldo não é sensibilizado em dias não
+            úteis, será retornada à data referência do saldo, sendo o último dia
+            útil.
+          example: 01/01/2024
+    ListaTransacoes:
+      type: object
+      properties:
+        transacoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransacaoSimples'
+    ListaTransacoesCompletaPadrao:
+      type: object
+      properties:
+        totalPaginas:
+          $ref: '#/components/schemas/totalPaginas'
+        totalElementos:
+          $ref: '#/components/schemas/totalElementos'
+        ultimaPagina:
+          $ref: '#/components/schemas/ultimaPagina'
+        primeiraPagina:
+          $ref: '#/components/schemas/primeiraPagina'
+        tamanhoPagina:
+          $ref: '#/components/schemas/tamanhoPagina'
+        numeroDeElementos:
+          $ref: '#/components/schemas/numeroDeElementos'
+        transacoes:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TransacaoCompleta'
+    ListaTransacoesCompletaScroll:
+      name: Resposta com Scroll
+      type: object
+      description: |
+        Resposta para consultas usando modo scroll. Retornado quando
+        headers `x-inter-scroll-enabled` ou `x-inter-scroll-id` são utilizados.
+      properties:
+        totalElementos:
+          $ref: '#/components/schemas/totalElementos'
+        scrollId:
+          type: string
+          nullable: true
+          format: uuid
+          description: |
+            ID único do scroll para continuar a navegação. Use este valor no
+            header `x-inter-scroll-id` das próximas requisições.
+            Quando `hasMore: false`, este campo será `null` indicando que o
+            scroll foi finalizado e removido.
+          example: 550e8400-e29b-41d4-a716-446655440000
+        hasMore:
+          type: boolean
+          description: >-
+            Indica se existem mais transações para serem recuperadas. Quando
+            `false`, o scroll é automaticamente removido.
+          example: true
+        transacoes:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TransacaoCompleta'
+    PdfModel:
+      type: object
+      properties:
+        pdf:
+          type: string
+          description: Base64 do PDF
+    TransacaoSimples:
+      type: object
+      properties:
+        cpmf:
+          type: string
+        dataEntrada:
+          type: string
+          format: date
+        tipoTransacao:
+          type: string
+          description: |
+            Transação vinculada a movimentação
+            * `DEBITO_EM_CONTA`
+            * `DEPOSITO_BOLETO`
+            * `ANTECIPACAO_RECEBIVEIS`
+            * `ANTECIPACAO_RECEBIVEIS_CARTAO`
+            * `BOLETO_COBRANCA`
+            * `CAMBIO`
+            * `CASHBACK`
+            * `CHEQUE`
+            * `ESTORNO`
+            * `DOMICILIO_CARTAO`
+            * `FINANCIAMENTO`
+            * `IMPOSTO`
+            * `INTERPAG`
+            * `INVESTIMENTO`
+            * `JUROS`
+            * `MAQUININHA_GRANITO`
+            * `MULTA`
+            * `OUTROS`
+            * `PAGAMENTO`
+            * `PIX`
+            * `PROVENTOS`
+            * `SAQUE`
+            * `COMPRA_DEBITO`
+            * `DEBITO_AUTOMATICO`
+            * `TARIFA`
+            * `TRANSFERENCIA`
+        tipoOperacao:
+          type: string
+          description: |
+            Tipo de operação realizada
+            * `D` - Débito(Saída)
+            * `C` - Crédito(Entrada)
+        valor:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+    TransacaoCompleta:
+      properties:
+        idTransacao:
+          type: string
+        dataInclusao:
+          type: string
+          format: date
+        dataTransacao:
+          type: string
+          format: date
+        tipoTransacao:
+          type: string
+          description: |
+            Transação vinculada a movimentação
+            * `DEBITO_EM_CONTA`
+            * `DEPOSITO_BOLETO`
+            * `ANTECIPACAO_RECEBIVEIS`
+            * `ANTECIPACAO_RECEBIVEIS_CARTAO`
+            * `BOLETO_COBRANCA`
+            * `CAMBIO`
+            * `CASHBACK`
+            * `CHEQUE`
+            * `ESTORNO`
+            * `DOMICILIO_CARTAO`
+            * `FINANCIAMENTO`
+            * `IMPOSTO`
+            * `INTERPAG`
+            * `INVESTIMENTO`
+            * `JUROS`
+            * `MAQUININHA_GRANITO`
+            * `MULTA`
+            * `OUTROS`
+            * `PAGAMENTO`
+            * `PIX`
+            * `PROVENTOS`
+            * `SAQUE`
+            * `COMPRA_DEBITO`
+            * `DEBITO_AUTOMATICO`
+            * `TARIFA`
+            * `TRANSFERENCIA`
+        tipoOperacao:
+          type: string
+          description: |
+            Tipo de operação realizada
+            * `D` - Débito(Saída)
+            * `C` - Crédito(Entrada)
+        valor:
+          type: string
+        titulo:
+          type: string
+        descricao:
+          type: string
+        numeroDocumento:
+          type: string
+        detalhes:
+          oneOf:
+            - $ref: '#/components/schemas/DetalhePix'
+            - $ref: '#/components/schemas/DetalheBoletoCobranca'
+            - $ref: '#/components/schemas/DetalheCashback'
+            - $ref: '#/components/schemas/DetalheCheque'
+            - $ref: '#/components/schemas/DetalheCompraDebito'
+            - $ref: '#/components/schemas/DetalheDepositoBoleto'
+            - $ref: '#/components/schemas/DetalheTransferencia'
+            - $ref: '#/components/schemas/DetalhePagamento'
+            - $ref: '#/components/schemas/DetalheTarifa'
+    TransacaoCompletaSemDetalhe:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+    TransacaoCompletaComDetalhe:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      properties:
+        detalhes:
+          type: object
+      required:
+        - detalhes
+    totalPaginas:
+      type: integer
+      title: Quantidade total de páginas
+      description: Quantidade total de páginas disponíveis para consulta.
+      minimum: 1
+      example: 1
+    totalElementos:
+      type: integer
+      format: int64
+      title: Quantidade total de itens
+      description: >-
+        Quantidade total de itens disponíveis de acordo com os parâmetros
+        informados.
+      minimum: 0
+    ultimaPagina:
+      type: boolean
+      description: Última página
+      example: true
+    primeiraPagina:
+      type: boolean
+      description: Primeira página
+      example: true
+    tamanhoPagina:
+      type: integer
+      title: Quantidade de itens por página
+      description: Quantidade de registros por página, configurado na requisição.
+      minimum: 1
+      example: 20
+    numeroDeElementos:
+      type: integer
+      title: Quantidade de itens na página atual
+      description: Quantidade de registros retornado na página atual.
+      minimum: 1
+      required:
+        - TransacaoCompletaComDetalhe
+    TransacaoBoletoCobranca:
+      description: detalhes de transações de BOLETO_COBRANCA
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheBoletoCobranca'
+    TransacaoPagamento:
+      description: detalhes de transações de PAGAMENTO
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalhePagamento'
+    TransacaoPix:
+      description: detalhes de transações de PIX
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalhePix'
+    TransacaoTransferencia:
+      description: detalhes de transações de PIX
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheTransferencia'
+    TransacaoCashback:
+      description: detalhes de transações de CASHBACK
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheCashback'
+    TransacaoDepositoBoleto:
+      description: detalhes de transações de DEPOSITO_BOLETO
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheDepositoBoleto'
+    TransacaoCompraDebito:
+      description: detalhes de transações de COMPRA_DEBITO
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheCompraDebito'
+    TransacaoCheque:
+      description: detalhes de transações de CHEQUE
+      allOf:
+        - $ref: '#/components/schemas/TransacaoCompleta'
+      type: object
+      properties:
+        detalhes:
+          $ref: '#/components/schemas/DetalheCheque'
+    DetalheCheque:
+      title: Cheque
+      properties:
+        agencia:
+          type: string
+          example: '0072'
+        numeroChequeBancario:
+          type: string
+          example: '000219'
+        contaBancaria:
+          type: string
+          example: ''
+        dataRetorno:
+          type: string
+        motivoRetorno:
+          type: string
+          example: ''
+        descricaoChequeBancario:
+          type: string
+          example: Cheque Bancário
+        nomeEmpresa:
+          type: string
+          example: BCO SANTANDER (BRASIL) S.A
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        codigoAfiliado:
+          type: string
+          example: '033'
+    DetalheCompraDebito:
+      title: Compra Débito
+      properties:
+        estabelecimento:
+          type: string
+          example: Loja teste
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+    DetalheDepositoBoleto:
+      title: Depósito Boleto
+      properties:
+        dataVencimento:
+          type: string
+          example: '2022-07-12'
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        dataEmissao:
+          type: string
+          example: '2022-07-09'
+        nossoNumero:
+          type: string
+          example: '7777011657373795603057629'
+        codBarras:
+          type: string
+          example: '07795904400000500007777011657373795603057629'
+    DetalheCashback:
+      title: Cashback
+      properties:
+        valorCompra:
+          type: string
+          example: '60.00'
+        produto:
+          type: string
+          example: TIM
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+    DetalheTransferencia:
+      title: Transferência
+      properties:
+        contaBancariaPagador:
+          type: string
+          example: '9733000'
+        descricaoTransferencia:
+          type: string
+          example: transferência
+        agenciaPagador:
+          type: string
+          example: '0001'
+        bancoRecebedor:
+          type: string
+          example: Nu Pagamentos
+        contaBancariaRecebedor:
+          type: string
+          example: '1372125'
+        cpfCnpjRecebedor:
+          type: string
+          example: '07857016640'
+        cpfCnpjPagador:
+          type: string
+          example: 905.678.996-16
+        nomePagador:
+          type: string
+          example: Nome
+        nomeEmpresaPagador:
+          type: string
+          example: Banco Inter
+        nomeRecebedor:
+          type: string
+          example: Fernanda
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        idTransferencia:
+          type: string
+          example: PAG20220621248759639
+        agenciaRecebedor:
+          type: string
+          example: '0001'
+        dataEfetivacao:
+          type: string
+          example: 21/06/2022
+    DetalhePix:
+      title: Pix
+      properties:
+        txId:
+          type: string
+          description: |
+            ID de identificação do documento.
+            Seu objetivo é possibilitar a conciliação de pagamentos.
+          example: Rv1pt4pjd2jtjdzx5nafhtjks7
+        nomePagador:
+          type: string
+          example: Nome Pagador
+        descricaoPix:
+          type: string
+          example: Pagamento do aluguel
+        cpfCnpjPagador:
+          type: string
+          example: '90105709247'
+        contaBancariaRecebedor:
+          type: string
+          example: '17687786'
+        nomeEmpresaPagador:
+          type: string
+          example: Banco Inter
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        endToEndId:
+          type: string
+          description: |
+            Id único para identificação do pagamento Pix.
+          example: E00416968202206201436ghzKRVgnb7A
+        chavePixRecebedor:
+          type: string
+          example: '+5531985443142'
+        nomeEmpresaRecebedor:
+          type: string
+          example: CAIXA ECONOMICA FEDEREAL
+        nomeRecebedor:
+          type: string
+          example: Nome Recebedor
+        agenciaRecebedor:
+          type: string
+          example: '0089'
+        cpfCnpjRecebedor:
+          type: string
+          example: '04993960654'
+        origemMovimentacao:
+          type: string
+          example: CHAVE
+        codigoSolicitacao:
+          type: string
+          example: f6a4de9c-4630-4806-b349-8cd96ea67d12
+    DetalhePagamento:
+      title: Pagamento
+      properties:
+        valorTotal:
+          type: string
+          example: '13.45'
+        detalheDescricao:
+          type: string
+          example: Pagamento
+        contaBancaria:
+          type: string
+          example: '0008579377'
+        agencia:
+          type: string
+          example: 0001-9
+        adicionado:
+          type: string
+          example: '0.0'
+        dataVencimento:
+          type: string
+          example: '2022-11-08'
+        codigoAfiliado:
+          type: string
+          example: '001'
+        empresaEmissora:
+          type: string
+          example: CAIXA ECONOMICA FEDERAL
+        valorOriginal:
+          type: string
+          example: '13.45'
+        desconto:
+          type: string
+          example: '0.0'
+        cpfCnpj:
+          type: string
+          example: '00436923000190'
+        valorPrincipal:
+          type: string
+          example: '25.50'
+        periodoApuracao:
+          type: string
+        valorAumentado:
+          type: string
+          example: '0.0'
+        codBarras:
+          type: string
+          example: '10491916300000013453395782000100040000022263'
+        valorParcial:
+          type: string
+          example: '0.0'
+        hora:
+          type: string
+          example: 16h56
+        juros:
+          type: string
+          example: '0.0'
+        multa:
+          type: string
+          example: '0.0'
+        empresaOrigem:
+          type: string
+          example: Banco Inter
+        nomeDestinatario:
+          type: string
+          example: CEDENTE TESTE GEPEC
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        nomeOrigem:
+          type: string
+          example: SACADO TESTE GEPEC
+        codigoReceita:
+          type: string
+          example: '0561'
+        linhaDigitavel:
+          type: string
+          example: '07797777051167847115990071126347192950000003010'
+        autenticacao:
+          type: string
+          example: '314089907290729163000000134528'
+    DetalheBoletoCobranca:
+      title: Boleto Cobrança
+      properties:
+        dataVencimento:
+          type: string
+          example: '2022-07-06'
+        dataTransacao:
+          type: string
+          example: '2022-07-06 11:12:29.810'
+        nossoNumero:
+          type: string
+          example: '00776396923'
+        seuNumero:
+          type: string
+          example: '1616'
+        codBarras:
+          type: string
+          example: '07791904700001000000001112056207900776396923'
+        juros:
+          type: string
+          example: '0'
+        multa:
+          type: string
+          example: '20.00'
+        desconto1:
+          type: string
+          example: '11.00'
+        desconto2:
+          type: string
+          example: '12.00'
+        desconto3:
+          type: string
+          example: '13.00'
+        nome:
+          type: string
+          example: BoletoCobranca
+        dataLimite:
+          type: string
+          example: '2022-07-17'
+        tipoDetalhe:
+          type: string
+          example: COMPLETE
+        cpfCnpj:
+          type: string
+          example: '08942553630'
+        dataEmissao:
+          type: string
+          example: '2022-07-06'
+        abatimento:
+          type: string
+          example: '0'
+    DetalheTarifa:
+      title: Tarifa
+      properties:
+        dataVencimento:
+          type: string
+          example: '2022-07-12'
+        dataEmissao:
+          type: string
+          example: '2022-07-09'
+        dataTransacao:
+          type: string
+          example: '2022-07-09'
+        nossoNumero:
+          type: string
+          example: '00776396923'
+        seuNumero:
+          type: string
+          example: '1616'
+        codBarras:
+          type: string
+          example: '07791904700001000000001112056207900776396923'
+        endToEndId:
+          type: string
+          example: E00416968202206201436ghzKRVgnb7A
+    TransactionType:
+      type: string
+      enum:
+        - BOLETO_COBRANCA
+        - CAMBIO
+        - ESTORNO
+        - INVESTIMENTO
+        - PAGAMENTO
+        - PIX
+        - TRANSFERENCIA
+        - CASHBACK
+        - ANTECIPACAO_RECEBIVEIS_CARTAO
+        - DEPOSITO_BOLETO
+        - JUROS
+        - TARIFA
+        - DEBITO_AUTOMATICO
+        - COMPRA_DEBITO
+        - SAQUE
+        - PROVENTOS
+        - MULTA
+        - MAQUININHA_GRANITO
+        - INTERPAG
+        - IMPOSTO
+        - FINANCIAMENTO
+        - DOMICILIO_CARTAO
+        - CHEQUE
+        - SEGURO
+    Violacao:
+      type: object
+      title: Violação
+      properties:
+        razao:
+          type: string
+          title: Descrição do erro
+          description: Descrição do erro
+          example: Valor da cobrança não pode ser 0.00
+        propriedade:
+          type: string
+          title: Nome da propriedade
+          description: Nome da propriedade
+          example: cob.chave
+        valor:
+          type: string
+          title: Valor da propriedade
+          description: Valor da propriedade
+          example: '061996671234'
+    Problema:
+      type: object
+      required:
+        - title
+        - detail
+      properties:
+        type:
+          type: string
+          format: uri
+          description: >-
+            URI de referência que identifica o tipo de problema. De acordo com a
+            RFC 7807.
+        title:
+          type: string
+          description: Descrição resumida do problema.
+        status:
+          type: integer
+          description: Código HTTP do status retornado.
+        detail:
+          type: string
+          description: Descrição completa do problema.
+        timestamp:
+          type: string
+          description: Data no formato timestamp do erro
+    EntidadeNaoProcessavel:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Descrição resumida do problema.
+          example: Não foi possível processar o QR Code
+        detail:
+          type: string
+          description: Descrição completa do problema.
+          example: >-
+            Por favor, verifique com quem o gerou. Você consegue pagar de outra
+            forma, buscando nos favoritos ou inserindo a chave.
+        timestamp:
+          type: string
+          description: Data no formato timestamp do erro
+          example: '2023-10-23T13:10:47.149543-03:00'
+    DarfRequest:
+      type: object
+      required:
+        - cnpjCpf
+        - codigoReceita
+        - dataVencimento
+        - descricao
+        - nomeEmpresa
+        - periodoApuracao
+        - valorPrincipal
+        - referencia
+      properties:
+        cnpjCpf:
+          type: string
+          description: Campo para informar o cpf ou cnpj do pagador
+          minLength: 11
+          maxLength: 20
+          example: '90022400664'
+        codigoReceita:
+          type: string
+          description: Campo para informar o código da receita
+          minLength: 4
+          maxLength: 4
+          example: '0220'
+        dataVencimento:
+          type: string
+          format: date
+          description: |
+            Campo para informar a data de vencimento da DARF
+
+            Formato aceito: YYYY-MM-DD
+          example: '2022-01-30'
+        descricao:
+          type: string
+          description: Campo para informar a descrição
+          maxLength: 1000
+          example: Pagamento DARF Janeiro
+        nomeEmpresa:
+          type: string
+          description: Campo para informar o nome da empresa
+          maxLength: 100
+          example: Minha Empresa
+        telefoneEmpresa:
+          type: string
+          description: Campo para informar o telefone da empresa
+          maxLength: 50
+          example: '031999911111'
+        periodoApuracao:
+          type: string
+          format: date
+          description: |
+            Campo para informar o período de apuração da DARF
+
+            Formato aceito: YYYY-MM-DD
+          example: '2020-01-31'
+        valorPrincipal:
+          type: number
+          description: Campo para informar o valor principal
+          example: 47.14
+        valorMulta:
+          type: number
+          description: Campo para informar o valor da multa
+          example: 27.48
+        valorJuros:
+          type: number
+          description: Campo para informar o valor do juros
+          example: 10.11
+        referencia:
+          type: string
+          description: Campo para informar a referência da DARF
+          maxLength: 30
+          pattern: '[0-9]'
+          example: '13609400849201739'
+    ResponseError:
+      description: Objeto para retorno do detalhamento do erro
+      type: object
+      properties:
+        erro:
+          $ref: '#/components/schemas/ErrorModel'
+    ErrorModel:
+      type: object
+      description: Objeto para retorno do detalhamento do erro
+      properties:
+        mensagem:
+          type: string
+          example: (Requisição inválida, Erro interno do servidor, ...)
+          description: Mensagem de erro.
+          maxLength: 200
+        mensagemDetalhe:
+          type: string
+          example: (Tipo não informado, CPF/CNPJ não pode ser nulo, ...)
+          description: Mensagem de erro detalhada.
+          maxLength: 200
+        codigo:
+          type: integer
+          example: (51002, 51001, ...)
+          description: Código da mensagem.
+        status:
+          type: integer
+          example: (400, 422, ...)
+          description: Status da Resposta.
+    SucessoDarfResponse:
+      type: object
+      properties:
+        nroOperacao:
+          type: integer
+          example: 1
+          description: Identificador retornado pelo Autbank
+        tipoRetorno:
+          $ref: '#/components/schemas/TipoRetornoEnum'
+        mensagemDetalhe:
+          type: string
+          example: Movimentação concluída com sucesso.
+          description: Mensagem de sucesso detalhada
+        codigo:
+          type: integer
+          example: 1
+          description: Identificador do Pagamento ou Agendamento de DARF
+        autenticacao:
+          type: string
+          example: '12345678910433'
+          description: Autenticação da transação
+        dataPagamento:
+          type: string
+          example: 23/01/2022
+          description: Data de pagamento
+    DarfResponse:
+      type: object
+      properties:
+        quantidadeAprovadores:
+          type: integer
+          example: 4
+        autenticacao:
+          description: Autenticação da transação
+          example: '12345678910433'
+          type: string
+        dataPagamento:
+          description: Data de pagamento
+          example: 23/01/2022
+          type: string
+        tipoRetorno:
+          $ref: '#/components/schemas/TipoRetornoEnum'
+        codigoSolicitacao:
+          example: 8bbdede4-35db-4ec9-b652-e176841e62c8
+          type: string
+    TipoRetornoEnum:
+      type: string
+      enum:
+        - PAGAMENTO
+        - AGENDAMENTO
+        - APROVACAO_PAGAMENTO
+        - APROVACAO_AGENDAMENTO
+    TipoRetornoPagamentoPixEnum:
+      type: string
+      enum:
+        - APROVACAO
+        - PROCESSADO
+        - AGENDADO
+    PagarLoteRequest:
+      type: object
+      required:
+        - pagamentos
+      properties:
+        meuIdentificador:
+          type: string
+          maxLength: 30
+          description: Identificador do lote para o cliente.
+        pagamentos:
+          type: array
+          maxItems: 150
+          minItems: 2
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/RequestBoletoLote'
+              - $ref: '#/components/schemas/RequestDarfLote'
+            discriminator:
+              propertyName: tipoPagamento
+              mapping:
+                BOLETO: '#/components/schemas/RequestBoletoLote'
+                DARF: '#/components/schemas/RequestDarfLote'
+          description: Pagamentos a serem efetuado.
+    PagamentoRequestModelBase:
+      type: object
+      required:
+        - tipoPagamento
+      discriminator:
+        propertyName: tipoPagamento
+      properties:
+        tipoPagamento:
+          $ref: '#/components/schemas/TipoPagamentoEnum'
+    PagamentoResponseModelBase:
+      type: object
+      discriminator:
+        propertyName: tipoPagamento
+      required:
+        - seqId
+      properties:
+        tipoPagamento:
+          $ref: '#/components/schemas/TipoPagamentoEnum'
+        detalhe:
+          type: string
+    RequestBoletoLote:
+      allOf:
+        - $ref: '#/components/schemas/PagamentoRequestModelBase'
+      type: object
+      required:
+        - codBarraLinhaDigitavel
+        - valorPagar
+        - dataVencimento
+      properties:
+        codBarraLinhaDigitavel:
+          type: string
+          minLength: 44
+          maxLength: 48
+          description: Código de barras ou linha digitável
+          example: '07797000000000000004501008460019310001802680'
+        valorPagar:
+          type: number
+          minimum: 0.01
+          description: |
+            Valor a ser pago.
+          example: '26.80'
+        dataPagamento:
+          type: string
+          format: date
+          description: |
+            Data em que será pago o título.
+            Formato aceito: YYYY-MM-DD
+          example: '2023-08-18'
+        dataVencimento:
+          type: string
+          format: date
+          description: |
+            Data de vencimento do título.
+            Formato aceito: YYYY-MM-DD
+          example: '2018-07-27'
+        cpfCnpjBeneficiario:
+          type: string
+          pattern: ^[0-9]{11}$|^[0-9]{14}$
+          description: >
+            CPF/CNPJ do beneficiário! Caso informado, será realizada a validação
+            do campo em questão. Formato aceito: 12345678912345
+          example: '12345678912345'
+    PagamentoPixRequestBody:
+      type: object
+      required:
+        - valor
+        - destinatario
+      properties:
+        valor:
+          type: number
+          format: double
+          description: Valor do pagamento PIX
+          example: 234.56
+        dataPagamento:
+          type: string
+          format: date
+          description: >
+            Data solicitada para efetivação do pagamento do Pix (String
+            formatada)
+
+
+            Se não for informada, será a data atual.
+
+
+            Format aceito: YYYY-MM-DD
+          example: '2025-02-24'
+        descricao:
+          type: string
+          maxLength: 140
+        destinatario:
+          oneOf:
+            - $ref: '#/components/schemas/DestinatarioDadosBancarios'
+            - $ref: '#/components/schemas/DestinatarioChave'
+            - $ref: '#/components/schemas/DestinatarioPixCopiaECola'
+          discriminator:
+            propertyName: tipo
+            mapping:
+              DADOS_BANCARIOS: '#/components/schemas/DestinatarioDadosBancarios'
+              CHAVE: '#/components/schemas/DestinatarioChave'
+              PIX_COPIA_E_COLA: '#/components/schemas/DestinatarioPixCopiaECola'
+      example:
+        dadosBancarios:
+          valor: 1.23
+          dataPagamento: '2022-10-10'
+          descricao: Pix dados bancários teste
+          destinatario:
+            tipo: DADOS_BANCARIOS
+            nome: Teste dados bancários
+            contaCorrente: '0000000'
+            tipoConta: CONTA_CORRENTE
+            cpfCnpj: '00000000000'
+            agencia: '0019'
+            instituicaoFinanceira:
+              ispb: '00416968'
+        chavePix:
+          valor: 1.23
+          dataPagamento: '2022-10-10'
+          descricao: Pix com chave Pix teste
+          destinatario:
+            tipo: CHAVE
+            chave: chavepix@teste.com
+        pixCopiaECola:
+          valor: 1.23
+          dataPagamento: '2022-10-10'
+          descricao: Pix com código Copia e Cola
+          destinatario:
+            tipo: PIX_COPIA_E_COLA
+            pixCopiaECola: <Código Copia E Cola>
+    DestinatarioBase:
+      type: object
+      required:
+        - tipo
+      properties:
+        tipo:
+          $ref: '#/components/schemas/TipoDestinatario'
+    DestinatarioDadosBancarios:
+      allOf:
+        - $ref: '#/components/schemas/DestinatarioBase'
+      required:
+        - contaCorrente
+        - tipoConta
+        - cpfCnpj
+        - agencia
+        - nome
+        - instituicaoFinanceira
+      properties:
+        contaCorrente:
+          type: string
+        tipoConta:
+          $ref: '#/components/schemas/TipoConta'
+        cpfCnpj:
+          type: string
+        agencia:
+          type: string
+        nome:
+          type: string
+        instituicaoFinanceira:
+          $ref: '#/components/schemas/InstituicaoFinanceira'
+    DestinatarioChave:
+      allOf:
+        - $ref: '#/components/schemas/DestinatarioBase'
+      required:
+        - chave
+      properties:
+        chave:
+          type: string
+          description: >
+            Exemplos de tipos:
+
+            Se email: email do recebedor (ex: fulano.da.silva@example.com)
+
+            Se CPF/CNPJ: 12345678900 / 00038166000105
+
+            Se número do telefone celular: +55DD9XXXXXXXX (formato
+            internacional)
+
+            Se EVP: 123e4567-e12b-12d1-a456-426655440000
+    DestinatarioPixCopiaECola:
+      allOf:
+        - $ref: '#/components/schemas/DestinatarioBase'
+      required:
+        - pixCopiaECola
+      properties:
+        pixCopiaECola:
+          type: string
+          description: Informar o código Pix Copia e Cola
+    TipoDestinatario:
+      type: string
+      description: >-
+        Tipos de pagamentos que podem ser realizados. Por chave pix, dados
+        bancários ou código Pix Copia E Cola.
+      enum:
+        - CHAVE
+        - DADOS_BANCARIOS
+        - PIX_COPIA_E_COLA
+    TipoConta:
+      type: string
+      example: CONTA_CORRENTE
+      enum:
+        - CONTA_CORRENTE
+        - CONTA_POUPANCA
+        - CONTA_SALARIO
+        - CONTA_PAGAMENTO
+    InstituicaoFinanceira:
+      type: object
+      required:
+        - ispb
+      properties:
+        ispb:
+          type: string
+          description: Código ISPB, de 8 dígitos, dos bancos
+          example: '01234567'
+    PagamentoPixResponse:
+      type: object
+      properties:
+        tipoRetorno:
+          $ref: '#/components/schemas/TipoRetornoPagamentoPixEnum'
+        codigoSolicitacao:
+          type: string
+          description: Codigo da solicitacao do pagamento Pix
+          example: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataPagamento:
+          type: string
+          description: Data solicitada para efetivação do pagamento do Pix
+          example: '2025-02-28'
+        dataOperacao:
+          type: string
+          description: Data em que foi solicitado a inclusão do pagamento do Pix
+          example: '2025-02-24'
+    ConsultaPixAsyncResponse:
+      type: object
+      properties:
+        transacaoPix:
+          $ref: '#/components/schemas/PixAsyncResponse'
+        historico:
+          items:
+            $ref: '#/components/schemas/HistoricoResponse'
+    PixAsyncResponse:
+      properties:
+        contaCorrente:
+          type: string
+        recebedor:
+          $ref: '#/components/schemas/DadosConta'
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErroPagamento'
+        endToEnd:
+          type: string
+        valor:
+          type: number
+        status:
+          $ref: '#/components/schemas/StatusPix'
+        dataHoraMovimento:
+          type: string
+        dataHoraSolicitacao:
+          type: string
+        chave:
+          type: string
+        codigoSolicitacao:
+          type: string
+    HistoricoResponse:
+      type: object
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusHistoricoPix'
+        dataHoraEvento:
+          type: string
+    StatusPix:
+      type: string
+      description: |
+        Status atual da transação Pix
+        * `CRIADO`
+        * `AGUARDANDO_APROVACAO`
+        * `APROVADO`
+        * `REPROVADO`
+        * `EXPIRADO`
+        * `CANCELADO`
+        * `FALHA`
+        * `AGENDADO`
+        * `PAGO`
+        * `ENVIADO`
+        * `CANCELADO_SEM_SALDO`
+        * `DEBITADO`
+        * `PARCIALMENTE_DEBITADO`
+        * `PARCIALMENTE_PAGO`
+        * `NAO_DEBITADO`
+        * `AGENDAMENTO_CANCELADO`
+    StatusHistoricoPix:
+      type: string
+      description: |
+        Status atual da transação Pix
+        * `CRIADO`
+        * `AGUARDANDO_APROVACAO`
+        * `APROVADO`
+        * `REPROVADO`
+        * `EXPIRADO`
+        * `CANCELADO`
+        * `FALHA`
+        * `AGENDADO`
+        * `PAGO`
+        * `ENVIADO`
+        * `CANCELADO_SEM_SALDO`
+        * `DEBITADO`
+        * `PARCIALMENTE_DEBITADO`
+        * `PARCIALMENTE_PAGO`
+        * `NAO_DEBITADO`
+        * `AGENDAMENTO_CANCELADO`
+    RequestDarfLote:
+      allOf:
+        - $ref: '#/components/schemas/PagamentoRequestModelBase'
+      type: object
+      required:
+        - cnpjCpf
+        - nomeEmpresa
+        - periodoApuracao
+        - codigoReceita
+        - referencia
+        - dataVencimento
+        - valorPrincipal
+      properties:
+        cnpjCpf:
+          type: string
+          example: '90022400664'
+          minLength: 11
+          maxLength: 20
+        codigoReceita:
+          type: string
+          maxLength: 10
+          example: '0220'
+        dataVencimento:
+          type: string
+          format: date
+          example: '2022-05-10'
+        descricao:
+          type: string
+          maxLength: 1000
+          example: Pagamento DARF Janeiro
+        nomeEmpresa:
+          type: string
+          example: Minha Empresa
+          maxLength: 100
+        telefoneEmpresa:
+          type: string
+          example: '031999911111'
+        periodoApuracao:
+          type: string
+          format: date
+          example: '2020-01-31'
+        valorPrincipal:
+          type: number
+          format: int64
+          minimum: 0.1
+          example: 47.14
+        valorMulta:
+          type: number
+          format: int64
+          example: 27.48
+        valorJuros:
+          type: number
+          example: 10.11
+        referencia:
+          type: string
+          maxLength: 30
+          example: '13609400849201739'
+          pattern: '[0-9]'
+    PagarLoteResponse:
+      type: object
+      required:
+        - idLote
+        - status
+      properties:
+        idLote:
+          type: string
+          minLength: 24
+          maxLength: 24
+          description: Id do pagamento de um lote específico.
+        status:
+          $ref: '#/components/schemas/StatusLoteEnum'
+        meuIdentificador:
+          type: string
+          description: Identificador do lote
+          example: Lote de pagamentos referente a despesas do condomínio
+        qtdePagamentos:
+          type: integer
+          format: int32
+          description: Qtde de pagamentos existentes no lote.
+    ObterLoteResponse:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/PagarLoteResponse'
+      properties:
+        contaCorrente:
+          type: string
+          description: Conta corrente responsável pelo pagamento do lote.
+        dataCriacao:
+          type: string
+          format: date-time
+          description: Data em que o lote foi cadastrado.
+        pagamentos:
+          type: array
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/ResponseBoletoLote'
+              - $ref: '#/components/schemas/ResponseDarfLote'
+            discriminator:
+              propertyName: tipoPagamento
+              mapping:
+                BOLETO: '#/components/schemas/ResponseBoletoLote'
+                DARF: '#/components/schemas/ResponseDarfLote'
+    TipoPagamentoEnum:
+      type: string
+      enum:
+        - BOLETO
+        - DARF
+    StatusLoteEnum:
+      type: string
+      enum:
+        - EMPROCESSAMENTO
+        - PROCESSADOCOMERRO
+        - PROCESSADOSEMERRO
+    StatusPagamentoBoleto:
+      type: string
+      enum:
+        - EMPROCESSAMENTO
+        - REALIZADO
+        - AGENDADO
+        - AGUARDANDO_APROVACAO
+        - APROVADO
+        - CANCELADO
+        - REPROVADO
+        - ERRO
+        - NAO_COMPENSADO
+        - APROVADO_NOVO_PAGAMENTO
+        - APROVADO_AGUARDO_RETENTATIVA
+        - AGENDADO_REALIZADO
+        - AGENDADO_NAO_REALIZADO
+        - AGENDADO_CANCELADO
+        - APROVACAO_EXPIRADA
+        - ERRO_PAGAMENTO
+        - PAGO
+        - PAGAMENTO_AGENDADO
+        - PAGAMENTO_COBRANCA_AGENDADO
+      description: >
+        * EMPROCESSAMENTO não representa um estado do serviço de pagamentos. É o
+        estado inicial do pagamento
+    StatusPagamentoDarf:
+      type: string
+      enum:
+        - EMPROCESSAMENTO
+        - PAGO
+        - PAGAMENTO_AGENDADO
+        - AGENDAMENTO_CANCELADO
+        - NAO_COMPENSADO
+        - ERRO_PAGAMENTO
+        - AGUARDANDO_APROVACAO
+        - APROVADO
+        - CANCELADO
+      description: >
+        * EMPROCESSAMENTO não representa um estado do serviço de pagamentos. É o
+        estado inicial do pagamento
+    ResponseBoletoLote:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/PagamentoResponseModelBase'
+      properties:
+        codigoTransacao:
+          type: string
+          description: Identificador único do pagamento ao ser registrado.
+        status:
+          $ref: '#/components/schemas/StatusPagamentoBoleto'
+        codBarraLinhaDigitavel:
+          type: string
+          minLength: 44
+          maxLength: 48
+          description: Código de barras ou linha digitável
+          example: '07797000000000000004501008460019310001802680'
+        valorPagar:
+          type: number
+          minimum: 0.01
+          description: |
+            Valor a ser pago.
+          example: '26.80'
+        dataPagamento:
+          type: string
+          format: date
+          description: |
+            Data em que será pago o título.
+            Formato aceito: YYYY-MM-DD
+          example: '2023-08-18'
+        dataVencimento:
+          type: string
+          format: date
+          description: |
+            Data de vencimento do título.
+            Formato aceito: YYYY-MM-DD
+          example: '2018-07-27'
+        nsu:
+          type: string
+          example: '82127399'
+          description: Número sequencial único, exclusivo para uso no Inter.
+    ResponseDarfLote:
+      type: object
+      allOf:
+        - $ref: '#/components/schemas/PagamentoResponseModelBase'
+      properties:
+        status:
+          $ref: '#/components/schemas/StatusPagamentoDarf'
+        codigoSolicitacao:
+          type: string
+          example: 3414f226-36fb-4d87-811e-cfd99911d845
+          description: Identificador único do pagamento ao ser registrado.
+        tipoDarf:
+          type: string
+          example: PRETO
+        cnpjCpf:
+          type: string
+          example: '90022400664'
+        descricao:
+          type: string
+        nomeEmpresa:
+          type: string
+        telefoneEmpresa:
+          type: string
+        valor:
+          type: number
+          example: 50.96
+        valorMulta:
+          type: number
+          example: 0
+        valorJuros:
+          type: number
+          example: 0
+        valorTotal:
+          type: number
+          example: 50.96
+        periodoApuracao:
+          type: string
+          format: date
+          example: '2019-10-10'
+        dataPagamento:
+          type: string
+          format: date
+          example: '2019-10-10'
+        referencia:
+          type: string
+          example: 424562562565
+        dataVencimento:
+          type: string
+          format: date
+          example: '2019-10-10'
+        codigoReceita:
+          type: string
+          example: 190
+    TipoWebhookEnum:
+      type: string
+      enum:
+        - pix-pagamento
+        - boleto-pagamento
+      description: |
+        * `pix-pagamento:` - Pix pagamento
+        * `boleto-pagamento:` - Boleto Pagamento
+    WebhookModel:
+      type: object
+      required:
+        - webhookUrl
+      properties:
+        webhookUrl:
+          type: string
+          pattern: ^https://[^\s]*$
+          format: uri
+          example: https://meuwebhook.com/
+          description: >-
+            URL de configuração do webhook. Deve iniciar obrigatoriamente com
+            **https://**
+        criacao:
+          type: string
+          format: date-time
+          description: >-
+            Data e hora em que o webhook foi cadastrado. Representada de acordo
+            com a [RFC3339](https://tools.ietf.org/html/rfc3339)
+          readOnly: true
+    CallbackPixPagamentoModel:
+      type: object
+      properties:
+        codigoSolicitacao:
+          type: string
+        chave:
+          type: string
+        dataHoraMovimento:
+          type: string
+        dataHoraSolicitacao:
+          type: string
+        descricaoPagamento:
+          type: string
+        endToEnd:
+          type: string
+        instituicaoDestinatario:
+          type: string
+        recebedor:
+          $ref: '#/components/schemas/DadosConta'
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErroPagamento'
+        status:
+          $ref: '#/components/schemas/StatusPixPagamento'
+        tipoMovimentacao:
+          $ref: '#/components/schemas/TipoMovimentacao'
+        valor:
+          type: string
+    CallbackPagamentoBoletoModel:
+      type: object
+      properties:
+        linhaDigitavel:
+          type: string
+        codigoTransacao:
+          type: string
+        dataPagamento:
+          type: string
+        dataHoraSolicitacao:
+          type: string
+        nomeBeneficiario:
+          type: string
+        status:
+          $ref: '#/components/schemas/StatusPagamentoBoletoCallback'
+        valorPago:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de Pagamento Boleto
+            **REALIZADO**.
+        valorAgendado:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de de Pagamento Boleto
+            **AGENDADO**.
+        nsu:
+          type: string
+          example: '82127399'
+          description: Número sequencial único, exclusivo para uso no Inter.
+        erros:
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackPagamentoBoletoErrorModel'
+    CallbackPagamentoBoletoErrorModel:
+      type: object
+      properties:
+        codigoErro:
+          type: string
+        descricaoErro:
+          type: string
+    DadosConta:
+      type: object
+      properties:
+        codIspb:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de Pagamento Pix com
+            dados bancários.
+        codAgencia:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de Pagamento Pix com
+            dados bancários.
+        nroConta:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de Pagamento Pix com
+            dados bancários.
+        cpfCnpj:
+          type: string
+          description: >
+            Caso seja um CPF, o dado retornado será mascarado.
+            (ex:\***.777.888-\**)
+        nome:
+          type: string
+        tipoConta:
+          type: string
+          description: >
+            O atributo em questão só é retornado em caso de Pagamento Pix com
+            dados bancários.
+    ErroPagamento:
+      type: object
+      properties:
+        codigoErro:
+          type: string
+        descricaoErro:
+          type: string
+        codigoErroComplementar:
+          type: string
+    StatusPixPagamento:
+      type: string
+      description: |
+        * `EFETIVADO`
+        * `ERRO`
+        * `REPROVADO`
+        * `APROVACAO_EXPIRADA`
+        * `CANCELADO`
+      enum:
+        - EFETIVADO
+        - ERRO
+        - REPROVADO
+        - APROVACAO_EXPIRADA
+        - CANCELADO
+    StatusPagamentoBoletoCallback:
+      type: string
+      description: |
+        * `REALIZADO`
+        * `AGENDADO`
+        * `CANCELADO`
+        * `ERRO`
+        * `REPROVADO`
+        * `APROVACAO_EXPIRADA`
+      enum:
+        - REALIZADO
+        - AGENDADO
+        - CANCELADO
+        - ERRO
+        - REPROVADO
+        - APROVACAO_EXPIRADA
+    TipoMovimentacao:
+      type: string
+      description: |
+        * `PAGAMENTO`
+      enum:
+        - PAGAMENTO
+    CallbackAttemptPage:
+      type: object
+      required:
+        - data
+      properties:
+        totalElementos:
+          type: integer
+          format: int64
+        totalPaginas:
+          type: integer
+        primeiraPagina:
+          description: Informa se é a primeira página
+          type: boolean
+        ultimaPagina:
+          description: Informa se é a última página
+          type: boolean
+        data:
+          description: Dados de cada notificação de callback.
+          type: array
+          items:
+            $ref: '#/components/schemas/CallbackAttemptPageItem'
+    CallbackAttemptPageItem:
+      type: object
+      required:
+        - payload
+        - numeroTentativa
+        - dataEnvio
+        - sucesso
+      properties:
+        webhookUrl:
+          type: string
+          description: URL do webhook no momento do disparo.
+          format: uri
+        payload:
+          description: Corpo enviado na requisição.
+          type: object
+        numeroTentativa:
+          description: Qual o índice da tentativa de disparo.
+          type: integer
+        dataEnvio:
+          description: Data/hora da tentativa de disparo do callback.
+          type: string
+          format: date-time
+        sucesso:
+          type: boolean
+        httpStatus:
+          description: Resposta da chamada ao endpoint do webhook.
+          type: integer
+        mensagemErro:
+          type: string
+    RetryCallbacksRequestBody:
+      type: object
+      properties:
+        body:
+          oneOf:
+            - $ref: '#/components/schemas/CallbackRetryPixPagamentoBody'
+            - $ref: '#/components/schemas/CallbackRetryBoletoPagamentoBody'
+      example:
+        pix-pagamento:
+          codigoSolicitacao:
+            - 5aa9e369-fc6c-4e03-82b7-aa09fdbaa210
+        boleto-pagamento:
+          codigoTransacao:
+            - 5ceb9b65-5b9c-4d2f-b44a-3c55536ce927
+    CallbackRetryBoletoPagamentoBody:
+      type: object
+      title: boleto-pagamento
+      required:
+        - codigoTransacao
+      properties:
+        codigoTransacao:
+          type: array
+          items:
+            type: string
+            format: string
+          description: >-
+            Lista de códigos de transações de pagamento que deseja reenviar o
+            callback
+          minItems: 1
+          maxItems: 50
+    CallbackRetryPixPagamentoBody:
+      type: object
+      title: pix-pagamento
+      required:
+        - codigoSolicitacao
+      properties:
+        codigoSolicitacao:
+          type: array
+          items:
+            type: string
+            format: string
+          description: >-
+            Lista de códigos de solicitações de pagamento pix que deseja
+            reenviar o callback
+          minItems: 1
+          maxItems: 50
+    RetryCallbackResponse:
+      type: object
+      properties:
+        foundIds:
+          type: array
+          items:
+            type: string
+          description: >-
+            Lista dos códigos identificadores em que o reenvio foi solicitado
+            com sucesso.
+  requestBodies:
+    EfetuarPagamentoBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/EfetuarPagamento'
+    DarfRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DarfRequest'
+    PagarLoteRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PagarLoteRequest'
+    PagamentoPixRequestBody:
+      description: Dados do PIX a ser realizado.
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/PagamentoPixRequestBody'
+    WebhookRequestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/WebhookModel'
+    RetryCallbacksRequest:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RetryCallbacksRequestBody'
+  examples:
+    PagamentoPixResponseEfetivado:
+      summary: Exemplo response pagamento Pix Efetivado.
+      value:
+        tipoRetorno: PROCESSADO
+        codigoSolicitacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataPagamento: '2022-03-15'
+        dataOperacao: '2022-03-15'
+    PagamentoPixResponseAguardandoAprovacao:
+      summary: Exemplo response pagamento Pix Aguardando Aprovação.
+      value:
+        tipoRetorno: APROVACAO
+        codigoSolicitacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataPagamento: '2022-03-15'
+        dataOperacao: '2022-03-15'
+    CallbackPixPagamentoChave:
+      summary: Exemplo de callback Pix Pagamento com chave.
+      value:
+        chave: '01123456000123'
+        codigoSolicitacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataHoraMovimento: '2023-09-30T17:34:00.663504'
+        dataHoraSolicitacao: '2023-09-30T17:34:00.527'
+        descricaoPagamento: Pagamento Pix Teste
+        endToEnd: E00416968202309302034aqtneKsYCqs
+        instituicaoDestinatario: Banco Inter S.A.
+        recebedor:
+          cpfCnpj: '01123456000123'
+          nome: João da Silva
+        status: PROCESSADO
+        tipoMovimentacao: PAGAMENTO
+        valor: '0.01'
+    CallbackPixPagamentoDadosBancarios:
+      summary: Exemplo de callback Pix Pagamento com dados bancários.
+      value:
+        codigoSolicitacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataHoraMovimento: '2023-09-30T17:34:00.663504'
+        dataHoraSolicitacao: '2023-09-30T17:34:00.527'
+        descricaoPagamento: Pagamento Pix Teste
+        endToEnd: E00416968202309302034aqtneKsYCqs
+        instituicaoDestinatario: Banco Inter S.A.
+        recebedor:
+          codAgencia: '123465'
+          codIspb: '1234567'
+          cpfCnpj: '01123456000123'
+          nome: João da Silva
+          nroConta: '12346587'
+          tipoConta: CAC
+        status: PROCESSADO
+        tipoMovimentacao: PAGAMENTO
+        valor: '0.01'
+    CallbackPagamentoBoletoRealizado:
+      summary: Exemplo de callback Pagamento Boleto REALIZADO.
+      value:
+        linhaDigitavel: '12345678946579865465498756465498754564874548123'
+        codigoTransacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataPagamento: '2023-09-30'
+        dataHoraSolicitacao: '2023-09-30T17:34:00.527'
+        nomeBeneficiario: João da Silva
+        status: REALIZADO
+        valorPago: '10.00'
+        nsu: '82127399'
+    CallbackPagamentoBoletoAgendado:
+      summary: Exemplo de callback Pagamento Boleto AGENDADO.
+      value:
+        linhaDigitavel: '12345678946579865465498756465498754564874548123'
+        codigoTransacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataPagamento: '2023-09-30'
+        dataHoraSolicitacao: '2023-09-30T17:34:00.527'
+        nomeBeneficiario: João da Silva
+        status: REALIZADO
+        valorAgendado: '10.00'
+    CallbackPagamentoBoletoComErro:
+      summary: Exemplo de callback Pagamento Boleto ERRO.
+      value:
+        linhaDigitavel: '12345678946579865465498756465498754564874548123'
+        codigoTransacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        dataHoraSolicitacao: '2023-09-30T17:34:00.527'
+        nomeBeneficiario: João da Silva
+        status: ERRO
+        erros:
+          - codigoErro: PGE006
+            descricaoErro: Data para pagamento inválida!
+    CallbackPagamentoBoletoCancelado:
+      summary: Exemplo de callback Pagamento Boleto CANCELADO.
+      value:
+        codigoTransacao: c42f0787-02cb-4b31-827e-459ec9d7ece1
+        status: CANCELADO
+    NaoEncontradoExample:
+      summary: Exemplo de payload para erro de objeto não encontrado
+      value:
+        title: Não Encontrado.
+        status: '404'
+        detail: Entidade não encontrada.
+    ServicoIndisponivelExample:
+      summary: Exemplo de payload para erro de serviço indisponível
+      value:
+        title: Serviço Indisponível
+        status: '503'
+        detail: >-
+          Serviço não está disponível no momento. Serviço solicitado pode estar
+          em manutenção ou fora da janela de funcionamento.
+    AcessoNegadoExample:
+      summary: Exemplo de erro da requisição 1
+      value:
+        title: Acesso Negado
+        status: '403'
+        detail: >-
+          Requisição de participante autenticado que viola alguma regra de
+          autorização.
+    NaoAutorizadoExample:
+      summary: Exemplo de payload para acesso não autorizado
+      value:
+        title: Acesso negado
+        status: '401'
+        detail: Login/senha inválido.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+    NaoAceitoExample:
+      summary: Exemplo de payload para objeto não aceito
+      value:
+        title: Ocorreu um erro!
+        detail: Título já liquidado / baixado.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+    ConflitoExample:
+      summary: Exemplo de payload para conflito com recursos do servidor
+      value:
+        title: Ocorreu um erro!
+        detail: Algo deu errado! Nós já estamos resolvendo isso.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+    EntidadeImprocessavelExample:
+      summary: Exemplo de payload para quando não for possivel processar a requisição
+      value:
+        title: Problema no cancelamento de agendamento de boleto
+        detail: O status atual do boleto é CANCELADO e não permite cancelamento
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+    RequisicaoInvalidaExtratoExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O valor não pode ser nulo.
+            propriedade: dataInicio
+    ScrollJaAtivoExample:
+      summary: Scroll já ativo para esta conta
+      value:
+        title: Já existe um scroll ativo para esta conta corrente.
+        detail: Aguarde o scroll atual expirar ou finalize-o antes de iniciar um novo.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        typeError: SCROLL_ALREADY_ACTIVE
+    ScrollExpiradoExample:
+      summary: Scroll expirado ou inválido
+      value:
+        title: Scroll ID não encontrado ou expirou.
+        detail: >-
+          O scroll expirou após 6 minutos de inatividade ou o ID é inválido.
+          Inicie uma nova consulta com scroll.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        typeError: SCROLL_EXPIRED
+    RequisicaoInvalidaSaldoExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: Não foi possível converter o valor.
+            propriedade: dataSaldo
+    RequisicaoInvalidaPagamentoExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O tamanho deve estar entre 44 e 48
+            propriedade: codBarraLinhaDigitavel
+    RequisicaoInvalidaIncluirDarfExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O valor não deve estar vazio
+            propriedade: cnpjCpf
+    RequisicaoInvalidaBuscarDarfExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O tamanho deve estar entre 36 e 36
+            propriedade: buscarInformacoesPagamentoDarf.codigoSolicitacao
+    RequisicaoInvalidaIncluirPixExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O valor não pode ser nulo
+            propriedade: valor
+    RequisicaoInvalidaIncluirWebhookExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O valor deve seguir o padrão ^https://.*$
+            propriedade: webhookUrl
+    RequisicaoInvalidaConsultarCallbackExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: Required QueryValue [dataHoraInicio] not specified
+    RequisicaoInvalidaConsultarPixExample:
+      summary: Exemplo de erro de requisição inválida
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-01-01T00:00:00.000000000-03:00'
+        violacoes:
+          - razao: O valor não pode ser nulo
+            propriedade: codigoSolicitacao
+    ExemploRetryCallbackResponse:
+      summary: Exemplo de retorno da lista de callbacks reenviados.
+      value:
+        foundIds:
+          - 5ceb9b65-5b9c-4d2f-b44a-3c55536ce927
+    RequisicaoInvalidaExampleRetryCallback:
+      summary: Exemplo de bad request para o reenvio de callback
+      value:
+        title: Dados inválidos.
+        detail: >-
+          Verifique se os dados informados estão de acordo com a documentação
+          disponibilizada e tente novamente.
+        timestamp: '2023-09-26T18:06:11.692931-03:00'
+        violacoes:
+          - razao: Required Body [body] not specified.

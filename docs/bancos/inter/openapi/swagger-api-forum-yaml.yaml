@@ -1,0 +1,1047 @@
+openapi: 3.0.3
+info:
+  title: API Forum (Gerenciamento de publicações no Forum)
+  version: ''
+  description: |
+
+    # Pré-requisitos
+
+      Para utilizar as APIs do Forum em **ambiente de produção**, os seguintes pré-requisitos devem ser atendidos:
+
+      **1. Criação de perfil de usuário:**
+      - O perfil é criado automaticamente no primeiro acesso ao Forum pelo SuperApp.
+      - O Forum pode ser encontrado no widget dedicado ou pela barra de navegação na página inicial do SuperApp, conforme exemplo abaixo.
+
+      **2. Aceite dos termos de uso e condições do Forum:**
+      - Os termos de uso e condições do Forum são apresentados ao interagir com qualquer funcionalidade do Forum no SuperApp.
+      - O aceite é obrigatório para habilitação completa dos recursos das APIs e precisa ser realizado apenas uma vez por usuário.
+      - Após a leitura dos termos de uso e condições, basta selecionar o checkbox e clicar em "Continuar" para finalizar o processo, conforme exemplo abaixo.
+
+      <div style="display: flex; justify-content: center; gap: 5%; margin: 2em 0; flex-wrap: wrap;">
+        <img src="/media/acessar_forum.png" alt="Acessar o Forum pelo SuperApp" style="width: 40%; height: auto;">
+        <img src="/media/termos_uso_forum.jpg" alt="Tela de termos de uso do Forum" style="width: 40%; height: auto;">
+      </div>
+
+    ---
+    # Informações gerais
+
+      A API Forum é a solução que permite o gerenciamento de publicações no Forum do Inter.
+      Os tipos de publicações aceitos são: POST e POLL.
+      * **POST**: Publicação simples
+      * **POLL**: Enquete
+
+      O tipo de uma publicação não pode ser alterado após a criação.
+
+      **Recursos disponíveis nas publicações:**
+
+      * **Menções**: Para mencionar usuários, utilize o formato `@username` no texto da publicação.
+      * **Hashtags**: Para mencionar hashtags, utilize o formato `#hashtag` no texto da publicação.
+      * **Ativos financeiros**: Para referenciar ativos, use o formato `$ticker` no texto e um card informativo será gerado automaticamente.
+      * **Produtos do shopping do Inter**: Para postar um produto do shopping do Inter, adicione o link do produto no texto da publicação e o card será gerado automaticamente.
+      * **Arquivos de mídia**: Apenas publicações do tipo POST podem conter mídia. Atualmente, há suporte para imagens, vídeos e documentos pdf. Há duas formas de postar arquivos de mídia, que serão melhor explicadas na seção [Upload de arquivos de mídia](#upload-de-arquivos-de-mídia).
+      * **Enquetes**: Para criar enquetes, informe o tipo POLL e as opções da enquete.
+
+      As interações que as publicações podem receber de outros usuários são: curtidas (likes), comentários (comments), repost sem texto (reposts), repost com texto ou citação (quotes) e respostas de enquete (answers).
+
+    ---
+    # Upload de arquivos de mídia
+
+      Para adicionar arquivos de mídia em publicações do tipo POST, existem duas formas de realizar o upload: através de **URLs** ou via **binário (base64)**.
+
+      **Regras gerais para upload de mídia:**
+      * Máximo de **4 arquivos** por publicação
+      * Apenas **um tipo de arquivo** por publicação (somente imagens **OU** vídeos **OU** documentos)
+      * Os tipos de arquivos aceitos são: imagens (PNG, JPG), vídeos (MOV, MP4, QUICKTIME) e documentos (PDF)
+      * Imagens: até 20 MB por arquivo
+      * Vídeos e documentos: até 2.000 MB por arquivo
+
+      ## Upload via URLs
+
+      Este método é o mais recomendado por permitir maior controle sobre o processo de upload. O processo é realizado em três etapas:
+
+      1. **Gerar URL de upload**: Para cada arquivo que deseja enviar, faça uma requisição ao endpoint `/media/upload-url` informando o tipo MIME (`image/jpeg`, `image/png`, `video/mp4`, `video/quicktime`, `application/pdf`).
+
+         A API retornará:
+         * `uploadUrl` - URL temporária e exclusiva para upload do arquivo
+         * `publicationUrl` - mesma url, porém no formato esperado na criação/edição de publicação
+
+         **Observações:** A URL é válida por tempo limitado (usar imediatamente) e cada URL serve para apenas um arquivo. Para múltiplos arquivos, gere uma URL para cada um.
+
+      2. **Fazer upload do arquivo**: Faça uma requisição **PUT** diretamente para a `uploadUrl` retornada no passo anterior, enviando o arquivo no corpo da requisição.
+
+      3. **Criar publicação com mídia**: Após o upload bem-sucedido, utilize a `publicationUrl` no campo `mediasInformation` ao criar ou editar uma publicação.
+
+      ## Upload via Binário (Base64)
+
+      Este método permite enviar os arquivos diretamente no corpo da requisição de criação da publicação, codificados em base64. É ideal para arquivos menores e quando você deseja realizar tudo em uma única requisição.
+
+      **Como utilizar:**
+      - Encode o arquivo em base64
+      - Inclua o arquivo codificado no campo `mediaFiles` do corpo da requisição
+      - Informe a extensão do arquivo no campo `extension`
+      - Opcionalmente, defina a posição do arquivo na publicação através do campo `position`
+
+      **Limitações:**
+      - Tamanho máximo do arquivo pode ser limitado pelo tamanho da requisição HTTP
+      - Pode ter impacto na performance para arquivos grandes
+
+    ---
+servers:
+  - url: https://cdpj-sandbox.partners.uatinter.co/forum/v1
+    description: Servidor de Sandbox
+  - url: https://cdpj.partners.bancointer.com.br/forum/v1
+    description: Servidor de Produção
+paths:
+  /publication:
+    get:
+      tags:
+        - Publicação
+      summary: Obter publicação pelo ID
+      description: >
+        Utilizado para recuperar uma publicação pelo ID.
+
+
+        * Escopo requerido: publication.read
+
+
+        * Rate limit: <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+        *Obs: O
+        [token](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: getPublicationById
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationResponse'
+        '204':
+          description: Publicação não encontrada
+        '403':
+          description: Não autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    post:
+      tags:
+        - Publicação
+      summary: Criar publicação
+      description: >
+        Utilizado para criar uma publicação.
+
+
+        * Escopo requerido: publication.write
+
+        * Rate limit: <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+        *Obs: O
+        [token](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: createPublication
+      requestBody:
+        description: Um JSON contendo informações da publicação
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublicationRequestBody'
+      responses:
+        '200':
+          description: Publicação criada com sucesso
+          content:
+            application/json:
+              schema:
+                type: string
+                description: ID da publicação
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '403':
+          description: Não autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    put:
+      tags:
+        - Publicação
+      summary: Editar publicação
+      description: >
+        Utilizado para editar uma publicação pelo ID.
+
+
+        * Escopo requerido: publication.write
+
+        * Rate limit: <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+        *Obs: O
+        [token](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/PUT-purple"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/PUT-purple"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: updatePublication
+      parameters:
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        description: Um JSON contendo informações da publicação
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePublicationRequestBody'
+      responses:
+        '200':
+          description: Publicação atualizada com sucesso
+          content:
+            application/json:
+              schema:
+                type: string
+                description: ID da publicação
+        '400':
+          description: Requisição inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '403':
+          description: Não autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+    delete:
+      tags:
+        - Publicação
+      summary: Deletar publicação
+      description: >
+        Utilizado para deletar uma publicação pelo ID.
+
+
+        * Escopo requerido: publication.delete
+
+        * Rate limit: <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+        *Obs: O
+        [token](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/DELETE-red"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/publication</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: deletePublication
+      parameters:
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Publicação deletada com sucesso
+        '403':
+          description: Não autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /publications:
+    get:
+      tags:
+        - Publicação
+      summary: Obter lista de publicações
+      description: >
+        Utilizado para recuperar uma lista de publicações baseado nos parametros
+        informados.
+
+
+        * Escopo requerido: publication.read
+
+        * Rate limit: <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+        *Obs: O
+        [token](https://developers.inter.co/references/token#tag/Token/operation/Token)
+        tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/publications</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/GET-green"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/publications</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: getPublications
+      parameters:
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/size'
+        - $ref: '#/components/parameters/searchKey'
+        - $ref: '#/components/parameters/startDate'
+        - $ref: '#/components/parameters/endDate'
+        - $ref: '#/components/parameters/types'
+      responses:
+        '200':
+          description: Ok
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicationPageResponse'
+        '403':
+          description: Não autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '404':
+          description: Não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '500':
+          description: Erro interno do servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+  /media/upload-url:
+    post:
+      tags:
+        - Upload de mídia
+      summary: Gerar URL para upload de arquivo de mídia
+      description: >
+        Utilizado para gerar uma URL pré-assinada para upload de um arquivo de
+        mídia.
+
+          * Escopo requerido: publication.write
+          * Rate limit: <br />
+              * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 20 chamadas por minuto
+              * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 120 chamadas por minuto
+
+          *Obs: O [token](https://developers.inter.co/references/token#tag/Token/operation/Token) tem validade de 60 minutos e deverá ser reutilizado nas requisições.*
+
+          <div class="swagger-link-container">
+            <div class="url-container">
+              <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+              <img src="https://img.shields.io/badge/POST-blue"/>
+              <span class="span-container">
+                <span class="server">https://cdpj-sandbox.partners.uatinter.co/forum/v1<span class="url">/media/upload-url</span></span>
+              </span>
+            </div>
+            <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+          </div>
+          <div class="swagger-link-container">
+            <div class="url-container">
+              <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+              <img src="https://img.shields.io/badge/POST-blue"/>
+              <span class="span-container">
+                <span class="server">https://cdpj.partners.bancointer.com.br/forum/v1<span class="url">/media/upload-url</span></span>
+              </span>
+            </div>
+            <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+          </div>
+      operationId: generateMediaUploadUrl
+      requestBody:
+        description: A JSON object containing content type information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateUploadUrlRequest'
+      responses:
+        '200':
+          description: URL generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateUploadUrlResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+        '403':
+          description: Permission denied
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemResponse'
+components:
+  parameters:
+    id:
+      name: id
+      in: header
+      required: true
+      description: ID da publicação
+      schema:
+        type: string
+    page:
+      name: page
+      in: query
+      required: false
+      description: Número da página
+      schema:
+        type: integer
+        default: 0
+    size:
+      name: size
+      in: query
+      required: false
+      description: Número de itens por página
+      schema:
+        type: integer
+        default: 100
+    searchKey:
+      name: searchKey
+      in: query
+      required: false
+      description: Chave de busca
+      schema:
+        type: string
+    startDate:
+      name: startDate
+      description: Data de início
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+        example: '2025-01-01'
+    endDate:
+      name: endDate
+      in: query
+      description: Data de fim
+      required: false
+      schema:
+        type: string
+        format: date
+        example: '2025-01-02'
+    types:
+      name: types
+      in: query
+      required: false
+      description: 'Tipos de publicações. Default: POST, POLL'
+      schema:
+        type: array
+        items:
+          $ref: '#/components/schemas/PostType'
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        alias:
+          type: string
+        message:
+          type: string
+    ProblemResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        title:
+          type: string
+          description: Descrição resumida do problema
+          example: Not found
+        detail:
+          type: string
+          description: Descrição completa do problema
+        timestamp:
+          type: string
+          format: date-time
+        violacoes:
+          type: array
+          items:
+            $ref: '#/components/schemas/Violacao'
+    Violacao:
+      type: object
+      properties:
+        propriedade:
+          type: string
+          description: Nome da propriedade
+        razao:
+          type: string
+          description: Descrição do erro
+        valor:
+          type: string
+          description: Valor da propriedade
+    PublicationRequestBody:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/PostType'
+        text:
+          type: string
+          description: Conteúdo da publicação
+        mediasInformation:
+          $ref: '#/components/schemas/MediasInformationUpdate'
+        mediaFiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaFile'
+          description: Arquivos de mídia para adicionar na publicação
+        poll:
+          $ref: '#/components/schemas/PollRequestBody'
+        createdAt:
+          type: string
+          format: date-time
+          description: >-
+            Data e hora da publicação (Aceita datas futuras para criar
+            publicações agendadas)
+    UpdatePublicationRequestBody:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Conteúdo da publicação
+        mediasInformation:
+          $ref: '#/components/schemas/MediasInformationUpdate'
+        mediaFiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaFile'
+          description: Arquivos para adicionar na publicação
+    PublicationResponse:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/PostType'
+        id:
+          type: string
+          description: ID da publicação
+        text:
+          type: string
+          description: Conteúdo da publicação
+        mediasInformation:
+          $ref: '#/components/schemas/MediasInformationUpdate'
+        card:
+          $ref: '#/components/schemas/CardInfo'
+        poll:
+          $ref: '#/components/schemas/PollResponse'
+        likes:
+          type: integer
+          format: int64
+          default: 0
+          description: Quantidade de curtidas
+        comments:
+          type: integer
+          format: int64
+          default: 0
+          description: Quantidade de comentários
+        reposts:
+          type: integer
+          format: int64
+          default: 0
+          description: Quantidade de reposts
+        quotes:
+          type: integer
+          format: int64
+          default: 0
+          description: Quantidade de citações
+        answers:
+          type: integer
+          format: int64
+          default: 0
+          description: Quantidade de respostas
+        createdAt:
+          type: string
+          format: date-time
+          description: Data e hora da publicação
+        updatedAt:
+          type: string
+          format: date-time
+          description: Data e hora da última atualização
+    PostType:
+      type: string
+      enum:
+        - POST
+        - POLL
+      default: POST
+      description: Tipo da publicação
+    PublicationPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationResponse'
+          description: Lista de publicações
+        totalPages:
+          type: integer
+          format: int32
+          description: Total de páginas
+        totalElements:
+          type: integer
+          format: int32
+          description: Total de itens
+      required:
+        - content
+        - totalPages
+        - totalElements
+    PollRequestBody:
+      type: object
+      description: Enquete
+      properties:
+        durationInDays:
+          $ref: '#/components/schemas/DurationPoll'
+        multipleChoice:
+          type: boolean
+          description: Se a enquete permite múltiplas escolhas
+        options:
+          type: array
+          description: As opções da enquete
+          items:
+            type: string
+          minItems: 2
+    DurationPoll:
+      type: string
+      description: Duração da enquete em dias
+      enum:
+        - ONE_DAY
+        - TWO_DAYS
+        - THREE_DAYS
+        - FOUR_DAYS
+        - FIVE_DAYS
+    PollResponse:
+      type: object
+      description: Enquete
+      properties:
+        expiresAt:
+          type: string
+          format: date-time
+          description: Data e hora da expiração da enquete
+        multipleChoice:
+          type: boolean
+          description: Se a enquete permite múltiplas escolhas
+        optionsPoll:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionPoll'
+          description: As opções da enquete
+    OptionPoll:
+      type: object
+      description: Opção da enquete
+      properties:
+        label:
+          type: string
+          description: A label da opção
+        totalAnswer:
+          type: integer
+          description: O total de votos para esta opção
+    MediaFormat:
+      type: string
+      enum:
+        - PORTRAIT
+        - LANDSCAPE
+        - SQUARE
+      description: Formato da mídia
+    MediasInformation:
+      type: object
+      description: Arquivos de mídia
+      properties:
+        images:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformation'
+        videos:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformation'
+        documents:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformation'
+    MediaInformation:
+      type: object
+      description: Arquivo de mídia
+      properties:
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        format:
+          $ref: '#/components/schemas/MediaFormat'
+    MediasInformationUpdate:
+      type: object
+      description: Arquivos de mídia para manter na publicação
+      properties:
+        images:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformationUpdate'
+          description: Imagens para manter na publicação
+        videos:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformationUpdate'
+          description: Vídeos para manter na publicação
+        documents:
+          type: array
+          items:
+            type: object
+            $ref: '#/components/schemas/MediaInformationUpdate'
+          description: Documentos para manter na publicação
+    MediaInformationUpdate:
+      type: object
+      description: Arquivo de mídia para atualizar na publicação
+      properties:
+        url:
+          type: string
+          description: A url do arquivo
+        position:
+          type: integer
+          description: A posição do arquivo na publicação
+          default: 0
+    MediaFile:
+      type: object
+      description: Arquivo de mídia para adicionar na publicação
+      properties:
+        file:
+          type: string
+          format: byte
+          description: Imagem, vídeo ou documento
+        extension:
+          $ref: '#/components/schemas/FileExtension'
+        position:
+          type: integer
+          description: A posição do arquivo na publicação
+          default: 0
+    FileExtension:
+      type: string
+      enum:
+        - PNG
+        - JPG
+        - MOV
+        - MP4
+        - QUICKTIME
+        - PDF
+      description: Extensão do arquivo
+    GenerateUploadUrlRequest:
+      type: object
+      required:
+        - contentType
+      properties:
+        contentType:
+          type: string
+          example: image/jpeg
+          description: >-
+            MIME type of the file to be uploaded. Allowed types: image/jpeg,
+            image/png, video/mp4, video/quicktime, application/pdf.
+    GenerateUploadUrlResponse:
+      type: object
+      properties:
+        uploadUrl:
+          type: string
+          description: URL pré-assinada para upload do arquivo
+          example: >-
+            https://s3.amazonaws.com/bucket?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=EXAMPLEACCESSKEY%2F20251218%2Fuse-east-1%2Fs3%2Faws4_request&X-Amz-Date=20251218T120000Z&X-Amz-Expires=900&X-Amz-SignedHeaders=host&X-Amz-Signature=12345567899
+        publicationUrl:
+          type: string
+          description: URL para ser usada na criação da publicação após o upload
+          example: https://s3.amazonaws.com/bucket
+    CardInfo:
+      type: object
+      description: Card Genérico
+      nullable: true
+      properties:
+        type:
+          $ref: '#/components/schemas/CardTypeInfo'
+        header:
+          $ref: '#/components/schemas/CardHeaderInfo'
+        body:
+          $ref: '#/components/schemas/CardBodyInfo'
+        footer:
+          $ref: '#/components/schemas/CardFooterInfo'
+        action:
+          $ref: '#/components/schemas/CardButtonActionInfo'
+        metadata:
+          type: object
+          additionalProperties:
+            type: object
+    CardTypeInfo:
+      type: string
+      enum:
+        - ASSET
+        - SHOPPING
+        - GENERIC
+        - BASIC
+      description: Tipo de card
+    CardHeaderInfo:
+      type: object
+      description: Cabeçalho do card
+      properties:
+        tag:
+          $ref: '#/components/schemas/CardTagInfo'
+        title:
+          type: string
+    CardBodyInfo:
+      type: object
+      description: Corpo do card
+      properties:
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardTagInfo'
+        title:
+          type: string
+        text:
+          type: string
+        price:
+          type: string
+        oldPrice:
+          type: string
+        installment:
+          type: string
+        cashback:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+        button:
+          $ref: '#/components/schemas/CardButtonInfo'
+        grid:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardGridCellInfo'
+        table:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardTableCellInfo'
+        chart:
+          $ref: '#/components/schemas/CardChartInfo'
+    CardFooterInfo:
+      type: object
+      description: Rodapé do card
+      properties:
+        text:
+          type: string
+    CardChartInfo:
+      type: object
+      description: Gráfico do card
+      properties:
+        description:
+          type: string
+        variations:
+          type: array
+          items:
+            $ref: '#/components/schemas/CardChartVariationInfo'
+        lineColor:
+          type: string
+        labelCount:
+          type: integer
+        forceLabelCount:
+          type: boolean
+        typeOfCurrency:
+          type: string
+    CardChartVariationInfo:
+      type: object
+      description: Variação do gráfico
+      properties:
+        value:
+          type: number
+          format: double
+        label:
+          type: string
+    CardTagInfo:
+      type: object
+      description: Tag do card
+      properties:
+        title:
+          type: string
+        textColor:
+          type: string
+          description: Código hexadecimal da cor do texto
+        backgroundColor:
+          type: string
+          description: Código hexadecimal da cor do fundo
+    CardGridCellInfo:
+      type: object
+      description: Célula do grid do card
+      properties:
+        title:
+          type: string
+        text:
+          type: string
+        textColor:
+          type: string
+          description: Código hexadecimal da cor do texto
+        icon:
+          $ref: '#/components/schemas/CardIconInfo'
+    CardButtonInfo:
+      type: object
+      description: Botão do card
+      properties:
+        title:
+          type: string
+        style:
+          $ref: '#/components/schemas/Style'
+        isEnable:
+          type: boolean
+          default: true
+        icon:
+          $ref: '#/components/schemas/CardIconInfo'
+        action:
+          $ref: '#/components/schemas/CardButtonActionInfo'
+    CardButtonActionInfo:
+      type: object
+      description: Ação do botão do card
+      properties:
+        route:
+          type: string
+        value:
+          type: string
+    CardIconInfo:
+      type: object
+      description: Ícone do card
+      properties:
+        value:
+          type: string
+    CardTableCellAlignInfo:
+      description: Alinhamento da célula da tabela do card
+      type: string
+      enum:
+        - LEFT
+        - RIGHT
+    CardTableCellInfo:
+      type: object
+      description: Célula da tabela do card
+      properties:
+        align:
+          $ref: '#/components/schemas/CardTableCellAlignInfo'
+        title:
+          type: string
+        icon:
+          $ref: '#/components/schemas/CardIconInfo'
+        text:
+          type: string
+        textColor:
+          type: string
+          description: Código hexadecimal da cor do texto
+    Style:
+      type: string
+      description: Estilo do botão do card
+      enum:
+        - PRIMARY
+        - SECONDARY
+        - GHOST

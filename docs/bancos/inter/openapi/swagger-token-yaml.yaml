@@ -1,0 +1,170 @@
+openapi: 3.0.3
+info:
+  title: Autenticação OAuth
+  version: ''
+  description: ''
+servers:
+  - url: https://cdpj.partners.bancointer.com.br/oauth/v2
+    description: Servidor OAuth Produção
+  - url: https://cdpj-sandbox.partners.uatinter.co/oauth/v2
+    description: Servidor OAuth Sandbox
+paths:
+  /token:
+    post:
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRequest'
+      tags:
+        - Token
+      summary: Obter token oAuth
+      description: >
+        A autenticação OAuth é a mais recente forma de autenticar os novos
+        serviços disponibilizados pelo Inter. O Token gerado será necessário
+        para consumir as APIs do Inter.
+
+
+        * O tempo de vida de um token gerado é de uma hora. Com isso, é possível
+        realizar um número determinado de requisições nas apis, de acordo com o
+        rate limit de cada api, utilizando um único token.
+
+        * rate limit: <br />
+            * <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/> 5 chamadas por minuto <br />
+            * <img src="https://img.shields.io/badge/SANDBOX-07605B"/> 5 chamadas por minuto
+
+        <div class="button-div"> 
+          <button class="button-yaml" data-category="CODE_EXAMPLE" data-value="obterTokenOauth">
+            <img src="/img/icons/recipes.svg" alt="Ícone" width="24" height="24" />
+            Exemplos de código
+          </button>
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/PRODUÇÃO-FF7043"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj.partners.bancointer.com.br/oauth/v2<span class="url">/token</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+
+
+        <div class="swagger-link-container">
+          <div class="url-container">
+            <img src="https://img.shields.io/badge/SANDBOX-07605B"/>
+            <img src="https://img.shields.io/badge/POST-blue"/>
+            <span class="span-container">
+              <span class="server">https://cdpj-sandbox.partners.uatinter.co/oauth/v2<span class="url">/token</span></span>
+            </span>
+          </div>
+          <img src="/img/icons/copy.svg" alt="Ícone" width="24" height="24" class="copy-icon" />
+        </div>
+      operationId: Token
+      responses:
+        '200':
+          $ref: '#/components/responses/TokenResponse'
+        '400':
+          $ref: '#/components/responses/FormatoInvalido'
+        '403':
+          $ref: '#/components/responses/AcessoNegado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '503':
+          $ref: '#/components/responses/ServicoIndisponivel'
+components:
+  responses:
+    FormatoInvalido:
+      description: Requisição com formato inválido.
+    NaoEncontrado:
+      description: Recurso solicitado não foi encontrado.
+    AcessoNegado:
+      description: >-
+        Requisição de participante autenticado que viola alguma regra de
+        autorização.
+    ServicoIndisponivel:
+      description: >-
+        Serviço não está disponível no momento. Serviço solicitado pode estar em
+        manutenção ou fora da janela de funcionamento.
+    TokenResponse:
+      description: Sucesso. Token emitido
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TokenResponse'
+  schemas:
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Token gerado para ser utilizado nas requisições do Inter via Bearer.
+        token_type:
+          type: string
+          description: Tipo do token gerado.
+        expires_in:
+          type: number
+          description: Tempo de uso do token até expirar.
+        scope:
+          type: string
+          description: Para qual escopo foi gerado o token.
+    TokenRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          description: Client Id obtido no detalhe da tela de aplicações no IB
+        client_secret:
+          type: string
+          description: Client Secret obtido no detalhe da tela de aplicações no IB
+        grant_type:
+          type: string
+          description: GrantType que utilizamos, o default é (client_credentials)
+          default: client_credentials
+        scope:
+          description: >
+            Escopos cadastrados na tela de aplicações.
+
+
+
+            **Onde encontrar os escopos:**<br>
+
+            Você encontra os escopos necessários para acesso na documentação 
+
+            específica de cada endpoint.<br>
+
+            **Exemplo:**<br>
+
+            O endpoint para Consultar extrato requer o escopo `extrato.read`,
+
+            conforme indicado na imagem abaixo, retirada da documentação:
+
+
+
+            <img src="/media/exemplo_escopo.png"><br>
+
+
+            **Múltiplos escopos:**<br>
+
+            É possível solicitar múltiplos escopos simultaneamente, enviando-os
+
+            em sequência separados por espaço.<br>
+
+            **Exemplo:**<br>
+
+            Para gerar um token com permissões de consulta para extrato,
+            cobrança
+
+            e Pix, utilize:<br>
+
+            extrato.read boleto-cobranca.read pix.read
+          example: extrato.read
+          type: string
+      required:
+        - client_id
+        - client_secret
+        - grant_type
+        - scope
