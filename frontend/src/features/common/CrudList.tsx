@@ -84,6 +84,12 @@ interface CrudListProps<T> {
   onStatusLote?: (itens: T[], status: 'ativo' | 'inativo') => Promise<void>
   /** Ações em lote específicas da tela, renderizadas na barra de seleção. */
   acoesLote?: (ctx: LoteContexto<T>) => ReactNode
+  /**
+   * Resumo acima do grid (cards de totais) calculado sobre as linhas visíveis: depois da
+   * busca, dos filtros por coluna e de mostrar/esconder inativos. Assim os totais batem
+   * com o que está na lista.
+   */
+  resumo?: (visiveis: T[]) => ReactNode
 }
 
 /**
@@ -106,6 +112,7 @@ export function CrudList<T>({
   onRowClick,
   onStatusLote,
   acoesLote,
+  resumo,
 }: CrudListProps<T>) {
   const [page, setPage] = useState(1)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
@@ -269,7 +276,9 @@ export function CrudList<T>({
   const podeReativar = !!onStatusLote && selecionados.some((r) => (r as { status?: string }).status === 'inativo')
 
   return (
-    <div className={ui.card}>
+    <>
+      {resumo?.(lista)}
+      <div className={ui.card}>
       {n > 0 ? (
         <div className={ui.selBar} role="region" aria-label="Ações em lote">
           <b>
@@ -396,6 +405,7 @@ export function CrudList<T>({
           <button disabled={current >= totalPages} onClick={() => setPage(current + 1)}><ChevronRight size={15} /></button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

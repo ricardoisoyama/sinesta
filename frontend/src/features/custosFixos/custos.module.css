@@ -64,6 +64,17 @@
   border-radius: 20px;
   padding: 3px 10px;
 }
+/* Despesa paga por outra empresa (aparece aqui pelo rateio): neutra, para não parecer desta empresa. */
+.unitTagOutra {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b6a60;
+  background: #f3f1ec;
+  border: 1px dashed #cfc9bd;
+  border-radius: 20px;
+  padding: 3px 10px;
+}
 .tipoTag {
   display: inline-block;
   font-size: 11px;

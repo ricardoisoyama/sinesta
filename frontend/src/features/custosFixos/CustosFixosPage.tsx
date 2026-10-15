@@ -47,16 +47,17 @@ export function CustosFixosPage() {
 
   // Filtrando por empresa, entram as despesas dela e as rateadas com ela (com a parte dela).
   const todas = unidadeFiltro === 'todos'
-  const daEmpresa = (c: CustoFixo) => todas || percentualDaEmpresa(c, unidadeFiltro) > 0
   /** Valor que conta para o filtro: cheio em "Todas" (cada despesa uma vez), a parte da empresa filtrada. */
   const valorNoFiltro = (c: CustoFixo) => (todas ? c.valorMensal : valorDaEmpresa(c, unidadeFiltro))
 
+  // A busca olha a descrição, o centro de custo e quem cobra (fornecedor ou funcionário).
   const searchFn = useCallback(
     (c: CustoFixo, q: string) =>
       (unidadeFiltro === 'todos' || percentualDaEmpresa(c, unidadeFiltro) > 0) &&
-      (c.descricao.toLowerCase().includes(q) ||
-        (categoriasData?.find((cat) => cat.id === c.categoriaId)?.nome ?? '').toLowerCase().includes(q)),
-    [unidadeFiltro, categoriasData],
+      [c.descricao, categoriasData?.find((cat) => cat.id === c.categoriaId)?.nome ?? '', nomeFornecedor(c.fornecedorId)]
+        .some((t) => t.toLowerCase().includes(q)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [unidadeFiltro, categoriasData, fornecedoresData, usuarios],
   )
 
   const crud = useCrud<CustoFixo>(mockCustosFixos, searchFn)
@@ -101,17 +102,53 @@ export function CustosFixosPage() {
     invalidate()
   }
 
-  // Totais respeitam a empresa selecionada (mas não o texto de busca): a DF dela é a soma das partes.
-  const escopo = crud.items.filter(daEmpresa)
-  const naDf = escopo.filter((c) => entraNaDf(c))
-  const totalMensal = naDf.reduce((acc, c) => acc + valorNoFiltro(c), 0)
-  const spot = escopo.filter((c) => c.status === 'ativo' && c.tipo === 'spot')
-  const totalSpot = spot.reduce((acc, c) => acc + valorNoFiltro(c), 0)
   const nomeEmpresa = (id: string) => unidadesAtivas.find((u) => u.id === id)?.nome ?? nomeUnidade(id)
   /** "50%" ou "33,33%": casas decimais só quando existem. */
   const pctCurto = (frac: number) => formatPct(frac, Number.isInteger(Math.round(frac * 10000) / 100) ? 0 : 2)
-  const resumoRateio = (c: CustoFixo) =>
-    todas ? `Rateada · ${c.rateio!.length} empresas` : `Rateada · ${pctCurto(percentualDaEmpresa(c, unidadeFiltro))}`
+  // Com uma empresa no combo, entram também as despesas pagas por outra e rateadas com ela:
+  // a linha diz quem paga e quanto vem para a empresa filtrada.
+  const pagaOutra = (c: CustoFixo) => !todas && c.unidadeId !== unidadeFiltro
+  const resumoRateio = (c: CustoFixo) => {
+    if (todas) return `Rateada · ${c.rateio!.length} empresas`
+    const pct = pctCurto(percentualDaEmpresa(c, unidadeFiltro))
+    return pagaOutra(c) ? `${pct} rateado para a ${nomeEmpresa(unidadeFiltro)}` : `Rateada · fica com ${pct}`
+  }
+
+  /**
+   * Cards de totais sobre exatamente o que a lista mostra (empresa, busca, filtros por coluna,
+   * inativos). Com uma empresa no combo, soma a parte dela em cada despesa (rateio).
+   */
+  const resumo = (visiveis: CustoFixo[]) => {
+    const naDf = visiveis.filter((c) => entraNaDf(c))
+    const totalMensal = naDf.reduce((acc, c) => acc + valorNoFiltro(c), 0)
+    const totalSpot = visiveis.filter((c) => c.status === 'ativo' && c.tipo === 'spot').reduce((acc, c) => acc + valorNoFiltro(c), 0)
+    const filtrado = visiveis.length < crud.items.filter((c) => c.status !== 'inativo').length
+    const sub = todas ? (filtrado ? 'das despesas filtradas' : 'todas as empresas') : `parte da ${nomeEmpresa(unidadeFiltro)} no rateio`
+    return (
+      <div className={s.summary}>
+        <div className={s.sumCard}>
+          <div className={s.sumLabel}>Total DF / mês</div>
+          <div className={`${s.sumValue} ${s.accent}`}>{formatBRL(totalMensal)}</div>
+          <div className={s.sumSub}>{sub}</div>
+        </div>
+        <div className={s.sumCard}>
+          <div className={s.sumLabel}>Total DF / ano</div>
+          <div className={s.sumValue}>{formatBRL(totalMensal * 12)}</div>
+          <div className={s.sumSub}>{sub}</div>
+        </div>
+        <div className={s.sumCard}>
+          <div className={s.sumLabel}>Custos na DF</div>
+          <div className={s.sumValue}>{naDf.length}</div>
+          <div className={s.sumSub}>de {visiveis.length} na lista</div>
+        </div>
+        <div className={s.sumCard}>
+          <div className={s.sumLabel}>Despesas spot</div>
+          <div className={s.sumValue}>{formatBRL(totalSpot)}</div>
+          <div className={s.sumSub}>fora da DF</div>
+        </div>
+      </div>
+    )
+  }
 
   const columns: Column<CustoFixo>[] = [
     {
@@ -137,7 +174,11 @@ export function CustosFixosPage() {
       valor: (c) => nomeEmpresa(c.unidadeId) + (rateada(c) ? ` (${resumoRateio(c)})` : ''),
       cell: (c) => (
         <div className={s.empresaCel}>
-          <span className={s.unitTag}>{nomeEmpresa(c.unidadeId)}</span>
+          {pagaOutra(c) ? (
+            <span className={s.unitTagOutra}>Paga pela {nomeEmpresa(c.unidadeId)}</span>
+          ) : (
+            <span className={s.unitTag}>{nomeEmpresa(c.unidadeId)}</span>
+          )}
           {rateada(c) && (
             <span
               className={s.rateioTag}
@@ -242,30 +283,12 @@ export function CustosFixosPage() {
         }
       />
 
-      <div className={s.summary}>
-        <div className={s.sumCard}>
-          <div className={s.sumLabel}>Total DF / mês</div>
-          <div className={`${s.sumValue} ${s.accent}`}>{formatBRL(totalMensal)}</div>
-        </div>
-        <div className={s.sumCard}>
-          <div className={s.sumLabel}>Total DF / ano</div>
-          <div className={s.sumValue}>{formatBRL(totalMensal * 12)}</div>
-        </div>
-        <div className={s.sumCard}>
-          <div className={s.sumLabel}>Custos na DF</div>
-          <div className={s.sumValue}>{naDf.length}</div>
-        </div>
-        <div className={s.sumCard}>
-          <div className={s.sumLabel}>Despesas spot</div>
-          <div className={s.sumValue}>{formatBRL(totalSpot)}</div>
-        </div>
-      </div>
-
       <CrudList
+        resumo={resumo}
         id="custos-fixos"
         query={crud.query}
         onQuery={crud.setQuery}
-        searchPlaceholder="Buscar por descrição ou centro de custo..."
+        searchPlaceholder="Buscar por descrição, fornecedor ou centro de custo..."
         columns={columns}
         rows={crud.filtered}
         getKey={(c) => c.id}
