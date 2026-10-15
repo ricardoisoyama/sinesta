@@ -9,7 +9,7 @@
  */
 export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual'
 
-export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico'
+export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico' | 'veiculo'
 
 /** O que o campo faz com o cálculo do preço (escolhido pelo usuário, dentro do que o tipo permite). */
 export type EfeitoCampo = 'informativo' | 'multiplica' | 'soma-custo' | 'pct-custo'
@@ -19,7 +19,7 @@ export const TIPOS_CAMPO: { valor: TipoCampoOperacao; label: string; ajuda: stri
   { valor: 'lista', label: 'Lista de opções', ajuda: 'Escolha entre opções fixas (ex.: escala 12x36, 5x2).' },
   { valor: 'uf', label: 'Lista de UFs', ajuda: 'Combo com as 27 UFs do Brasil.' },
   { valor: 'cidade', label: 'Lista de cidades', ajuda: 'Busca na base de municípios do IBGE ("SP - São Paulo"). Filtra pela UF do campo de UF mais próximo, quando preenchida.' },
-  { valor: 'cadastro', label: 'Cadastro', ajuda: 'Escolhe um registro do sistema (cliente, fornecedor, vendedor, serviço).' },
+  { valor: 'cadastro', label: 'Cadastro', ajuda: 'Escolhe um registro do sistema (cliente, fornecedor, vendedor, serviço, veículo).' },
   { valor: 'data', label: 'Data', ajuda: 'Uma data (início do contrato, coleta...).' },
   { valor: 'numero', label: 'Número', ajuda: 'Quantidade, peso, metragem. Pode multiplicar o preço.' },
   { valor: 'valor', label: 'Valor (R$)', ajuda: 'Valor em reais. Pode entrar como custo da operação.' },
@@ -55,6 +55,7 @@ export const CADASTROS: { valor: CadastroOrigem; label: string }[] = [
   { valor: 'fornecedor', label: 'Fornecedores' },
   { valor: 'vendedor', label: 'Vendedores' },
   { valor: 'servico', label: 'Serviços' },
+  { valor: 'veiculo', label: 'Veículos' },
 ]
 
 /** Largura no grid de 4 colunas da Precificação. */

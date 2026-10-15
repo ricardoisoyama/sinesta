@@ -27,7 +27,7 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     public int Ordem { get; set; }
     /// <summary>Opções quando Tipo = lista.</summary>
     public List<string> Opcoes { get; set; } = new();
-    /// <summary>Origem quando Tipo = cadastro: cliente | fornecedor | vendedor | servico.</summary>
+    /// <summary>Origem quando Tipo = cadastro: cliente | fornecedor | vendedor | servico | veiculo.</summary>
     public string Cadastro { get; set; } = string.Empty;
     /// <summary>Texto do balão de ajuda na Precificação.</summary>
     public string Ajuda { get; set; } = string.Empty;

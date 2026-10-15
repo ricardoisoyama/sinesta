@@ -1,6 +1,6 @@
 import { apiBlob, apiFetch, apiUpload } from '@/lib/api'
 
-export type EntidadeAnexo = 'cliente' | 'fornecedor'
+export type EntidadeAnexo = 'cliente' | 'fornecedor' | 'veiculo'
 
 export interface Anexo {
   id: string

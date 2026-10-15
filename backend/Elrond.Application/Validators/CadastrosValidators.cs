@@ -1,4 +1,5 @@
 using Elrond.Domain.Entities;
+using Elrond.Domain.Regras;
 using FluentValidation;
 
 namespace Elrond.Application.Validators;
@@ -134,6 +135,26 @@ public class RegraAprovacaoValidator : AbstractValidator<RegraAprovacao>
         });
         When(r => r.Tipo == "comissao", () =>
             RuleFor(r => r.VendedorId).NotEmpty().WithMessage("Escolha o vendedor."));
+    }
+}
+
+public class VeiculoValidator : AbstractValidator<Veiculo>
+{
+    public VeiculoValidator()
+    {
+        // Regras separadas: o When de uma corrente vale para a corrente toda (e anularia o NotEmpty).
+        RuleFor(v => v.PlacaTracao).NotEmpty().WithMessage("Informe a placa de tração.");
+        RuleFor(v => v.PlacaTracao).Must(Veiculo.PlacaValida).When(v => !string.IsNullOrWhiteSpace(v.PlacaTracao))
+            .WithMessage("Placa de tração inválida: use ABC-1234 ou ABC1D23 (Mercosul).");
+        RuleFor(v => v.PlacaReboque).Must(Veiculo.PlacaValida).When(v => !string.IsNullOrWhiteSpace(v.PlacaReboque))
+            .WithMessage("Placa do reboque inválida: use ABC-1234 ou ABC1D23 (Mercosul).");
+        RuleFor(v => v.TipoVeiculo).NotEmpty().WithMessage("Escolha o tipo de veículo.");
+        RuleFor(v => v.Renavam).Must(r => r.Length is 9 or 11).When(v => !string.IsNullOrWhiteSpace(v.Renavam))
+            .WithMessage("O Renavam tem 11 dígitos (os antigos, 9).");
+        RuleFor(v => v.CpfCnpj)
+            .Must(d => DocumentoFiscal.Digitos(d).Length == 11 ? DocumentoFiscal.CpfValido(d) : DocumentoFiscal.CnpjValido(d))
+            .When(v => !string.IsNullOrWhiteSpace(v.CpfCnpj))
+            .WithMessage("CPF/CNPJ do proprietário inválido.");
     }
 }
 

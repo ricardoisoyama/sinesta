@@ -34,6 +34,7 @@ public static class Funcionalidades
         "/cadastros/fornecedores",
         "/cadastros/vendedores",
         "/cadastros/servicos",
+        "/cadastros/veiculos",
         // "/cadastros/tipos-custo" saiu em 01/10/2026: os tipos de custo viraram a ficha Tecnologia.
         "/cadastros/categorias",
         "/cadastros/aprovadores",

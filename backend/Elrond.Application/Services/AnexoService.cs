@@ -13,7 +13,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public partial class AnexoService : IAnexoService
 {
-    private static readonly string[] Entidades = { "cliente", "fornecedor" };
+    private static readonly string[] Entidades = { "cliente", "fornecedor", "veiculo" };
     private static readonly Dictionary<string, string> TiposPorExtensao = new(StringComparer.OrdinalIgnoreCase)
     {
         [".pdf"] = "application/pdf",

@@ -33,6 +33,7 @@ import {
   BarChart3,
   UserCog,
   LifeBuoy,
+  Truck,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -67,6 +68,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Fornecedores', path: '/cadastros/fornecedores', icon: Store },
       { label: 'Vendedores', path: '/cadastros/vendedores', icon: UserRound },
       { label: 'Serviços', path: '/cadastros/servicos', icon: Briefcase },
+      { label: 'Veículos', path: '/cadastros/veiculos', icon: Truck },
       // Taxas e Seguros e Tipos de Custo ficam ocultos; as rotas continuam existindo.
       // O funcionário é o usuário do portal: cadastro e permissões no mesmo lugar.
       { label: 'Funcionários', path: '/cadastros/usuarios', icon: Users },

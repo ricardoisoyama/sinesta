@@ -239,6 +239,20 @@ public class ServicosController(ICrudRepository<Servico> repo) : CrudControllerB
 [Route("api/tipos-custo")]
 public class TiposCustoController(ICrudRepository<TipoCusto> repo) : CrudControllerBase<TipoCusto>(repo);
 
+[Route("api/veiculos")]
+public class VeiculosController(ICrudRepository<Veiculo> repo) : CrudControllerBase<Veiculo>(repo)
+{
+    /// <summary>Placas no formato padrão e placa de tração única entre os veículos ativos.</summary>
+    protected override async Task<string?> AntesDeGravarAsync(Veiculo entity)
+    {
+        entity.Normalizar();
+        if (entity.Status == "inativo") return null;
+        var placa = entity.PlacaTracao;
+        var repetido = (await Repo.ListarAsync(v => v.PlacaTracao == placa && v.Status != "inativo" && v.Id != entity.Id)).FirstOrDefault();
+        return repetido is null ? null : $"Já existe um veículo ativo com a placa {Veiculo.PlacaFormatada(placa)}.";
+    }
+}
+
 [Route("api/validades-proposta")]
 public class ValidadesPropostaController(ICrudRepository<ValidadeProposta> repo) : CrudControllerBase<ValidadeProposta>(repo);
 

@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Field } from '@/features/common/Field'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
-import { listClientes, listFornecedores, listServicos, listVendedores } from '@/features/cadastros/api'
+import { listClientes, listFornecedores, listServicos, listVeiculos, listVendedores } from '@/features/cadastros/api'
+import { nomeVeiculo } from '@/features/veiculos/types'
 import ui from '@/features/common/ui.module.css'
 import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { UFS } from '@/lib/ufs'
@@ -30,12 +31,14 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
   const { data: fornecedores } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores, enabled: precisaCadastro })
   const { data: vendedores } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores, enabled: precisaCadastro })
   const { data: servicos } = useQuery({ queryKey: ['servicos'], queryFn: listServicos, enabled: precisaCadastro })
+  const { data: veiculos } = useQuery({ queryKey: ['veiculos'], queryFn: listVeiculos, enabled: campos.some((c) => c.tipo === 'cadastro' && c.cadastro === 'veiculo') })
 
   const opcoesCadastro = (c: CampoOperacao): OpcaoCadastro[] => {
     if (c.cadastro === 'cliente') return (clientes ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome, doc: x.cpfCnpj }))
     if (c.cadastro === 'fornecedor') return (fornecedores ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome, doc: x.cpfCnpj }))
     if (c.cadastro === 'vendedor') return (vendedores ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nome }))
     if (c.cadastro === 'servico') return (servicos ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nome }))
+    if (c.cadastro === 'veiculo') return (veiculos ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: nomeVeiculo(x), busca: `${x.placaTracao} ${x.placaReboque} ${x.nomeProprietario}` }))
     return []
   }
 
@@ -120,7 +123,9 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
                 opcoes={opcoesCadastro(c)}
                 value={String(v ?? '')}
                 onChange={(id) => onChange(c.chave, id)}
-                placeholder={c.cadastro === 'cliente' || c.cadastro === 'fornecedor' ? 'Digite o nome ou o CNPJ' : 'Digite o nome'}
+                placeholder={
+                  c.cadastro === 'cliente' || c.cadastro === 'fornecedor' ? 'Digite o nome ou o CNPJ' : c.cadastro === 'veiculo' ? 'Digite a placa ou o modelo' : 'Digite o nome'
+                }
               />
             )}
           </Field>

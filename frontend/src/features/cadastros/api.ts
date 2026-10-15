@@ -10,6 +10,7 @@ import type { ModeloProposta } from '@/features/modelosProposta/types'
 import type { Parceiro, Vendedor } from '@/features/parceiros/types'
 import type { CategoriaCusto } from '@/features/categorias/types'
 import type { RegraAprovacao } from '@/features/aprovadores/types'
+import type { Veiculo } from '@/features/veiculos/types'
 
 /**
  * Camada HTTP dos cadastros (backend .NET). O apiFetch injeta baseURL (/api) + Bearer.
@@ -154,6 +155,11 @@ export const createTipoCusto = (t: TipoCustoDto) =>
   apiFetch<TipoCustoDto>('/tipos-custo', { method: 'POST', body: JSON.stringify(t) })
 export const updateTipoCusto = (t: TipoCustoDto) =>
   apiFetch<TipoCustoDto>(`/tipos-custo/${t.id}`, { method: 'PUT', body: JSON.stringify(t) })
+
+// ── Veículos ────────────────────────────────────────────────────────────────
+export const listVeiculos = () => apiFetch<Veiculo[]>('/veiculos')
+export const createVeiculo = (v: Veiculo) => apiFetch<Veiculo>('/veiculos', { method: 'POST', body: JSON.stringify(v) })
+export const updateVeiculo = (v: Veiculo) => apiFetch<Veiculo>(`/veiculos/${v.id}`, { method: 'PUT', body: JSON.stringify(v) })
 
 export const listValidades = () => apiFetch<ValidadePropostaDto[]>('/validades-proposta')
 export const createValidade = (v: ValidadePropostaDto) =>

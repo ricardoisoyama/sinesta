@@ -9,6 +9,8 @@ export interface OpcaoCadastro {
   nome: string
   /** CPF/CNPJ (clientes e fornecedores): também serve para buscar. */
   doc?: string
+  /** Texto a mais que a busca considera e não aparece (ex.: placa sem hífen, proprietário do veículo). */
+  busca?: string
 }
 
 interface Props {
@@ -32,7 +34,11 @@ export function CadastroBusca({ opcoes, value, onChange, placeholder }: Props) {
   const digitos = termo.replace(/\D/g, '')
   const sugestoes = termo
     ? opcoes
-        .filter((o) => semAcento(o.nome).includes(termo) || (digitos.length >= 3 && (o.doc ?? '').replace(/\D/g, '').includes(digitos)))
+        .filter(
+          (o) =>
+            semAcento(`${o.nome} ${o.busca ?? ''}`).includes(termo) ||
+            (digitos.length >= 3 && (o.doc ?? '').replace(/\D/g, '').includes(digitos)),
+        )
         .slice(0, 8)
     : []
   const escolher = (o: OpcaoCadastro) => {

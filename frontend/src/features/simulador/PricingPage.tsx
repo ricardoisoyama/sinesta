@@ -11,7 +11,8 @@ import { formatBRL, formatNumberBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
 import { useCustosFixosQuery, useTaxasQuery } from '@/features/cadastros/hooks'
-import { listClientes, listFornecedores, listServicos, listVendedores } from '@/features/cadastros/api'
+import { listClientes, listFornecedores, listServicos, listVeiculos, listVendedores } from '@/features/cadastros/api'
+import { nomeVeiculo } from '@/features/veiculos/types'
 import { margem as calcMargem, precoParaMargem, precoVenda } from '@/features/pricing/engine'
 import { useFator, usePrecoServidor } from '@/features/pricing/usePreco'
 import { useAuth } from '@/features/auth/auth-context'
@@ -109,6 +110,7 @@ export function PricingPage() {
   const clientes = (clientesData ?? []).filter((c) => c.status === 'ativo')
   const { data: fornecedoresData } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores })
   const { data: servicosData } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const { data: veiculosData } = useQuery({ queryKey: ['veiculos'], queryFn: listVeiculos })
   const { data: vendedoresData } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores })
   const vendedores = (vendedoresData ?? []).filter((v) => v.status === 'ativo')
   // Validades: as da empresa que emite a proposta (a do 1º item; sem itens, a selecionada).
@@ -242,6 +244,10 @@ export function PricingPage() {
     }
     if (origem === 'vendedor') return vendedores.find((x) => x.id === id)?.nome ?? ''
     if (origem === 'servico') return (servicosData ?? []).find((x) => x.id === id)?.nome ?? ''
+    if (origem === 'veiculo') {
+      const v = (veiculosData ?? []).find((x) => x.id === id)
+      return v ? nomeVeiculo(v) : ''
+    }
     return ''
   }
   const retratoDados = (): DadoOperacaoItem[] =>
@@ -374,6 +380,7 @@ export function PricingPage() {
           origem === 'cliente' ? clientes.map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome })) :
           origem === 'vendedor' ? vendedores.map((x) => ({ id: x.id, nome: x.nome })) :
           origem === 'servico' ? (servicosData ?? []).map((x) => ({ id: x.id, nome: x.nome })) :
+          origem === 'veiculo' ? (veiculosData ?? []).map((x) => ({ id: x.id, nome: nomeVeiculo(x) })) :
           (fornecedoresData ?? []).map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome }))
         v[campo.chave] = lista.find((x) => x.nome === d.texto)?.id ?? atual ?? ''
       } else if (campo.tipo === 'numero' || campo.tipo === 'valor' || campo.tipo === 'percentual') v[campo.chave] = d.numero

@@ -9,7 +9,7 @@ import { getErrorMessage } from '@/lib/api'
 import { ACOES, alteracoesLegiveis, listarAuditoria, type RegistroAuditoria } from './api'
 import s from './auditoria.module.css'
 
-const ENTIDADES = ['Proposta', 'Cliente', 'Fornecedor', 'Vendedor', 'Empresa', 'Usuario', 'CustoFixo', 'PlanoConta', 'RegraAprovacao', 'Meta', 'Servico', 'TipoCusto', 'Taxa', 'Oportunidade', 'Funil', 'ModeloProposta', 'ValidadeProposta', 'CategoriaCusto', 'CampoOperacao', 'FichaColuna', 'FichaTecnica']
+const ENTIDADES = ['Proposta', 'Cliente', 'Fornecedor', 'Vendedor', 'Empresa', 'Usuario', 'CustoFixo', 'PlanoConta', 'RegraAprovacao', 'Meta', 'Servico', 'Veiculo', 'TipoCusto', 'Taxa', 'Oportunidade', 'Funil', 'ModeloProposta', 'ValidadeProposta', 'CategoriaCusto', 'CampoOperacao', 'FichaColuna', 'FichaTecnica']
 
 const quando = (iso: string) => {
   const d = new Date(iso)

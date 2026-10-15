@@ -18,6 +18,7 @@ public class AppDbContext : DbContext
     public DbSet<Cidade> Cidades => Set<Cidade>();
     public DbSet<Servico> Servicos => Set<Servico>();
     public DbSet<TipoCusto> TiposCusto => Set<TipoCusto>();
+    public DbSet<Veiculo> Veiculos => Set<Veiculo>();
     public DbSet<ValidadeProposta> ValidadesProposta => Set<ValidadeProposta>();
     public DbSet<CertificadoEmpresa> CertificadosEmpresa => Set<CertificadoEmpresa>();
     public DbSet<RegistroErro> RegistrosErro => Set<RegistroErro>();
@@ -280,6 +281,16 @@ public class AppDbContext : DbContext
         {
             e.ToTable("tipos_custo");
             e.HasKey(t => t.Id);
+        });
+
+        modelBuilder.Entity<Veiculo>(e =>
+        {
+            e.ToTable("veiculos");
+            e.HasKey(v => v.Id);
+            e.Property(v => v.PlacaTracao).IsRequired().HasMaxLength(10);
+            e.Property(v => v.PlacaReboque).HasMaxLength(10);
+            e.Ignore(v => v.Nome);
+            e.HasIndex(v => v.PlacaTracao);
         });
 
         modelBuilder.Entity<ConexaoGoogle>(e =>

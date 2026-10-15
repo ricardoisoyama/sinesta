@@ -7,8 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Elrond.API.Controllers;
 
 /// <summary>
-/// Documentos anexados aos cadastros (cliente, fornecedor). Exige a permissão da tela
-/// dona do cadastro (Clientes ou Fornecedores) para ver, enviar, abrir e excluir.
+/// Documentos anexados aos cadastros (cliente, fornecedor, veículo). Exige a permissão da tela
+/// dona do cadastro (Clientes, Fornecedores ou Veículos) para ver, enviar, abrir e excluir.
 /// </summary>
 [ApiController]
 [Authorize]
@@ -19,6 +19,15 @@ public class AnexosController : ControllerBase
     {
         ["cliente"] = "/cadastros/clientes",
         ["fornecedor"] = "/cadastros/fornecedores",
+        ["veiculo"] = "/cadastros/veiculos",
+    };
+
+    /// <summary>Nome da entidade na trilha de auditoria.</summary>
+    private static string NomeNaTrilha(string entidade) => entidade switch
+    {
+        "cliente" => "Cliente",
+        "veiculo" => "Veiculo",
+        _ => "Fornecedor",
     };
 
     private readonly IAnexoService _anexos;
@@ -59,7 +68,7 @@ public class AnexosController : ControllerBase
         await using var stream = arquivo.OpenReadStream();
         var r = await _anexos.EnviarAsync(entidade, entidadeId, arquivo.FileName, arquivo.ContentType, arquivo.Length, stream, quem);
         if (!r.IsSuccess) return BadRequest(r.Error);
-        await _auditoria.RegistrarAsync("anexo", entidade == "cliente" ? "Cliente" : "Fornecedor", entidadeId,
+        await _auditoria.RegistrarAsync("anexo", NomeNaTrilha(entidade), entidadeId,
             $"Anexo \"{r.Value!.Nome}\" enviado ({r.Value.Tamanho / 1024} KB)");
         return Ok(r.Value);
     }
@@ -103,7 +112,7 @@ public class AnexosController : ControllerBase
         var r = await _anexos.ExcluirAsync(id);
         if (!r.IsSuccess) return NotFound(r.Error);
         if (anexo is not null)
-            await _auditoria.RegistrarAsync("anexo-excluido", anexo.Entidade == "cliente" ? "Cliente" : "Fornecedor", anexo.EntidadeId,
+            await _auditoria.RegistrarAsync("anexo-excluido", NomeNaTrilha(anexo.Entidade), anexo.EntidadeId,
                 $"Anexo \"{anexo.Nome}\" excluído");
         return NoContent();
     }

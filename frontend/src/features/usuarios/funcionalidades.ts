@@ -42,6 +42,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/fornecedores', label: 'Fornecedores', grupo: 'Cadastros' },
   { key: '/cadastros/vendedores', label: 'Vendedores', grupo: 'Cadastros' },
   { key: '/cadastros/servicos', label: 'Serviços', grupo: 'Cadastros' },
+  { key: '/cadastros/veiculos', label: 'Veículos', grupo: 'Cadastros' },
   { key: '/cadastros/fichas-tecnicas', label: 'Ficha Técnica (custos parametrizáveis)', grupo: 'Parametrizações' },
   { key: '/cadastros/campos-operacao', label: 'Dados da Operação (campos da Precificação)', grupo: 'Parametrizações' },
   { key: '/cadastros/categorias', label: 'Centro de Custo', grupo: 'Financeiro' },

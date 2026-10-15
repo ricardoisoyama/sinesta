@@ -2862,6 +2862,132 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("validades_proposta", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.Veiculo", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Antt")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Blindado")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Chassi")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Cor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CpfCnpj")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataNascimento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Marca")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Modelo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NomeMae")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NomeProprietario")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Perfil")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlacaReboque")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("PlacaTracao")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Renavam")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Rg")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tecnologia")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TipoCarroceria")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TipoVeiculo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TravaQuintaRoda")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UfRg")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlacaTracao");
+
+                    b.ToTable("veiculos", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Vendedor", b =>
                 {
                     b.Property<string>("Id")
