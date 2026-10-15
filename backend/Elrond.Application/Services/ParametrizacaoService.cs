@@ -16,7 +16,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public class ParametrizacaoService : IParametrizacaoService
 {
-    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual" };
+    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual", "uf", "cidade" };
     private static readonly string[] Cadastros = { "cliente", "fornecedor", "vendedor", "servico" };
     private static readonly string[] TiposColuna = { "valor", "percentual", "calculo", "numero", "texto", "lista" };
     private const int MaxItens = 300;

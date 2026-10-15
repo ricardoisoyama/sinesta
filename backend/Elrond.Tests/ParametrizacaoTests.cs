@@ -110,6 +110,36 @@ public class ParametrizacaoTests
     }
 
     [Fact]
+    public async Task Campos_de_uf_e_cidade_sao_aceitos_e_so_informam()
+    {
+        var (svc, _, _, _, _, _, _) = Montar();
+        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        {
+            new() { Id = "u", Nome = "UF de origem", Tipo = "uf", Efeito = "multiplica", Opcoes = new() { "x" } },
+            new() { Id = "c", Nome = "Cidade de origem", Tipo = "cidade" },
+        });
+        Assert.True(r.IsSuccess);
+        Assert.Equal(new[] { "uf", "cidade" }, r.Value!.Select(c => c.Tipo));
+        Assert.All(r.Value!, c => Assert.Equal("informativo", c.Efeito));
+        Assert.Empty(r.Value![0].Opcoes); // opções só valem para "lista"
+    }
+
+    [Theory]
+    [InlineData("são pa", null, "", "sao pa")]
+    [InlineData("SP - São Pa", null, "SP", "sao pa")]
+    [InlineData("sp-santos", null, "SP", "santos")]
+    [InlineData("SP - Santos", "rj", "RJ", "santos")] // a UF do campo prevalece
+    [InlineData("Campinas", "SP", "SP", "campinas")]
+    [InlineData("Ji-Paraná", null, "", "ji-parana")] // "JI" não é UF
+    [InlineData("Santos", "XX", "", "santos")] // UF inválida é ignorada
+    public void Busca_de_cidade_entende_o_formato_UF_nome(string termo, string? uf, string ufEsperada, string nomeEsperado)
+    {
+        var (u, n) = BuscaCidade.Interpretar(termo, uf);
+        Assert.Equal(ufEsperada, u);
+        Assert.Equal(nomeEsperado, n);
+    }
+
+    [Fact]
     public async Task Fichas_gravam_valores_por_coluna_e_o_servidor_calcula_o_total()
     {
         var (svc, _, colunas, fichas, valores, _, _) = Montar();

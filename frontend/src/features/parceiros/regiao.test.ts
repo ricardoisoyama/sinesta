@@ -19,6 +19,14 @@ describe('região bloqueada do vendedor (lista de exclusão)', () => {
     expect(bloqueioDeRegiao([r('cidade', 'São Paulo - SP')], 'Campinas - SP')).toBeNull()
   })
 
+  it('aceita "UF - Cidade" (Dados da Operação) além de "Cidade - UF"', () => {
+    expect(ufDaCidade('SP - Campinas')).toBe('SP')
+    expect(ufDaCidade('Ji-Paraná - RO')).toBe('RO')
+    expect(ufDaCidade('Ji-Paraná')).toBe('')
+    expect(bloqueioDeRegiao([r('estado', 'SP')], 'SP - Campinas')).not.toBeNull()
+    expect(bloqueioDeRegiao([r('cidade', 'Campinas - SP')], 'SP - Campinas')).not.toBeNull()
+  })
+
   it('país Brasil bloqueia qualquer cidade com UF; sem cidade não bloqueia', () => {
     expect(bloqueioDeRegiao([r('pais', 'Brasil')], 'Manaus - AM')).not.toBeNull()
     expect(bloqueioDeRegiao([r('pais', 'Brasil')], '')).toBeNull()

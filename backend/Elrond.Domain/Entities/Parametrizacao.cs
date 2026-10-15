@@ -14,7 +14,10 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     public string Nome { get; set; } = string.Empty;
     /// <summary>Identificador estável do campo (derivado do nome, único por empresa entre os ativos).</summary>
     public string Chave { get; set; } = string.Empty;
-    /// <summary>texto | lista | cadastro | data | numero | valor | percentual.</summary>
+    /// <summary>
+    /// texto | lista | cadastro | data | numero | valor | percentual | uf (combo das UFs) |
+    /// cidade (busca na base IBGE, filtrada pela UF do campo uf mais próximo).
+    /// </summary>
     public string Tipo { get; set; } = "texto";
     /// <summary>informativo | multiplica (numero) | soma-custo (valor) | pct-custo (percentual).</summary>
     public string Efeito { get; set; } = "informativo";

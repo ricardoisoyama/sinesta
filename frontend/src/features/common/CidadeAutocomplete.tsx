@@ -7,13 +7,18 @@ interface Props {
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  /** Só cidades desta UF (vazio = todas). */
+  uf?: string
+  /** "Cidade - UF" (endereços, padrão) ou "UF - Cidade" (Dados da Operação). */
+  formato?: 'cidade-uf' | 'uf-cidade'
 }
 
 /**
  * Input de cidade com sugestões da base IBGE (backend /api/cidades).
- * Ao escolher uma sugestão, preenche "Cidade - UF". Texto livre continua valendo.
+ * Ao escolher uma sugestão, preenche "Cidade - UF" (ou "UF - Cidade"). Texto livre continua valendo.
  */
-export function CidadeAutocomplete({ value, onChange, placeholder }: Props) {
+export function CidadeAutocomplete({ value, onChange, placeholder, uf = '', formato = 'cidade-uf' }: Props) {
+  const rotulo = (c: CidadeDto) => (formato === 'uf-cidade' ? `${c.uf} - ${c.nome}` : `${c.nome} - ${c.uf}`)
   const [sugestoes, setSugestoes] = useState<CidadeDto[]>([])
   const [aberto, setAberto] = useState(false)
   const timer = useRef<number | undefined>(undefined)
@@ -29,7 +34,7 @@ export function CidadeAutocomplete({ value, onChange, placeholder }: Props) {
     }
     timer.current = window.setTimeout(async () => {
       try {
-        const res = await buscarCidades(termo)
+        const res = await buscarCidades(termo, uf)
         setSugestoes(res)
         setAberto(res.length > 0)
       } catch {
@@ -40,7 +45,7 @@ export function CidadeAutocomplete({ value, onChange, placeholder }: Props) {
   }
 
   const escolher = (c: CidadeDto) => {
-    onChange(`${c.nome} - ${c.uf}`)
+    onChange(rotulo(c))
     setSugestoes([])
     setAberto(false)
   }
@@ -66,7 +71,13 @@ export function CidadeAutocomplete({ value, onChange, placeholder }: Props) {
             <li key={c.id} {...nav.itemProps(i)}>
               {/* onMouseDown: dispara antes do blur do input, senão a lista fecha antes do clique */}
               <button type="button" tabIndex={-1} onMouseDown={() => escolher(c)}>
-                {c.nome} <span>{c.uf}</span>
+                {formato === 'uf-cidade' ? (
+                  rotulo(c)
+                ) : (
+                  <>
+                    {c.nome} <span>{c.uf}</span>
+                  </>
+                )}
               </button>
             </li>
           ))}

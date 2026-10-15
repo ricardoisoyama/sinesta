@@ -15,10 +15,11 @@ public class CidadesController : ControllerBase
     public CidadesController(ICidadeRepository cidades) => _cidades = cidades;
 
     [HttpGet]
-    public async Task<IActionResult> Buscar([FromQuery] string q = "", [FromQuery] int limite = 20, CancellationToken ct = default)
+    /// <summary>Busca pelo nome; <paramref name="uf"/> restringe à UF (campo "Lista de cidades" ligado a um campo de UF).</summary>
+    public async Task<IActionResult> Buscar([FromQuery] string q = "", [FromQuery] string uf = "", [FromQuery] int limite = 20, CancellationToken ct = default)
     {
         var lim = Math.Clamp(limite, 1, 50);
-        var lista = await _cidades.BuscarAsync(q, lim, ct);
+        var lista = await _cidades.BuscarAsync(q, lim, uf, ct);
         return Ok(lista.Select(c => new { id = c.Id, nome = c.Nome, uf = c.Uf }));
     }
 }

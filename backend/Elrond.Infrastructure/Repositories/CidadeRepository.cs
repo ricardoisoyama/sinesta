@@ -1,6 +1,6 @@
 using Elrond.Application.Interfaces;
-using Elrond.Domain.Common;
 using Elrond.Domain.Entities;
+using Elrond.Domain.Regras;
 using Elrond.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,13 +12,14 @@ public class CidadeRepository : ICidadeRepository
 
     public CidadeRepository(AppDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<Cidade>> BuscarAsync(string termo, int limite, CancellationToken ct = default)
+    public async Task<IReadOnlyList<Cidade>> BuscarAsync(string termo, int limite, string? uf = null, CancellationToken ct = default)
     {
-        var q = Textos.Normalizar(termo);
+        var (ufBusca, q) = BuscaCidade.Interpretar(termo, uf);
         if (q.Length < 2) return Array.Empty<Cidade>();
 
-        return await _db.Cidades.AsNoTracking()
-            .Where(c => c.Busca.Contains(q))
+        var cidades = _db.Cidades.AsNoTracking().Where(c => c.Busca.Contains(q));
+        if (ufBusca.Length > 0) cidades = cidades.Where(c => c.Uf == ufBusca);
+        return await cidades
             .OrderBy(c => c.Busca.StartsWith(q) ? 0 : 1)
             .ThenBy(c => c.Nome)
             .Take(limite)

@@ -10,8 +10,10 @@ import { chaveDe } from '@/lib/formula'
 import { useEmpresaAtiva } from './useEmpresaAtiva'
 import { chaveCampos, listCampos, salvarCampos } from './api'
 import { BlocoDadosOperacao } from './BlocoDadosOperacao'
-import { CADASTROS, EFEITOS, EFEITOS_POR_TIPO, LARGURAS, TIPOS_CAMPO, efeitoDe, novoCampo, type CampoOperacao, type EfeitoCampo, type LarguraCampo, type TipoCampoOperacao, type ValoresOperacao } from './types'
+import { CADASTROS, EFEITOS, EFEITOS_POR_TIPO, LARGURAS, TIPOS_CAMPO, campoUfDaCidade, efeitoDe, novoCampo, type CampoOperacao, type EfeitoCampo, type LarguraCampo, type TipoCampoOperacao, type ValoresOperacao } from './types'
 import s from './camposOperacao.module.css'
+
+const notaOpcoes = { padding: '0 10px', fontSize: 12 } as const
 
 /** Chave única entre os ativos (o servidor confere de novo). */
 function comChaveUnica(lista: CampoOperacao[]): CampoOperacao[] {
@@ -121,7 +123,16 @@ export function CamposOperacaoPage() {
               ))}
             </select>
           )}
-          {c.tipo !== 'lista' && c.tipo !== 'cadastro' && <span className={sheet.mut} style={{ padding: '0 10px', fontSize: 12 }}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
+          {c.tipo === 'uf' && <span className={sheet.mut} style={notaOpcoes}>— as 27 UFs do Brasil</span>}
+          {c.tipo === 'cidade' && (
+            <span className={sheet.mut} style={notaOpcoes}>
+              {(() => {
+                const campoUf = campoUfDaCidade(ativos, c)
+                return campoUf ? `— cidades do IBGE, filtradas pela UF de “${campoUf.nome}”` : '— cidades do IBGE de todas as UFs (crie um campo de UF para filtrar)'
+              })()}
+            </span>
+          )}
+          {!['lista', 'cadastro', 'uf', 'cidade'].includes(c.tipo) && <span className={sheet.mut} style={notaOpcoes}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
         </td>
         <td className={sheet[EFEITOS[ef].cor]} title={EFEITOS[ef].ajuda}>
           {efeitosPermitidos.length > 1 && !removido ? (

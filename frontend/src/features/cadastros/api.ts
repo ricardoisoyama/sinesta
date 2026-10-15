@@ -223,8 +223,9 @@ export interface CidadeDto {
   nome: string
   uf: string
 }
-export const buscarCidades = (q: string) =>
-  apiFetch<CidadeDto[]>(`/cidades?q=${encodeURIComponent(q)}`)
+/** Busca pelo nome; `uf` restringe à UF (o termo também aceita "SP - são pa"). */
+export const buscarCidades = (q: string, uf = '') =>
+  apiFetch<CidadeDto[]>(`/cidades?q=${encodeURIComponent(q)}${uf ? `&uf=${encodeURIComponent(uf)}` : ''}`)
 
 // ── Modelos de Proposta ─────────────────────────────────────────────────────
 export const listModelos = () => apiFetch<ModeloProposta[]>('/modelos-proposta')

@@ -4,8 +4,10 @@ import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
 import { listClientes, listFornecedores, listServicos, listVendedores } from '@/features/cadastros/api'
 import ui from '@/features/common/ui.module.css'
+import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
+import { UFS } from '@/lib/ufs'
 import { CadastroBusca, type OpcaoCadastro } from './CadastroBusca'
-import { EFEITOS, efeitoDe, type CampoOperacao, type ValoresOperacao } from './types'
+import { EFEITOS, campoUfDaCidade, efeitoDe, textoCidade, type CampoOperacao, type ValoresOperacao } from './types'
 import s from './camposOperacao.module.css'
 
 interface Props {
@@ -35,6 +37,20 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
     if (c.cadastro === 'vendedor') return (vendedores ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nome }))
     if (c.cadastro === 'servico') return (servicos ?? []).filter((x) => x.status === 'ativo').map((x) => ({ id: x.id, nome: x.nome }))
     return []
+  }
+
+  // Cidade ligada a um campo de UF: busca só naquela UF quando ela está preenchida.
+  const ufDe = (cidade: CampoOperacao) => {
+    const campoUf = campoUfDaCidade(campos, cidade)
+    return campoUf ? String(valores[campoUf.chave] ?? '') : ''
+  }
+  // Trocar a UF limpa as cidades ligadas a ela que eram de outra UF ("SP - Santos" com UF = RJ).
+  const trocarUf = (campoUf: CampoOperacao, uf: string) => {
+    onChange(campoUf.chave, uf)
+    for (const cidade of campos.filter((x) => x.tipo === 'cidade' && campoUfDaCidade(campos, x)?.id === campoUf.id)) {
+      const atual = String(valores[cidade.chave] ?? '')
+      if (uf && atual && !atual.startsWith(textoCidade(uf, ''))) onChange(cidade.chave, '')
+    }
   }
 
   if (campos.length === 0)
@@ -81,6 +97,23 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
                   <option key={o} value={o}>{o}</option>
                 ))}
               </select>
+            )}
+            {c.tipo === 'uf' && (
+              <select value={String(v ?? '')} onChange={(e) => trocarUf(c, e.target.value)}>
+                <option value="">Selecione</option>
+                {UFS.map((u) => (
+                  <option key={u.sigla} value={u.sigla}>{u.sigla} - {u.nome}</option>
+                ))}
+              </select>
+            )}
+            {c.tipo === 'cidade' && (
+              <CidadeAutocomplete
+                value={String(v ?? '')}
+                onChange={(t) => onChange(c.chave, t)}
+                uf={ufDe(c)}
+                formato="uf-cidade"
+                placeholder={ufDe(c) ? `Cidade de ${ufDe(c)}` : 'Digite a cidade'}
+              />
             )}
             {c.tipo === 'cadastro' && (
               <CadastroBusca

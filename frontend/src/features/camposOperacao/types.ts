@@ -7,7 +7,7 @@
  * Remover é inativar. A proposta guarda um retrato (nome, tipo, efeito e valor de cada
  * campo) no dia em que o item entrou, então mudar os campos depois não altera propostas feitas.
  */
-export type TipoCampoOperacao = 'texto' | 'lista' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual'
+export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual'
 
 export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico'
 
@@ -17,6 +17,8 @@ export type EfeitoCampo = 'informativo' | 'multiplica' | 'soma-custo' | 'pct-cus
 export const TIPOS_CAMPO: { valor: TipoCampoOperacao; label: string; ajuda: string }[] = [
   { valor: 'texto', label: 'Texto', ajuda: 'Texto livre.' },
   { valor: 'lista', label: 'Lista de opções', ajuda: 'Escolha entre opções fixas (ex.: escala 12x36, 5x2).' },
+  { valor: 'uf', label: 'Lista de UFs', ajuda: 'Combo com as 27 UFs do Brasil.' },
+  { valor: 'cidade', label: 'Lista de cidades', ajuda: 'Busca na base de municípios do IBGE ("SP - São Paulo"). Filtra pela UF do campo de UF mais próximo, quando preenchida.' },
   { valor: 'cadastro', label: 'Cadastro', ajuda: 'Escolhe um registro do sistema (cliente, fornecedor, vendedor, serviço).' },
   { valor: 'data', label: 'Data', ajuda: 'Uma data (início do contrato, coleta...).' },
   { valor: 'numero', label: 'Número', ajuda: 'Quantidade, peso, metragem. Pode multiplicar o preço.' },
@@ -31,10 +33,12 @@ export const EFEITOS: Record<EfeitoCampo, { label: string; cor: string; ajuda: s
   'pct-custo': { label: '% sobre o custo', cor: 'verde', ajuda: 'Percentual aplicado sobre o custo e somado a ele.' },
 }
 
-/** Efeitos que cada tipo aceita. Texto, lista, cadastro e data só informam. */
+/** Efeitos que cada tipo aceita. Texto, listas, cadastro e data só informam. */
 export const EFEITOS_POR_TIPO: Record<TipoCampoOperacao, EfeitoCampo[]> = {
   texto: ['informativo'],
   lista: ['informativo'],
+  uf: ['informativo'],
+  cidade: ['informativo'],
   cadastro: ['informativo'],
   data: ['informativo'],
   numero: ['informativo', 'multiplica'],
@@ -93,6 +97,20 @@ export const novoCampo = (nome = '', tipo: TipoCampoOperacao = 'texto'): CampoOp
   ajuda: '',
   status: 'ativo',
 })
+
+/**
+ * Campo de UF que filtra um campo de cidade: o de UF mais próximo ACIMA dele na ordem (pares
+ * "UF de origem / Cidade de origem", "UF de destino / Cidade de destino"); sem nenhum acima, o
+ * primeiro abaixo. Sem campo de UF, a cidade busca em todas as UFs.
+ */
+export function campoUfDaCidade(campos: CampoOperacao[], cidade: CampoOperacao): CampoOperacao | undefined {
+  const i = campos.findIndex((c) => c.id === cidade.id)
+  const ufs = campos.map((c, j) => ({ c, j })).filter((x) => x.c.tipo === 'uf')
+  return [...ufs].reverse().find((x) => x.j < i)?.c ?? ufs.find((x) => x.j > i)?.c
+}
+
+/** "SP - São Paulo": formato do valor de um campo de cidade. */
+export const textoCidade = (uf: string, nome: string) => `${uf} - ${nome}`
 
 /** Valores preenchidos na Precificação, por chave do campo. */
 export type ValoresOperacao = Record<string, string | number>
