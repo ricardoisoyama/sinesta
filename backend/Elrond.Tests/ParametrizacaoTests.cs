@@ -124,6 +124,40 @@ public class ParametrizacaoTests
         Assert.Empty(r.Value![0].Opcoes); // opções só valem para "lista"
     }
 
+    [Fact]
+    public async Task Tipos_de_operacao_separam_os_campos_e_a_chave_so_e_unica_dentro_do_tipo()
+    {
+        var (svc, campos, _, _, _, auditoria, _) = Montar();
+        var r = await svc.SalvarDadosOperacaoAsync("emp", new DadosOperacaoDto(
+            new List<TipoOperacao>
+            {
+                new() { Id = "tr", Nome = " Transporte " },
+                new() { Id = "ar", Nome = "Armazenagem" },
+                new() { Id = "novo", Nome = "  " }, // em digitação: não grava
+            },
+            new List<CampoOperacao>
+            {
+                new() { Id = "c1", TipoOperacaoId = "tr", Nome = "Origem" },
+                new() { Id = "c2", TipoOperacaoId = "ar", Nome = "Origem" }, // mesmo nome em outro tipo: mesma chave
+                new() { Id = "c3", TipoOperacaoId = "tr", Nome = "Origem" }, // repetido no mesmo tipo: chave nova
+                new() { Id = "c4", TipoOperacaoId = "nao-existe", Nome = "Prazo" }, // tipo inválido: vai para o primeiro
+            }));
+        Assert.True(r.IsSuccess);
+        Assert.Equal(new[] { "Transporte", "Armazenagem" }, r.Value!.Tipos!.Select(t => t.Nome));
+        var porId = r.Value.Campos!.ToDictionary(c => c.Id);
+        Assert.Equal("origem", porId["c1"].Chave);
+        Assert.Equal("origem", porId["c2"].Chave);
+        Assert.Equal("origem_2", porId["c3"].Chave);
+        Assert.Equal("tr", porId["c4"].TipoOperacaoId);
+        Assert.Contains("criar", auditoria.Acoes);
+
+        // Inativar o tipo não apaga nada: tipo e campos continuam guardados.
+        await svc.SalvarDadosOperacaoAsync("emp", new DadosOperacaoDto(new List<TipoOperacao> { new() { Id = "ar", Nome = "Armazenagem", Status = "inativo" } }, null));
+        Assert.Equal(2, Tipos.Itens.Count);
+        Assert.Equal("inativo", Tipos.Itens.Single(t => t.Id == "ar").Status);
+        Assert.Equal(4, campos.Itens.Count);
+    }
+
     [Theory]
     [InlineData("são pa", null, "", "sao pa")]
     [InlineData("SP - São Pa", null, "SP", "sao pa")]
@@ -224,6 +258,9 @@ public class ParametrizacaoTests
     private static FichaColuna Col(string id, string nome, string tipo, string formula = "", string baseK = "", bool compoe = true) =>
         new() { Id = id, Nome = nome, Chave = Formula.ChaveDe(nome), Tipo = tipo, Formula = formula, Base = baseK, CompoeTotal = compoe && FichaCalculo.TiposNumericos.Contains(tipo) };
 
+    /// <summary>Repositório de tipos de operação do último Montar().</summary>
+    private static MemRepo<TipoOperacao> Tipos = new();
+
     private static (ParametrizacaoService, MemRepo<CampoOperacao>, MemRepo<FichaColuna>, MemRepo<FichaTecnica>, MemRepo<FichaValor>, FakeAuditoria, MemRepo<FichaGrupo>) Montar()
     {
         var campos = new MemRepo<CampoOperacao>();
@@ -234,7 +271,8 @@ public class ParametrizacaoTests
         var empresas = new MemRepo<Empresa>();
         empresas.Itens.Add(new Empresa { Id = "emp", Nome = "Sinesta" });
         var auditoria = new FakeAuditoria();
-        return (new ParametrizacaoService(campos, grupos, colunas, fichas, valores, empresas, new SemTransacao(), auditoria), campos, colunas, fichas, valores, auditoria, grupos);
+        Tipos = new MemRepo<TipoOperacao>();
+        return (new ParametrizacaoService(campos, Tipos, grupos, colunas, fichas, valores, empresas, new SemTransacao(), auditoria), campos, colunas, fichas, valores, auditoria, grupos);
     }
 
     private sealed class SemTransacao : IUnidadeTrabalho

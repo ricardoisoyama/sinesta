@@ -1,0 +1,40 @@
+/* Seletor de tipo de operação (Dados da Operação): mesmo padrão do combo "Empresa" ao lado
+   (rótulo cinza fora, caixa branca de 13px, borda #e6e3db e cantos de 9px), abrindo um painel. */
+.campo { display: inline-flex; align-items: center; gap: 8px; }
+.rotulo { font-size: 12px; font-weight: 600; color: #6b7b72; }
+.raiz { position: relative; }
+.botao { display: inline-flex; align-items: center; gap: 8px; min-width: 180px; padding: 9px 12px; border: 1px solid #e6e3db; border-radius: 9px; background: #fff; font-family: inherit; font-size: 13px; line-height: normal; color: #143d18; cursor: pointer; }
+.botao:hover { border-color: #d7d3ca; }
+.botao:focus-visible { outline: 2px solid #e8702f; outline-offset: 2px; }
+.botaoAberto { border-color: #e8702f; }
+.botao svg { color: #e8702f; flex: none; }
+.botao b { flex: 1; text-align: left; font-weight: 600; color: #143d18; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seta { color: #6b7b72 !important; transition: transform 0.15s; }
+.botaoAberto .seta { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .seta { transition: none; } }
+
+.painel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 60; width: 340px; max-width: calc(100vw - 32px); background: #fff; border: 1px solid #e6e3db; border-radius: 12px; box-shadow: 0 16px 36px -14px rgba(0, 0, 0, 0.28); padding: 6px; color: #1f2a24; }
+.lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 300px; overflow-y: auto; }
+.lista li { display: flex; align-items: center; gap: 2px; border-radius: 8px; }
+.lista li:hover { background: #f6f4ef; }
+.lista li.ativo { background: #fdeee4; }
+.item { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: none; background: none; font-family: inherit; font-size: 13.5px; color: inherit; text-align: left; cursor: pointer; border-radius: 8px; }
+.item svg { color: #e8702f; flex: none; }
+.vazioIcone { width: 14px; flex: none; }
+.nome { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.qtd { font-size: 11px; font-weight: 700; color: #6b7b72; background: #efece4; border-radius: 999px; padding: 1px 8px; }
+.acao { width: 28px; height: 28px; flex: none; display: inline-flex; align-items: center; justify-content: center; border: none; background: none; color: #8a948c; border-radius: 6px; cursor: pointer; }
+.acao:hover { color: #e8702f; background: #fff; }
+.renomear { flex: 1; min-width: 0; height: 34px; margin: 2px 4px; padding: 0 10px; border: 1px solid #e8702f; border-radius: 8px; font-family: inherit; font-size: 13.5px; outline: none; }
+
+.novo { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 8px 8px 4px; border-top: 1px dashed #e6e3db; }
+.novo svg { color: #e8702f; flex: none; }
+.novo input { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid #d7d3ca; border-radius: 8px; font-family: inherit; font-size: 13px; outline: none; }
+.novo input:focus { border-color: #e8702f; }
+.criar { height: 34px; padding: 0 12px; border: none; border-radius: 8px; background: #e8702f; color: #fff; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.criar:disabled { opacity: 0.45; cursor: default; }
+
+.inativos { margin-top: 6px; padding: 8px 10px 4px; border-top: 1px solid #efebe2; display: grid; gap: 4px; font-size: 12.5px; }
+.inativos > span { font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #8a948c; }
+.inativo { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #8a948c; }
+.inativo button { display: inline-flex; align-items: center; gap: 4px; border: none; background: none; font-family: inherit; font-size: 12px; font-weight: 600; color: #1d6b3e; cursor: pointer; }

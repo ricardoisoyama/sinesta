@@ -66,8 +66,26 @@ export const LARGURAS: { valor: LarguraCampo; label: string }[] = [
   { valor: 4, label: 'Linha inteira' },
 ]
 
+/** Tipo de operação da empresa (Transporte, Armazenagem...): cada um tem os seus campos. */
+export interface TipoOperacao {
+  id: string
+  nome: string
+  status: 'ativo' | 'inativo'
+}
+
+/** Id do tipo "Geral" da empresa (o mesmo que a migração criou para quem já tinha campos). */
+export const idTipoPadrao = (empresaId: string) => `padrao-${empresaId}`
+
+/** Tipos e campos da empresa, como a tela edita e o servidor grava. */
+export interface DadosOperacao {
+  tipos: TipoOperacao[]
+  campos: CampoOperacao[]
+}
+
 export interface CampoOperacao {
   id: string
+  /** Tipo de operação a que o campo pertence. */
+  tipoOperacaoId: string
   nome: string
   /** Identificador estável (gerado do nome). */
   chave: string
@@ -85,8 +103,9 @@ export interface CampoOperacao {
   status: 'ativo' | 'inativo'
 }
 
-export const novoCampo = (nome = '', tipo: TipoCampoOperacao = 'texto'): CampoOperacao => ({
+export const novoCampo = (nome = '', tipo: TipoCampoOperacao = 'texto', tipoOperacaoId = ''): CampoOperacao => ({
   id: crypto.randomUUID(),
+  tipoOperacaoId,
   nome,
   chave: '',
   tipo,

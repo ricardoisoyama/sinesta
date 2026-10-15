@@ -8,18 +8,38 @@ import { useSalvamentoAutomatico } from '@/features/common/useSalvamentoAutomati
 import { SituacaoSalvamento } from '@/features/common/SituacaoSalvamento'
 import { chaveDe } from '@/lib/formula'
 import { useEmpresaAtiva } from './useEmpresaAtiva'
-import { chaveCampos, listCampos, salvarCampos } from './api'
+import { chaveCampos, listDadosOperacao, salvarDadosOperacao } from './api'
 import { BlocoDadosOperacao } from './BlocoDadosOperacao'
-import { CADASTROS, EFEITOS, EFEITOS_POR_TIPO, LARGURAS, TIPOS_CAMPO, campoUfDaCidade, efeitoDe, novoCampo, type CampoOperacao, type EfeitoCampo, type LarguraCampo, type TipoCampoOperacao, type ValoresOperacao } from './types'
+import { SeletorTipoOperacao } from './SeletorTipoOperacao'
+import {
+  CADASTROS,
+  EFEITOS,
+  EFEITOS_POR_TIPO,
+  LARGURAS,
+  TIPOS_CAMPO,
+  campoUfDaCidade,
+  efeitoDe,
+  idTipoPadrao,
+  novoCampo,
+  type CampoOperacao,
+  type DadosOperacao,
+  type EfeitoCampo,
+  type LarguraCampo,
+  type TipoCampoOperacao,
+  type TipoOperacao,
+  type ValoresOperacao,
+} from './types'
 import s from './camposOperacao.module.css'
 
 const notaOpcoes = { padding: '0 10px', fontSize: 12 } as const
 
-/** Chave única entre os ativos (o servidor confere de novo). */
+/** Chave única entre os ativos do MESMO tipo de operação (o servidor confere de novo). */
 function comChaveUnica(lista: CampoOperacao[]): CampoOperacao[] {
-  const usadas = new Set<string>()
+  const usadasPorTipo = new Map<string, Set<string>>()
   return lista.map((c) => {
     if (c.status !== 'ativo') return c
+    const usadas = usadasPorTipo.get(c.tipoOperacaoId) ?? new Set<string>()
+    usadasPorTipo.set(c.tipoOperacaoId, usadas)
     const base = chaveDe(c.chave || c.nome) || 'campo'
     let k = base
     for (let n = 2; usadas.has(k); n++) k = `${base}_${n}`
@@ -29,27 +49,54 @@ function comChaveUnica(lista: CampoOperacao[]): CampoOperacao[] {
 }
 
 /**
- * Cadastro dos campos de "Dados da operação": uma linha por campo, editada direto na
- * tabela (como numa planilha), com a prévia do bloco do Pricing logo acima.
- * Grava sozinho um instante depois de cada alteração.
+ * Cadastro de "Dados da operação": a empresa tem tipos de operação (Transporte, Armazenagem...)
+ * e cada tipo tem os seus campos, uma linha por campo editada direto na tabela (como numa
+ * planilha), com a prévia do bloco do Pricing logo acima. Grava sozinho a cada alteração.
  */
 export function CamposOperacaoPage() {
   const { empresas, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
-  const auto = useSalvamentoAutomatico<CampoOperacao[]>({
+  const auto = useSalvamentoAutomatico<DadosOperacao>({
     chave: chaveCampos(empresaId),
-    carregar: () => listCampos(empresaId),
-    salvar: (lista) => salvarCampos(empresaId, lista),
+    carregar: () => listDadosOperacao(empresaId),
+    salvar: (dados) => salvarDadosOperacao(empresaId, dados),
     habilitado: !!empresaId,
   })
-  const todos = auto.dados ?? []
-  const ativos = todos.filter((c) => c.status === 'ativo')
-  const removidos = todos.filter((c) => c.status !== 'ativo')
+  // Empresa ainda sem tipos: começa com "Geral" (vira registro na primeira gravação).
+  const tipoPadrao: TipoOperacao = { id: idTipoPadrao(empresaId), nome: 'Geral', status: 'ativo' }
+  const dados = auto.dados ?? { tipos: [], campos: [] }
+  const tipos = dados.tipos.length > 0 ? dados.tipos : [tipoPadrao]
+  const tiposAtivos = tipos.filter((t) => t.status === 'ativo')
+  const [tipoEscolhido, setTipoEscolhido] = useState('')
+  const tipoId = tiposAtivos.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (tiposAtivos[0]?.id ?? '')
+  const doTipo = (c: CampoOperacao) => c.tipoOperacaoId === tipoId
+
+  const todos = dados.campos
+  const camposDoTipo = todos.filter(doTipo)
+  const ativos = camposDoTipo.filter((c) => c.status === 'ativo')
+  const removidos = camposDoTipo.filter((c) => c.status !== 'ativo')
+  const qtdCampos = (id: string) => todos.filter((c) => c.tipoOperacaoId === id && c.status === 'ativo').length
   const [mostrarRemovidos, setMostrarRemovidos] = useState(false)
   const [valoresPrevia, setValoresPrevia] = useState<ValoresOperacao>({})
   const [focoId, setFocoId] = useState('')
 
-  const gravar = (lista: CampoOperacao[]) => auto.alterar(comChaveUnica(lista))
-  const upd = (id: string, patch: Partial<CampoOperacao>) => gravar(todos.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+  const gravarDados = (d: DadosOperacao) => auto.alterar({ tipos: d.tipos, campos: comChaveUnica(d.campos) })
+  /** Grava a lista do tipo escolhido; os campos dos outros tipos ficam como estão. */
+  const gravar = (listaDoTipo: CampoOperacao[]) =>
+    gravarDados({ tipos, campos: [...todos.filter((c) => !doTipo(c)), ...listaDoTipo.map((c) => ({ ...c, tipoOperacaoId: tipoId }))] })
+  const upd = (id: string, patch: Partial<CampoOperacao>) => gravar(camposDoTipo.map((c) => (c.id === id ? { ...c, ...patch } : c)))
+
+  // ── tipos de operação ──
+  const escolherTipo = (id: string) => {
+    setTipoEscolhido(id)
+    setValoresPrevia({})
+  }
+  const adicionarTipo = (nome: string) => {
+    const novo: TipoOperacao = { id: crypto.randomUUID(), nome, status: 'ativo' }
+    gravarDados({ tipos: [...tipos, novo], campos: todos })
+    escolherTipo(novo.id)
+  }
+  const mudarTipo = (id: string, patch: Partial<TipoOperacao>) =>
+    gravarDados({ tipos: tipos.map((t) => (t.id === id ? { ...t, ...patch } : t)), campos: todos })
   // Trocar o tipo mantém o efeito se ele ainda vale; senão sugere o efeito "natural" do tipo novo.
   const trocarTipo = (c: CampoOperacao, tipo: TipoCampoOperacao) => {
     const permitidos = EFEITOS_POR_TIPO[tipo]
@@ -66,7 +113,7 @@ export function CamposOperacaoPage() {
     gravar([...lista, ...removidos])
   }
   const adicionar = (apos?: number) => {
-    const novo = novoCampo()
+    const novo = novoCampo('', 'texto', tipoId)
     const lista = [...ativos]
     lista.splice(apos === undefined ? lista.length : apos + 1, 0, novo)
     gravar([...lista, ...removidos])
@@ -74,6 +121,7 @@ export function CamposOperacaoPage() {
   }
   const trocarEmpresa = (id: string) => {
     setEmpresaId(id)
+    setTipoEscolhido('')
     setValoresPrevia({})
   }
 
@@ -176,7 +224,7 @@ export function CamposOperacaoPage() {
       <PageHeader
         breadcrumb="Cadastros"
         title="Dados da Operação"
-        subtitle="Monte os campos que o Pricing mostra para esta empresa. Nada é fixo: cada campo tem um tipo, e você escolhe o que ele faz com o preço."
+        subtitle="Monte, para cada tipo de operação da empresa (Transporte, Armazenagem...), os campos que o Pricing mostra. Nada é fixo: cada campo tem um tipo, e você escolhe o que ele faz com o preço."
         action={
           <div className={s.acoes}>
             {empresaId && <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />}
@@ -188,15 +236,23 @@ export function CamposOperacaoPage() {
                 ))}
               </select>
             </label>
+            {empresaId && (
+              <SeletorTipoOperacao
+                tipos={tipos}
+                selecionadoId={tipoId}
+                qtdCampos={qtdCampos}
+                onSelecionar={escolherTipo}
+                onAdicionar={adicionarTipo}
+                onRenomear={(id, nome) => mudarTipo(id, { nome })}
+                onStatus={(id, status) => mudarTipo(id, { status })}
+              />
+            )}
             {removidos.length > 0 && (
               <label className={ui.chip}>
                 <input className={ui.chipCheck} type="checkbox" checked={mostrarRemovidos} onChange={(e) => setMostrarRemovidos(e.target.checked)} />
                 {mostrarRemovidos ? 'Ocultar removidos' : `Removidos (${removidos.length})`}
               </label>
             )}
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => adicionar()} disabled={!empresaId}>
-              <Plus /> Campo
-            </button>
           </div>
         }
       />
@@ -205,7 +261,7 @@ export function CamposOperacaoPage() {
 
       <div className={`${ui.card} ${s.previaCard}`}>
         <div className={s.previaTitulo}>
-          <Eye size={14} /> Prévia · como fica no Pricing
+          <Eye size={14} /> Prévia · como fica no Pricing{tiposAtivos.length > 1 && ` (${tiposAtivos.find((t) => t.id === tipoId)?.nome})`}
           <small>Preencha para testar. Os campos com etiqueta mexem no preço; os demais só informam.</small>
         </div>
         <BlocoDadosOperacao campos={ativos} valores={valoresPrevia} onChange={(k, v) => setValoresPrevia((p) => ({ ...p, [k]: v }))} mostrarEfeito />
@@ -239,7 +295,7 @@ export function CamposOperacaoPage() {
               {ativos.length === 0 && !auto.carregando && (
                 <tr className={sheet.vazio}>
                   <td colSpan={9}>
-                    <b>Nenhum campo ainda para esta empresa.</b> Clique em <b>+ Campo</b> e monte o bloco do seu jeito: cliente, cidade, quantidade, forma de cobrança...
+                    <b>Nenhum campo ainda neste tipo de operação.</b> Clique em <b>+ Adicionar campo</b> e monte o bloco do seu jeito: cliente, cidade, quantidade, forma de cobrança...
                   </td>
                 </tr>
               )}

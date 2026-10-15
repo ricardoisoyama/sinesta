@@ -199,6 +199,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<string>("TipoOperacaoId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasDefaultValue("");
+
                     b.HasKey("Id");
 
                     b.HasIndex("EmpresaId", "Ordem");
@@ -2738,6 +2745,59 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("tipos_custo", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.TipoOperacao", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<int>("Ordem")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "Ordem");
+
+                    b.ToTable("tipos_operacao", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4086,6 +4146,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("ServicoId")
                                 .IsRequired();
+
+                            b1.Property<string>("TipoOperacao");
+
+                            b1.Property<string>("TipoOperacaoId");
 
                             b1.HasKey("PropostaId", "__synthesizedOrdinal");
 

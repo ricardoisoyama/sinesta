@@ -38,6 +38,7 @@ public class AppDbContext : DbContext
     public DbSet<Oportunidade> Oportunidades => Set<Oportunidade>();
     public DbSet<RegistroAuditoria> Auditoria => Set<RegistroAuditoria>();
     public DbSet<CampoOperacao> CamposOperacao => Set<CampoOperacao>();
+    public DbSet<TipoOperacao> TiposOperacao => Set<TipoOperacao>();
     public DbSet<FichaGrupo> FichaGrupos => Set<FichaGrupo>();
     public DbSet<FichaColuna> FichaColunas => Set<FichaColuna>();
     public DbSet<FichaTecnica> FichasTecnicas => Set<FichaTecnica>();
@@ -438,7 +439,17 @@ public class AppDbContext : DbContext
             e.Property(c => c.Cadastro).HasMaxLength(20);
             e.Property(c => c.Ajuda).HasMaxLength(400);
             e.Property(c => c.Opcoes).HasColumnType("text[]");
+            e.Property(c => c.TipoOperacaoId).HasMaxLength(80).HasDefaultValue(string.Empty);
             e.HasIndex(c => new { c.EmpresaId, c.Ordem });
+        });
+
+        modelBuilder.Entity<TipoOperacao>(e =>
+        {
+            e.ToTable("tipos_operacao");
+            e.HasKey(t => t.Id);
+            e.Property(t => t.EmpresaId).IsRequired().HasMaxLength(80);
+            e.Property(t => t.Nome).IsRequired().HasMaxLength(80);
+            e.HasIndex(t => new { t.EmpresaId, t.Ordem });
         });
 
         modelBuilder.Entity<FichaGrupo>(e =>

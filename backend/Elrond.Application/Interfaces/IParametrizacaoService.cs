@@ -4,13 +4,19 @@ using Elrond.Domain.Entities;
 
 namespace Elrond.Application.Interfaces;
 
-/// <summary>Cadastros parametrizáveis por empresa: campos de Dados da Operação e a Ficha Técnica.</summary>
+/// <summary>Cadastros parametrizáveis por empresa: tipos de operação e seus campos, e a Ficha Técnica.</summary>
 public interface IParametrizacaoService
 {
+    /// <summary>Tipos de operação e campos da empresa (ativos e inativos), na ordem da tela.</summary>
+    Task<DadosOperacaoDto> DadosOperacaoAsync(string empresaId);
+
+    /// <summary>Grava tipos e campos da empresa numa transação (insere, altera, inativa). Não apaga o que não veio.</summary>
+    Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(string empresaId, DadosOperacaoDto dto);
+
     /// <summary>Campos da empresa (ativos e inativos), na ordem da tela.</summary>
     Task<List<CampoOperacao>> CamposAsync(string empresaId);
 
-    /// <summary>Grava a lista de campos da empresa (insere, altera, inativa). Não apaga o que não veio.</summary>
+    /// <summary>Grava só os campos (os tipos ficam como estão).</summary>
     Task<Result<List<CampoOperacao>>> SalvarCamposAsync(string empresaId, List<CampoOperacao> campos);
 
     Task<FichasEmpresaDto> FichasAsync(string empresaId);

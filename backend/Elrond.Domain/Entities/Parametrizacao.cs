@@ -11,6 +11,8 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
 {
     public string Id { get; set; } = string.Empty;
     public string EmpresaId { get; set; } = string.Empty;
+    /// <summary>Tipo de operação a que o campo pertence (Transporte, Armazenagem...).</summary>
+    public string TipoOperacaoId { get; set; } = string.Empty;
     public string Nome { get; set; } = string.Empty;
     /// <summary>Identificador estável do campo (derivado do nome, único por empresa entre os ativos).</summary>
     public string Chave { get; set; } = string.Empty;
@@ -32,6 +34,22 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     /// <summary>Texto do balão de ajuda na Precificação.</summary>
     public string Ajuda { get; set; } = string.Empty;
     public string Status { get; set; } = "ativo";
+}
+
+/// <summary>
+/// Tipo de operação da empresa (Transporte, Armazenagem...): cada um tem o seu conjunto de campos
+/// de Dados da Operação, e no Pricing a pessoa escolhe qual está precificando.
+/// </summary>
+public class TipoOperacao : Rastreavel, IEntity, IInativavel
+{
+    public string Id { get; set; } = string.Empty;
+    public string EmpresaId { get; set; } = string.Empty;
+    public string Nome { get; set; } = string.Empty;
+    public int Ordem { get; set; }
+    public string Status { get; set; } = "ativo";
+
+    /// <summary>Id do tipo criado para as empresas que já tinham campos antes dos tipos existirem.</summary>
+    public static string IdPadrao(string empresaId) => $"padrao-{empresaId}";
 }
 
 /// <summary>

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Elrond.Application.Common;
 using Elrond.Application.DTOs;
 using Elrond.Application.Interfaces;
+using Elrond.Domain.Common;
 using Elrond.Domain.Entities;
 using Elrond.Domain.Regras;
 
@@ -20,6 +21,7 @@ public class ParametrizacaoService : IParametrizacaoService
     private static readonly string[] Cadastros = { "cliente", "fornecedor", "vendedor", "servico", "veiculo" };
     private static readonly string[] TiposColuna = { "valor", "percentual", "calculo", "numero", "texto", "lista" };
     private const int MaxItens = 300;
+    private const int MaxTipos = 50;
 
     /// <summary>Efeitos que cada tipo de campo aceita (o resto só informa).</summary>
     public static string EfeitoValido(string tipo, string efeito) => (tipo, efeito) switch
@@ -31,6 +33,7 @@ public class ParametrizacaoService : IParametrizacaoService
     };
 
     private readonly ICrudRepository<CampoOperacao> _campos;
+    private readonly ICrudRepository<TipoOperacao> _tipos;
     private readonly ICrudRepository<FichaGrupo> _grupos;
     private readonly ICrudRepository<FichaColuna> _colunas;
     private readonly ICrudRepository<FichaTecnica> _fichas;
@@ -39,11 +42,12 @@ public class ParametrizacaoService : IParametrizacaoService
     private readonly IUnidadeTrabalho _uow;
     private readonly IAuditoriaService _auditoria;
 
-    public ParametrizacaoService(ICrudRepository<CampoOperacao> campos, ICrudRepository<FichaGrupo> grupos, ICrudRepository<FichaColuna> colunas,
-        ICrudRepository<FichaTecnica> fichas, ICrudRepository<FichaValor> valores, ICrudRepository<Empresa> empresas,
-        IUnidadeTrabalho uow, IAuditoriaService auditoria)
+    public ParametrizacaoService(ICrudRepository<CampoOperacao> campos, ICrudRepository<TipoOperacao> tipos, ICrudRepository<FichaGrupo> grupos,
+        ICrudRepository<FichaColuna> colunas, ICrudRepository<FichaTecnica> fichas, ICrudRepository<FichaValor> valores,
+        ICrudRepository<Empresa> empresas, IUnidadeTrabalho uow, IAuditoriaService auditoria)
     {
         _campos = campos;
+        _tipos = tipos;
         _grupos = grupos;
         _colunas = colunas;
         _fichas = fichas;
@@ -55,23 +59,94 @@ public class ParametrizacaoService : IParametrizacaoService
 
     // ══════════════════════════ Dados da Operação ══════════════════════════
 
+    /// <summary>O que mudou numa gravação: registros novos, alterados (antes/depois) e o conjunto final.</summary>
+    private sealed record Lote<T>(List<T> Novos, List<(T Antes, T Depois)> Alterados, List<T> Todos);
+
+    public async Task<DadosOperacaoDto> DadosOperacaoAsync(string empresaId) =>
+        new(await TiposAsync(empresaId), await CamposAsync(empresaId));
+
+    private async Task<List<TipoOperacao>> TiposAsync(string empresaId) =>
+        (await _tipos.ListarAsync(t => t.EmpresaId == empresaId)).OrderBy(t => t.Ordem).ToList();
+
     public async Task<List<CampoOperacao>> CamposAsync(string empresaId) =>
         (await _campos.ListarAsync(c => c.EmpresaId == empresaId)).OrderBy(c => c.Ordem).ToList();
 
-    public async Task<Result<List<CampoOperacao>>> SalvarCamposAsync(string empresaId, List<CampoOperacao> campos)
+    public async Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(string empresaId, DadosOperacaoDto dto)
     {
         if (await _empresas.GetByIdAsync(empresaId) is not { } empresa)
-            return Result.Failure<List<CampoOperacao>>("Empresa não encontrada.");
-        if ((campos ?? new()).Count > MaxItens)
-            return Result.Failure<List<CampoOperacao>>($"No máximo {MaxItens} campos por empresa.");
+            return Result.Failure<DadosOperacaoDto>("Empresa não encontrada.");
+        var brutosTipos = dto?.Tipos ?? new();
+        var brutosCampos = dto?.Campos ?? new();
+        if (brutosTipos.Count > MaxTipos)
+            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxTipos} tipos de operação por empresa.");
+        if (brutosCampos.Count > MaxItens)
+            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxItens} campos por empresa.");
 
+        var tipos = await PrepararTiposAsync(empresaId, brutosTipos);
+        var campos = await PrepararCamposAsync(empresaId, brutosCampos, tipos.Todos);
+
+        await _uow.ExecutarAsync(async () =>
+        {
+            await _tipos.SalvarLoteAsync(tipos.Novos, tipos.Alterados.Select(a => a.Depois).ToList());
+            await _campos.SalvarLoteAsync(campos.Novos, campos.Alterados.Select(a => a.Depois).ToList());
+        });
+
+        await AuditarAsync(empresa, "TipoOperacao", "Tipo de operação", tipos, t => t.Nome, t => t.Status);
+        await AuditarAsync(empresa, "CampoOperacao", "Campo", campos, c => c.Nome, c => c.Status);
+        return Result.Success(await DadosOperacaoAsync(empresaId));
+    }
+
+    public async Task<Result<List<CampoOperacao>>> SalvarCamposAsync(string empresaId, List<CampoOperacao> campos)
+    {
+        var r = await SalvarDadosOperacaoAsync(empresaId, new DadosOperacaoDto(null, campos));
+        return r.IsSuccess ? Result.Success(r.Value!.Campos ?? new()) : Result.Failure<List<CampoOperacao>>(r.Error!);
+    }
+
+    /// <summary>Tipos de operação: insere, renomeia, reordena e inativa. Os que não vieram ficam como estão.</summary>
+    private async Task<Lote<TipoOperacao>> PrepararTiposAsync(string empresaId, List<TipoOperacao> brutos)
+    {
+        var existentes = (await _tipos.ListarAsync(t => t.EmpresaId == empresaId)).ToDictionary(t => t.Id);
+        var novos = new List<TipoOperacao>();
+        var alterados = new List<(TipoOperacao Antes, TipoOperacao Depois)>();
+        var vistos = new HashSet<string>();
+        var ordem = 0;
+        foreach (var bruto in brutos)
+        {
+            existentes.TryGetValue(bruto.Id ?? string.Empty, out var antes);
+            var nome = (bruto.Nome ?? string.Empty).Trim();
+            if (antes is null && nome.Length == 0) continue; // tipo novo ainda sem nome
+            var t = new TipoOperacao
+            {
+                Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
+                EmpresaId = empresaId,
+                Nome = Limitar(nome.Length > 0 ? nome : antes!.Nome, 80),
+                Ordem = ordem++,
+                Status = bruto.Status == "inativo" ? "inativo" : "ativo",
+            };
+            if (!vistos.Add(t.Id)) continue;
+            if (antes is null) novos.Add(t);
+            else if (antes.Nome != t.Nome || antes.Ordem != t.Ordem || antes.Status != t.Status) alterados.Add((antes, t));
+        }
+        var depois = alterados.ToDictionary(a => a.Antes.Id, a => a.Depois);
+        var todos = existentes.Values.Select(e => depois.GetValueOrDefault(e.Id) ?? e).Concat(novos).ToList();
+        return new(novos, alterados, todos);
+    }
+
+    /// <summary>
+    /// Campos: normaliza tipo, efeito e chave (única entre os ativos do mesmo tipo de operação).
+    /// Campo sem tipo de operação válido vai para o primeiro tipo ativo da empresa.
+    /// </summary>
+    private async Task<Lote<CampoOperacao>> PrepararCamposAsync(string empresaId, List<CampoOperacao> brutos, List<TipoOperacao> tipos)
+    {
         var existentes = (await _campos.ListarAsync(c => c.EmpresaId == empresaId)).ToDictionary(c => c.Id);
-        var chaves = new HashSet<string>();
+        var idsTipos = tipos.Select(t => t.Id).ToHashSet();
+        var tipoPadrao = tipos.Where(t => t.Status == "ativo").OrderBy(t => t.Ordem).FirstOrDefault()?.Id ?? tipos.FirstOrDefault()?.Id ?? string.Empty;
+        var chavesPorTipo = new Dictionary<string, HashSet<string>>();
         var novos = new List<CampoOperacao>();
         var alterados = new List<(CampoOperacao Antes, CampoOperacao Depois)>();
 
         var ordem = 0;
-        foreach (var bruto in campos ?? new())
+        foreach (var bruto in brutos)
         {
             existentes.TryGetValue(bruto.Id ?? string.Empty, out var antes);
             var nome = (bruto.Nome ?? string.Empty).Trim();
@@ -80,10 +155,14 @@ public class ParametrizacaoService : IParametrizacaoService
 
             var tipo = TiposCampo.Contains(bruto.Tipo) ? bruto.Tipo : "texto";
             var status = bruto.Status == "inativo" ? "inativo" : "ativo";
+            var tipoOperacaoId = idsTipos.Contains(bruto.TipoOperacaoId ?? string.Empty) ? bruto.TipoOperacaoId!
+                : antes is not null && idsTipos.Contains(antes.TipoOperacaoId) ? antes.TipoOperacaoId
+                : tipoPadrao;
             var c = new CampoOperacao
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
                 EmpresaId = empresaId,
+                TipoOperacaoId = tipoOperacaoId,
                 Nome = Limitar(nome.Length > 0 ? nome : antes!.Nome, 120),
                 Tipo = tipo,
                 Efeito = EfeitoValido(tipo, bruto.Efeito ?? string.Empty),
@@ -95,28 +174,34 @@ public class ParametrizacaoService : IParametrizacaoService
                 Ajuda = Limitar((bruto.Ajuda ?? string.Empty).Trim(), 400),
                 Status = status,
             };
-            c.Chave = ChaveUnica(bruto.Chave, c.Nome, status == "ativo" ? chaves : new HashSet<string>());
+            var chaves = status == "ativo"
+                ? chavesPorTipo.TryGetValue(tipoOperacaoId, out var k) ? k : chavesPorTipo[tipoOperacaoId] = new HashSet<string>()
+                : new HashSet<string>();
+            c.Chave = ChaveUnica(bruto.Chave, c.Nome, chaves);
 
             if (antes is null) novos.Add(c);
             else if (MudouCampo(antes, c)) alterados.Add((antes, c));
         }
+        return new(novos, alterados, new());
+    }
 
-        await _uow.ExecutarAsync(() => _campos.SalvarLoteAsync(novos, alterados.Select(a => a.Depois).ToList()));
-
-        foreach (var n in novos)
-            await _auditoria.RegistrarAsync("criar", "CampoOperacao", n.Id, $"Campo \"{n.Nome}\" criado em Dados da Operação de {empresa.Nome}");
-        foreach (var (a, d) in alterados)
+    /// <summary>Trilha de auditoria de uma gravação: criar, editar, inativar ou reativar cada registro.</summary>
+    private async Task AuditarAsync<T>(Empresa empresa, string entidade, string rotulo, Lote<T> lote, Func<T, string> nome, Func<T, string> status)
+        where T : IEntity
+    {
+        foreach (var n in lote.Novos)
+            await _auditoria.RegistrarAsync("criar", entidade, n.Id, $"{rotulo} \"{nome(n)}\" criado em Dados da Operação de {empresa.Nome}");
+        foreach (var (a, d) in lote.Alterados)
         {
-            var acao = a.Status != "inativo" && d.Status == "inativo" ? "inativar" : a.Status == "inativo" && d.Status != "inativo" ? "reativar" : "editar";
-            await _auditoria.RegistrarAsync(acao, "CampoOperacao", d.Id, $"Campo \"{d.Nome}\" de Dados da Operação ({empresa.Nome}): {acao}", a, d);
+            var acao = status(a) != "inativo" && status(d) == "inativo" ? "inativar" : status(a) == "inativo" && status(d) != "inativo" ? "reativar" : "editar";
+            await _auditoria.RegistrarAsync(acao, entidade, d.Id, $"{rotulo} \"{nome(d)}\" de Dados da Operação ({empresa.Nome}): {acao}", a, d);
         }
-        return Result.Success(await CamposAsync(empresaId));
     }
 
     private static bool MudouCampo(CampoOperacao a, CampoOperacao b) =>
         a.Nome != b.Nome || a.Chave != b.Chave || a.Tipo != b.Tipo || a.Efeito != b.Efeito || a.Obrigatorio != b.Obrigatorio
         || a.Largura != b.Largura || a.Ordem != b.Ordem || a.Cadastro != b.Cadastro || a.Ajuda != b.Ajuda || a.Status != b.Status
-        || !a.Opcoes.SequenceEqual(b.Opcoes);
+        || a.TipoOperacaoId != b.TipoOperacaoId || !a.Opcoes.SequenceEqual(b.Opcoes);
 
     // ══════════════════════════ Ficha Técnica ══════════════════════════
 

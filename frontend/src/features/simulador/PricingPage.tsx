@@ -24,7 +24,7 @@ import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
 import { FORMAS_PAGAMENTO, type Parceiro } from '@/features/parceiros/types'
 import { bloqueioDeRegiao, descreverRegiao } from '@/features/parceiros/regiao'
 import { useEmpresaAtiva } from '@/features/camposOperacao/useEmpresaAtiva'
-import { useCamposDaEmpresa } from '@/features/camposOperacao/api'
+import { useDadosOperacaoDaEmpresa } from '@/features/camposOperacao/api'
 import { BlocoDadosOperacao } from '@/features/camposOperacao/BlocoDadosOperacao'
 import { efeitoDe, efeitosDosCampos, numeroDe, type ValoresOperacao } from '@/features/camposOperacao/types'
 import { useFichasDaEmpresa } from '@/features/fichaTecnica/api'
@@ -55,7 +55,12 @@ export function PricingPage() {
   const { empresas, empresa, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
   useCustosFixosQuery()
   useTaxasQuery()
-  const { campos } = useCamposDaEmpresa(empresaId)
+  // Cada empresa tem os seus tipos de operação (Transporte, Armazenagem...) e cada tipo os seus campos.
+  const { tipos: tiposOperacao, camposDo, todosCampos } = useDadosOperacaoDaEmpresa(empresaId)
+  const [tipoEscolhido, setTipoEscolhido] = useState('')
+  const tipoOperacaoId = tiposOperacao.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (tiposOperacao[0]?.id ?? '')
+  const tipoOperacao = tiposOperacao.find((t) => t.id === tipoOperacaoId)
+  const campos = camposDo(tipoOperacaoId)
   const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichasDaEmpresa(empresaId)
   const { user } = useAuth()
   const ehGestor = user?.perfil === 'Gestor'
@@ -92,10 +97,18 @@ export function PricingPage() {
   const [carregouProposta, setCarregouProposta] = useState('')
   const propostaParam = searchParams.get('proposta') ?? ''
 
+  const [tipoVisto, setTipoVisto] = useState(tipoOperacaoId)
+  if (tipoVisto !== tipoOperacaoId) {
+    // Trocou o tipo de operação: os campos são outros, então os valores recomeçam.
+    setTipoVisto(tipoOperacaoId)
+    setValores({})
+  }
+
   const [empresaVista, setEmpresaVista] = useState(empresaId)
   if (empresaVista !== empresaId) {
-    // Trocou de empresa: campos e fichas são outros, então a operação recomeça.
+    // Trocou de empresa: tipos, campos e fichas são outros, então a operação recomeça.
     setEmpresaVista(empresaId)
+    setTipoEscolhido('')
     setValores({})
     setLinhas([])
     setAberta('')
@@ -350,6 +363,8 @@ export function PricingPage() {
         custos,
         abaixoMinimo: abaixoDoMinimo,
         dadosOperacao: retratoDados(),
+        tipoOperacaoId: tipoOperacao?.id ?? null,
+        tipoOperacao: tipoOperacao?.nome ?? null,
         fichas: fichasItem,
       },
     ])
@@ -368,9 +383,13 @@ export function PricingPage() {
     rmItem(it.id)
     setEmpresaId(it.empresaId)
     setEmpresaVista(it.empresaId)
+    // Volta para o tipo de operação do item (sem recomeçar os valores que vêm a seguir).
+    const tipoDoItem = tiposOperacao.some((t) => t.id === it.tipoOperacaoId) ? (it.tipoOperacaoId ?? '') : tipoOperacaoId
+    setTipoEscolhido(tipoDoItem)
+    setTipoVisto(tipoDoItem)
     const v: ValoresOperacao = {}
     for (const d of it.dadosOperacao ?? []) {
-      const campo = campos.find((c) => c.id === d.campoId)
+      const campo = todosCampos.find((c) => c.id === d.campoId)
       if (!campo) continue // campo removido depois: sai do item
       const atual = campo.tipo === 'cadastro' ? '' : undefined
       if (campo.tipo === 'cadastro') {
@@ -511,14 +530,27 @@ export function PricingPage() {
             : 'Preencha os dados da operação e os custos pela ficha técnica: o preço sai com o fator da empresa.'
         }
         action={
-          <label className={s.empresaSel}>
-            Empresa
-            <select value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} disabled={carregando}>
-              {empresas.map((e) => (
-                <option key={e.id} value={e.id}>{e.nome}</option>
-              ))}
-            </select>
-          </label>
+          <div className={s.selecoes}>
+            <label className={s.empresaSel}>
+              Empresa
+              <select value={empresaId} onChange={(e) => setEmpresaId(e.target.value)} disabled={carregando}>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
+              </select>
+            </label>
+            {/* Só aparece quando a empresa tem mais de um tipo (com um só, não há o que escolher). */}
+            {tiposOperacao.length > 1 && (
+              <label className={s.empresaSel}>
+                Tipo de operação
+                <select value={tipoOperacaoId} onChange={(e) => setTipoEscolhido(e.target.value)}>
+                  {tiposOperacao.map((t) => (
+                    <option key={t.id} value={t.id}>{t.nome}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
         }
       />
 

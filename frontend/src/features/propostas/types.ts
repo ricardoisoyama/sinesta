@@ -50,6 +50,9 @@ export interface ItemProposta {
   abaixoMinimo?: boolean
   /** Retrato dos Dados da operação no dia (Pricing parametrizável). Ausente nos itens antigos. */
   dadosOperacao?: DadoOperacaoItem[] | null
+  /** Tipo de operação precificado (id e nome do dia: "Transporte"). Nulo nos itens antigos. */
+  tipoOperacaoId?: string | null
+  tipoOperacao?: string | null
   /** Retrato das fichas técnicas usadas como custo. Ausente nos itens antigos. */
   fichas?: FichaItemProposta[] | null
 }

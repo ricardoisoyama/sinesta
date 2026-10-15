@@ -7,8 +7,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace Elrond.API.Controllers;
 
 /// <summary>
-/// Campos de "Dados da operação" por empresa. Leitura liberada a quem está logado (a Precificação
-/// monta o bloco com eles); gravação exige a tela Parametrizações › Dados da Operação (PermissaoPorRota).
+/// "Dados da operação" por empresa: os tipos de operação (Transporte, Armazenagem...) e os campos de
+/// cada um. Leitura liberada a quem está logado (o Pricing monta o bloco com eles); gravação exige a
+/// tela Parametrizações › Dados da Operação (PermissaoPorRota).
 /// </summary>
 [ApiController]
 [Authorize]
@@ -17,13 +18,13 @@ public class CamposOperacaoController(IParametrizacaoService service) : Controll
 {
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string empresaId) =>
-        string.IsNullOrWhiteSpace(empresaId) ? BadRequest("Informe a empresa.") : Ok(await service.CamposAsync(empresaId));
+        string.IsNullOrWhiteSpace(empresaId) ? BadRequest("Informe a empresa.") : Ok(await service.DadosOperacaoAsync(empresaId));
 
-    /// <summary>Grava a lista inteira da empresa (a tela salva sozinha). Remover = enviar com status "inativo".</summary>
+    /// <summary>Grava tipos e campos da empresa (a tela salva sozinha). Remover = enviar com status "inativo".</summary>
     [HttpPut("{empresaId}")]
-    public async Task<IActionResult> Salvar(string empresaId, [FromBody] List<CampoOperacao> campos)
+    public async Task<IActionResult> Salvar(string empresaId, [FromBody] DadosOperacaoDto dados)
     {
-        var r = await service.SalvarCamposAsync(empresaId, campos ?? new());
+        var r = await service.SalvarDadosOperacaoAsync(empresaId, dados ?? new DadosOperacaoDto(null, null));
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 }

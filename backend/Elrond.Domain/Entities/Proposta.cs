@@ -79,6 +79,9 @@ public class ItemProposta
     public decimal DvSem { get; set; }
     /// <summary>Retrato dos Dados da operação (Pricing com campos parametrizáveis). Nulo nos itens antigos.</summary>
     public List<DadoOperacaoItem>? DadosOperacao { get; set; }
+    /// <summary>Tipo de operação precificado (id e nome do dia: "Transporte"). Nulo nos itens antigos.</summary>
+    public string? TipoOperacaoId { get; set; }
+    public string? TipoOperacao { get; set; }
     /// <summary>Retrato das fichas técnicas usadas como custo. Nulo nos itens antigos.</summary>
     public List<FichaItemProposta>? Fichas { get; set; }
     /// <summary>Custo efetivamente executado (lançado depois da aprovação). 0 = ainda não informado.</summary>
