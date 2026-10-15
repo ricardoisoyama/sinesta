@@ -201,4 +201,7 @@
 .duDanger svg { color: #c0392b; }
 
 /* ---------- CONTENT ---------- */
-.content { flex: 1; min-width: 0; padding: 26px 30px; overflow: auto; }
+/* overflow-anchor: none desliga a "âncora de rolagem" do Chrome: ao reordenar uma linha pelas
+   setas (Dados da Operação, Ficha Técnica...), ele rolava a página para seguir a linha que
+   estava na altura da âncora, e a tela pulava para cima. */
+.content { flex: 1; min-width: 0; padding: 26px 30px; overflow: auto; overflow-anchor: none; }
