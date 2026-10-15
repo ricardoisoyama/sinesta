@@ -33,6 +33,9 @@ import {
   BarChart3,
   UserCog,
   LifeBuoy,
+  FolderOpen,
+  ReceiptText,
+  LineChart,
   Truck,
   type LucideIcon,
 } from 'lucide-react'
@@ -80,6 +83,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: 'Pricing', path: '/simulador', icon: Calculator },
       { label: 'Proposta', path: '/propostas', icon: Route },
+      // Protótipo (dados de exemplo): livre até ganhar backend e permissão própria.
+      { label: 'Contratos', path: '/contratos', icon: FolderOpen, livre: true },
       { label: 'CRM', path: '/crm', icon: SquareKanban },
       { label: 'Agenda', path: '/agenda', icon: CalendarDays },
       { label: 'Metas', path: '/analises/metas', icon: Target },
@@ -100,6 +105,8 @@ export const navGroups: NavGroup[] = [
     label: 'Financeiro',
     icon: Landmark,
     items: [
+      // Protótipo (dados de exemplo): livre até ganhar backend e permissão própria.
+      { label: 'Faturamento', path: '/financeiro/faturamento', icon: ReceiptText, livre: true },
       { label: 'Entradas e Saídas', path: '/financeiro/entradas-saidas', icon: ArrowLeftRight },
       { label: 'Caixa', path: '/financeiro/caixa', icon: PiggyBank },
       { label: 'Conciliação', path: '/financeiro/conciliacao', icon: Link2 },
@@ -112,6 +119,8 @@ export const navGroups: NavGroup[] = [
     label: 'Relatórios',
     icon: BarChart3,
     items: [
+      // Protótipo: a base é real (DF, metas, fator); os cenários ficam no navegador. Livre por enquanto.
+      { label: 'Projeção', path: '/analises/projecao', icon: LineChart, livre: true },
       { label: 'Break-even', path: '/analises/break-even', icon: Scale },
       { label: 'Mix / Equilíbrio', path: '/analises/mix', icon: PieChart },
       { label: 'RPO (Orçado × Real)', path: '/analises/rpo', icon: ClipboardList },

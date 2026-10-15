@@ -1,0 +1,75 @@
+/* Central de Faturamento (protótipo). Mesma paleta do sistema. */
+.topoAcoes { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.mesNav { display: inline-flex; align-items: center; gap: 4px; background: #fff; border: 1px solid #e6e3db; border-radius: 10px; padding: 3px; }
+.mesNav span { min-width: 150px; text-align: center; font-size: 13px; font-weight: 700; color: #143d18; }
+.mesNav button { border: none; background: none; width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; color: #1a4d1e; cursor: pointer; }
+.mesNav button:hover { background: #eef4ef; }
+
+.painel { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 16px 18px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04); }
+.totais { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; margin-bottom: 16px; }
+.totais > div:first-child { display: flex; flex-direction: column; }
+.totRotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; }
+.totValor { font-size: 24px; font-weight: 700; color: #143d18; font-variant-numeric: tabular-nums; }
+.totSub { font-size: 12px; color: #6b7b72; }
+.barraMes { flex: 1; min-width: 160px; height: 8px; border-radius: 8px; background: #ece8de; overflow: hidden; }
+.barraRecebido { display: block; height: 100%; background: linear-gradient(90deg, #2c6b33, #1a4d1e); border-radius: 8px; }
+.atencao { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #f3c8c0; background: #fbe6e2; color: #b42318; font: inherit; font-size: 12.5px; font-weight: 700; padding: 8px 12px; border-radius: 9px; cursor: pointer; }
+.atencaoOn { box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.15); }
+
+/* esteira: as etapas da fatura em linha, com o total de cada uma */
+.esteira { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0; }
+@media (max-width: 1100px) { .esteira { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 8px; } }
+.passo {
+  position: relative; display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 10px 14px 10px 22px; border: 1px solid #e6e3db; background: #fbfaf7; font: inherit; text-align: left; cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%, 14px 50%);
+  margin-right: -6px;
+}
+.passo:first-child { clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 50%, calc(100% - 14px) 100%, 0 100%); padding-left: 14px; border-radius: 10px 0 0 10px; }
+.passo:hover { background: #f3f1ea; }
+.passoOn { background: #143d18; border-color: #143d18; }
+.passoOn .passoTexto b, .passoOn .passoTexto span { color: #fff; }
+.passoOn .passoNum { background: #e8702f; color: #fff; }
+.passoVazio .passoTexto { opacity: 0.55; }
+.passoNum { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: #e6e3db; color: #4b5a51; }
+.passoTexto { display: flex; flex-direction: column; min-width: 0; }
+.passoTexto b { font-size: 12.5px; color: #143d18; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.passoTexto span { font-size: 11.5px; color: #6b7b72; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+
+.filtroContrato { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12.5px; font-weight: 600; color: #1a4d1e; background: #eef4ef; border-radius: 9px; padding: 6px 8px 6px 12px; }
+.filtroContrato button { display: inline-flex; align-items: center; gap: 4px; border: none; background: #fff; border-radius: 7px; padding: 4px 8px; font: inherit; font-size: 12px; color: #143d18; cursor: pointer; }
+
+.numero { font-weight: 700; color: #143d18; font-variant-numeric: tabular-nums; }
+.cliente { display: flex; flex-direction: column; line-height: 1.25; }
+.cliente small { color: #6b7b72; font-size: 11.5px; }
+.avulsa { color: #b5541b; font-weight: 700; }
+.valorCel { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
+.valorCel small { color: #b5541b; font-size: 11px; font-weight: 600; }
+.docs { display: flex; flex-direction: column; font-size: 12.5px; color: #1f2a24; line-height: 1.25; }
+.docs small { color: #6b7b72; font-size: 11px; }
+.atrasado { color: #b42318; font-weight: 700; }
+
+/* conferência */
+.espaco { flex: 1; }
+.confTopo { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: #6b7b72; margin-bottom: 14px; }
+.confTitulo { display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #e8702f; margin: 4px 0 10px; }
+.comp { border: 1px solid #efebe2; border-radius: 12px; overflow: hidden; }
+.compLinha { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid #f0eee7; font-size: 13px; color: #1f2a24; }
+.compLinha b { font-variant-numeric: tabular-nums; color: #143d18; white-space: nowrap; }
+.compLinha small { color: #6b7b72; }
+.compExtra { cursor: pointer; background: #fdf8ee; }
+.compExtra span { display: inline-flex; align-items: center; gap: 8px; }
+.compFora { opacity: 0.5; text-decoration: line-through; }
+.compTotal { background: #fbfaf7; border-bottom: none; font-weight: 700; }
+.compTotal b { font-size: 16px; }
+.descontoInput { width: 130px; text-align: right; font: inherit; font-size: 13px; border: 1px solid #e6e3db; border-radius: 8px; padding: 6px 10px; }
+.confNota { font-size: 12px; color: #8a5a0c; margin-top: 8px; }
+.confGrade { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 18px; }
+@media (max-width: 720px) { .confGrade { grid-template-columns: 1fr; } }
+.confDefs { display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; margin: 0; font-size: 12.5px; }
+.confDefs dt { color: #6b7b72; }
+.confDefs dd { margin: 0; color: #1f2a24; font-weight: 600; min-width: 0; }
+.confCaixa { font-size: 12.5px; line-height: 1.5; color: #1f2a24; background: #f6f5f1; border-radius: 10px; padding: 10px 12px; }
+.codigo { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; font-weight: 500; color: #143d18; background: #f6f5f1; border-radius: 5px; padding: 2px 6px; display: inline-block; }
+.checklist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 5px; font-size: 12px; color: #1d6b3e; }
+.checklist li { display: flex; align-items: center; gap: 6px; }

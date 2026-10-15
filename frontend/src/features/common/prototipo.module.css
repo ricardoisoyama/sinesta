@@ -1,0 +1,14 @@
+.faixa {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px dashed #d9b98a;
+  background: #fdf8ee;
+  color: #7a5214;
+  font-size: 12.5px;
+}
+.faixa b { font-weight: 700; }
+.faixa svg { flex-shrink: 0; }
