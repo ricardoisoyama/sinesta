@@ -19,6 +19,8 @@ public class AppDbContext : DbContext
     public DbSet<Servico> Servicos => Set<Servico>();
     public DbSet<TipoCusto> TiposCusto => Set<TipoCusto>();
     public DbSet<Veiculo> Veiculos => Set<Veiculo>();
+    public DbSet<IntegracaoBancaria> IntegracoesBancarias => Set<IntegracaoBancaria>();
+    public DbSet<CobrancaBancaria> CobrancasBancarias => Set<CobrancaBancaria>();
     public DbSet<ValidadeProposta> ValidadesProposta => Set<ValidadeProposta>();
     public DbSet<CertificadoEmpresa> CertificadosEmpresa => Set<CertificadoEmpresa>();
     public DbSet<RegistroErro> RegistrosErro => Set<RegistroErro>();
@@ -282,6 +284,31 @@ public class AppDbContext : DbContext
         {
             e.ToTable("tipos_custo");
             e.HasKey(t => t.Id);
+        });
+
+        // ── Motor de bancos ──
+        modelBuilder.Entity<IntegracaoBancaria>(e =>
+        {
+            e.ToTable("integracoes_bancarias");
+            e.HasKey(i => i.Id);
+            e.Property(i => i.EmpresaId).IsRequired().HasMaxLength(80);
+            e.Property(i => i.Banco).IsRequired().HasMaxLength(30);
+            e.Property(i => i.Ambiente).HasMaxLength(20);
+            e.Property(i => i.Recursos).HasColumnType("text[]");
+            e.HasIndex(i => new { i.EmpresaId, i.Banco }).IsUnique();
+        });
+
+        modelBuilder.Entity<CobrancaBancaria>(e =>
+        {
+            e.ToTable("cobrancas_bancarias");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.EmpresaId).IsRequired().HasMaxLength(80);
+            e.Property(c => c.SeuNumero).IsRequired().HasMaxLength(15);
+            e.Property(c => c.Situacao).HasMaxLength(20);
+            // O seu número nunca repete na empresa (o banco usa como referência nossa).
+            e.HasIndex(c => new { c.EmpresaId, c.SeuNumero }).IsUnique();
+            e.HasIndex(c => new { c.OrigemTipo, c.OrigemId });
+            e.HasIndex(c => c.IdBanco);
         });
 
         modelBuilder.Entity<Veiculo>(e =>

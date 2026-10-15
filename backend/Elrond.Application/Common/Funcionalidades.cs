@@ -68,6 +68,10 @@ public static class Funcionalidades
         "/propostas/alterar-pagamento",
         // Emite, consulta e cancela NFS-e pelo motor fiscal, e configura o provedor da empresa.
         "/fiscal/nfse",
+        // Página provisória de testes de boleto (/boleto): faturas da SIIMP → boleto no banco.
+        "/financeiro/boleto-teste",
+        // Implantação: liga e configura a integração bancária de uma empresa (só a nossa equipe).
+        "/financeiro/integracao-bancaria",
     };
 
     public static readonly IReadOnlyList<string> Todas = Base.Concat(Extras).ToList();

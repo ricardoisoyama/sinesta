@@ -1,0 +1,52 @@
+/* Página provisória de testes de boleto. Cores explícitas: o body do sistema é creme. */
+.topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.campo { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #6b7b72; }
+.campo select, .campo input { font: inherit; font-size: 13px; font-weight: 600; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; }
+.ambiente { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: #8a5a0c; background: #fdf6e7; border: 1px solid #f0dfb0; border-radius: 999px; padding: 4px 12px; }
+.producao { color: #fff; background: #b42318; border-color: #b42318; }
+
+.painel { padding: 16px 18px; }
+.grade { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .grade { grid-template-columns: 1fr; } }
+.boletos { margin-top: 16px; }
+.cardTitulo { font-size: 14px; font-weight: 700; color: #143d18; margin-bottom: 12px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sub { font-size: 12px; font-weight: 500; color: #6b7b72; }
+
+.filtros { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: #4b5a51; margin-left: auto; cursor: pointer; }
+.rolagem { max-height: 460px; overflow: auto; border: 1px solid #efebe2; border-radius: 10px; }
+.boletos .rolagem { max-height: none; }
+
+.tabela { width: 100%; border-collapse: collapse; font-size: 13px; color: #1f2a24; }
+.tabela th { position: sticky; top: 0; background: #f6f4ef; text-align: left; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #6b7b72; padding: 8px 10px; }
+.tabela td { padding: 8px 10px; border-top: 1px solid #efebe2; vertical-align: middle; }
+.tabela tbody tr[tabindex] { cursor: pointer; }
+.tabela tbody tr[tabindex]:hover { background: #faf8f3; }
+.tabela tbody tr[tabindex]:focus-visible { outline: 2px solid #e8702f; outline-offset: -2px; }
+.selecionada td { background: #fdeee4 !important; }
+.dir { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.forte { font-weight: 700; color: #143d18; }
+
+.pagador { display: grid; gap: 3px; padding: 10px 12px; margin-bottom: 10px; background: #f7f6f2; border-radius: 10px; font-size: 13px; color: #1f2a24; }
+.pagador b { color: #143d18; }
+.pagador span { color: #4b5a51; }
+.docs { font-size: 12.5px; color: #6b7b72; margin-bottom: 10px; }
+.novoVenc { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; font-size: 11.5px; color: #8a5a0c; }
+.novoVenc input { font: inherit; font-size: 12px; border: 1px solid #f0dfb0; border-radius: 6px; padding: 2px 6px; }
+
+.pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.ok { background: #e3f2e8; color: #1d6b3e; }
+.atencao { background: #fbf1db; color: #8a5a0c; }
+.erro { color: #b42318; }
+.pill.erro { background: #fbe6e2; }
+.neutro { background: #efece4; color: #5b6a60; }
+.mini { font-size: 11.5px; color: #6b7b72; margin-top: 2px; }
+.linha code { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; color: #143d18; word-break: break-all; }
+.acoes { display: flex; gap: 4px; justify-content: flex-end; }
+.pix { font-size: 11px; font-weight: 800; }
+
+.vazio { display: flex; align-items: center; gap: 8px; padding: 18px; font-size: 13px; color: #6b7b72; }
+.aviso { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 10px; background: #fdf6e7; border: 1px solid #f0dfb0; color: #8a5a0c; font-size: 13px; }
+.gira { animation: gira 0.9s linear infinite; }
+@keyframes gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .gira { animation: none; } }

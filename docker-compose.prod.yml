@@ -61,6 +61,10 @@ services:
       # NFE.io (motor de NFS-e): chave de API da conta e segredo do webhook. Sem a chave, só o simulador.
       NfeIo__ChaveApi: ${NFEIO_CHAVE:-}
       NfeIo__SegredoAviso: ${NFEIO_SEGREDO_AVISO:-}
+      # SIIMP (financeiro antigo, só consulta): URL e chave da API. Sem elas, a página /boleto
+      # não lista faturas. As credenciais de banco (Inter...) ficam cifradas no banco, por empresa.
+      Siimp__Url: ${SIIMP_URL:-}
+      Siimp__Token: ${SIIMP_TOKEN:-}
       # E-mail do admin criado na primeira subida (banco vazio). Sem ele, admin@elrond.com.br.
       Seed__AdminEmail: ${ADMIN_EMAIL_INICIAL:-}
     volumes:

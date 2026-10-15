@@ -1,7 +1,11 @@
 using Elrond.Application.Interfaces;
 using Elrond.Application.Services;
 using Elrond.Application.Validators;
+using Elrond.Infrastructure.Bancos;
+using Elrond.Infrastructure.Bancos.Inter;
+using Elrond.Infrastructure.Bancos.Simulador;
 using Elrond.Infrastructure.Integracoes.ConsultaPublica;
+using Elrond.Infrastructure.Integracoes.Siimp;
 using Elrond.Infrastructure.Integracoes.Google;
 using Elrond.Infrastructure.Integracoes.NfeIo;
 using Elrond.Infrastructure.Integracoes.Simulador;
@@ -103,6 +107,29 @@ public static class DependencyInjection
         services.AddSingleton<INfseProvedores, NfseProvedores>();
         services.AddScoped<INotasFiscaisServicoRepository, NotasFiscaisServicoRepository>();
         services.AddScoped<INfseService, NfseService>();
+
+        // Motor de bancos: um módulo por banco (Inter, simulador...), escolhido pela integração da empresa.
+        // Credenciais de cada integração ficam cifradas no banco com a mesma chave do certificado A1.
+        services.AddSingleton<ICofreBancario, CofreBancario>();
+        services.AddSingleton(new InterOpcoes
+        {
+            UrlProducao = configuration["Inter:UrlProducao"] is { Length: > 0 } up ? up : "https://cdpj.partners.bancointer.com.br",
+            UrlSandbox = configuration["Inter:UrlSandbox"] is { Length: > 0 } us ? us : "https://cdpj-sandbox.partners.uatinter.co",
+        });
+        services.AddSingleton<InterConexao>();
+        services.AddSingleton<InterCobranca>();
+        services.AddSingleton<IBancoModulo, InterModulo>();
+        services.AddSingleton<SimuladorCobranca>();
+        services.AddSingleton<IBancoModulo, SimuladorModulo>();
+        services.AddSingleton<IBancos, BancosRegistro>();
+        services.AddScoped<ICobrancaService, CobrancaService>();
+        services.AddScoped<IIntegracaoBancariaService, IntegracaoBancariaService>();
+
+        // SIIMP (TMS do cliente): só leitura e temporário, para a página de testes de boleto.
+        var httpSiimp = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) }) { Timeout = TimeSpan.FromSeconds(30) };
+        httpSiimp.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+        var siimp = new SiimpOpcoes { Url = configuration["Siimp:Url"] ?? string.Empty, Token = configuration["Siimp:Token"] ?? string.Empty };
+        services.AddSingleton<ISiimp>(sp => new SiimpCliente(httpSiimp, siimp, sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<SiimpCliente>>()));
 
         // Erros devolvidos pelo servidor, guardados no banco para diagnóstico (90 dias).
         services.AddSingleton<IRegistroErros, RegistroErros>();

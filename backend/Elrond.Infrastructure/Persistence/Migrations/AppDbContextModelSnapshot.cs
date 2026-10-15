@@ -537,6 +537,146 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("clientes", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.CobrancaBancaria", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Ambiente")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Banco")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CodigoBarras")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("IdBanco")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("IntegracaoId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LinhaDigitavel")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Mensagem")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NossoNumero")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrigemDescricao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrigemId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrigemParcelaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("OrigemTipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PagadorDocumento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PagadorNome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PixCopiaECola")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecebidaEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RecebidaPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SeuNumero")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("SituacaoBanco")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("ValorRecebido")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("Vencimento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdBanco");
+
+                    b.HasIndex("EmpresaId", "SeuNumero")
+                        .IsUnique();
+
+                    b.HasIndex("OrigemTipo", "OrigemId");
+
+                    b.ToTable("cobrancas_bancarias", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Compromisso", b =>
                 {
                     b.Property<string>("Id")
@@ -1498,6 +1638,93 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("funis", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.IntegracaoBancaria", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Ambiente")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("Ativa")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Banco")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<byte[]>("CertificadoCifrado")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("CertificadoValidoAte")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<byte[]>("ChaveCifrada")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContaCorrente")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("Recursos")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<byte[]>("SegredoCifrado")
+                        .IsRequired()
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId", "Banco")
+                        .IsUnique();
+
+                    b.ToTable("integracoes_bancarias", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.Meta", b =>

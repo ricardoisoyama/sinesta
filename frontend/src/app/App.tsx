@@ -22,6 +22,7 @@ import { ModelosPropostaPage } from '@/features/modelosProposta/ModelosPropostaP
 import { ServicosPage } from '@/features/servicos/ServicosPage'
 import { TiposCustoPage } from '@/features/tiposCusto/TiposCustoPage'
 import { VeiculosPage } from '@/features/veiculos/VeiculosPage'
+import { BoletoTestePage } from '@/features/boletoTeste/BoletoTestePage'
 import { ClientesPage } from '@/features/parceiros/ClientesPage'
 import { FornecedoresPage } from '@/features/parceiros/FornecedoresPage'
 import { VendedoresPage } from '@/features/parceiros/VendedoresPage'
@@ -70,6 +71,8 @@ export function App() {
           <Route path="/cadastros/servicos" element={<ServicosPage />} />
           <Route path="/cadastros/tipos-custo" element={<TiposCustoPage />} />
           <Route path="/cadastros/veiculos" element={<VeiculosPage />} />
+          {/* Provisória, fora do menu: testes de boleto (permissão especial /financeiro/boleto-teste). */}
+          <Route path="/boleto" element={<BoletoTestePage />} />
           <Route path="/cadastros/categorias" element={<CategoriasPage />} />
           <Route path="/cadastros/aprovadores" element={<AprovadoresPage />} />
           <Route path="/cadastros/funis" element={<FunisPage />} />
