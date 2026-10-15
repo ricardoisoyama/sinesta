@@ -64,11 +64,12 @@ export function PaginaView({ pagina, modelo, proposta, logo, numero, total, cont
   const referencia = `Proposta ${proposta.numero} · ${proposta.cliente}`
   const paginaDe = numero && total ? `Página ${numero} de ${total}` : ''
   const rodapeTexto = modelo.rodapeEmpresa || ''
-  // Logo no fundo escuro: o próprio (logo da capa) ou o da empresa num selo claro.
+  // Logo no fundo escuro: o próprio (logo da capa) ou o da empresa num selo claro. Sem nenhum
+  // dos dois, não há logo (a capa fica só com o título).
   const logoEscuro = (largura: 'grande' | 'topo'): ReactNode =>
     modelo.logoCapa ? (
       <img className={largura === 'grande' ? s.capaLogo : s.topoLogo} src={modelo.logoCapa} alt="Logo" />
-    ) : largura === 'grande' ? (
+    ) : !logo ? null : largura === 'grande' ? (
       <div className={s.capaSelo}><img src={logo} alt="Logo" /></div>
     ) : (
       <div className={s.capaSelo} style={{ padding: '6px 12px', borderRadius: 10 }}><img src={logo} alt="Logo" style={{ width: 'auto', height: 26 }} /></div>
@@ -76,7 +77,7 @@ export function PaginaView({ pagina, modelo, proposta, logo, numero, total, cont
 
   const topo = (escura = false) => (
     <div className={s.topo}>
-      {escura ? logoEscuro('topo') : <img className={s.topoLogo} src={logo} alt="Logo" />}
+      {escura ? logoEscuro('topo') : logo ? <img className={s.topoLogo} src={logo} alt="Logo" /> : <span />}
       <span className={s.topoRef}>{referencia}</span>
     </div>
   )

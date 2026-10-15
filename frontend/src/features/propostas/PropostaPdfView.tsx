@@ -16,7 +16,8 @@ export function PropostaPdfView({ modelo, proposta, exemplo = false }: { modelo:
   const { data: vendedores } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores, enabled: !exemplo })
   const { usuarios } = useUsuarios()
   const empresaId = modelo.empresaId || proposta.itens[0]?.empresaId
-  const logo = (empresas ?? []).find((u) => u.id === empresaId)?.logo || '/sinesta-logo.png'
+  // Empresa sem logo cadastrado: a proposta sai sem logo (nunca com o de outra empresa).
+  const logo = (empresas ?? []).find((u) => u.id === empresaId)?.logo ?? ''
 
   const vendedor = (vendedores ?? []).find((v) => v.id === proposta.vendedorId)
   const usuario = vendedor?.usuarioId

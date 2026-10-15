@@ -23,7 +23,6 @@ interface Props {
 }
 
 const empresasAtivas = () => mockUnidades.filter((u) => u.status === 'ativo')
-const logoDe = (empresaId: string) => mockUnidades.find((u) => u.id === empresaId)?.logo || '/sinesta-logo.png'
 const tipoLabel = (tipo: TipoPagina) => TIPOS_PAGINA.find((t) => t.tipo === tipo)?.label ?? tipo
 
 const emptyModelo = (): ModeloProposta => ({
@@ -139,7 +138,8 @@ function ModeloForm({
   const set = (patch: Partial<ModeloProposta>) => setD((prev) => ({ ...prev, ...patch }))
   const { data: empresasData } = useEmpresasQuery()
   const empresas = (empresasData ?? []).filter((u) => u.status === 'ativo')
-  const logo = logoDe(d.empresaId)
+  // Logo do cadastro da empresa (vazio = a proposta sai sem logo, nunca com o de outra empresa).
+  const logo = empresas.find((u) => u.id === d.empresaId)?.logo ?? ''
   const exemplo = propostaExemplo(d.empresaId)
 
   const setPagina = (i: number, patch: Partial<Pagina>) =>
