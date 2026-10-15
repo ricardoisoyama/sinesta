@@ -23,12 +23,12 @@ public interface ICrudRepository<T> where T : class, IEntity
 }
 
 /// <summary>
-/// Próximo número de uma sequência do banco, quando o serviço precisa dele antes de gravar
-/// (ex.: as parcelas de um lançamento dividem o mesmo número).
+/// Reserva números da sequência do banco antes de gravar, em ordem crescente. Serve ao
+/// parcelamento: o EF grava o lote fora de ordem, então as parcelas levariam números trocados.
 /// </summary>
 public interface INumerador
 {
-    Task<long> ProximoMovimentoAsync();
+    Task<IReadOnlyList<long>> ProximosMovimentosAsync(int quantidade);
 }
 
 /// <summary>Agrupa várias gravações numa transação só (tudo ou nada).</summary>

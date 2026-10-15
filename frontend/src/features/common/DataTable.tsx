@@ -12,7 +12,15 @@ export interface Column<T> {
   valor?: (row: T) => string | number | null | undefined
   /** Coluna que não pode ser escondida (ex.: nome, ações). */
   fixa?: boolean
+  /**
+   * Largura fixa em px. Quando alguma coluna tem largura, o grid trava as larguras (não mudam
+   * de uma página para outra conforme o conteúdo); as colunas sem largura dividem o resto.
+   */
+  largura?: number
 }
+
+/** Espaço mínimo de cada coluna sem largura, num grid de larguras travadas. */
+const MINIMO_COLUNA_LIVRE = 180
 
 interface DataTableProps<T> {
   columns: Column<T>[]
@@ -42,9 +50,16 @@ export function DataTable<T>({
 }: DataTableProps<T>) {
   // A moldura adapta o grid à largura disponível (zoom do navegador, tela menor): primeiro aperta o
   // espaçamento; se ainda não couber, rola só o grid, com a coluna de ações presa à direita.
+  const travado = columns.some((c) => c.largura)
+  const larguraMinima = columns.reduce((t, c) => t + (c.largura ?? MINIMO_COLUNA_LIVRE), 0)
   return (
     <div className={ui.tableScroll}>
-    <table className={ui.table}>
+    <table className={`${ui.table} ${travado ? ui.tableTravada : ''}`} style={travado ? { minWidth: larguraMinima } : undefined}>
+      {travado && (
+        <colgroup>
+          {columns.map((c, i) => <col key={colunaId(c, i)} style={c.largura ? { width: c.largura } : undefined} />)}
+        </colgroup>
+      )}
       <thead>
         <tr>
           {columns.map((c, i) => <th key={colunaId(c, i)} className={c.className}>{c.header}</th>)}

@@ -540,10 +540,10 @@ public class AppDbContext : DbContext
         {
             e.ToTable("movimentos");
             e.HasKey(m => m.Id);
-            // Número do lançamento: o serviço dá um só para todas as parcelas do grupo; sem número
-            // (0), o banco gera. Não é único por linha (parcelas repetem), por isso índice simples.
+            // Número do lançamento (cada parcela tem o seu): o banco gera (sequência); o repositório
+            // preserva na alteração.
             e.Property(m => m.Numero).HasDefaultValueSql("nextval('movimentos_numero_seq')");
-            e.HasIndex(m => m.Numero);
+            e.HasIndex(m => m.Numero).IsUnique();
             e.Property(m => m.Tipo).IsRequired().HasMaxLength(10);
             e.Property(m => m.Descricao).IsRequired().HasMaxLength(300);
             e.Property(m => m.ParceiroNome).HasMaxLength(200);

@@ -20,9 +20,11 @@ public class UnidadeTrabalho(AppDbContext db) : IUnidadeTrabalho
     }
 }
 
-/// <summary>Números das sequências do Postgres (nextval nunca repete, nem com gravações simultâneas).</summary>
+/// <summary>Números da sequência do Postgres (nextval nunca repete, nem com gravações simultâneas).</summary>
 public class Numerador(AppDbContext db) : INumerador
 {
-    public async Task<long> ProximoMovimentoAsync() =>
-        (await db.Database.SqlQueryRaw<long>("SELECT nextval('movimentos_numero_seq') AS \"Value\"").ToListAsync()).First();
+    public async Task<IReadOnlyList<long>> ProximosMovimentosAsync(int quantidade) =>
+        (await db.Database.SqlQueryRaw<long>(
+            "SELECT nextval('movimentos_numero_seq') AS \"Value\" FROM generate_series(1, {0})", quantidade).ToListAsync())
+        .Order().ToList();
 }

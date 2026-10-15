@@ -18,7 +18,7 @@ import { diasParaVencer, hojeISO, liquidoDe, primeiroDiaDoMes, resumo, somarDias
 import { useFinanceiro } from './store'
 import { MovimentoFormModal } from './MovimentoFormModal'
 import { BaixaModal } from './BaixaModal'
-import { APROVACAO_LABEL, STATUS_MOVIMENTO, numeroDoMovimento, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
+import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
 import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento
@@ -81,9 +81,9 @@ export function EntradasSaidasPage() {
     const ini = primeiroDiaDoMes(hoje)
     const fim = ultimoDiaDoMes(hoje)
     const lim30 = somarDias(hoje, 30)
-    // Buscou pelo número: mostra o lançamento (todas as parcelas) mesmo fora dos filtros da tela.
+    // Buscou pelo número: mostra o lançamento mesmo fora dos filtros da tela.
     const peloNumero = movimentos.filter((m) => buscaPeloNumero(busca, m.numero))
-    if (peloNumero.length > 0) return peloNumero.sort((a, b) => a.parcela - b.parcela)
+    if (peloNumero.length > 0) return peloNumero
     return movimentos
       .filter((m) => aba === 'todos' || m.tipo === aba)
       .filter((m) => {
@@ -105,8 +105,8 @@ export function EntradasSaidasPage() {
     {
       header: 'Nº',
       fixa: true,
-      valor: (m) => numeroDoMovimento(m),
-      cell: (m) => <span className={s.numero}>{numeroDoMovimento(m)}</span>,
+      valor: (m) => m.numero ?? 0,
+      cell: (m) => <span className={s.numero}>{m.numero || '—'}</span>,
     },
     {
       header: 'Vencimento',
@@ -134,6 +134,7 @@ export function EntradasSaidasPage() {
           <span className={ui.cellStrong}>
             <i className={`${s.tipoDot} ${s[m.tipo]}`} />
             {m.parceiroNome}
+            {m.totalParcelas > 1 && <span className={s.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
           </span>
           <small>{m.descricao}{m.documento ? ` · ${m.documento}` : ''}</small>
         </div>

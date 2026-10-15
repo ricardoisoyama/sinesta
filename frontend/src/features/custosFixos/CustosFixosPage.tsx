@@ -26,7 +26,7 @@ import { mockCustosFixos } from './mock'
 import { entraNaDf, percentualDaEmpresa, rateada, valorDaEmpresa } from './regras'
 import { CustoFixoFormModal } from './CustoFixoFormModal'
 import { ImportarCustosModal } from './ImportarCustosModal'
-import { DATA_FIM_SEM_PRAZO, type CustoFixo } from './types'
+import type { CustoFixo } from './types'
 import type { CustoFixoForm } from './custo-fixo-schema'
 import s from './custos.module.css'
 
@@ -156,6 +156,7 @@ export function CustosFixosPage() {
     {
       header: 'Nº',
       fixa: true,
+      largura: 56,
       valor: (c) => c.numero ?? 0,
       cell: (c) => <span className={s.numero}>{c.numero || '—'}</span>,
     },
@@ -164,14 +165,14 @@ export function CustosFixosPage() {
       fixa: true,
       valor: (c) => `${c.descricao} ${nomeFornecedor(c.fornecedorId)}`,
       cell: (c) => (
-        <div className={ui.rowName}>
+        <div className={ui.rowName} title={[c.descricao, nomeFornecedor(c.fornecedorId)].filter(Boolean).join(' · ')}>
           <span className={ui.avatarSm}>
             <Wallet size={15} />
           </span>
-          <div>
-            <div className={ui.cellStrong}>{c.descricao}</div>
+          <div className={s.descricaoCel}>
+            <span className={`${ui.cellStrong} ${ui.umaLinha}`}>{c.descricao}</span>
             {nomeFornecedor(c.fornecedorId) && (
-              <div className={ui.cellMut}>{nomeFornecedor(c.fornecedorId)}</div>
+              <span className={`${ui.cellMut} ${ui.umaLinha}`}>{nomeFornecedor(c.fornecedorId)}</span>
             )}
           </div>
         </div>
@@ -179,9 +180,10 @@ export function CustosFixosPage() {
     },
     {
       header: 'Empresa que paga',
+      largura: 170,
       valor: (c) => nomeEmpresa(c.unidadeId) + (rateada(c) ? ` (${resumoRateio(c)})` : ''),
       cell: (c) => (
-        <div className={s.empresaCel}>
+        <div className={s.empresaCel} title={nomeEmpresa(c.unidadeId) + (rateada(c) ? ` · ${resumoRateio(c)}` : '')}>
           {pagaOutra(c) ? (
             <span className={s.unitTagOutra}>Paga pela {nomeEmpresa(c.unidadeId)}</span>
           ) : (
@@ -198,39 +200,46 @@ export function CustosFixosPage() {
         </div>
       ),
     },
-    { header: 'Centro de custo', valor: (c) => nomeCategoria(c.categoriaId), cell: (c) => <span className={s.catTag}>{nomeCategoria(c.categoriaId)}</span> },
+    {
+      header: 'Centro de custo',
+      largura: 130,
+      valor: (c) => nomeCategoria(c.categoriaId),
+      cell: (c) => <span className={s.catTag} title={nomeCategoria(c.categoriaId)}>{nomeCategoria(c.categoriaId)}</span>,
+    },
     {
       header: 'Tipo',
+      largura: 100,
       valor: (c) => (c.tipo === 'spot' ? 'Spot' : 'Recorrente'),
+      // A vigência (início e término) fica no cadastro; aqui só o tipo e o aviso de fora da DF.
       cell: (c) => (
         <div>
           <span className={`${s.tipoTag} ${c.tipo === 'spot' ? s.tipoSpot : ''}`}>
             {c.tipo === 'spot' ? 'Spot' : 'Recorrente'}
           </span>
-          {c.tipo === 'recorrente' && (c.dataInicio || c.dataFim) && (
-            <div className={ui.cellMut}>
-              {c.dataInicio ? c.dataInicio.split('-').reverse().join('/') : 'sem início'} até{' '}
-              {!c.dataFim ? 'sem término' : c.dataFim.split('-').reverse().join('/')}
-              {c.dataFim === DATA_FIM_SEM_PRAZO && ' (sem prazo final)'}
-            </div>
-          )}
           {c.status === 'ativo' && !entraNaDf(c) && <div className={s.foraDf}>fora da DF</div>}
         </div>
       ),
     },
     {
       header: 'Plano de contas',
+      largura: 150,
       valor: (c) => (c.planoContaId ? nomePlanoConta(c.planoContaId) : ''),
-      cell: (c) => <span className={ui.cellMut}>{c.planoContaId ? nomePlanoConta(c.planoContaId) : '—'}</span>,
+      cell: (c) => (
+        <span className={`${ui.cellMut} ${ui.umaLinha}`} title={c.planoContaId ? nomePlanoConta(c.planoContaId) : undefined}>
+          {c.planoContaId ? nomePlanoConta(c.planoContaId) : '—'}
+        </span>
+      ),
     },
     {
       header: 'Vencimento',
+      largura: 86,
       valor: (c) => (c.diaVencimento ? `dia ${c.diaVencimento}` : ''),
       cell: (c) => <span className={ui.cellMut}>{c.diaVencimento ? `dia ${c.diaVencimento}` : '—'}</span>,
     },
     {
       header: todas ? 'Valor mensal' : 'Valor desta empresa',
       className: ui.right,
+      largura: 116,
       valor: (c) => formatBRL(valorNoFiltro(c)),
       cell: (c) => (
         <div>
@@ -243,10 +252,11 @@ export function CustosFixosPage() {
         </div>
       ),
     },
-    { header: 'Status', valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
+    { header: 'Status', largura: 96, valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: 100,
       className: ui.colActions,
       cell: (c) => (
         <RowActions

@@ -48,8 +48,17 @@
   border: 1px solid #d8e3da;
   border-radius: 20px;
   padding: 3px 10px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
-.empresaCel { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+/* Empresa e rateio lado a lado, numa linha (o grid trava as larguras). */
+.empresaCel { display: flex; align-items: center; gap: 4px; flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+.empresaCel > span { flex-shrink: 0; white-space: nowrap; }
+.empresaCel > span:last-child:not(:first-child) { flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.descricaoCel { display: flex; flex-direction: column; min-width: 0; }
 .rateioTag {
   display: inline-block;
   font-size: 11px;

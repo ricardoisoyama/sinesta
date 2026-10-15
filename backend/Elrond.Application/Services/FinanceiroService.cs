@@ -164,8 +164,8 @@ public class FinanceiroService : IFinanceiroService
         var centavos = (long)Math.Round(b.Valor * 100m);
         var cada = centavos / qtd;
         var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), b.Tipo, b.Valor);
-        // Um número para o lançamento: todas as parcelas levam o mesmo (1532 · 1/3, 2/3, 3/3).
-        var numero = await _numerador.ProximoMovimentoAsync();
+        // Cada parcela tem o seu número, em ordem (1532 é a 1/3, 1533 a 2/3...).
+        var numeros = await _numerador.ProximosMovimentosAsync(qtd);
 
         var novos = Enumerable.Range(0, qtd).Select(i =>
         {
@@ -173,7 +173,7 @@ public class FinanceiroService : IFinanceiroService
             return new Movimento
             {
                 Id = Guid.NewGuid().ToString(),
-                Numero = numero,
+                Numero = numeros[i],
                 Tipo = b.Tipo,
                 EmpresaId = b.EmpresaId,
                 ParceiroId = b.ParceiroId,
@@ -203,9 +203,13 @@ public class FinanceiroService : IFinanceiroService
 
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(novos, Array.Empty<Movimento>()));
         await _auditoria.RegistrarAsync("criar", "Movimento", novos[0].Id,
-            $"Lançamento {numero} {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
+            $"Lançamento {NumerosDe(novos)} {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
         return Result.Success(novos);
     }
+
+    /// <summary>"1532" ou, parcelado, "1532 a 1534".</summary>
+    private static string NumerosDe(IReadOnlyList<Movimento> lote) =>
+        lote.Count == 1 ? $"{lote[0].Numero}" : $"{lote[0].Numero} a {lote[^1].Numero}";
 
     public async Task<Result<Movimento>> AtualizarAsync(string id, Movimento dados)
     {

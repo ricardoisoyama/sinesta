@@ -78,16 +78,18 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
 
       <nav className={styles.nav}>
         {groups.map((g, i) => {
-          // Menu recolhido: mostra todos os itens (só os ícones), sem cabeçalho.
-          const aberto = collapsed || !g.label || estaAberto(g.label)
+          // Recolhido ou não, a sanfona é a mesma: só os grupos e, abaixo do grupo aberto, as telas
+          // dele (recolhido, só os ícones). Assim o menu não vira uma coluna de ícones sem fim.
+          const aberto = !g.label || estaAberto(g.label)
           return (
-            <div key={g.label ?? `g${i}`}>
+            <div key={g.label ?? `g${i}`} className={g.label && aberto ? styles.navGrupoAberto : undefined}>
               {g.label && (
                 <button
                   type="button"
-                  className={`${styles.navGroupBtn} ${aberto ? styles.navGroupOpen : ''}`}
+                  className={`${styles.navGroupBtn} ${aberto ? styles.navGroupOpen : ''} ${g.label === ativo ? styles.navGroupAtivo : ''}`}
                   onClick={() => alternar(g.label!)}
                   title={collapsed ? g.label : undefined}
+                  aria-expanded={aberto}
                 >
                   {g.icon && <g.icon />}
                   <span>{g.label}</span>

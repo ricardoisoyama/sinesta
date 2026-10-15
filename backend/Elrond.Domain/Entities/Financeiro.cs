@@ -39,7 +39,7 @@ public class AprovacaoMovimento
 public class Movimento : Rastreavel, IEntity, INumerado
 {
     public string Id { get; set; } = string.Empty;
-    /// <summary>Número do lançamento: as parcelas de um parcelamento dividem o mesmo (1532 · 2/3).</summary>
+    /// <summary>Número do lançamento, único: cada parcela tem o seu (nasce no banco, nunca muda).</summary>
     public long Numero { get; set; }
     /// <summary>receber | pagar.</summary>
     public string Tipo { get; set; } = "pagar";

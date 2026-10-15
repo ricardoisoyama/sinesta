@@ -142,16 +142,16 @@ public class FinanceiroTests
     }
 
     [Fact]
-    public async Task Parcelas_dividem_o_numero_do_lancamento_e_editar_nao_troca_o_numero()
+    public async Task Cada_parcela_tem_o_seu_numero_em_ordem_e_editar_nao_troca()
     {
         var (svc, _, _) = Montar(Regra(0, 0, "u-ana"));
         var parcelas = (await svc.CriarAsync(new NovoMovimentoDto(Base(300m), 3), Ana)).Value!;
-        Assert.All(parcelas, p => Assert.Equal(1001, p.Numero));
+        Assert.Equal(new long[] { 1001, 1002, 1003 }, parcelas.OrderBy(p => p.Parcela).Select(p => p.Numero));
         var outro = (await svc.CriarAsync(new NovoMovimentoDto(Base(50m)), Ana)).Value![0];
-        Assert.Equal(1002, outro.Numero);
+        Assert.Equal(1004, outro.Numero);
 
         var editado = await svc.AtualizarAsync(outro.Id, new Movimento { Numero = 7, ParceiroNome = "Fornecedor X", Descricao = "Outro", Vencimento = "2026-10-10", Valor = 50m, CarteiraId = "cart" });
-        Assert.Equal(1002, editado.Value!.Numero);
+        Assert.Equal(1004, editado.Value!.Numero);
     }
 
     // ── infraestrutura de teste ──
@@ -164,7 +164,8 @@ public class FinanceiroTests
     private sealed class Sequencia : INumerador
     {
         private long _ultimo = 1000;
-        public Task<long> ProximoMovimentoAsync() => Task.FromResult(++_ultimo);
+        public Task<IReadOnlyList<long>> ProximosMovimentosAsync(int quantidade) =>
+            Task.FromResult<IReadOnlyList<long>>(Enumerable.Range(0, quantidade).Select(_ => ++_ultimo).ToList());
     }
 
     private sealed class FakeAuditoria : IAuditoriaService

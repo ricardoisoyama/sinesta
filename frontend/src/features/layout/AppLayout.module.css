@@ -81,7 +81,15 @@
 .navGroupBtn span { flex: 1; text-align: left; }
 .navChevron { transition: transform 0.18s ease; opacity: 0.6 !important; }
 .navGroupOpen .navChevron { transform: rotate(180deg); }
-.app.collapsed .navGroupBtn { display: none; }
+/* Recolhido: o grupo vira só o ícone (nome no title); o grupo da tela atual fica marcado e o
+   grupo aberto mostra os ícones das telas logo abaixo, numa faixa mais escura. */
+.app.collapsed .navGroupBtn { justify-content: center; padding: 11px 0; margin: 4px 0 2px; }
+.app.collapsed .navGroupBtn span,
+.app.collapsed .navGroupBtn .navChevron { display: none; }
+.app.collapsed .navGroupBtn svg { width: 19px; height: 19px; }
+.app.collapsed .navGroupAtivo { background: rgba(232, 112, 47, 0.22); color: #ffc79e; }
+.app.collapsed .navGrupoAberto { background: rgba(0, 0, 0, 0.18); border-radius: 12px; padding-bottom: 4px; margin-bottom: 4px; }
+.app.collapsed .navGrupoAberto .navGroupBtn { margin-top: 4px; }
 
 .navItem {
   display: flex; align-items: center; gap: 11px;
@@ -108,6 +116,9 @@
 .app.collapsed .navItemSub { margin-left: 0; padding-left: 0; border-left: none; border-radius: 10px; }
 .app.collapsed .navItem { justify-content: center; padding: 11px 0; }
 .app.collapsed .navItem span { display: none; }
+/* O Suporte é botão (largura descontada do recuo do subitem): recolhido, ocupa a largura toda
+   como os outros ícones, senão fica fora do centro. */
+.app.collapsed .navItemAcao { width: 100%; }
 
 .sbFoot { position: relative; z-index: 1; padding: 10px; border-top: 1px solid rgba(255, 255, 255, 0.1); }
 .collapseBtn {

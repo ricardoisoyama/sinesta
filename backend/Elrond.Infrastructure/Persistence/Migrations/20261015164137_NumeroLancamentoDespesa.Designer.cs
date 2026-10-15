@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Elrond.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261015160120_NumeroLancamentoDespesa")]
+    [Migration("20261015164137_NumeroLancamentoDespesa")]
     partial class NumeroLancamentoDespesa
     {
         /// <inheritdoc />
@@ -2074,7 +2074,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("GrupoId");
 
-                    b.HasIndex("Numero");
+                    b.HasIndex("Numero")
+                        .IsUnique();
 
                     b.HasIndex("Vencimento");
 

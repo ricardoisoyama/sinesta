@@ -129,7 +129,8 @@ export function CrudList<T>({
   const colunasBase = temRastro(rows)
     ? (() => {
         const idx = columns.findIndex((c) => c.header === 'Ações')
-        const rastro = colunaRastro<T>()
+        // Grid de larguras travadas: a coluna automática também ganha largura.
+        const rastro = { ...colunaRastro<T>(), largura: columns.some((c) => c.largura) ? 124 : undefined }
         return idx >= 0 ? [...columns.slice(0, idx), rastro, ...columns.slice(idx)] : [...columns, rastro]
       })()
     : columns
@@ -224,6 +225,7 @@ export function CrudList<T>({
   const colunaSelecao: Column<T> = {
     id: COL_SELECAO,
     fixa: true,
+    largura: columns.some((c) => c.largura) ? 48 : undefined,
     className: ui.selCol,
     header: (
       <input

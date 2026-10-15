@@ -2071,7 +2071,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("GrupoId");
 
-                    b.HasIndex("Numero");
+                    b.HasIndex("Numero")
+                        .IsUnique();
 
                     b.HasIndex("Vencimento");
 

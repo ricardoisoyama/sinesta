@@ -10,21 +10,17 @@ namespace Elrond.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // Só aditiva. Os registros que já existem recebem número pela ordem de criação (no
-            // lançamento, um por grupo de parcelas); depois a sequência continua do maior.
+            // Só aditiva. Os registros que já existem recebem número pela ordem de criação (as
+            // parcelas de um lançamento em sequência); depois a sequência continua do maior.
             migrationBuilder.Sql("""
                 CREATE SEQUENCE IF NOT EXISTS movimentos_numero_seq;
                 CREATE SEQUENCE IF NOT EXISTS custos_fixos_numero_seq;
 
                 ALTER TABLE movimentos ADD COLUMN "Numero" bigint NOT NULL DEFAULT 0;
-                WITH grupos AS (
-                    SELECT COALESCE(NULLIF("GrupoId", ''), "Id") AS chave, MIN("CriadoEm") AS criado, MIN("Id") AS desempate
-                    FROM movimentos GROUP BY 1
-                ), numerados AS (
-                    SELECT chave, ROW_NUMBER() OVER (ORDER BY criado, desempate) AS n FROM grupos
+                WITH numerados AS (
+                    SELECT "Id", ROW_NUMBER() OVER (ORDER BY "CriadoEm", "GrupoId", "Parcela", "Id") AS n FROM movimentos
                 )
-                UPDATE movimentos m SET "Numero" = numerados.n
-                FROM numerados WHERE COALESCE(NULLIF(m."GrupoId", ''), m."Id") = numerados.chave;
+                UPDATE movimentos m SET "Numero" = numerados.n FROM numerados WHERE m."Id" = numerados."Id";
                 SELECT setval('movimentos_numero_seq', COALESCE((SELECT MAX("Numero") FROM movimentos), 0) + 1, false);
                 ALTER TABLE movimentos ALTER COLUMN "Numero" SET DEFAULT nextval('movimentos_numero_seq');
 
@@ -40,7 +36,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_movimentos_Numero",
                 table: "movimentos",
-                column: "Numero");
+                column: "Numero",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_custos_fixos_Numero",
