@@ -143,19 +143,6 @@ export function EntradasSaidasPage() {
         </div>
       ),
     },
-    { header: 'Carteira', largura: LARGURA.media, valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
-    { header: 'Forma', largura: LARGURA.curta, valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
-    {
-      header: 'Valor',
-      className: ui.right,
-      largura: LARGURA.valor,
-      valor: (m) => liquidoDe(m),
-      cell: (m) => (
-        <span className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}>
-          {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
-        </span>
-      ),
-    },
     {
       header: 'Situação',
       largura: LARGURA.situacao,
@@ -188,6 +175,19 @@ export function EntradasSaidasPage() {
         )
       },
     },
+    {
+      header: 'Valor',
+      className: ui.right,
+      largura: LARGURA.valor,
+      valor: (m) => liquidoDe(m),
+      cell: (m) => (
+        <span className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}>
+          {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
+        </span>
+      ),
+    },
+    { header: 'Carteira', largura: LARGURA.media, valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
+    { header: 'Forma', largura: LARGURA.curta, valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
     {
       header: 'Ações',
       fixa: true,
