@@ -54,7 +54,7 @@ export function BoletoTestePage() {
   const [ate, setAte] = useState(hojeISO())
   const [periodo, setPeriodo] = useState({ de: INICIO_SIIMP, ate: hojeISO() })
   const [soBoleto, setSoBoleto] = useState(true)
-  const faturasQ = useQuery({ queryKey: ['boleto-teste', 'faturas', periodo], queryFn: () => listFaturas(periodo.de, periodo.ate), enabled: !!empresaId })
+  const faturasQ = useQuery({ queryKey: ['boleto-teste', 'faturas', empresaId, periodo], queryFn: () => listFaturas(empresaId, periodo.de, periodo.ate), enabled: !!empresaId })
   const faturas = (faturasQ.data ?? []).filter((f) => !soBoleto || f.formaPagamento === 6).sort((a, b) => b.numero - a.numero)
 
   const [faturaId, setFaturaId] = useState<number | null>(null)
@@ -118,7 +118,13 @@ export function BoletoTestePage() {
           <div className={s.topo}>
             <label className={s.campo}>
               Empresa
-              <select value={empresaId} onChange={(e) => setEmpresaEscolhida(e.target.value)}>
+              <select
+                value={empresaId}
+                onChange={(e) => {
+                  setEmpresaEscolhida(e.target.value)
+                  setFaturaId(null)
+                }}
+              >
                 {(empresas ?? []).map((e) => (
                   <option key={e.empresaId} value={e.empresaId}>{e.empresa}</option>
                 ))}
@@ -136,7 +142,9 @@ export function BoletoTestePage() {
       <div className={s.grade}>
         {/* ── Faturas da SIIMP ── */}
         <section className={`${ui.card} ${s.painel}`}>
-          <div className={s.cardTitulo}>Faturas da SIIMP</div>
+          <div className={s.cardTitulo}>
+            Faturas da SIIMP {empresa && <span className={s.sub}>emitidas pela {empresa.empresa}</span>}
+          </div>
           <form
             className={s.filtros}
             onSubmit={(e) => {

@@ -96,7 +96,8 @@ export interface Cobranca {
 const base = '/boleto-teste'
 
 export const listEmpresasComBanco = () => apiFetch<EmpresaComBanco[]>(`${base}/empresas`)
-export const listFaturas = (de: string, ate: string) => apiFetch<FaturaResumo[]>(`${base}/faturas?de=${de}&ate=${ate}`)
+export const listFaturas = (empresaId: string, de: string, ate: string) =>
+  apiFetch<FaturaResumo[]>(`${base}/faturas?empresaId=${encodeURIComponent(empresaId)}&de=${de}&ate=${ate}`)
 export const obterFatura = (id: number, empresaId: string) =>
   apiFetch<{ fatura: FaturaDetalhe; pagador: PessoaSiimp | null; erroPagador: string; boletos: Cobranca[] }>(`${base}/faturas/${id}?empresaId=${encodeURIComponent(empresaId)}`)
 export const gerarBoleto = (faturaId: number, parcelaId: number, empresaId: string, vencimento?: string) =>

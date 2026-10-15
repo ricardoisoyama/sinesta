@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Elrond.Application.Interfaces;
 using Elrond.Application.Services;
 using Elrond.Domain.Entities;
@@ -51,13 +52,23 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
         return Ok(ativas.Select(i => new { empresaId = i.EmpresaId, empresa = nomes.GetValueOrDefault(i.EmpresaId, i.EmpresaId), i.Banco, i.Ambiente, i.CertificadoValidoAte }));
     }
 
+    /// <summary>Faturas da SIIMP emitidas pela empresa escolhida (o CNPJ do emitente tem de ser o dela).</summary>
     [HttpGet("faturas")]
-    public async Task<IActionResult> Faturas([FromQuery] string de, [FromQuery] string ate, CancellationToken ct)
+    public async Task<IActionResult> Faturas([FromQuery] string empresaId, [FromQuery] string de, [FromQuery] string ate, CancellationToken ct)
     {
         if (!DateOnly.TryParseExact(de, "yyyy-MM-dd", out var d1) || !DateOnly.TryParseExact(ate, "yyyy-MM-dd", out var d2) || d2 < d1)
             return BadRequest("Informe o período (de e até, aaaa-mm-dd).");
+        if (await CnpjDaEmpresaAsync(empresaId) is not { Length: > 0 } cnpj) return BadRequest("Empresa sem CNPJ no cadastro.");
         var r = await siimp.FaturasAsync(de, ate, ct);
-        return r.Erro.Length > 0 ? BadRequest(r.Erro) : Ok(r.Dados);
+        if (r.Erro.Length > 0) return BadRequest(r.Erro);
+        var daEmpresa = new List<FaturaSiimpResumo>();
+        foreach (var grupo in r.Dados!.GroupBy(f => f.EmitenteId))
+        {
+            var doc = await CnpjDoEmitenteAsync(grupo.Key, ct);
+            if (doc.Erro.Length > 0) return BadRequest(doc.Erro);
+            if (doc.Dados == cnpj) daEmpresa.AddRange(grupo);
+        }
+        return Ok(daEmpresa);
     }
 
     /// <summary>Fatura com parcelas, documentos, pagador (com endereço) e os boletos já gerados para ela.</summary>
@@ -66,6 +77,7 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
     {
         var f = await siimp.FaturaAsync(id, ct);
         if (f.Erro.Length > 0) return BadRequest(f.Erro);
+        if (!string.IsNullOrEmpty(empresaId) && await OutraEmpresaAsync(f.Dados!, empresaId, ct) is { Length: > 0 } erro) return BadRequest(erro);
         var pessoa = f.Dados!.PagadorId > 0 ? await siimp.PessoaAsync(f.Dados.PagadorId, ct) : RespostaSiimp<PessoaSiimp>.Falha("Fatura sem pagador.");
         var boletos = string.IsNullOrEmpty(empresaId) ? new List<CobrancaBancaria>() : await cobrancas.ListarAsync(empresaId, Origem, id.ToString());
         return Ok(new { fatura = f.Dados, pagador = pessoa.Dados, erroPagador = pessoa.Erro, boletos });
@@ -80,6 +92,7 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
         var f = await siimp.FaturaAsync(id, ct);
         if (f.Erro.Length > 0) return BadRequest(f.Erro);
         var fatura = f.Dados!;
+        if (await OutraEmpresaAsync(fatura, dto.EmpresaId, ct) is { Length: > 0 } erro) return BadRequest(erro);
         if (fatura.Parcelas.FirstOrDefault(p => p.Id == parcelaId) is not { } parcela) return BadRequest("Parcela não encontrada nesta fatura.");
         var pessoa = await siimp.PessoaAsync(fatura.PagadorId, ct);
         if (pessoa.Erro.Length > 0) return BadRequest($"Não foi possível ler o pagador na SIIMP: {pessoa.Erro}");
@@ -123,5 +136,34 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
     {
         var r = await cobrancas.CancelarAsync(id, dto.Motivo ?? string.Empty, ct);
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    // ── fatura × empresa: o boleto sai na conta da empresa que EMITIU a fatura, nunca de outra ──
+
+    // CNPJ de uma pessoa da SIIMP não muda; guarda para não gastar o limite de 60 req/min.
+    private static readonly ConcurrentDictionary<long, string> CnpjEmitentes = new();
+
+    private static string Digitos(string? s) => new((s ?? string.Empty).Where(char.IsDigit).ToArray());
+
+    private async Task<string> CnpjDaEmpresaAsync(string empresaId) =>
+        Digitos((await empresas.GetByIdAsync(empresaId))?.Cnpj);
+
+    private async Task<RespostaSiimp<string>> CnpjDoEmitenteAsync(long emitenteId, CancellationToken ct)
+    {
+        if (emitenteId <= 0) return RespostaSiimp<string>.Ok(string.Empty);
+        if (CnpjEmitentes.TryGetValue(emitenteId, out var guardado)) return RespostaSiimp<string>.Ok(guardado);
+        var p = await siimp.PessoaAsync(emitenteId, ct);
+        if (p.Erro.Length > 0) return RespostaSiimp<string>.Falha($"Não foi possível ler a empresa emitente na SIIMP: {p.Erro}");
+        return RespostaSiimp<string>.Ok(CnpjEmitentes[emitenteId] = Digitos(p.Dados!.Documento));
+    }
+
+    /// <summary>Mensagem de erro quando a fatura foi emitida por outra empresa (vazia quando confere).</summary>
+    private async Task<string> OutraEmpresaAsync(FaturaSiimp fatura, string empresaId, CancellationToken ct)
+    {
+        var cnpj = await CnpjDaEmpresaAsync(empresaId);
+        if (cnpj.Length == 0) return "Empresa sem CNPJ no cadastro.";
+        var emitente = await CnpjDoEmitenteAsync(fatura.EmitenteId, ct);
+        if (emitente.Erro.Length > 0) return emitente.Erro;
+        return emitente.Dados == cnpj ? string.Empty : $"A fatura {fatura.Numero} foi emitida por outra empresa (CNPJ {emitente.Dados}); escolha essa empresa para gerar o boleto.";
     }
 }

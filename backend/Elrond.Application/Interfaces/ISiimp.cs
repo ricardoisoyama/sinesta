@@ -4,8 +4,11 @@ namespace Elrond.Application.Interfaces;
 // Conector SÓ DE LEITURA e temporário: serve à página de testes de boleto até a fatura nascer
 // no ELROND. Quando a SIIMP for desligada, este conector sai sem mexer no motor de bancos.
 
+// EmitenteId (owner_id da SIIMP) é a pessoa da empresa que emitiu a fatura (Matriz, Filial...);
+// o CNPJ dela diz de qual empresa do ELROND a fatura é.
+
 /// <summary>Fatura como vem na listagem (resumo, sem pagador nem parcelas).</summary>
-public sealed record FaturaSiimpResumo(long Id, long Numero, int Situacao, decimal Total, string Vencimento, int FormaPagamento, string CriadaEm);
+public sealed record FaturaSiimpResumo(long Id, long Numero, int Situacao, decimal Total, string Vencimento, int FormaPagamento, string CriadaEm, long EmitenteId);
 
 public sealed record ParcelaSiimp(long Id, int Numero, decimal Valor, decimal Desconto, string Vencimento, int Situacao);
 
@@ -15,7 +18,7 @@ public sealed record DocumentoSiimp(string Tipo, string Numero, string Serie, st
 public sealed record FaturaSiimp(
     long Id, long Numero, int Situacao, decimal Total, string Vencimento, int FormaPagamento,
     long PagadorId, string PagadorNome, string PagadorDocumento, string Carteira, string Observacao,
-    IReadOnlyList<ParcelaSiimp> Parcelas, IReadOnlyList<DocumentoSiimp> Documentos);
+    IReadOnlyList<ParcelaSiimp> Parcelas, IReadOnlyList<DocumentoSiimp> Documentos, long EmitenteId);
 
 public sealed record PessoaSiimp(
     long Id, string Nome, string Documento, string Email, string Telefone,

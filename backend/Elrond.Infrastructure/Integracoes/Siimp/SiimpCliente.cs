@@ -26,7 +26,7 @@ public sealed class SiimpCliente(HttpClient http, SiimpOpcoes opcoes, ILogger<Si
         var r = await GetAsync($"/invoices/search?invoice_issued_at_from={emitidasDe}&invoice_issued_at_to={emitidasAte}", ct);
         if (r.Erro.Length > 0) return RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>.Falha(r.Erro);
         var lista = r.Dados.EnumerateArray().Select(f => new FaturaSiimpResumo(
-            Long(f, "id"), Long(f, "invoice_number"), Int(f, "invoice_status"), Dec(f, "total"), Str(f, "maturity"), Int(f, "payment_form"), Str(f, "created_at"))).ToList();
+            Long(f, "id"), Long(f, "invoice_number"), Int(f, "invoice_status"), Dec(f, "total"), Str(f, "maturity"), Int(f, "payment_form"), Str(f, "created_at"), Long(f, "owner_id"))).ToList();
         return RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>.Ok(lista);
     }
 
@@ -46,7 +46,7 @@ public sealed class SiimpCliente(HttpClient http, SiimpOpcoes opcoes, ILogger<Si
             cliente.ValueKind == JsonValueKind.Object ? Long(cliente, "id") : 0,
             cliente.ValueKind == JsonValueKind.Object ? Str(cliente, "name") : string.Empty,
             cliente.ValueKind == JsonValueKind.Object ? (Str(cliente, "cnpj") is { Length: > 0 } cnpj ? cnpj : Str(cliente, "cpf")) : string.Empty,
-            carteira, Str(f, "invoice_obs"), parcelas, documentos));
+            carteira, Str(f, "invoice_obs"), parcelas, documentos, Long(f, "owner_id")));
     }
 
     public async Task<RespostaSiimp<PessoaSiimp>> PessoaAsync(long id, CancellationToken ct = default)
