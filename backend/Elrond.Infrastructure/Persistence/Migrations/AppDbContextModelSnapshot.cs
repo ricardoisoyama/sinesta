@@ -959,6 +959,11 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<long>("Numero")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("nextval('custos_fixos_numero_seq')");
+
                     b.Property<string>("PlanoContaId")
                         .HasColumnType("text");
 
@@ -979,6 +984,9 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,6)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Numero")
+                        .IsUnique();
 
                     b.ToTable("custos_fixos", (string)null);
                 });
@@ -1988,6 +1996,11 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<long>("Numero")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValueSql("nextval('movimentos_numero_seq')");
+
                     b.Property<string>("Observacao")
                         .IsRequired()
                         .HasColumnType("text");
@@ -2057,6 +2070,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasIndex("Aprovacao");
 
                     b.HasIndex("GrupoId");
+
+                    b.HasIndex("Numero");
 
                     b.HasIndex("Vencimento");
 

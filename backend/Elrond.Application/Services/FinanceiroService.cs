@@ -21,10 +21,12 @@ public class FinanceiroService : IFinanceiroService
     private readonly ICrudRepository<ExtratoLinha> _extrato;
     private readonly IUnidadeTrabalho _uow;
     private readonly IAuditoriaService _auditoria;
+    private readonly INumerador _numerador;
 
     public FinanceiroService(ICrudRepository<Movimento> movimentos, ICrudRepository<Carteira> carteiras, ICrudRepository<RegraAprovacao> regras,
-        ICrudRepository<ExtratoLinha> extrato, IUnidadeTrabalho uow, IAuditoriaService auditoria)
+        ICrudRepository<ExtratoLinha> extrato, IUnidadeTrabalho uow, IAuditoriaService auditoria, INumerador numerador)
     {
+        _numerador = numerador;
         _movimentos = movimentos;
         _carteiras = carteiras;
         _regras = regras;
@@ -162,6 +164,8 @@ public class FinanceiroService : IFinanceiroService
         var centavos = (long)Math.Round(b.Valor * 100m);
         var cada = centavos / qtd;
         var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), b.Tipo, b.Valor);
+        // Um número para o lançamento: todas as parcelas levam o mesmo (1532 · 1/3, 2/3, 3/3).
+        var numero = await _numerador.ProximoMovimentoAsync();
 
         var novos = Enumerable.Range(0, qtd).Select(i =>
         {
@@ -169,6 +173,7 @@ public class FinanceiroService : IFinanceiroService
             return new Movimento
             {
                 Id = Guid.NewGuid().ToString(),
+                Numero = numero,
                 Tipo = b.Tipo,
                 EmpresaId = b.EmpresaId,
                 ParceiroId = b.ParceiroId,
@@ -198,7 +203,7 @@ public class FinanceiroService : IFinanceiroService
 
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(novos, Array.Empty<Movimento>()));
         await _auditoria.RegistrarAsync("criar", "Movimento", novos[0].Id,
-            $"Lançamento {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
+            $"Lançamento {numero} {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
         return Result.Success(novos);
     }
 
@@ -218,7 +223,7 @@ public class FinanceiroService : IFinanceiroService
         var mudouAprovado = atual.Valor != dados.Valor || atual.Vencimento != dados.Vencimento || atual.ParceiroNome != dados.ParceiroNome.Trim();
         var novo = new Movimento
         {
-            Id = atual.Id, Tipo = atual.Tipo, EmpresaId = dados.EmpresaId, ParceiroId = dados.ParceiroId, ParceiroNome = dados.ParceiroNome.Trim(),
+            Id = atual.Id, Numero = atual.Numero, Tipo = atual.Tipo, EmpresaId = dados.EmpresaId, ParceiroId = dados.ParceiroId, ParceiroNome = dados.ParceiroNome.Trim(),
             Descricao = dados.Descricao.Trim(), PlanoContaId = dados.PlanoContaId, CentroCustoId = dados.CentroCustoId, Documento = dados.Documento,
             Competencia = dados.Competencia, Vencimento = dados.Vencimento, Valor = dados.Valor, Desconto = dados.Desconto, Juros = dados.Juros, Multa = dados.Multa,
             CarteiraId = dados.CarteiraId, FormaPagamento = dados.FormaPagamento, Parcela = atual.Parcela, TotalParcelas = atual.TotalParcelas,

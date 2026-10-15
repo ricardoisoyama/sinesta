@@ -22,6 +22,15 @@ public interface ICrudRepository<T> where T : class, IEntity
     Task<bool> DeleteAsync(string id);
 }
 
+/// <summary>
+/// Próximo número de uma sequência do banco, quando o serviço precisa dele antes de gravar
+/// (ex.: as parcelas de um lançamento dividem o mesmo número).
+/// </summary>
+public interface INumerador
+{
+    Task<long> ProximoMovimentoAsync();
+}
+
 /// <summary>Agrupa várias gravações numa transação só (tudo ou nada).</summary>
 public interface IUnidadeTrabalho
 {

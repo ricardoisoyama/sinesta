@@ -98,6 +98,9 @@ public class AppDbContext : DbContext
         {
             e.ToTable("custos_fixos");
             e.HasKey(c => c.Id);
+            // Número da despesa: o banco gera (sequência); o repositório preserva na alteração.
+            e.Property(c => c.Numero).HasDefaultValueSql("nextval('custos_fixos_numero_seq')");
+            e.HasIndex(c => c.Numero).IsUnique();
             // Rateio entre empresas: lista {empresa, fração} em JSON; vazia = a despesa é toda de quem paga.
             e.OwnsMany(c => c.Rateio, b => b.ToJson());
             e.Ignore(c => c.Rateada);
@@ -537,6 +540,10 @@ public class AppDbContext : DbContext
         {
             e.ToTable("movimentos");
             e.HasKey(m => m.Id);
+            // Número do lançamento: o serviço dá um só para todas as parcelas do grupo; sem número
+            // (0), o banco gera. Não é único por linha (parcelas repetem), por isso índice simples.
+            e.Property(m => m.Numero).HasDefaultValueSql("nextval('movimentos_numero_seq')");
+            e.HasIndex(m => m.Numero);
             e.Property(m => m.Tipo).IsRequired().HasMaxLength(10);
             e.Property(m => m.Descricao).IsRequired().HasMaxLength(300);
             e.Property(m => m.ParceiroNome).HasMaxLength(200);

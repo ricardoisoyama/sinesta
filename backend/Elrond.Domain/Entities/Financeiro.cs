@@ -36,9 +36,11 @@ public class AprovacaoMovimento
 /// <see cref="GrupoId"/>. Nunca é apagado: cancelar marca <see cref="Cancelado"/>.
 /// Todo lançamento nasce pendente de aprovação (regra do tipo "movimento").
 /// </summary>
-public class Movimento : Rastreavel, IEntity
+public class Movimento : Rastreavel, IEntity, INumerado
 {
     public string Id { get; set; } = string.Empty;
+    /// <summary>Número do lançamento: as parcelas de um parcelamento dividem o mesmo (1532 · 2/3).</summary>
+    public long Numero { get; set; }
     /// <summary>receber | pagar.</summary>
     public string Tipo { get; set; } = "pagar";
     public string EmpresaId { get; set; } = string.Empty;

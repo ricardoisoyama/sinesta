@@ -13,12 +13,12 @@ import { CrudList } from '@/features/common/CrudList'
 import { Hint } from '@/features/common/Hint'
 import type { Column } from '@/features/common/DataTable'
 import { formatBRL } from '@/lib/format'
-import { semAcento } from '@/lib/texto'
+import { buscaPeloNumero, semAcento } from '@/lib/texto'
 import { diasParaVencer, hojeISO, liquidoDe, primeiroDiaDoMes, resumo, somarDias, statusDe, ultimoDiaDoMes } from './calculos'
 import { useFinanceiro } from './store'
 import { MovimentoFormModal } from './MovimentoFormModal'
 import { BaixaModal } from './BaixaModal'
-import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
+import { APROVACAO_LABEL, STATUS_MOVIMENTO, numeroDoMovimento, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
 import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento
@@ -81,6 +81,9 @@ export function EntradasSaidasPage() {
     const ini = primeiroDiaDoMes(hoje)
     const fim = ultimoDiaDoMes(hoje)
     const lim30 = somarDias(hoje, 30)
+    // Buscou pelo número: mostra o lançamento (todas as parcelas) mesmo fora dos filtros da tela.
+    const peloNumero = movimentos.filter((m) => buscaPeloNumero(busca, m.numero))
+    if (peloNumero.length > 0) return peloNumero.sort((a, b) => a.parcela - b.parcela)
     return movimentos
       .filter((m) => aba === 'todos' || m.tipo === aba)
       .filter((m) => {
@@ -99,6 +102,12 @@ export function EntradasSaidasPage() {
   const totalLista = linhas.reduce((a, m) => a + (m.tipo === 'receber' ? 1 : -1) * liquidoDe(m), 0)
 
   const columns: Column<Movimento>[] = [
+    {
+      header: 'Nº',
+      fixa: true,
+      valor: (m) => numeroDoMovimento(m),
+      cell: (m) => <span className={s.numero}>{numeroDoMovimento(m)}</span>,
+    },
     {
       header: 'Vencimento',
       fixa: true,
@@ -125,7 +134,6 @@ export function EntradasSaidasPage() {
           <span className={ui.cellStrong}>
             <i className={`${s.tipoDot} ${s[m.tipo]}`} />
             {m.parceiroNome}
-            {m.totalParcelas > 1 && <span className={s.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
           </span>
           <small>{m.descricao}{m.documento ? ` · ${m.documento}` : ''}</small>
         </div>
@@ -245,7 +253,7 @@ export function EntradasSaidasPage() {
         id="financeiro-entradas-saidas"
         query={busca}
         onQuery={setBusca}
-        searchPlaceholder="Buscar por nome, descrição ou documento..."
+        searchPlaceholder="Buscar por nº, nome, descrição ou documento..."
         columns={columns}
         rows={linhas}
         getKey={(m) => m.id}

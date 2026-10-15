@@ -57,7 +57,7 @@ export function AprovacaoModal({ movimento: m, regra, nomeDe, meuId, podeAprovar
     <Modal
       open={!!m}
       onClose={onClose}
-      title="Aprovação do lançamento"
+      title={m.numero ? `Aprovação do lançamento ${m.numero}` : 'Aprovação do lançamento'}
       subtitle={`${m.parceiroNome} · ${m.descricao}${total ? ` · ${total}` : ''}`}
       icon={<ShieldCheck />}
       maxWidth={620}

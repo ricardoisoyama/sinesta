@@ -73,11 +73,17 @@ export interface Carteira {
   status: 'ativo' | 'inativo'
 }
 
+/** Como o lançamento é citado: "1532" ou, parcelado, "1532 · 2/3". */
+export const numeroDoMovimento = (m: Pick<Movimento, 'numero' | 'parcela' | 'totalParcelas'>): string =>
+  !m.numero ? '—' : m.totalParcelas > 1 ? `${m.numero} · ${m.parcela}/${m.totalParcelas}` : String(m.numero)
+
 /** A carteira atende a empresa? Cada CNPJ tem as suas contas; a sem empresa (antiga) atende todas. */
 export const carteiraDaEmpresa = (c: Carteira, empresaId: string): boolean => !c.empresaId || !empresaId || c.empresaId === empresaId
 
 export interface Movimento {
   id: string
+  /** Número do lançamento (as parcelas dividem o mesmo). Ausente antes de gravar. */
+  numero?: number
   tipo: TipoMovimento
   empresaId: string
   /** Cliente (receber) ou fornecedor/funcionário (pagar). */

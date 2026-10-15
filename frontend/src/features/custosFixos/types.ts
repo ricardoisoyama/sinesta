@@ -19,6 +19,8 @@ export const DATA_FIM_SEM_PRAZO = '9999-12-31'
 
 export interface CustoFixo {
   id: string
+  /** Número da despesa (gerado pelo banco). Ausente antes de gravar. */
+  numero?: number
   /** Unidade a que pertence o custo (ver features/unidades). */
   unidadeId: string
   descricao: string

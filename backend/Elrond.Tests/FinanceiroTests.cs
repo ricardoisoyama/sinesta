@@ -28,7 +28,7 @@ public class FinanceiroTests
         carteiras.Itens.Add(new Carteira { Id = "cart-matriz", Nome = "Bradesco Matriz", EmpresaId = "matriz" });
         var rs = new MemRepo<RegraAprovacao>();
         rs.Itens.AddRange(regras);
-        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria()), movs, rs);
+        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia()), movs, rs);
     }
 
     private static RegraAprovacao Regra(decimal de, decimal ate, params string[] aprovadores) => new()
@@ -141,11 +141,30 @@ public class FinanceiroTests
         Assert.Equal("reprovado", (await svc.ReprovarAsync(m.Id, "Valor fora do contrato", Ana, true)).Value!.Aprovacao);
     }
 
+    [Fact]
+    public async Task Parcelas_dividem_o_numero_do_lancamento_e_editar_nao_troca_o_numero()
+    {
+        var (svc, _, _) = Montar(Regra(0, 0, "u-ana"));
+        var parcelas = (await svc.CriarAsync(new NovoMovimentoDto(Base(300m), 3), Ana)).Value!;
+        Assert.All(parcelas, p => Assert.Equal(1001, p.Numero));
+        var outro = (await svc.CriarAsync(new NovoMovimentoDto(Base(50m)), Ana)).Value![0];
+        Assert.Equal(1002, outro.Numero);
+
+        var editado = await svc.AtualizarAsync(outro.Id, new Movimento { Numero = 7, ParceiroNome = "Fornecedor X", Descricao = "Outro", Vencimento = "2026-10-10", Valor = 50m, CarteiraId = "cart" });
+        Assert.Equal(1002, editado.Value!.Numero);
+    }
+
     // ── infraestrutura de teste ──
 
     private sealed class SemTransacao : IUnidadeTrabalho
     {
         public Task ExecutarAsync(Func<Task> acao) => acao();
+    }
+
+    private sealed class Sequencia : INumerador
+    {
+        private long _ultimo = 1000;
+        public Task<long> ProximoMovimentoAsync() => Task.FromResult(++_ultimo);
     }
 
     private sealed class FakeAuditoria : IAuditoriaService

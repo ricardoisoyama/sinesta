@@ -2,12 +2,14 @@ using Elrond.Domain.Common;
 
 namespace Elrond.Domain.Entities;
 
-public class CustoFixo : Rastreavel, IEntity, IInativavel
+public class CustoFixo : Rastreavel, IEntity, IInativavel, INumerado
 {
     /// <summary>Término de quem não tem prazo final (o campo nunca fica vazio nas recorrentes).</summary>
     public const string DataFimSemPrazo = "9999-12-31";
 
     public string Id { get; set; } = string.Empty;
+    /// <summary>Número da despesa (sequencial, nasce no banco).</summary>
+    public long Numero { get; set; }
     public string UnidadeId { get; set; } = string.Empty;
     public string Descricao { get; set; } = string.Empty;
     /// <summary>Categoria de despesa (cadastro <see cref="CategoriaCusto"/>).</summary>

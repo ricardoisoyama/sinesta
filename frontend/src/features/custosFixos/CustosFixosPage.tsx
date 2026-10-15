@@ -9,6 +9,7 @@ import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
 import { formatBRL, formatPct } from '@/lib/format'
+import { buscaPeloNumero } from '@/lib/texto'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { usePlanoContas } from '@/features/planoContas/store'
 import { useUsuarios } from '@/features/usuarios/store'
@@ -50,12 +51,13 @@ export function CustosFixosPage() {
   /** Valor que conta para o filtro: cheio em "Todas" (cada despesa uma vez), a parte da empresa filtrada. */
   const valorNoFiltro = (c: CustoFixo) => (todas ? c.valorMensal : valorDaEmpresa(c, unidadeFiltro))
 
-  // A busca olha a descrição, o centro de custo e quem cobra (fornecedor ou funcionário).
+  // A busca olha o número, a descrição, o centro de custo e quem cobra (fornecedor ou funcionário).
   const searchFn = useCallback(
     (c: CustoFixo, q: string) =>
       (unidadeFiltro === 'todos' || percentualDaEmpresa(c, unidadeFiltro) > 0) &&
+      (buscaPeloNumero(q, c.numero) ||
       [c.descricao, categoriasData?.find((cat) => cat.id === c.categoriaId)?.nome ?? '', nomeFornecedor(c.fornecedorId)]
-        .some((t) => t.toLowerCase().includes(q)),
+        .some((t) => t.toLowerCase().includes(q))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [unidadeFiltro, categoriasData, fornecedoresData, usuarios],
   )
@@ -151,6 +153,12 @@ export function CustosFixosPage() {
   }
 
   const columns: Column<CustoFixo>[] = [
+    {
+      header: 'Nº',
+      fixa: true,
+      valor: (c) => c.numero ?? 0,
+      cell: (c) => <span className={s.numero}>{c.numero || '—'}</span>,
+    },
     {
       header: 'Descrição',
       fixa: true,
@@ -288,7 +296,7 @@ export function CustosFixosPage() {
         id="custos-fixos"
         query={crud.query}
         onQuery={crud.setQuery}
-        searchPlaceholder="Buscar por descrição, fornecedor ou centro de custo..."
+        searchPlaceholder="Buscar por nº, descrição, fornecedor ou centro de custo..."
         columns={columns}
         rows={crud.filtered}
         getKey={(c) => c.id}

@@ -16,6 +16,16 @@ public abstract class Rastreavel
     public string InativadoPor { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Registro com número sequencial para as pessoas citarem e buscarem ("o lançamento 1532").
+/// O Id (GUID) continua sendo a chave e as ligações; o número só identifica. Nasce no banco
+/// (sequência) e nunca muda: o repositório preserva o número do registro existente.
+/// </summary>
+public interface INumerado
+{
+    long Numero { get; set; }
+}
+
 /// <summary>Cadastro que nunca é apagado: "excluir" vira Status = "inativo" (exclusão lógica).</summary>
 public interface IInativavel
 {

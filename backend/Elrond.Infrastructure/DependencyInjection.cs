@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ICidadeRepository, CidadeRepository>();
         services.AddScoped<IAnexoRepository, AnexoRepository>();
         services.AddScoped<IUnidadeTrabalho, UnidadeTrabalho>();
+        services.AddScoped<INumerador, Numerador>();
 
         // Arquivos anexados (disco, raiz em Arquivos:Raiz)
         services.AddSingleton<IArquivoStorage, DiscoArquivoStorage>();

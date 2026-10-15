@@ -120,6 +120,9 @@ public class EfCrudRepository<T> : ICrudRepository<T> where T : class, IEntity
     /// </summary>
     private async Task CarimbarAsync(T entity, T? existente)
     {
+        // O número nunca muda: na alteração (remove + reinsere) vale o do registro existente, não o
+        // do payload. Novo com 0: o banco gera pela sequência.
+        if (entity is INumerado n && existente is INumerado e && e.Numero > 0) n.Numero = e.Numero;
         if (entity is not Rastreavel r) return;
         var quem = await _usuario.QuemAsync();
         var agora = DateTime.UtcNow.ToString("o");

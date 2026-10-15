@@ -1,5 +1,6 @@
 using Elrond.Application.Interfaces;
 using Elrond.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Elrond.Infrastructure.Repositories;
 
@@ -17,4 +18,11 @@ public class UnidadeTrabalho(AppDbContext db) : IUnidadeTrabalho
         await acao();
         await tx.CommitAsync();
     }
+}
+
+/// <summary>Números das sequências do Postgres (nextval nunca repete, nem com gravações simultâneas).</summary>
+public class Numerador(AppDbContext db) : INumerador
+{
+    public async Task<long> ProximoMovimentoAsync() =>
+        (await db.Database.SqlQueryRaw<long>("SELECT nextval('movimentos_numero_seq') AS \"Value\"").ToListAsync()).First();
 }

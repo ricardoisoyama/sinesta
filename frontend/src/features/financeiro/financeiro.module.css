@@ -39,6 +39,7 @@
 .tipoDot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 .tipoDot.receber { background: #2e7d44; }
 .tipoDot.pagar { background: #e8702f; }
+.numero { font-size: 12.5px; font-weight: 700; color: #143d18; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .parcelaTag { font-size: 10.5px; font-weight: 600; color: #6b7b72; background: #f0eee7; border-radius: 5px; padding: 1px 5px; margin-left: 6px; }
 
 /* ── Modais ─────────────────────────────────────────────────────────────── */

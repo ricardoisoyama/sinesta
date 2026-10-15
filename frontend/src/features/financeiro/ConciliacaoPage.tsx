@@ -6,7 +6,7 @@ import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
 import { formatBRL } from '@/lib/format'
-import { semAcento } from '@/lib/texto'
+import { buscaPeloNumero, semAcento } from '@/lib/texto'
 import { getErrorMessage } from '@/lib/api'
 import { listCategoriasCusto } from '@/features/cadastros/api'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
@@ -347,6 +347,7 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDes
                 {m.totalParcelas > 1 && <span className={fin.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
               </span>
               <small>
+                {m.numero ? `nº ${m.numero} · ` : ''}
                 {m.pagoEm ? `pago em ${dataBR(m.pagoEm)}` : `vence ${dataBR(m.vencimento)}`} · {formatBRL(liquidoDe(m))}
                 {l.motivo && l.situacao === 'sugestao' && <> · <em className={s[`conf_${l.confianca}`]}>{l.motivo}</em></>}
               </small>
@@ -415,7 +416,7 @@ function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada;
   const alvo = Math.abs(l.linha.valor)
   const lista = movimentos
     .filter((m) => (credito ? m.tipo === 'receber' : m.tipo === 'pagar'))
-    .filter((m) => !q || semAcento(`${m.parceiroNome} ${m.descricao} ${m.documento}`).includes(q))
+    .filter((m) => !q || buscaPeloNumero(busca, m.numero) || semAcento(`${m.parceiroNome} ${m.descricao} ${m.documento}`).includes(q))
     .sort((a, b) => {
       const pa = pontos.get(a.id)?.pontos ?? -Math.abs(liquidoDe(a) - alvo) / 100
       const pb = pontos.get(b.id)?.pontos ?? -Math.abs(liquidoDe(b) - alvo) / 100
@@ -428,7 +429,7 @@ function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada;
         <b>Vincular a um lançamento {credito ? 'a receber' : 'a pagar'}</b>
         <div className={ui.search}>
           <Search />
-          <input autoFocus placeholder="Buscar por nome, descrição ou documento" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <input autoFocus placeholder="Buscar por nº, nome, descrição ou documento" value={busca} onChange={(e) => setBusca(e.target.value)} />
         </div>
         <button type="button" className={ui.iconBtn} onClick={onFechar} title="Fechar"><X /></button>
       </div>
@@ -437,7 +438,7 @@ function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada;
           const c = pontos.get(m.id)
           return (
             <button key={m.id} type="button" className={s.opcao} onClick={() => onEscolher(m)}>
-              <span className={s.opcaoNome}><b>{m.parceiroNome}</b> · {m.descricao}{m.documento ? ` · ${m.documento}` : ''}</span>
+              <span className={s.opcaoNome}>{m.numero ? <>nº {m.numero} · </> : null}<b>{m.parceiroNome}</b> · {m.descricao}{m.documento ? ` · ${m.documento}` : ''}</span>
               <span className={s.opcaoMeta}>{m.pagoEm ? `pago ${dataBR(m.pagoEm)}` : `vence ${dataBR(m.vencimento)}${m.aprovacao === 'aprovado' ? '' : ' · aguardando aprovação'}`}</span>
               <span className={`${s.opcaoValor} ${Math.abs(liquidoDe(m) - alvo) < 0.005 ? s.cred : ''}`}>{formatBRL(liquidoDe(m))}</span>
               <span className={s.opcaoConf}>{c ? <em className={s[`conf_${c.confianca}`]}>{c.motivo}</em> : <em className={s.mut}>valor diferente</em>}</span>
