@@ -214,9 +214,9 @@ export function ProjecaoPage() {
                 <YAxis tickFormatter={kBRL} tick={{ fontSize: 12, fill: '#6b7b72' }} width={64} />
                 <Tooltip formatter={(v) => formatBRL(Number(v))} cursor={{ fill: 'rgba(26,77,30,0.05)' }} contentStyle={{ borderRadius: 10, border: '1px solid #e6e3db', fontSize: 13 }} />
                 <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12, paddingBottom: 6 }} />
-                <Bar dataKey="receita" name={cenario ? `Receita · ${cenario.nome}` : 'Receita (meta)'} fill="#1a4d1e" radius={[3, 3, 0, 0]} maxBarSize={34} />
-                {cenario && <Line dataKey="receitaBase" name="Receita · base" stroke="#9aa39b" strokeDasharray="4 4" dot={false} strokeWidth={2} />}
-                <Line dataKey="equilibrio" name="Ponto de equilíbrio" stroke="#e8702f" strokeWidth={2.5} dot={{ r: 3, fill: '#e8702f' }} />
+                <Bar isAnimationActive={false} dataKey="receita" name={cenario ? `Receita · ${cenario.nome}` : 'Receita (meta)'} fill="#1a4d1e" radius={[3, 3, 0, 0]} maxBarSize={34} />
+                {cenario && <Line isAnimationActive={false} dataKey="receitaBase" name="Receita · base" stroke="#9aa39b" strokeDasharray="4 4" dot={false} strokeWidth={2} />}
+                <Line isAnimationActive={false} dataKey="equilibrio" name="Ponto de equilíbrio" stroke="#e8702f" strokeWidth={2.5} dot={{ r: 3, fill: '#e8702f' }} />
               </ComposedChart>
             </ResponsiveContainer>
             <div className={s.nota}>Abaixo da linha laranja o mês não paga as despesas fixas. Equilíbrio = DF do mês ÷ {formatPct(parametros.contribuicao, 1)} (a parte do preço que cobre DF e lucro).</div>
@@ -231,11 +231,11 @@ export function ProjecaoPage() {
                 <YAxis tickFormatter={kBRL} tick={{ fontSize: 12, fill: '#6b7b72' }} width={64} />
                 <Tooltip formatter={(v) => formatBRL(Number(v))} cursor={{ fill: 'rgba(26,77,30,0.05)' }} contentStyle={{ borderRadius: 10, border: '1px solid #e6e3db', fontSize: 13 }} />
                 <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12, paddingBottom: 6 }} />
-                <Bar dataKey="lucro" name="Lucro do mês" fill="#2e7d44" radius={[3, 3, 0, 0]} maxBarSize={34}>
+                <Bar isAnimationActive={false} dataKey="lucro" name="Lucro do mês" fill="#2e7d44" radius={[3, 3, 0, 0]} maxBarSize={34}>
                   {dados.map((d) => <Cell key={d.chave} fill={d.lucro >= 0 ? '#2e7d44' : '#c0392b'} />)}
                 </Bar>
-                <Line dataKey="acumulado" name="Acumulado" stroke="#143d18" strokeWidth={2.5} dot={false} />
-                {cenario && <Line dataKey="acumuladoBase" name="Acumulado · base" stroke="#9aa39b" strokeDasharray="4 4" dot={false} strokeWidth={2} />}
+                <Line isAnimationActive={false} dataKey="acumulado" name="Acumulado" stroke="#143d18" strokeWidth={2.5} dot={false} />
+                {cenario && <Line isAnimationActive={false} dataKey="acumuladoBase" name="Acumulado · base" stroke="#9aa39b" strokeDasharray="4 4" dot={false} strokeWidth={2} />}
               </ComposedChart>
             </ResponsiveContainer>
           </div>
