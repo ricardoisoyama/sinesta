@@ -96,7 +96,7 @@ public sealed class CobrancaService(
                 break;
             default:
                 cobranca.Situacao = CobrancaBancaria.Incerta;
-                cobranca.Mensagem = $"Não deu para confirmar com o banco ({envio.Mensagem}). Clique em atualizar: o sistema procura antes de emitir de novo.";
+                cobranca.Mensagem = $"O banco não confirmou se registrou o boleto. Resposta do banco: {envio.Mensagem}";
                 break;
         }
         await cobrancas.UpdateAsync(cobranca.Id, cobranca);

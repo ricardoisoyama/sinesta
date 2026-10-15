@@ -70,7 +70,16 @@ export function BoletoTestePage() {
   const [vencimentos, setVencimentos] = useState<Record<number, string>>({})
   const gerar = useMutation({
     mutationFn: (p: ParcelaFatura) => gerarBoleto(faturaId!, p.id, empresaId, vencimentos[p.id]),
-    onSuccess: recarregar,
+    onSuccess: (c) => {
+      recarregar()
+      // O pedido chegou ao servidor, mas o banco recusou ou não confirmou: avisa já, não só na lista de baixo.
+      if (c.situacao === 'falha') void avisar({ titulo: 'O banco recusou o boleto', mensagem: c.mensagem })
+      if (c.situacao === 'incerta')
+        void avisar({
+          titulo: 'O banco não confirmou o boleto',
+          mensagem: `${c.mensagem} Se o banco não tiver registrado, "Conferir no banco" libera a parcela para gerar de novo.`,
+        })
+    },
     onError: falhou('Não foi possível gerar o boleto'),
   })
   const atualizar = useMutation({ mutationFn: (c: Cobranca) => atualizarCobranca(c.id), onSuccess: recarregar, onError: falhou('Não foi possível consultar o banco') })
@@ -249,7 +258,17 @@ export function BoletoTestePage() {
                         <td className={s.dir}>{formatBRL(p.valor - p.desconto)}</td>
                         <td className={s.dir}>
                           {vigente ? (
-                            <span className={`${s.pill} ${s[SITUACAO_COBRANCA[vigente.situacao].tom]}`}>Boleto {vigente.seuNumero} · {SITUACAO_COBRANCA[vigente.situacao].rotulo}</span>
+                            <>
+                              <span className={`${s.pill} ${s[SITUACAO_COBRANCA[vigente.situacao].tom]}`}>Boleto {vigente.seuNumero} · {SITUACAO_COBRANCA[vigente.situacao].rotulo}</span>
+                              {vigente.situacao === 'incerta' && (
+                                <div className={s.incerta}>
+                                  <span>{vigente.mensagem}</span>
+                                  <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={atualizar.isPending} onClick={() => atualizar.mutate(vigente)}>
+                                    {atualizar.isPending && atualizar.variables?.id === vigente.id ? <Loader2 className={s.gira} /> : <RefreshCw />} Conferir no banco
+                                  </button>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <button
                               type="button"
