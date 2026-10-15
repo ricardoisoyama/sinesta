@@ -14,6 +14,7 @@ import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
 import { DataTable, type Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL, formatPct } from '@/lib/format'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
@@ -71,13 +72,14 @@ export function RpoPage() {
   const barData = linhas.map((o) => ({ nome: o.proposta, orcado: o.orcado, real: o.real }))
 
   const columns: Column<LinhaRpo>[] = [
-    { header: 'Proposta', cell: (o) => <span className={ui.cellStrong}>{o.proposta}</span> },
-    { header: 'Cliente', cell: (o) => <span className={ui.cellMut}>{o.cliente}</span> },
-    { header: 'Item', cell: (o) => <span className={ui.cellMut}>{o.descricao}</span> },
-    { header: 'Orçado', className: ui.right, cell: (o) => formatBRL(o.orcado) },
-    { header: 'Realizado', className: ui.right, cell: (o) => formatBRL(o.real) },
+    { header: 'Proposta', largura: LARGURA.curta, cell: (o) => <span className={ui.cellStrong}>{o.proposta}</span> },
+    { header: 'Cliente', valor: (o) => o.cliente, cell: (o) => <span className={ui.cellMut}>{o.cliente}</span> },
+    { header: 'Item', valor: (o) => o.descricao, cell: (o) => <span className={ui.cellMut}>{o.descricao}</span> },
+    { header: 'Orçado', largura: LARGURA.valor, className: ui.right, cell: (o) => formatBRL(o.orcado) },
+    { header: 'Realizado', largura: LARGURA.valor, className: ui.right, cell: (o) => formatBRL(o.real) },
     {
       header: 'Desvio',
+      largura: LARGURA.valor,
       className: ui.right,
       cell: (o) => (
         <span style={{ color: o.desvio <= 0 ? '#2e7d44' : '#c0392b', fontWeight: 600 }}>

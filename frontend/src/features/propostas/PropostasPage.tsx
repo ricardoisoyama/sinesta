@@ -6,6 +6,7 @@ import { PageHeader } from '@/features/common/PageHeader'
 import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import { DataTable, type Column } from '@/features/common/DataTable'
+import { LARGURA, LARGURA_ICONE } from '@/features/common/grid'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import { formatBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
@@ -101,17 +102,19 @@ export function PropostasPage() {
   const aprovada = detalhe?.status === 'aprovada'
 
   const columns: Column<Proposta>[] = [
-    { header: 'Nº', cell: (p) => <span className={ui.cellStrong}>{p.numero}</span> },
-    { header: 'Cliente', cell: (p) => <span className={ui.cellStrong}>{p.cliente}</span> },
-    { header: 'Data', cell: (p) => <span className={ui.cellMut}>{p.data}</span> },
-    { header: 'Itens', cell: (p) => <span className={ui.cellMut}>{p.itens.length}</span> },
-    { header: 'Total', className: ui.right, cell: (p) => <span className={ui.cellStrong}>{formatBRL(p.total)}</span> },
+    { header: 'Nº', largura: LARGURA.curta, cell: (p) => <span className={ui.cellStrong}>{p.numero}</span> },
+    { header: 'Cliente', valor: (p) => p.cliente, cell: (p) => <span className={ui.cellStrong}>{p.cliente}</span> },
+    { header: 'Data', largura: LARGURA.data, cell: (p) => <span className={ui.cellMut}>{p.data}</span> },
+    { header: 'Itens', largura: LARGURA.numero, cell: (p) => <span className={ui.cellMut}>{p.itens.length}</span> },
+    { header: 'Total', largura: LARGURA.valor, className: ui.right, cell: (p) => <span className={ui.cellStrong}>{formatBRL(p.total)}</span> },
     {
       header: 'Status',
+      largura: LARGURA.situacao,
       cell: (p) => <span className={`${s.stat} ${s[p.status]}`}>{STATUS_LABEL[p.status]}</span>,
     },
     {
       header: 'Ações',
+      largura: LARGURA.acoes + 2 * LARGURA_ICONE,
       className: ui.colActions,
       cell: (p) => (
         <>

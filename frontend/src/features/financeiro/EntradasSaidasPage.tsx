@@ -12,6 +12,7 @@ import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
 import { Hint } from '@/features/common/Hint'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
 import { diasParaVencer, hojeISO, liquidoDe, primeiroDiaDoMes, resumo, somarDias, statusDe, ultimoDiaDoMes } from './calculos'
@@ -105,12 +106,14 @@ export function EntradasSaidasPage() {
     {
       header: 'Nº',
       fixa: true,
+      largura: LARGURA.numero,
       valor: (m) => m.numero ?? 0,
       cell: (m) => <span className={s.numero}>{m.numero || '—'}</span>,
     },
     {
       header: 'Vencimento',
       fixa: true,
+      largura: LARGURA.data,
       valor: (m) => dataBR(m.vencimento),
       cell: (m) => {
         const st = statusDe(m, hoje)
@@ -140,11 +143,12 @@ export function EntradasSaidasPage() {
         </div>
       ),
     },
-    { header: 'Carteira', valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
-    { header: 'Forma', valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
+    { header: 'Carteira', largura: LARGURA.media, valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
+    { header: 'Forma', largura: LARGURA.curta, valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
     {
       header: 'Valor',
       className: ui.right,
+      largura: LARGURA.valor,
       valor: (m) => liquidoDe(m),
       cell: (m) => (
         <span className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}>
@@ -154,6 +158,7 @@ export function EntradasSaidasPage() {
     },
     {
       header: 'Situação',
+      largura: LARGURA.situacao,
       valor: (m) => STATUS_MOVIMENTO[statusDe(m, hoje)],
       cell: (m) => {
         const st = statusDe(m, hoje)
@@ -167,6 +172,7 @@ export function EntradasSaidasPage() {
     },
     {
       header: 'Aprovação',
+      largura: LARGURA.etiqueta,
       valor: (m) => APROVACAO_LABEL[m.aprovacao ?? 'pendente'],
       cell: (m) => {
         const ap = m.aprovacao ?? 'pendente'
@@ -185,6 +191,7 @@ export function EntradasSaidasPage() {
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (m) => {
         const st = statusDe(m, hoje)

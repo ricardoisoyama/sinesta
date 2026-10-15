@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
@@ -108,18 +109,20 @@ export function AprovadoresPage() {
         </div>
       ),
     },
-    { header: 'O que faz', valor: (r) => resumo(r), cell: (r) => <span className={s.faixaTag}>{resumo(r)}</span> },
+    { header: 'O que faz', largura: LARGURA.longa, valor: (r) => resumo(r), cell: (r) => <span className={s.faixaTag}>{resumo(r)}</span> },
     {
       header: 'Aprovadores',
+      largura: LARGURA.longa,
       valor: (r) => r.aprovadores.map(nomeDe).join(' '),
       cell: (r) => (
         <span className={ui.cellMut}>{tipoDaRegra(r) === 'comissao' ? '—' : r.aprovadores.map(nomeDe).join(' + ') || '—'}</span>
       ),
     },
-    { header: 'Status', valor: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (r) => r.status, cell: (r) => <StatusBadge status={r.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (r) => (
         <RowActions status={r.status} onEdit={() => crud.openEdit(r)} onSetStatus={(st) => setStatus(r, st)} />

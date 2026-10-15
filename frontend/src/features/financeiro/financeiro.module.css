@@ -106,9 +106,9 @@
 .aprov_pendente { background: #fbf3d5; color: #8a6d00; }
 .aprov_aprovado { background: #e8f5ec; color: #2e7d44; }
 .aprov_reprovado { background: #fdecea; color: #c0392b; }
-.aprovBtn { border: none; background: none; padding: 0; cursor: pointer; font: inherit; }
+.aprovBtn { border: none; background: none; padding: 0; cursor: pointer; font: inherit; max-width: 100%; text-align: left; }
 .aprovBtn:hover .aprov { box-shadow: 0 0 0 2px rgba(232, 112, 47, 0.25); }
-.aprovSub { display: block; font-size: 11px; color: #6b7b72; margin-top: 2px; }
+.aprovSub { display: block; font-size: 11px; color: #6b7b72; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; }
 .aprovTopo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; font-size: 13px; }
 .aprovAviso { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; margin: 10px 0; border-radius: 10px; background: #fdf0e6; border: 1px solid #f0c69e; color: #8a4513; font-size: 13px; line-height: 19px; }
 .aprovAviso svg { flex-shrink: 0; margin-top: 1px; }

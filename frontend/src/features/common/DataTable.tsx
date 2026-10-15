@@ -13,14 +13,20 @@ export interface Column<T> {
   /** Coluna que não pode ser escondida (ex.: nome, ações). */
   fixa?: boolean
   /**
-   * Largura fixa em px. Quando alguma coluna tem largura, o grid trava as larguras (não mudam
-   * de uma página para outra conforme o conteúdo); as colunas sem largura dividem o resto.
+   * Largura fixa em px (use as de LARGURA, em ./grid). Quando alguma coluna tem largura, o grid trava
+   * as larguras (não mudam de uma página para outra conforme o conteúdo) e as colunas sem largura
+   * (a principal: nome, descrição) dividem o resto.
    */
   largura?: number
 }
 
 /** Espaço mínimo de cada coluna sem largura, num grid de larguras travadas. */
-const MINIMO_COLUNA_LIVRE = 180
+const MINIMO_COLUNA_LIVRE = 260
+
+function textoDaCelula<T>(c: Column<T>, row: T): string | undefined {
+  const v = c.valor?.(row)
+  return v === null || v === undefined || v === '' ? undefined : String(v)
+}
 
 interface DataTableProps<T> {
   columns: Column<T>[]
@@ -91,7 +97,12 @@ export function DataTable<T>({
             className={[onRowClick ? ui.rowClick : '', rowClassName?.(r) ?? ''].filter(Boolean).join(' ') || undefined}
             onClick={onRowClick ? () => onRowClick(r) : undefined}
           >
-            {columns.map((c, i) => <td key={colunaId(c, i)} className={c.className}>{c.cell(r)}</td>)}
+            {columns.map((c, i) => (
+              // Grid travado corta o texto longo em "…": o title mostra a célula inteira.
+              <td key={colunaId(c, i)} className={c.className} title={travado ? textoDaCelula(c, r) : undefined}>
+                {c.cell(r)}
+              </td>
+            ))}
           </tr>
         ))}
         {rows.length === 0 && (

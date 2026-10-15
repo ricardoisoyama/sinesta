@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL, formatPct } from '@/lib/format'
 import { useTaxasQuery } from '@/features/cadastros/hooks'
 import { createTaxa, updateTaxa } from '@/features/cadastros/api'
@@ -76,6 +77,7 @@ export function TaxasPage() {
     },
     {
       header: 'Tipo',
+      largura: LARGURA.curta,
       valor: (t) => (t.tipo === 'percentual' ? 'Percentual (NF)' : 'Valor fixo'),
       cell: (t) => (
         <span className={ui.cellMut}>{t.tipo === 'percentual' ? 'Percentual (NF)' : 'Valor fixo'}</span>
@@ -83,6 +85,7 @@ export function TaxasPage() {
     },
     {
       header: 'Valor',
+      largura: LARGURA.valor,
       className: ui.right,
       valor: (t) => (t.tipo === 'percentual' ? formatPct(t.valor) : formatBRL(t.valor)),
       cell: (t) => (
@@ -91,10 +94,11 @@ export function TaxasPage() {
         </span>
       ),
     },
-    { header: 'Status', valor: (t) => t.status, cell: (t) => <StatusBadge status={t.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (t) => t.status, cell: (t) => <StatusBadge status={t.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (t) => (
         <RowActions status={t.status} onEdit={() => crud.openEdit(t)} onSetStatus={(st) => setStatus(t, st)} />

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Search, ChevronLeft, ChevronRight, Filter, Columns3, EyeOff, Download, Ban, CheckCircle2, X } from 'lucide-react'
 import ui from './ui.module.css'
 import { DataTable, type Column } from './DataTable'
-import { colunaId, filtrarPorColunas, gravarOcultas, lerOcultas, listaTemStatus, semInativos } from './grid'
+import { colunaId, filtrarPorColunas, gravarOcultas, LARGURA, lerOcultas, listaTemStatus, semInativos } from './grid'
 import { exportarXlsx } from './exportar'
 import { getErrorMessage } from '@/lib/api'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
@@ -129,8 +129,8 @@ export function CrudList<T>({
   const colunasBase = temRastro(rows)
     ? (() => {
         const idx = columns.findIndex((c) => c.header === 'Ações')
-        // Grid de larguras travadas: a coluna automática também ganha largura.
-        const rastro = { ...colunaRastro<T>(), largura: columns.some((c) => c.largura) ? 124 : undefined }
+        // Rastro é secundário: fica no fim (antes das ações), na parte que rola.
+        const rastro = { ...colunaRastro<T>(), largura: LARGURA.rastro }
         return idx >= 0 ? [...columns.slice(0, idx), rastro, ...columns.slice(idx)] : [...columns, rastro]
       })()
     : columns
@@ -225,7 +225,8 @@ export function CrudList<T>({
   const colunaSelecao: Column<T> = {
     id: COL_SELECAO,
     fixa: true,
-    largura: columns.some((c) => c.largura) ? 48 : undefined,
+    // Todo grid de cadastro segue o padrão de larguras travadas (ver LARGURA).
+    largura: LARGURA.selecao,
     className: ui.selCol,
     header: (
       <input

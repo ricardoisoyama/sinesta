@@ -4,6 +4,7 @@ import { History, RefreshCw } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { DataTable, type Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { Hint } from '@/features/common/Hint'
 import { getErrorMessage } from '@/lib/api'
 import { ACOES, alteracoesLegiveis, listarAuditoria, type RegistroAuditoria } from './api'
@@ -31,13 +32,14 @@ export function AuditoriaPage() {
   const linhas = data ?? []
 
   const columns: Column<RegistroAuditoria>[] = [
-    { header: 'Quando', fixa: true, cell: (r) => <span className={ui.cellMut}>{quando(r.em)}</span> },
-    { header: 'Usuário', cell: (r) => <span className={ui.cellStrong}>{r.usuarioNome || '—'}</span> },
-    { header: 'Ação', cell: (r) => <span className={`${s.acao} ${s[`acao_${r.acao.replace(/-/g, '_')}`] ?? ''}`}>{ACOES[r.acao] ?? r.acao}</span> },
-    { header: 'Registro', cell: (r) => <span className={ui.cellMut}>{r.entidade}</span> },
-    { header: 'Descrição', fixa: true, cell: (r) => r.descricao },
+    { header: 'Quando', largura: LARGURA.dataHora, fixa: true, cell: (r) => <span className={ui.cellMut}>{quando(r.em)}</span> },
+    { header: 'Usuário', largura: LARGURA.media, cell: (r) => <span className={ui.cellStrong}>{r.usuarioNome || '—'}</span> },
+    { header: 'Ação', largura: LARGURA.etiqueta, cell: (r) => <span className={`${s.acao} ${s[`acao_${r.acao.replace(/-/g, '_')}`] ?? ''}`}>{ACOES[r.acao] ?? r.acao}</span> },
+    { header: 'Registro', largura: LARGURA.media, cell: (r) => <span className={ui.cellMut}>{r.entidade}</span> },
+    { header: 'Descrição', fixa: true, valor: (r) => r.descricao, cell: (r) => r.descricao },
     {
       header: 'Alterações',
+      largura: LARGURA.longa,
       cell: (r) => {
         const itens = alteracoesLegiveis(r.alteracoes)
         if (itens.length === 0) return <span className={ui.cellMut}>—</span>
@@ -58,7 +60,7 @@ export function AuditoriaPage() {
         )
       },
     },
-    { header: 'IP', cell: (r) => <span className={ui.cellMut}>{r.ip}</span> },
+    { header: 'IP', largura: LARGURA.curta, cell: (r) => <span className={ui.cellMut}>{r.ip}</span> },
   ]
 
   return (

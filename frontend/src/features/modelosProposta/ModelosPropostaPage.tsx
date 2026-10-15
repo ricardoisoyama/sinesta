@@ -6,6 +6,7 @@ import { CrudList } from '@/features/common/CrudList'
 import { RowActions } from '@/features/common/RowActions'
 import { StatusBadge } from '@/features/common/StatusBadge'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { nomeUnidade } from '@/features/unidades/mock'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { getErrorMessage } from '@/lib/api'
@@ -68,12 +69,13 @@ export function ModelosPropostaPage() {
         </div>
       ),
     },
-    { header: 'Empresa', valor: (m) => nomeUnidade(m.empresaId), cell: (m) => <span className={ui.cellMut}>{nomeUnidade(m.empresaId)}</span> },
-    { header: 'Páginas', valor: (m) => m.paginas.length, cell: (m) => <span className={ui.cellMut}>{m.paginas.length}</span> },
-    { header: 'Status', valor: (m) => m.status, cell: (m) => <StatusBadge status={m.status} /> },
+    { header: 'Empresa', largura: LARGURA.media, valor: (m) => nomeUnidade(m.empresaId), cell: (m) => <span className={ui.cellMut}>{nomeUnidade(m.empresaId)}</span> },
+    { header: 'Páginas', largura: LARGURA.curta, valor: (m) => m.paginas.length, cell: (m) => <span className={ui.cellMut}>{m.paginas.length}</span> },
+    { header: 'Status', largura: LARGURA.status, valor: (m) => m.status, cell: (m) => <StatusBadge status={m.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (m) => <RowActions status={m.status} onEdit={() => openEdit(m)} onSetStatus={(st) => mudarStatus(m, st)} />,
     },

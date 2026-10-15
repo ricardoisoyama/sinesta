@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { createEmpresa, updateEmpresa } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
@@ -86,15 +87,16 @@ export function UnidadesPage() {
         </div>
       ),
     },
-    { header: 'Razão social', valor: (u) => u.razaoSocial, cell: (u) => <span className={ui.cellMut}>{u.razaoSocial}</span> },
-    { header: 'CNPJ', valor: (u) => `${u.cnpj} ${formatCnpj(u.cnpj)}`, cell: (u) => <span className={ui.cellMut}>{formatCnpj(u.cnpj)}</span> },
-    { header: 'Tipo', valor: (u) => u.tipo, cell: (u) => <span className={ui.cellMut}>{u.tipo}</span> },
-    { header: 'Regime', valor: (u) => u.regime, cell: (u) => <span className={ui.cellMut}>{u.regime}</span> },
-    { header: 'Endereço', valor: (u) => u.endereco, cell: (u) => <span className={ui.cellMut}>{u.endereco}</span> },
-    { header: 'Status', valor: (u) => u.status, cell: (u) => <StatusBadge status={u.status} /> },
+    { header: 'Razão social', largura: LARGURA.longa, valor: (u) => u.razaoSocial, cell: (u) => <span className={ui.cellMut}>{u.razaoSocial}</span> },
+    { header: 'CNPJ', largura: LARGURA.documento, valor: (u) => `${u.cnpj} ${formatCnpj(u.cnpj)}`, cell: (u) => <span className={ui.cellMut}>{formatCnpj(u.cnpj)}</span> },
+    { header: 'Tipo', largura: LARGURA.curta, valor: (u) => u.tipo, cell: (u) => <span className={ui.cellMut}>{u.tipo}</span> },
+    { header: 'Regime', largura: LARGURA.media, valor: (u) => u.regime, cell: (u) => <span className={ui.cellMut}>{u.regime}</span> },
+    { header: 'Endereço', largura: LARGURA.longa, valor: (u) => u.endereco, cell: (u) => <span className={ui.cellMut}>{u.endereco}</span> },
+    { header: 'Status', largura: LARGURA.status, valor: (u) => u.status, cell: (u) => <StatusBadge status={u.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (u) => (
         <RowActions

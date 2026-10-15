@@ -6,6 +6,7 @@ import { CrudList } from '@/features/common/CrudList'
 import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
 import { useUsuarios } from './store'
@@ -79,6 +80,7 @@ export function UsuariosPage() {
     },
     {
       header: 'Cargo',
+      largura: LARGURA.media,
       valor: (u) => `${u.cargo ?? ''} ${u.departamento ?? ''}`,
       cell: (u) => (
         <div>
@@ -89,6 +91,7 @@ export function UsuariosPage() {
     },
     {
       header: 'Perfil',
+      largura: LARGURA.curta,
       valor: (u) => u.perfil,
       cell: (u) => (
         <span className={`${ui.badge} ${u.perfil === 'Gestor' ? ui.badgeOk : ui.badgeOff}`}>
@@ -98,6 +101,7 @@ export function UsuariosPage() {
     },
     {
       header: 'Acessos',
+      largura: LARGURA.curta,
       className: ui.right,
       cell: (u) => (
         <span className={ui.cellMut}>
@@ -105,10 +109,11 @@ export function UsuariosPage() {
         </span>
       ),
     },
-    { header: 'Status', valor: (u) => u.status, cell: (u) => <StatusBadge status={u.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (u) => u.status, cell: (u) => <StatusBadge status={u.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (u) => (
         <RowActions

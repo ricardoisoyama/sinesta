@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL, formatPct } from '@/lib/format'
 import { buscaPeloNumero } from '@/lib/texto'
 import { nomeUnidade } from '@/features/unidades/mock'
@@ -156,7 +157,7 @@ export function CustosFixosPage() {
     {
       header: 'Nº',
       fixa: true,
-      largura: 56,
+      largura: LARGURA.numero,
       valor: (c) => c.numero ?? 0,
       cell: (c) => <span className={s.numero}>{c.numero || '—'}</span>,
     },
@@ -180,7 +181,7 @@ export function CustosFixosPage() {
     },
     {
       header: 'Empresa que paga',
-      largura: 170,
+      largura: LARGURA.etiqueta,
       valor: (c) => nomeEmpresa(c.unidadeId) + (rateada(c) ? ` (${resumoRateio(c)})` : ''),
       cell: (c) => (
         <div className={s.empresaCel} title={nomeEmpresa(c.unidadeId) + (rateada(c) ? ` · ${resumoRateio(c)}` : '')}>
@@ -202,13 +203,13 @@ export function CustosFixosPage() {
     },
     {
       header: 'Centro de custo',
-      largura: 130,
+      largura: LARGURA.etiqueta,
       valor: (c) => nomeCategoria(c.categoriaId),
       cell: (c) => <span className={s.catTag} title={nomeCategoria(c.categoriaId)}>{nomeCategoria(c.categoriaId)}</span>,
     },
     {
       header: 'Tipo',
-      largura: 100,
+      largura: LARGURA.curta,
       valor: (c) => (c.tipo === 'spot' ? 'Spot' : 'Recorrente'),
       // A vigência (início e término) fica no cadastro; aqui só o tipo e o aviso de fora da DF.
       cell: (c) => (
@@ -222,7 +223,7 @@ export function CustosFixosPage() {
     },
     {
       header: 'Plano de contas',
-      largura: 150,
+      largura: LARGURA.media,
       valor: (c) => (c.planoContaId ? nomePlanoConta(c.planoContaId) : ''),
       cell: (c) => (
         <span className={`${ui.cellMut} ${ui.umaLinha}`} title={c.planoContaId ? nomePlanoConta(c.planoContaId) : undefined}>
@@ -232,14 +233,14 @@ export function CustosFixosPage() {
     },
     {
       header: 'Vencimento',
-      largura: 86,
+      largura: LARGURA.curta,
       valor: (c) => (c.diaVencimento ? `dia ${c.diaVencimento}` : ''),
       cell: (c) => <span className={ui.cellMut}>{c.diaVencimento ? `dia ${c.diaVencimento}` : '—'}</span>,
     },
     {
       header: todas ? 'Valor mensal' : 'Valor desta empresa',
       className: ui.right,
-      largura: 116,
+      largura: LARGURA.valor,
       valor: (c) => formatBRL(valorNoFiltro(c)),
       cell: (c) => (
         <div>
@@ -252,11 +253,11 @@ export function CustosFixosPage() {
         </div>
       ),
     },
-    { header: 'Status', largura: 96, valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
     {
       header: 'Ações',
       fixa: true,
-      largura: 100,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (c) => (
         <RowActions

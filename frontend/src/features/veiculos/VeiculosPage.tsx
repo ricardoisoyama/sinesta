@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { avisar } from '@/features/common/dialogo/dialogo'
 import { createVeiculo, listVeiculos, updateVeiculo } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
@@ -66,6 +67,7 @@ export function VeiculosPage() {
   const columns: Column<Veiculo>[] = [
     {
       header: 'Placa',
+      largura: LARGURA.media,
       fixa: true,
       valor: (v) => `${placaFormatada(v.placaTracao)} ${v.placaReboque ? placaFormatada(v.placaReboque) : ''}`,
       cell: (v) => (
@@ -80,19 +82,20 @@ export function VeiculosPage() {
         </div>
       ),
     },
-    { header: 'Tipo', valor: (v) => v.tipoVeiculo, cell: (v) => v.tipoVeiculo },
-    { header: 'Carroceria', valor: (v) => v.tipoCarroceria, cell: (v) => <span className={ui.cellMut}>{v.tipoCarroceria || '—'}</span> },
+    { header: 'Tipo', largura: LARGURA.media, valor: (v) => v.tipoVeiculo, cell: (v) => v.tipoVeiculo },
+    { header: 'Carroceria', largura: LARGURA.media, valor: (v) => v.tipoCarroceria, cell: (v) => <span className={ui.cellMut}>{v.tipoCarroceria || '—'}</span> },
     {
       header: 'Marca / Modelo',
       valor: (v) => `${v.marca} ${v.modelo}`.trim(),
       cell: (v) => <span className={ui.cellMut}>{`${v.marca} ${v.modelo}`.trim() || '—'}</span>,
     },
-    { header: 'Perfil', valor: (v) => v.perfil, cell: (v) => <span className={ui.cellMut}>{v.perfil || '—'}</span> },
-    { header: 'Proprietário', valor: (v) => v.nomeProprietario, cell: (v) => <span className={ui.cellMut}>{v.nomeProprietario || '—'}</span> },
-    { header: 'Status', valor: (v) => v.status, cell: (v) => <StatusBadge status={v.status} /> },
+    { header: 'Perfil', largura: LARGURA.curta, valor: (v) => v.perfil, cell: (v) => <span className={ui.cellMut}>{v.perfil || '—'}</span> },
+    { header: 'Proprietário', largura: LARGURA.longa, valor: (v) => v.nomeProprietario, cell: (v) => <span className={ui.cellMut}>{v.nomeProprietario || '—'}</span> },
+    { header: 'Status', largura: LARGURA.status, valor: (v) => v.status, cell: (v) => <StatusBadge status={v.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (v) => <RowActions status={v.status} onEdit={() => crud.openEdit(v)} onSetStatus={(st) => setStatus(v, st)} />,
     },

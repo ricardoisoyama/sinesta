@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { usePlanoContas } from '@/features/planoContas/store'
 import {
   listCategoriasCusto,
@@ -78,13 +79,15 @@ export function CategoriasPage() {
     },
     {
       header: 'Conta padrão',
+      largura: LARGURA.longa,
       valor: (c) => (c.planoContaId ? nomeConta(c.planoContaId) : ''),
       cell: (c) => <span className={ui.cellMut}>{c.planoContaId ? nomeConta(c.planoContaId) : '—'}</span>,
     },
-    { header: 'Status', valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (c) => c.status, cell: (c) => <StatusBadge status={c.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (c) => (
         <RowActions status={c.status} onEdit={() => crud.openEdit(c)} onSetStatus={(st) => setStatus(c, st)} />

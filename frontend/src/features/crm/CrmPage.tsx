@@ -17,6 +17,7 @@ import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatBRL } from '@/lib/format'
 import { semAcento } from '@/lib/texto'
 import { getErrorMessage } from '@/lib/api'
@@ -212,9 +213,10 @@ export function CrmPage() {
   const nomeEtapa = (op: Oportunidade) => funil?.etapas.find((e) => e.id === op.etapaId)?.nome ?? ''
   const colunasLista: Column<Oportunidade>[] = [
     { header: 'Cliente', fixa: true, valor: (op) => `${op.cliente} ${op.cnpj}`, cell: (op) => <span className={ui.cellStrong}>{op.cliente}</span> },
-    { header: 'Serviço', valor: (op) => op.servico, cell: (op) => <span className={ui.cellMut}>{op.servico || '—'}</span> },
+    { header: 'Serviço', largura: LARGURA.media, valor: (op) => op.servico, cell: (op) => <span className={ui.cellMut}>{op.servico || '—'}</span> },
     {
       header: 'Etapa',
+      largura: LARGURA.etiqueta,
       valor: nomeEtapa,
       cell: (op) => {
         const etapa = funil?.etapas.find((e) => e.id === op.etapaId)
@@ -226,10 +228,11 @@ export function CrmPage() {
         )
       },
     },
-    { header: 'Responsável', valor: (op) => op.responsavel, cell: (op) => <span className={ui.cellMut}>{op.responsavel}</span> },
-    { header: 'Proposta', valor: (op) => op.propostaNumero, cell: (op) => <span className={ui.cellMut}>{op.propostaNumero || '—'}</span> },
+    { header: 'Responsável', largura: LARGURA.media, valor: (op) => op.responsavel, cell: (op) => <span className={ui.cellMut}>{op.responsavel}</span> },
+    { header: 'Proposta', largura: LARGURA.curta, valor: (op) => op.propostaNumero, cell: (op) => <span className={ui.cellMut}>{op.propostaNumero || '—'}</span> },
     {
       header: 'Próxima ação',
+      largura: LARGURA.longa,
       valor: (op) => `${op.proximaAcao} ${op.proximaAcaoDetalhe}`,
       cell: (op) => (
         <span className={ui.cellMut}>
@@ -238,8 +241,8 @@ export function CrmPage() {
         </span>
       ),
     },
-    { header: 'Valor', className: ui.right, valor: (op) => formatBRL(op.valorEstimado), cell: (op) => <span className={ui.cellStrong}>{formatBRL(op.valorEstimado)}</span> },
-    { header: 'Na etapa', className: ui.right, valor: (op) => diasNaEtapa(op.entrouNaEtapaEm), cell: (op) => <span className={ui.cellMut}>{diasNaEtapa(op.entrouNaEtapaEm)}d</span> },
+    { header: 'Valor', largura: LARGURA.valor, className: ui.right, valor: (op) => formatBRL(op.valorEstimado), cell: (op) => <span className={ui.cellStrong}>{formatBRL(op.valorEstimado)}</span> },
+    { header: 'Na etapa', largura: LARGURA.curta, className: ui.right, valor: (op) => diasNaEtapa(op.entrouNaEtapaEm), cell: (op) => <span className={ui.cellMut}>{diasNaEtapa(op.entrouNaEtapaEm)}d</span> },
   ]
 
   const onDragStart = (ev: DragStartEvent) => {

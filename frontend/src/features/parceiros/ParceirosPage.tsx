@@ -12,6 +12,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatCpfCnpj } from '@/lib/format'
 import {
   listClientes, createCliente, updateCliente,
@@ -149,6 +150,7 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
     },
     {
       header: 'CPF / CNPJ',
+      largura: LARGURA.documento,
       // Exterior não tem CNPJ: mostra a identificação fiscal do país (Tax ID, VAT...).
       valor: (p) => (p.externo ? `${p.taxId ?? ''} exterior` : `${p.cpfCnpj} ${formatCpfCnpj(p.cpfCnpj)}`),
       cell: (p) =>
@@ -160,6 +162,7 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
     },
     {
       header: 'Contato',
+      largura: LARGURA.longa,
       valor: (p) => contatosDoParceiro(p).map((c) => `${c.nome} ${c.email} ${c.telefone}`).join(' '),
       cell: (p) => {
         const lista = contatosDoParceiro(p)
@@ -175,15 +178,17 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
     },
     {
       header: 'Cidade',
+      largura: LARGURA.media,
       valor: (p) => (p.externo ? `${p.cidade} ${p.pais ?? ''}` : p.cidade),
       cell: (p) => <span className={ui.cellMut}>{p.externo ? [p.cidade, p.pais].filter(Boolean).join(', ') || 'Exterior' : p.cidade || '—'}</span>,
     },
-    { header: 'Segmento', valor: (p) => p.segmento, cell: (p) => <span className={ui.cellMut}>{p.segmento || '—'}</span> },
-    { header: 'Grupo', valor: (p) => p.grupoEconomico, cell: (p) => <span className={ui.cellMut}>{p.grupoEconomico || '—'}</span> },
-    { header: 'Status', valor: (p) => p.status, cell: (p) => <StatusBadge status={p.status} /> },
+    { header: 'Segmento', largura: LARGURA.media, valor: (p) => p.segmento, cell: (p) => <span className={ui.cellMut}>{p.segmento || '—'}</span> },
+    { header: 'Grupo', largura: LARGURA.media, valor: (p) => p.grupoEconomico, cell: (p) => <span className={ui.cellMut}>{p.grupoEconomico || '—'}</span> },
+    { header: 'Status', largura: LARGURA.status, valor: (p) => p.status, cell: (p) => <StatusBadge status={p.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (p) => (
         <RowActions status={p.status} onEdit={() => crud.openEdit(p)} onSetStatus={(st) => setStatus(p, st)} />

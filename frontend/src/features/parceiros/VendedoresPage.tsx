@@ -10,6 +10,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { formatCpfCnpj } from '@/lib/format'
 import { descreverRegiao } from './regiao'
 import { listVendedores, createVendedor, updateVendedor, transferirCarteira } from '@/features/cadastros/api'
@@ -113,32 +114,37 @@ export function VendedoresPage() {
     },
     {
       header: 'Tipo',
+      largura: LARGURA.curta,
       valor: (v) => labelTipo(v),
       cell: (v) => <span className={ui.cellMut}>{labelTipo(v)}</span>,
     },
     {
       header: 'CPF / CNPJ',
+      largura: LARGURA.documento,
       valor: (v) => `${v.cpfCnpj} ${formatCpfCnpj(v.cpfCnpj)}`,
       cell: (v) => <span className={ui.cellMut}>{v.cpfCnpj ? formatCpfCnpj(v.cpfCnpj) : '—'}</span>,
     },
-    { header: 'Telefone', valor: (v) => v.telefone, cell: (v) => <span className={ui.cellMut}>{v.telefone || '—'}</span> },
+    { header: 'Telefone', largura: LARGURA.media, valor: (v) => v.telefone, cell: (v) => <span className={ui.cellMut}>{v.telefone || '—'}</span> },
     {
       header: 'Funcionário',
+      largura: LARGURA.media,
       valor: (v) => (v.usuarioId ? 'vinculado' : 'sem acesso'),
       cell: (v) => <span className={ui.cellMut}>{v.usuarioId ? 'Vinculado' : 'Sem acesso ao portal'}</span>,
     },
     {
       header: 'Regiões bloqueadas',
+      largura: LARGURA.longa,
       valor: (v) => (v.regioesBloqueadas ?? []).map(descreverRegiao).join(' '),
       cell: (v) => {
         const lista = v.regioesBloqueadas ?? []
         return <span className={ui.cellMut}>{lista.length ? lista.map((r) => r.valor).join(', ') : '—'}</span>
       },
     },
-    { header: 'Status', valor: (v) => v.status, cell: (v) => <StatusBadge status={v.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (v) => v.status, cell: (v) => <StatusBadge status={v.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (v) => (
         <>

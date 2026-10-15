@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { listServicos, createServico, updateServico, type ServicoDto } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
@@ -87,6 +88,7 @@ export function ServicosPage() {
     },
     {
       header: 'Uso',
+      largura: LARGURA.media,
       valor: (s) => (jaUsado(s.id) ? 'Em proposta' : 'Sem uso'),
       cell: (s) =>
         jaUsado(s.id) ? (
@@ -95,10 +97,11 @@ export function ServicosPage() {
           <span className={ui.cellMut}>—</span>
         ),
     },
-    { header: 'Status', valor: (s) => s.status, cell: (s) => <StatusBadge status={s.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (s) => s.status, cell: (s) => <StatusBadge status={s.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (s) => (
         <RowActions

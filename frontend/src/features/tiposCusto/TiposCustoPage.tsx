@@ -8,6 +8,7 @@ import { StatusBadge } from '@/features/common/StatusBadge'
 import { RowActions } from '@/features/common/RowActions'
 import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
+import { LARGURA } from '@/features/common/grid'
 import { listTiposCusto, createTipoCusto, updateTipoCusto, type TipoCustoDto } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
@@ -81,14 +82,16 @@ export function TiposCustoPage() {
     },
     {
       header: 'Valor pré-cadastrado',
+      largura: LARGURA.valor,
       className: ui.right,
       valor: (t) => descreverValor(t),
       cell: (t) => <span className={ui.cellStrong}>{descreverValor(t)}</span>,
     },
-    { header: 'Status', valor: (t) => t.status, cell: (t) => <StatusBadge status={t.status} /> },
+    { header: 'Status', largura: LARGURA.status, valor: (t) => t.status, cell: (t) => <StatusBadge status={t.status} /> },
     {
       header: 'Ações',
       fixa: true,
+      largura: LARGURA.acoes,
       className: ui.colActions,
       cell: (t) => (
         <RowActions status={t.status} onEdit={() => crud.openEdit(t)} onSetStatus={(st) => setStatus(t, st)} />
