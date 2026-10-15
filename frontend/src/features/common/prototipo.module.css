@@ -12,3 +12,6 @@
 }
 .faixa b { font-weight: 700; }
 .faixa svg { flex-shrink: 0; }
+.faixa > span { flex: 1; min-width: 0; }
+.restaurar { border: 1px solid #e3c99a; background: #fff; color: #7a5214; font: inherit; font-size: 12px; font-weight: 600; border-radius: 7px; padding: 3px 10px; cursor: pointer; white-space: nowrap; }
+.restaurar:hover { border-color: #e8702f; color: #e8702f; }

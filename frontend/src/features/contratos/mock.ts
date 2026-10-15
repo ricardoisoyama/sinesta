@@ -1,4 +1,4 @@
-import type { Contrato, CondicoesContrato, FaturaContrato, ItemEscopo, SituacaoFatura } from './types'
+import type { ComponenteContrato, Contrato, CondicoesContrato, DocumentoVinculado, FaturaContrato, ItemEscopo, SituacaoFatura } from './types'
 
 /**
  * Dados de EXEMPLO do protótipo (Mirai Matriz e Filial). Nada aqui vem do banco.
@@ -67,7 +67,7 @@ const arubaItens = [
   item('a4', 'Terceirização de mão de obra', 'Zelador(a) · escala 6x1 · 7h20', 1, 'posto', 6550, 5280),
 ]
 
-export const CONTRATOS_EXEMPLO: Contrato[] = [
+const BASE: Contrato[] = [
   {
     id: 'c1',
     numero: 'MIR-0001',
@@ -438,4 +438,125 @@ export const CONTRATOS_EXEMPLO: Contrato[] = [
     eventos: [{ data: '2026-09-30', tipo: 'encerramento', texto: 'Contrato encerrado no fim da vigência (cliente não renovou)', quem: 'Ricardo' }, { data: '2025-10-01', tipo: 'assinatura', texto: 'Contrato em vigor (proposta MS-00001)', quem: 'Ricardo' }],
     margemRealizada: 0.152,
   },
+]
+
+// ── ligação com os Modelos de Contrato (Parametrizações) ─────────────────────────────
+
+const componente = (apelido: string, nome: string, regra: ComponenteContrato['regra'], p: Partial<ComponenteContrato> = {}): ComponenteContrato => ({
+  id: `cc-${apelido}`, apelido, nome, regra, unidade: '', valorUnitario: 0, quantidade: 0, formula: '', documento: '', servicoNfse: '', ativo: true, ...p,
+})
+
+const terceirizacao = (caracteristicas: Record<string, string | number>, extras: ComponenteContrato[] = []): Partial<Contrato> => ({
+  modeloId: 'm-terceirizacao',
+  caracteristicas,
+  componentes: [
+    componente('hora_extra', 'Hora extra', 'lancamento', { unidade: 'hora', valorUnitario: 38 }),
+    componente('material', 'Material extra', 'lancamento', { unidade: 'item' }),
+    ...extras,
+  ],
+})
+
+/** O que cada contrato de exemplo usa do modelo (apelido dos itens, características, componentes). */
+const LIGACAO: Record<string, { apelido: string; extra: Partial<Contrato> }> = {
+  c1: { apelido: 'posto', extra: terceirizacao({ escala: '6x1 e 12x36', qtd_postos: 5, turno: 'Misto', convencao: 'SIEMACO Baixada Santista 2026', local: 'Av. Presidente Kennedy, 1200 · Praia Grande' }) },
+  c2: { apelido: 'posto', extra: terceirizacao({ escala: '5x2 e 6x1', qtd_postos: 2, turno: 'Diurno', convencao: 'SIEMACO Baixada Santista 2026' }) },
+  c3: {
+    apelido: 'posto',
+    extra: terceirizacao({ escala: '6x1 e 12x36', qtd_postos: 3, turno: 'Noturno', convencao: 'SIEMACO Baixada Santista 2025' }, [
+      // Mesmo modelo da Aruba, mas aqui o adicional noturno existe (desligado: dá para ligar e ver a fatura mudar).
+      componente('adicional_noturno', 'Adicional noturno', 'formula', { formula: 'posto * 20%', ativo: false, servicoNfse: 'Terceirização de mão de obra' }),
+    ]),
+  },
+  c4: { apelido: 'posto', extra: terceirizacao({ escala: '12x36', qtd_postos: 2, turno: 'Misto' }) },
+  c5: { apelido: 'posto', extra: terceirizacao({ escala: '3x por semana', qtd_postos: 1, turno: 'Diurno' }) },
+  c6: {
+    apelido: 'posicao',
+    extra: {
+      modeloId: 'm-armazenagem',
+      caracteristicas: { posicoes: 120, tipo_pallet: 'PBR', armazem: 'CD Cubatão · rua B' },
+      componentes: [
+        componente('excedente', 'Posição excedente', 'lancamento', { unidade: 'pallet-dia', valorUnitario: 1.4 }),
+        componente('fora_horario', 'Recebimento fora do horário', 'lancamento', { unidade: 'hora', valorUnitario: 102.5 }),
+      ],
+    },
+  },
+  // Transporte com veículo dedicado e mensalidade fixa: mesmo modelo de frete, mas cobra um fixo em vez dos CT-es.
+  c7: {
+    apelido: 'veiculo',
+    extra: {
+      modeloId: 'm-frete',
+      caracteristicas: { tipo_veiculo: 'VUC', veiculo_dedicado: 'FTR4H21', janela: 'seg a sáb, 6h às 14h' },
+      componentes: [componente('pedagio', 'Pedágio', 'lancamento', { unidade: 'praça' })],
+    },
+  },
+  c11: { apelido: 'posto', extra: terceirizacao({ escala: '6x1', qtd_postos: 3, turno: 'Diurno' }) },
+}
+
+// ── contrato de FRETES: contrato-base com tabela; cada viagem entra vinculada com o seu CT-e ──
+
+const fretes: DocumentoVinculado[] = [
+  { id: 'v1', tipo: 'CT-e', numero: '70', data: venc(mesHoje - 1, 3), descricao: 'Cubatão → Jundiaí · Truck · 11 t', valor: 3480, mdfe: '38', canhoto: true, situacao: 'entregue' },
+  { id: 'v2', tipo: 'CT-e', numero: '71', data: venc(mesHoje - 1, 9), descricao: 'Cubatão → Santos (porto) · Truck', valor: 1450, mdfe: '39', canhoto: true, situacao: 'entregue' },
+  { id: 'v3', tipo: 'CT-e', numero: '73', data: venc(mesHoje - 1, 18), descricao: 'Cubatão → Campinas · Carreta · 26 t', valor: 5950, mdfe: '40', canhoto: true, situacao: 'entregue' },
+  { id: 'v4', tipo: 'CT-e', numero: '75', data: venc(mesHoje - 1, 25), descricao: 'Cubatão → Jundiaí · Truck · 9 t', valor: 3480, mdfe: '42', canhoto: true, situacao: 'entregue' },
+  { id: 'v5', tipo: 'CT-e', numero: '79', data: venc(mesHoje, 2), descricao: 'Cubatão → Santos (porto) · Truck', valor: 1450, mdfe: '44', canhoto: true, situacao: 'entregue' },
+  { id: 'v6', tipo: 'CT-e', numero: '81', data: venc(mesHoje, 7), descricao: 'Cubatão → Jundiaí · Truck · 12 t', valor: 3480, mdfe: '45', canhoto: true, situacao: 'entregue' },
+  { id: 'v7', tipo: 'CT-e', numero: '84', data: venc(mesHoje, 12), descricao: 'Cubatão → Campinas · Carreta · 24 t', valor: 5950, mdfe: '47', canhoto: false, situacao: 'em-transito' },
+]
+
+const CONTRATO_FRETES: Contrato = {
+  id: 'c12',
+  numero: 'MRF-0003',
+  empresaId: 'filial',
+  empresaNome: 'Mirai - Filial 02',
+  clienteNome: 'Química Cubatão Ltda',
+  clienteDocumento: '89.012.345/0001-67',
+  contato: 'Expedição · Marcos · (13) 3362-1200',
+  tipoOperacao: 'Transporte',
+  modalidade: 'recorrente',
+  situacao: 'vigente',
+  inicio: '2026-08-01',
+  fim: '2027-07-31',
+  propostaNumero: 'MF-00016',
+  propostaAprovadaEm: '2026-07-22',
+  servicoNfse: 'Transporte de cargas (CT-e)',
+  servicoNfseDetalhe: 'Documento fiscal de cada viagem (CT-e emitido na saída)',
+  textoAdicionalNota: '',
+  centroCusto: 'Transporte',
+  responsavel: 'Jéssica',
+  escopo: [{ versao: 1, vigenteDesde: '2026-08-01', motivo: 'Proposta MF-00016 aprovada (tabela de fretes)', itens: [
+    { ...item('tf1', 'Frete', 'Cubatão → Jundiaí · Truck (até 12 t)', 1, 'viagem', 3480, 2610), apelido: 'fretes', tabela: true },
+    { ...item('tf2', 'Frete', 'Cubatão → Campinas · Carreta (até 27 t)', 1, 'viagem', 5950, 4590), apelido: 'fretes', tabela: true },
+    { ...item('tf3', 'Frete', 'Cubatão → Santos (porto) · Truck', 1, 'viagem', 1450, 1050), apelido: 'fretes', tabela: true },
+  ] }],
+  condicoes: { ...condicoesPadrao, carteira: 'Inter · Filial', diaFaturamento: 1, diaVencimento: 0, prazoPagamentoDias: 15, reajusteIndice: 'Negociado', reajusteMesBase: 8, agrupamento: 'periodo', fechamento: 'quinzenal' },
+  faturas: [],
+  extras: [
+    { id: 'e8', data: venc(mesHoje, 7), tipo: 'custo-extra', descricao: 'Pedágio Anchieta/Bandeirantes (CT-e 81)', quantidade: 1, valorUnitario: 96.4, cobranca: 'proxima-fatura', lancadoPor: 'Jéssica' },
+    { id: 'e9', data: venc(mesHoje, 12), tipo: 'hora-extra', descricao: 'Diária de carreta parada no cliente (CT-e 84)', quantidade: 1, valorUnitario: 650, cobranca: 'proxima-fatura', lancadoPor: 'Jéssica' },
+  ],
+  documentos: [{ id: 'd17', nome: 'Contrato de fretes - Química Cubatão.pdf', tipo: 'contrato', data: '2026-07-28', tamanho: '450 KB' }],
+  eventos: [
+    { data: venc(mesHoje, 12), tipo: 'documento', texto: 'CT-e 84 importado da SIIMP e vinculado (Cubatão → Campinas)', quem: 'sistema' },
+    { data: venc(mesHoje, 7), tipo: 'documento', texto: 'CT-e 81 importado da SIIMP e vinculado (Cubatão → Jundiaí)', quem: 'sistema' },
+    { data: '2026-08-01', tipo: 'assinatura', texto: 'Contrato de fretes em vigor (proposta MF-00016)', quem: 'Jéssica' },
+  ],
+  margemRealizada: 0.219,
+  modeloId: 'm-frete',
+  caracteristicas: { tipo_veiculo: 'Truck e Carreta', rotas: 'Cubatão → Jundiaí, Campinas e porto de Santos', janela: 'seg a sex, 7h às 16h', seguro_rctrc: 0.0035 },
+  componentes: [
+    componente('fretes', 'Fretes do período (CT-e)', 'documento', { documento: 'CT-e', servicoNfse: 'Transporte de cargas (CT-e)' }),
+    componente('pedagio', 'Pedágio', 'lancamento', { unidade: 'praça' }),
+    componente('diaria_parada', 'Diária de veículo parado', 'lancamento', { unidade: 'diária', valorUnitario: 650 }),
+  ],
+  documentosVinculados: fretes,
+}
+
+export const CONTRATOS_EXEMPLO: Contrato[] = [
+  ...BASE.map((c) => {
+    const l = LIGACAO[c.id]
+    if (!l) return c
+    return { ...c, ...l.extra, escopo: c.escopo.map((v) => ({ ...v, itens: v.itens.map((i) => ({ ...i, apelido: i.apelido ?? l.apelido })) })) }
+  }),
+  CONTRATO_FRETES,
 ]

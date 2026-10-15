@@ -20,6 +20,10 @@ import { ContratosPage } from '@/features/contratos/ContratosPage'
 import { PastaContratoPage } from '@/features/contratos/PastaContratoPage'
 import { CentralFaturamentoPage } from '@/features/faturamento/CentralFaturamentoPage'
 import { ProjecaoPage } from '@/features/projecao/ProjecaoPage'
+import { ContratoFormPage } from '@/features/contratos/ContratoFormPage'
+import { ModelosContratoPage } from '@/features/contratos/ModelosContratoPage'
+import { ExigePermissao } from '@/features/auth/ExigePermissao'
+import { PROTOTIPOS } from '@/features/layout/nav'
 import { UnidadesPage } from '@/features/unidades/UnidadesPage'
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage'
 import { ModelosPropostaPage } from '@/features/modelosProposta/ModelosPropostaPage'
@@ -61,8 +65,12 @@ export function App() {
           <Route path="/simulador/antigo" element={<SimuladorPage />} />
           <Route path="/simulador/nova" element={<Navigate to="/simulador" replace />} />
           <Route path="/propostas" element={<PropostasPage />} />
-          <Route path="/contratos" element={<ContratosPage />} />
-          <Route path="/contratos/:id" element={<PastaContratoPage />} />
+          {/* Telas em protótipo: só com a permissão especial "Ver protótipos". */}
+          <Route path="/contratos" element={<ExigePermissao chave={PROTOTIPOS}><ContratosPage /></ExigePermissao>} />
+          <Route path="/contratos/novo" element={<ExigePermissao chave={PROTOTIPOS}><ContratoFormPage /></ExigePermissao>} />
+          <Route path="/contratos/:id" element={<ExigePermissao chave={PROTOTIPOS}><PastaContratoPage /></ExigePermissao>} />
+          <Route path="/contratos/:id/editar" element={<ExigePermissao chave={PROTOTIPOS}><ContratoFormPage /></ExigePermissao>} />
+          <Route path="/cadastros/modelos-contrato" element={<ExigePermissao chave={PROTOTIPOS}><ModelosContratoPage /></ExigePermissao>} />
           <Route path="/crm" element={<CrmPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
 
@@ -90,7 +98,7 @@ export function App() {
           <Route path="/cadastros/fichas-tecnicas" element={<FichasTecnicasPage />} />
 
           {/* Financeiro (fase de layout) */}
-          <Route path="/financeiro/faturamento" element={<CentralFaturamentoPage />} />
+          <Route path="/financeiro/faturamento" element={<ExigePermissao chave={PROTOTIPOS}><CentralFaturamentoPage /></ExigePermissao>} />
           <Route path="/financeiro/entradas-saidas" element={<EntradasSaidasPage />} />
           <Route path="/financeiro/caixa" element={<CaixaPage />} />
           <Route path="/financeiro/conciliacao" element={<ConciliacaoPage />} />
@@ -99,7 +107,7 @@ export function App() {
           <Route path="/analises/break-even" element={<BreakEvenPage />} />
           <Route path="/analises/mix" element={<MixPage />} />
           <Route path="/analises/rpo" element={<RpoPage />} />
-          <Route path="/analises/projecao" element={<ProjecaoPage />} />
+          <Route path="/analises/projecao" element={<ExigePermissao chave={PROTOTIPOS}><ProjecaoPage /></ExigePermissao>} />
           <Route path="/analises/metas" element={<MetasPage />} />
         </Route>
       </Route>

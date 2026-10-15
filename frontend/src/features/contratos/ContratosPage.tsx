@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CalendarClock, FilePlus2, FolderOpen, Repeat, Truck } from 'lucide-react'
+import { CalendarClock, FilePlus2, FolderOpen, LayoutTemplate, Repeat, Truck } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
 import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
 import type { Column } from '@/features/common/DataTable'
 import { LARGURA } from '@/features/common/grid'
-import { avisar } from '@/features/common/dialogo/dialogo'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { formatBRL } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
-import { CONTRATOS_EXEMPLO } from './mock'
+import { prototipo, usePrototipo } from './store'
+import { faturaPorDocumento } from './faturas'
 import { alertasDoContrato, dataBR, diasParaFim, hojeISO, mesAnoNum, progressoVigencia, proximoFaturamento, valorContrato } from './regras'
 import type { Contrato, Modalidade, SituacaoContrato } from './types'
 import { BadgeModalidade, BadgeSituacao, Alertas } from './componentes'
@@ -31,10 +32,11 @@ export function ContratosPage() {
   const [empresa, setEmpresa] = useState('todas')
   const [modalidade, setModalidade] = useState<'todas' | Modalidade>('todas')
   const [situacao, setSituacao] = useState<FiltroSituacao>('ativos')
+  const { contratos } = usePrototipo()
 
-  const empresas = [...new Map(CONTRATOS_EXEMPLO.map((c) => [c.empresaId, c.empresaNome])).entries()]
+  const empresas = [...new Map(contratos.map((c) => [c.empresaId, c.empresaNome])).entries()]
   const q = semAcento(busca.trim())
-  const linhas = CONTRATOS_EXEMPLO.filter((c) => empresa === 'todas' || c.empresaId === empresa)
+  const linhas = contratos.filter((c) => empresa === 'todas' || c.empresaId === empresa)
     .filter((c) => modalidade === 'todas' || c.modalidade === modalidade)
     .filter((c) => (situacao === 'todos' ? true : situacao === 'ativos' ? ATIVOS.includes(c.situacao) : !ATIVOS.includes(c.situacao)))
     .filter((c) => !q || buscaPeloNumero(busca.replace(/\D/g, ''), Number(c.numero.replace(/\D/g, ''))) || semAcento(`${c.numero} ${c.clienteNome} ${c.clienteDocumento} ${c.tipoOperacao} ${c.propostaNumero}`).includes(q))
@@ -86,9 +88,9 @@ export function ContratosPage() {
       valor: (c) => valorContrato(c, hoje),
       cell: (c) => (
         <div className={s.valorCel}>
-          <span className={ui.cellStrong}>{formatBRL(valorContrato(c, hoje))}</span>
+          <span className={ui.cellStrong}>{faturaPorDocumento(c) ? 'por frete' : formatBRL(valorContrato(c, hoje))}</span>
           <small>
-            {c.modalidade === 'spot' ? 'total' : 'por mês'}
+            {faturaPorDocumento(c) ? 'tabela do contrato' : c.modalidade === 'spot' ? 'total' : 'por mês'}
             {proximoFaturamento(c, hoje) ? ` · fatura ${dataBR(proximoFaturamento(c, hoje)!).slice(0, 5)}` : ''}
           </small>
         </div>
@@ -148,22 +150,23 @@ export function ContratosPage() {
         title="Contratos"
         subtitle="Contratos recorrentes e serviços spot de todas as operações. Cada um abre a sua pasta."
         action={
-          <button
-            type="button"
-            className={`${ui.btn} ${ui.btnPrimary}`}
-            onClick={() =>
-              void avisar({
-                titulo: 'Novo contrato',
-                mensagem:
-                  'O contrato nasce da proposta aprovada: no Pricing a proposta diz se é Recorrente ou Spot e, aprovada, ganha o botão "Gerar contrato" (escopo, preço e condições já vêm preenchidos). Também dá para abrir um em branco. No protótipo, esse fluxo ainda não grava.',
-              })
-            }
-          >
-            <FilePlus2 /> Novo contrato
-          </button>
+          <div className={s.acoesTopo}>
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => navigate('/cadastros/modelos-contrato')}>
+              <LayoutTemplate /> Modelos de contrato
+            </button>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/contratos/novo')}>
+              <FilePlus2 /> Novo contrato
+            </button>
+          </div>
         }
       />
-      <AvisoPrototipo />
+      <AvisoPrototipo
+        onRestaurar={async () => {
+          if (await confirmar({ titulo: 'Restaurar os exemplos', mensagem: 'Voltar contratos, modelos e faturas do protótipo para os dados de exemplo? O que foi mexido neste navegador some.', confirmar: 'Restaurar' })) prototipo.restaurarExemplos()
+        }}
+      >
+        dados de exemplo, guardados só neste navegador. Crie, edite e lance à vontade.
+      </AvisoPrototipo>
       <CrudList
         id="contratos"
         query={busca}

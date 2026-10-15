@@ -64,6 +64,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/fiscal/nfse', label: 'Emitir, consultar e cancelar NFS-e (motor fiscal, em teste)', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (faturas da SIIMP → banco)', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/financeiro/integracao-bancaria', label: 'Configurar a integração bancária das empresas (implantação)', grupo: GRUPO_ESPECIAIS, extra: true },
+  { key: '/prototipos', label: 'Ver as telas em protótipo (Contratos, Modelos de Contrato, Faturamento, Projeção)', grupo: GRUPO_ESPECIAIS, extra: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)

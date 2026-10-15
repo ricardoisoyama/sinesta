@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search } from 'lucide-react'
-import { navGroups } from './nav'
+import { visibleGroups } from './nav'
+import { useAuth } from '@/features/auth/auth-context'
 import { abrirSuporte } from '@/features/suporte/eventos'
 import styles from './AppLayout.module.css'
 
@@ -19,9 +20,11 @@ export function GlobalSearch() {
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
 
+  // Só as telas que o usuário pode abrir (as mesmas do menu).
+  const { user } = useAuth()
   const items = useMemo(
-    () => navGroups.flatMap((g) => g.items.map((it) => ({ ...it, grupo: g.label ?? 'Geral' }))),
-    [],
+    () => visibleGroups(user?.permissoes).flatMap((g) => g.items.map((it) => ({ ...it, grupo: g.label ?? 'Geral' }))),
+    [user?.permissoes],
   )
 
   const hits = useMemo(() => {

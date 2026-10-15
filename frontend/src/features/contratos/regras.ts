@@ -24,13 +24,17 @@ export const totalItem = (i: ItemEscopo) => i.quantidade * i.valorUnitario
 export const custoItem = (i: ItemEscopo) => i.quantidade * i.custoUnitario
 const r2 = (v: number) => Math.round(v * 100) / 100
 
-export const totalEscopo = (v: VersaoEscopo) => r2(v.itens.reduce((a, i) => a + totalItem(i), 0))
-export const custoEscopo = (v: VersaoEscopo) => r2(v.itens.reduce((a, i) => a + custoItem(i), 0))
+/** O que o escopo cobra por período (linhas de tabela de preço ficam de fora). */
+export const totalEscopo = (v: VersaoEscopo) => r2(v.itens.filter((i) => !i.tabela).reduce((a, i) => a + totalItem(i), 0))
+export const custoEscopo = (v: VersaoEscopo) => r2(v.itens.filter((i) => !i.tabela).reduce((a, i) => a + custoItem(i), 0))
+/** O escopo é só tabela de preços (contrato por documento: cada frete tem o seu valor). */
+export const ehTabela = (v: VersaoEscopo) => v.itens.length > 0 && v.itens.every((i) => i.tabela)
 
-/** Margem precificada do escopo: (preço − custo) ÷ preço. */
+/** Margem precificada: (preço − custo) ÷ preço. Na tabela de preços, a média das linhas. */
 export function margemPrecificada(v: VersaoEscopo): number {
-  const t = totalEscopo(v)
-  return t > 0 ? (t - custoEscopo(v)) / t : 0
+  const itens = ehTabela(v) ? v.itens : v.itens.filter((i) => !i.tabela)
+  const t = itens.reduce((a, i) => a + totalItem(i), 0)
+  return t > 0 ? (t - itens.reduce((a, i) => a + custoItem(i), 0)) / t : 0
 }
 
 /** Valor do contrato: mensal no recorrente, total do serviço no spot. */
@@ -114,6 +118,7 @@ export const ROTULO_SITUACAO_FATURA: Record<SituacaoFatura, string> = {
   recebida: 'Recebida',
   atrasada: 'Em atraso',
   problema: 'Com problema',
+  devolvida: 'Devolvida',
 }
 
 /** Ordem do ciclo da fatura (para a barra de etapas). */

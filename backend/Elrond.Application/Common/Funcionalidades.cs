@@ -72,6 +72,8 @@ public static class Funcionalidades
         "/financeiro/boleto-teste",
         // Implantação: liga e configura a integração bancária de uma empresa (só a nossa equipe).
         "/financeiro/integracao-bancaria",
+        // Telas em protótipo (dados de exemplo): Contratos, Modelos de Contrato, Faturamento e Projeção.
+        "/prototipos",
     };
 
     public static readonly IReadOnlyList<string> Todas = Base.Concat(Extras).ToList();

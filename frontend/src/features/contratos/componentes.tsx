@@ -33,6 +33,7 @@ const FATURA_CLS: Record<SituacaoFatura, string> = {
   recebida: s.fRecebida,
   atrasada: s.fAtrasada,
   problema: s.fAtrasada,
+  devolvida: s.fDevolvida,
 }
 
 export function BadgeFatura({ situacao }: { situacao: SituacaoFatura }) {

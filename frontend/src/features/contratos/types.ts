@@ -10,10 +10,14 @@ export type Modalidade = 'recorrente' | 'spot'
 export type SituacaoContrato = 'vigente' | 'suspenso' | 'encerrado' | 'a-faturar' | 'faturado'
 
 /** Etapas da fatura (o que anda todo mês). A pasta do contrato só mostra; quem move é a Central de Faturamento. */
-export type SituacaoFatura = 'prevista' | 'a-conferir' | 'conferida' | 'nf-emitida' | 'boleto-emitido' | 'recebida' | 'atrasada' | 'problema'
+export type SituacaoFatura = 'prevista' | 'a-conferir' | 'conferida' | 'nf-emitida' | 'boleto-emitido' | 'recebida' | 'atrasada' | 'problema' | 'devolvida'
 
 export interface ItemEscopo {
   id: string
+  /** Apelido do componente de cobrança (usado nas fórmulas: `posto * 20%`). */
+  apelido?: string
+  /** Linha de tabela de preços (ex.: frete por rota): não entra na mensalidade, só referencia o preço. */
+  tabela?: boolean
   servico: string
   descricao: string
   quantidade: number
@@ -47,6 +51,47 @@ export interface CondicoesContrato {
   carteira: string
   formaCobranca: string
   prazoPagamentoDias: number
+  /**
+   * Contrato com documentos vinculados (fretes com CT-e): uma fatura juntando os documentos do
+   * período ou uma cobrança por documento. Depende do cliente.
+   */
+  agrupamento?: 'periodo' | 'por-documento'
+  fechamento?: 'mensal' | 'quinzenal' | 'semanal'
+}
+
+/** Regra de um componente de cobrança (o que entra na fatura e como se calcula). */
+export type RegraComponente = 'fixo' | 'lancamento' | 'documento' | 'formula' | 'unico'
+
+/** Componente de cobrança do contrato que não é a mensalidade fixa (essa mora no escopo). */
+export interface ComponenteContrato {
+  id: string
+  apelido: string
+  nome: string
+  regra: RegraComponente
+  /** Lançamento: unidade e preço de referência (hora, diária, pallet...). */
+  unidade: string
+  valorUnitario: number
+  /** Único: quantidade cobrada uma vez, na primeira fatura. */
+  quantidade: number
+  /** Fórmula sobre apelidos (escopo, características e "subtotal"). */
+  formula: string
+  /** Documento vinculado: CT-e, NF-e, OS... */
+  documento: string
+  servicoNfse: string
+  ativo: boolean
+}
+
+/** Documento da operação vinculado ao contrato (ex.: frete com CT-e e MDF-e). */
+export interface DocumentoVinculado {
+  id: string
+  tipo: string
+  numero: string
+  data: string
+  descricao: string
+  valor: number
+  mdfe?: string
+  canhoto: boolean
+  situacao: 'em-transito' | 'entregue' | 'cancelado'
 }
 
 export interface FaturaContrato {
@@ -131,4 +176,12 @@ export interface Contrato {
   localServico?: string
   /** Margem realizada no período (custo real lançado ÷ receita), do RPO. */
   margemRealizada: number
+  /** Modelo de contrato (Parametrizações) que define os campos e os componentes. */
+  modeloId?: string
+  /** Valores das características do modelo, por apelido. */
+  caracteristicas?: Record<string, string | number>
+  /** Componentes além da mensalidade: fórmulas, lançamentos, documentos, cobrança única. */
+  componentes?: ComponenteContrato[]
+  /** Documentos da operação vinculados (fretes com CT-e...). */
+  documentosVinculados?: DocumentoVinculado[]
 }

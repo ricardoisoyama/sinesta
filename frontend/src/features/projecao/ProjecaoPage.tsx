@@ -21,6 +21,8 @@ interface Cenario {
 }
 
 const CHAVE = 'elrond.projecao.cenarios.v1'
+/** Id novo (fora dos componentes: Date.now não é puro). */
+const novoId = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 const kBRL = (v: number) => `${v < 0 ? '−' : ''}R$ ${Math.round(Math.abs(v) / 1000)}k`
 const fatorTxt = (f: number) => (f > 0 ? f.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—')
 const PORCENTO: TipoHipotese[] = ['reajuste-custos', 'variacao-meta']
@@ -129,7 +131,7 @@ export function ProjecaoPage() {
     salvarCenarios(cenarios.map((c) => (c.id === cenario.id ? { ...c, hipoteses: fn(c.hipoteses) } : c)))
   }
   const novoCenario = (copiar?: Cenario) => {
-    const id = `c${Date.now()}`
+    const id = novoId('c')
     salvarCenarios([...cenarios, { id, nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: `${h.id}-${id}` })) : [] }])
     setAtivo(id)
   }
@@ -371,7 +373,7 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const valido = form.tipo === 'cortar-custo' ? !!form.custoId : form.valor !== 0
   const adicionar = () => {
     const nomeAuto = form.tipo === 'cortar-custo' ? `Cortar: ${custos.find((c) => c.id === form.custoId)?.nome ?? ''}` : ROTULO_HIPOTESE[form.tipo]
-    onAlterar((h) => [...h, { id: `h${Date.now()}`, tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: porcento ? form.valor / 100 : form.valor, inicio: form.inicio, fim: form.fim || undefined, custoId: form.custoId || undefined, ativa: true }])
+    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: porcento ? form.valor / 100 : form.valor, inicio: form.inicio, fim: form.fim || undefined, custoId: form.custoId || undefined, ativa: true }])
     setForm(vazio)
     setAbrindo(false)
   }

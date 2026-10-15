@@ -1,20 +1,23 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardCheck, FileCheck2, FolderOpen, Landmark, ReceiptText, X } from 'lucide-react'
+import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardCheck, FileCheck2, FilePlus2, FolderOpen, Landmark, ReceiptText, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
 import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
 import type { Column } from '@/features/common/DataTable'
 import { LARGURA, LARGURA_ICONE } from '@/features/common/grid'
-import { avisar } from '@/features/common/dialogo/dialogo'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { formatBRL } from '@/lib/format'
 import { semAcento } from '@/lib/texto'
 import { BadgeFatura, BadgeModalidade } from '@/features/contratos/componentes'
 import { dataBR, ETAPAS_FATURA, hojeISO, ROTULO_SITUACAO_FATURA } from '@/features/contratos/regras'
+import { prototipo, usePrototipo } from '@/features/contratos/store'
+import type { AjusteFatura } from '@/features/contratos/faturas'
 import type { SituacaoFatura } from '@/features/contratos/types'
 import { acaoPossivel, faturasDoMes, ROTULO_ACAO, totalDaFatura, type Acao, type FaturaCentral } from './dados'
 import { ConferenciaModal } from './ConferenciaModal'
+import { NovaCobrancaModal } from './NovaCobrancaModal'
 import s from './faturamento.module.css'
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -27,55 +30,52 @@ const nomeMes = (comp: string) => {
   const m = MESES[Number(comp.slice(5, 7)) - 1]
   return `${m[0].toUpperCase()}${m.slice(1)} de ${comp.slice(0, 4)}`
 }
+const ATENCAO: SituacaoFatura[] = ['atrasada', 'problema', 'devolvida']
 
 type FiltroEtapa = SituacaoFatura | 'todas' | 'atencao'
 
 /**
  * Central de Faturamento (protótipo): o que precisa ser faturado no mês, de todos os contratos e
  * spots. O contrato mora na pasta; quem anda aqui é a fatura: prevista → conferida → NF → boleto →
- * recebida. Sem kanban: uma esteira com os totais por etapa e um grid com ações em lote.
+ * recebida. A conferência pode devolver a fatura (com motivo) para alguém ajustar o contrato.
  */
 export function CentralFaturamentoPage() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const hoje = hojeISO()
+  const { contratos, ajustes } = usePrototipo()
   const [mes, setMes] = useState(hoje.slice(0, 7))
   const [empresa, setEmpresa] = useState('todas')
   const [etapa, setEtapa] = useState<FiltroEtapa>('todas')
   const [busca, setBusca] = useState('')
-  // Mudanças do protótipo (conferir, emitir...) por id de fatura; somem ao sair da tela.
-  const [mudancas, setMudancas] = useState<Record<string, Partial<FaturaCentral>>>({})
-  const [conferindo, setConferindo] = useState<FaturaCentral | null>(null)
-  const [nf, setNf] = useState(1170)
+  const [conferindoId, setConferindoId] = useState<string | null>(null)
+  const [novaCobranca, setNovaCobranca] = useState(false)
   const contratoFiltro = params.get('contrato')
 
-  const doMes = faturasDoMes(mes, hoje).map((f) => ({ ...f, ...mudancas[f.id] }) as FaturaCentral)
+  const doMes = faturasDoMes(contratos, mes, hoje, ajustes)
+  const conferindo = conferindoId ? doMes.find((f) => f.id === conferindoId) ?? null : null
   const daEmpresa = doMes.filter((f) => empresa === 'todas' || f.empresaId === empresa)
-  const empresas = [...new Map(doMes.map((f) => [f.empresaId, f.empresaNome])).entries()]
+  const empresas = [...new Map(contratos.map((c) => [c.empresaId, c.empresaNome])).entries()]
   const q = semAcento(busca.trim())
   const linhas = daEmpresa
     .filter((f) => !contratoFiltro || f.contratoId === contratoFiltro)
-    .filter((f) => etapa === 'todas' || (etapa === 'atencao' ? f.situacao === 'atrasada' || f.situacao === 'problema' : f.situacao === etapa))
+    .filter((f) => etapa === 'todas' || (etapa === 'atencao' ? ATENCAO.includes(f.situacao) : f.situacao === etapa))
     .filter((f) => !q || semAcento(`${f.numero} ${f.clienteNome} ${f.descricao} ${f.nf ?? ''} ${f.boleto ?? ''}`).includes(q))
-    .sort((a, b) => ETAPAS_FATURA.indexOf(a.situacao) - ETAPAS_FATURA.indexOf(b.situacao) || a.vencimento.localeCompare(b.vencimento))
+    .sort((a, b) => Number(!ATENCAO.includes(a.situacao)) - Number(!ATENCAO.includes(b.situacao)) || ETAPAS_FATURA.indexOf(a.situacao) - ETAPAS_FATURA.indexOf(b.situacao) || a.vencimento.localeCompare(b.vencimento))
 
-  const aplicar = (f: FaturaCentral, acao: Acao, extra: Partial<FaturaCentral> = {}): Partial<FaturaCentral> => {
-    if (acao === 'conferir') return { situacao: 'conferida', ...extra }
-    if (acao === 'emitir') return { situacao: 'nf-emitida', nf: f.documentoDaOperacao ? f.nf : String(nf), ...extra }
-    return { situacao: 'boleto-emitido', boleto: `00${nf + 1000}`.slice(-6), ...extra }
-  }
-  const executar = (f: FaturaCentral, acao: Acao, extra: Partial<FaturaCentral> = {}) => {
-    setMudancas((m) => ({ ...m, [f.id]: { ...m[f.id], ...aplicar(f, acao, extra) } }))
-    if (acao !== 'conferir') setNf((n) => n + 1)
-  }
+  // Numeração das NFS-e do protótipo: continua da maior já usada.
+  const proximaNf = () => Math.max(1169, ...Object.values(ajustes).map((a) => Number(a.nf) || 0)) + 1
+  const passo = (f: FaturaCentral, acao: Acao, nf: number): AjusteFatura =>
+    acao === 'conferir' ? { situacao: 'conferida' } : acao === 'emitir' ? { situacao: 'nf-emitida', nf: f.documentoDaOperacao ? f.nf : String(nf) } : { situacao: 'boleto-emitido', boleto: `00${nf + 1000}`.slice(-6) }
+  const textoDe = (acao: Acao, f: FaturaCentral) => (acao === 'conferir' ? 'Conferida' : acao === 'emitir' ? (f.documentoDaOperacao ? 'Cobrança liberada (documento da viagem)' : 'NFS-e emitida') : 'Boleto e Pix gerados')
+
+  const executar = (f: FaturaCentral, acao: Acao) =>
+    prototipo.ajustarFatura(f.id, passo(f, acao, proximaNf()), { quem: 'você', texto: textoDe(acao, f), total: totalDaFatura(f) })
+
   const emLote = (itens: FaturaCentral[], acao: Acao, limpar: () => void) => {
     const aptas = itens.filter((f) => acaoPossivel(f) === acao)
-    const novo: Record<string, Partial<FaturaCentral>> = {}
-    aptas.forEach((f, i) => {
-      novo[f.id] = acao === 'emitir' ? { situacao: 'nf-emitida', nf: f.documentoDaOperacao ? f.nf : String(nf + i) } : acao === 'boleto' ? { situacao: 'boleto-emitido', boleto: `00${nf + 1000 + i}`.slice(-6) } : { situacao: 'conferida' }
-    })
-    setMudancas((m) => ({ ...m, ...Object.fromEntries(Object.entries(novo).map(([id, v]) => [id, { ...m[id], ...v }])) }))
-    if (acao !== 'conferir') setNf((n) => n + aptas.length)
+    const base = proximaNf()
+    prototipo.ajustarFaturas(aptas.map((f, i) => ({ id: f.id, parcial: passo(f, acao, base + i), versao: { quem: 'você', texto: `${textoDe(acao, f)} (em lote)`, total: totalDaFatura(f) } })))
     limpar()
     const fora = itens.length - aptas.length
     void avisar({
@@ -88,7 +88,7 @@ export function CentralFaturamentoPage() {
     const l = daEmpresa.filter((f) => sit.includes(f.situacao))
     return { n: l.length, total: l.reduce((a, f) => a + totalDaFatura(f), 0) }
   }
-  const atencao = contagem(['atrasada', 'problema'])
+  const atencao = contagem(ATENCAO)
 
   const columns: Column<FaturaCentral>[] = [
     { header: 'Contrato', fixa: true, largura: LARGURA.curta, valor: (f) => f.numero, cell: (f) => <span className={s.numero}>{f.numero}</span> },
@@ -104,7 +104,7 @@ export function CentralFaturamentoPage() {
       ),
     },
     { header: 'Modalidade', largura: LARGURA.curta, valor: (f) => f.modalidade, cell: (f) => <BadgeModalidade modalidade={f.modalidade} /> },
-    { header: 'Referência', largura: LARGURA.curta, valor: (f) => f.referencia, cell: (f) => <span className={ui.cellMut}>{f.referencia}</span> },
+    { header: 'Referência', largura: LARGURA.media, valor: (f) => f.referencia, cell: (f) => <span className={ui.cellMut}>{f.referencia}</span> },
     { header: 'Vencimento', largura: LARGURA.data, valor: (f) => dataBR(f.vencimento), cell: (f) => <span className={f.situacao === 'atrasada' ? s.atrasado : undefined}>{dataBR(f.vencimento)}</span> },
     {
       header: 'Total',
@@ -139,7 +139,7 @@ export function CentralFaturamentoPage() {
         const acao = acaoPossivel(f)
         return (
           <>
-            <button type="button" className={ui.iconBtn} title="Conferir a fatura" onClick={(e) => { e.stopPropagation(); setConferindo(f) }}>
+            <button type="button" className={ui.iconBtn} title="Conferir a fatura" onClick={(e) => { e.stopPropagation(); setConferindoId(f.id) }}>
               <ClipboardCheck />
             </button>
             {acao && acao !== 'conferir' && (
@@ -156,8 +156,8 @@ export function CentralFaturamentoPage() {
     },
   ]
 
-  const passo = (sit: SituacaoFatura, i: number) => {
-    const c = contagem(sit === 'boleto-emitido' ? ['boleto-emitido'] : [sit])
+  const passoEsteira = (sit: SituacaoFatura, i: number) => {
+    const c = contagem([sit])
     return (
       <button key={sit} type="button" className={`${s.passo} ${etapa === sit ? s.passoOn : ''} ${c.n === 0 ? s.passoVazio : ''}`} onClick={() => setEtapa(etapa === sit ? 'todas' : sit)} aria-pressed={etapa === sit}>
         <span className={s.passoNum}>{i + 1}</span>
@@ -189,10 +189,17 @@ export function CentralFaturamentoPage() {
               <option value="todas">Todas as empresas</option>
               {empresas.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
             </select>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setNovaCobranca(true)}><FilePlus2 /> Novo spot ou cobrança</button>
           </div>
         }
       />
-      <AvisoPrototipo>dados de exemplo; conferir, emitir e gerar boleto aqui só mudam a tela (nada vai para a prefeitura nem para o banco).</AvisoPrototipo>
+      <AvisoPrototipo
+        onRestaurar={async () => {
+          if (await confirmar({ titulo: 'Restaurar os exemplos', mensagem: 'Voltar contratos, modelos e faturas do protótipo para os dados de exemplo? O que foi mexido neste navegador some.', confirmar: 'Restaurar' })) prototipo.restaurarExemplos()
+        }}
+      >
+        dados de exemplo, guardados só neste navegador; conferir, emitir e gerar boleto não vão para a prefeitura nem para o banco.
+      </AvisoPrototipo>
 
       <div className={s.painel}>
         <div className={s.totais}>
@@ -206,16 +213,16 @@ export function CentralFaturamentoPage() {
           </div>
           {atencao.n > 0 && (
             <button type="button" className={`${s.atencao} ${etapa === 'atencao' ? s.atencaoOn : ''}`} onClick={() => setEtapa(etapa === 'atencao' ? 'todas' : 'atencao')}>
-              <AlertTriangle size={15} /> {atencao.n} em atraso ou com problema · {formatBRL(atencao.total)}
+              <AlertTriangle size={15} /> {atencao.n} em atraso, devolvida(s) ou com problema · {formatBRL(atencao.total)}
             </button>
           )}
         </div>
-        <div className={s.esteira}>{ETAPAS_FATURA.map(passo)}</div>
+        <div className={s.esteira}>{ETAPAS_FATURA.map(passoEsteira)}</div>
       </div>
 
       {contratoFiltro && (
         <div className={s.filtroContrato}>
-          Mostrando só o contrato {doMes.find((f) => f.contratoId === contratoFiltro)?.numero ?? ''}
+          Mostrando só o contrato {contratos.find((c) => c.id === contratoFiltro)?.numero ?? ''}
           <button type="button" onClick={() => setParams({})} aria-label="Tirar o filtro"><X size={13} /> ver todos</button>
         </div>
       )}
@@ -230,7 +237,7 @@ export function CentralFaturamentoPage() {
         getKey={(f) => f.id}
         rotulo={['fatura', 'faturas']}
         pageSize={12}
-        onRowClick={setConferindo}
+        onRowClick={(f) => setConferindoId(f.id)}
         empty={etapa === 'todas' ? 'Nenhuma fatura neste mês.' : `Nenhuma fatura em "${etapa === 'atencao' ? 'atenção' : ROTULO_SITUACAO_FATURA[etapa]}".`}
         acoesLote={({ itens, limpar }) => (
           <>
@@ -243,15 +250,33 @@ export function CentralFaturamentoPage() {
 
       <ConferenciaModal
         fatura={conferindo}
-        onClose={() => setConferindo(null)}
+        onClose={() => setConferindoId(null)}
         onAbrirPasta={(id) => navigate(`/contratos/${id}`)}
-        onAprovar={(f, ajustes, emitir) => {
-          executar(f, 'conferir', ajustes)
-          if (emitir) setMudancas((m) => ({ ...m, [f.id]: { ...m[f.id], ...ajustes, situacao: 'nf-emitida', nf: f.documentoDaOperacao ? f.nf : String(nf) } }))
-          if (emitir) setNf((n) => n + 1)
-          setConferindo(null)
+        onAprovar={(f, ajuste, emitir, totalNovo) => {
+          const nf = proximaNf()
+          prototipo.ajustarFatura(
+            f.id,
+            emitir ? { ...ajuste, situacao: 'nf-emitida', nf: f.documentoDaOperacao ? f.nf : String(nf) } : { ...ajuste, situacao: 'conferida' },
+            { quem: 'você', texto: emitir ? (f.documentoDaOperacao ? 'Conferida e cobrança liberada' : 'Conferida e NFS-e emitida') : 'Conferência aprovada', total: totalNovo },
+          )
+          setConferindoId(null)
+        }}
+        onDevolver={(f, motivo, totalAtual) => {
+          prototipo.ajustarFatura(f.id, { situacao: 'devolvida', motivo }, { quem: 'você', texto: `Devolvida na conferência: ${motivo}`, total: totalAtual })
+          setConferindoId(null)
         }}
       />
+      {novaCobranca && (
+        <NovaCobrancaModal
+          onClose={() => setNovaCobranca(false)}
+          onCriado={(id, mesFatura) => {
+            setNovaCobranca(false)
+            setMes(mesFatura)
+            setConferindoId(null)
+            void avisar({ titulo: 'Criado', mensagem: 'O spot já tem a sua pasta e a fatura está "A conferir" nesta lista.' }).then(() => navigate(`/financeiro/faturamento?contrato=${id}`))
+          }}
+        />
+      )}
     </div>
   )
 }
