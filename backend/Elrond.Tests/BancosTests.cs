@@ -172,7 +172,7 @@ public class BancosTests
         var empresas = new MemRepo<Empresa>();
         empresas.Itens.Add(new Empresa { Id = "emp2", Nome = "Mirai" });
         var bancos = new BancosRegistro(new IBancoModulo[] { new SimuladorModulo(new SimuladorCobranca()) });
-        var svc = new IntegracaoBancariaService(integracoes, empresas, bancos, cofre, new FakeAuditoria());
+        var svc = new IntegracaoBancariaService(integracoes, empresas, new MemRepo<Carteira>(), bancos, cofre, new FakeAuditoria());
 
         var semSegredo = await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("simulador", "sandbox", "client", null, null, null, null, null, true));
         Assert.Contains("primeira configuração", semSegredo.Error);
@@ -189,6 +189,83 @@ public class BancosTests
         var mantem = await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("simulador", "sandbox", "client", null, null, null, null, new() { "cobranca" }, false));
         Assert.True(mantem.IsSuccess, mantem.Error);
         Assert.Equal("segredo", cofre.Abrir(integracoes.Itens.Single(x => x.EmpresaId == "emp2")).ClientSecret);
+    }
+
+    [Fact]
+    public async Task Padroes_do_boleto_e_conta_do_caixa_sao_conferidos_e_gravados()
+    {
+        var (_, _, integracoes, cofre) = Montar();
+        var empresas = new MemRepo<Empresa>();
+        empresas.Itens.Add(new Empresa { Id = "emp", Nome = "Mirai" });
+        var carteiras = new MemRepo<Carteira>();
+        carteiras.Itens.Add(new Carteira { Id = "cx-inter", EmpresaId = "emp", Tipo = "banco", Nome = "Inter" });
+        carteiras.Itens.Add(new Carteira { Id = "cx-outra", EmpresaId = "emp-b", Tipo = "banco", Nome = "Itaú da filial" });
+        carteiras.Itens.Add(new Carteira { Id = "cx-caixinha", EmpresaId = "emp", Tipo = "caixa", Nome = "Caixinha" });
+        var bancos = new BancosRegistro(new IBancoModulo[] { new SimuladorModulo(new SimuladorCobranca()) });
+        var svc = new IntegracaoBancariaService(integracoes, empresas, carteiras, bancos, cofre, new FakeAuditoria());
+        ConfigurarIntegracaoDto Dto(string? carteira = null, RegrasBoleto? regras = null) =>
+            new("simulador", "sandbox", "id", null, null, null, null, new() { "cobranca" }, true, carteira, regras);
+
+        Assert.Contains("outra empresa", (await svc.ConfigurarAsync("emp", Dto("cx-outra"))).Error);
+        Assert.Contains("conta bancária", (await svc.ConfigurarAsync("emp", Dto("cx-caixinha"))).Error);
+        Assert.Contains("valor da multa", (await svc.ConfigurarAsync("emp", Dto(regras: new RegrasBoleto { MultaTipo = RegrasBoleto.Percentual }))).Error);
+        Assert.Contains("0 a 60", (await svc.ConfigurarAsync("emp", Dto(regras: new RegrasBoleto { DiasBaixa = 90 }))).Error);
+        Assert.Contains("até 3 linhas", (await svc.ConfigurarAsync("emp", Dto(regras: new RegrasBoleto { Instrucoes = new() { "a", "b", "c", "d" } }))).Error);
+
+        var ok = await svc.ConfigurarAsync("emp", Dto("cx-inter", new RegrasBoleto
+        {
+            MultaTipo = RegrasBoleto.Percentual, Multa = 2, JurosTipo = RegrasBoleto.PercentualMes, Juros = 1,
+            DescontoTipo = RegrasBoleto.Nenhum, Desconto = 5, DiasBaixa = 15, Instrucoes = new() { " Não receber após 15 dias ", "" },
+        }));
+        Assert.True(ok.IsSuccess, ok.Error);
+        Assert.Equal("cx-inter", ok.Value!.CarteiraId);
+        Assert.Equal(0, ok.Value.Boleto.Desconto); // sem desconto não guarda valor solto
+        Assert.Equal(new[] { "Não receber após 15 dias" }, ok.Value.Boleto.Instrucoes);
+
+        // Reconfigurar sem mandar regras nem carteira mantém as gravadas.
+        var mantem = await svc.ConfigurarAsync("emp", Dto());
+        Assert.Equal(("cx-inter", 15), (mantem.Value!.CarteiraId, mantem.Value.Boleto.DiasBaixa));
+    }
+
+    [Fact]
+    public async Task Emissao_usa_os_padroes_da_integracao()
+    {
+        var (svc, _, integracoes, _) = Montar();
+        integracoes.Itens.Single().Boleto = new RegrasBoleto { DiasBaixa = 10, Instrucoes = new() { "Após o vencimento, multa de 2%" } };
+        var c = (await svc.EmitirAsync("emp", Parcela1, Pedido())).Value!;
+        Assert.Equal(CobrancaBancaria.AReceber, c.Situacao);
+        Assert.Equal(new[] { "Fatura 61 · parcela 1/1", "Após o vencimento, multa de 2%" },
+            CobrancaService.Mensagens(new[] { "Fatura 61 · parcela 1/1" }, integracoes.Itens.Single().RegrasDoBoleto));
+        // Nunca passa de 5 linhas, a referência vem primeiro.
+        var muitas = CobrancaService.Mensagens(new[] { "r1", "r2" }, new RegrasBoleto { Instrucoes = new() { "i1", "i2", "i3", "i4" } });
+        Assert.Equal(new[] { "r1", "r2", "i1", "i2", "i3" }, muitas);
+    }
+
+    [Fact]
+    public void Multa_juros_desconto_e_pix_vao_no_formato_do_Inter()
+    {
+        var pagador = new PagadorCobranca("529.982.247-25", "Fulano", "Rua", "1", "", "Centro", "Santos", "SP", "11010-000", "", "");
+        var regras = new RegrasBoleto
+        {
+            MultaTipo = RegrasBoleto.Percentual, Multa = 2, JurosTipo = RegrasBoleto.ValorDia, Juros = 0.333m,
+            DescontoTipo = RegrasBoleto.Valor, Desconto = 5, DescontoDiasAntes = 3, ComPix = false,
+        };
+        var p = InterMapeador.Pedido(new PedidoCobranca("000001", 100m, Venc, 15, pagador, Array.Empty<string>(), regras));
+        Assert.Equal(new InterEncargo("PERCENTUAL", Taxa: 2), p.Multa);
+        Assert.Equal(new InterEncargo("VALORDIA", Valor: 0.33m), p.Mora);
+        Assert.Equal(new InterEncargo("VALORFIXODATAINFORMADA", Valor: 5, QuantidadeDias: 3), p.Desconto);
+        Assert.Equal(new[] { "BOLETO" }, p.FormasRecebimento);
+        Assert.Equal(15, p.NumDiasAgenda);
+
+        var json = JsonSerializer.Serialize(p, InterJson.Opcoes);
+        Assert.Contains("\"multa\":{\"codigo\":\"PERCENTUAL\",\"taxa\":2}", json);
+
+        // Sem regras: nada de multa/mora/desconto e o Inter decide boleto + Pix (como antes).
+        var simples = InterMapeador.Pedido(new PedidoCobranca("000002", 100m, Venc, 30, pagador, Array.Empty<string>()));
+        Assert.Null(simples.Multa);
+        Assert.Null(simples.Mora);
+        Assert.Null(simples.Desconto);
+        Assert.Null(simples.FormasRecebimento);
     }
 
     // ── tradução do Inter ──

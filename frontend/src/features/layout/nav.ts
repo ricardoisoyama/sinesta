@@ -38,10 +38,11 @@ import {
   LineChart,
   LayoutTemplate,
   Truck,
+  Plug,
   type LucideIcon,
 } from 'lucide-react'
 
-/** Permissão especial que mostra as telas em protótipo (desligada para todos; ligada por usuário). */
+/** Permissão administrativa que mostra as telas em protótipo (só o perfil Suporte, a equipe ELROND). */
 export const PROTOTIPOS = '/prototipos'
 
 export interface NavItem {
@@ -140,6 +141,8 @@ export const navGroups: NavGroup[] = [
       // Abre a janela do suporte (canto inferior direito). Vira tela quando houver o módulo de chamados.
       { label: 'Suporte (prévia)', path: '#suporte', icon: LifeBuoy, acao: 'suporte', livre: true },
       { label: 'Auditoria', path: '/cadastros/auditoria', icon: History },
+      // Só o perfil Suporte (a equipe ELROND): bancos das empresas.
+      { label: 'Integrações', path: '/administrativo/integracoes', icon: Plug },
     ],
   },
 ]

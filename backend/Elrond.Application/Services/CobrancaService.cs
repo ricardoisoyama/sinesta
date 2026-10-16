@@ -39,8 +39,8 @@ public sealed class CobrancaService(
 {
     /// <summary>Valor mínimo aceito pelo Inter (e uma referência razoável para os demais).</summary>
     public const decimal ValorMinimo = 2.50m;
-    /// <summary>Dias depois do vencimento até o banco dar baixa sozinho.</summary>
-    public const int DiasAgendaPadrao = 30;
+    /// <summary>Linhas de texto que o boleto comporta (padrão dos bancos).</summary>
+    public const int MaxLinhasBoleto = 5;
 
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
 
@@ -83,7 +83,8 @@ public sealed class CobrancaService(
         await cobrancas.AddAsync(cobranca);
 
         var credencial = cofre.Abrir(integracao);
-        var envio = await banco.EmitirAsync(credencial, new PedidoCobranca(cobranca.SeuNumero, cobranca.Valor, cobranca.Vencimento, DiasAgendaPadrao, pedido.Pagador, pedido.Mensagens), ct);
+        var regras = integracao.RegrasDoBoleto;
+        var envio = await banco.EmitirAsync(credencial, new PedidoCobranca(cobranca.SeuNumero, cobranca.Valor, cobranca.Vencimento, regras.DiasBaixa, pedido.Pagador, Mensagens(pedido.Mensagens, regras), regras), ct);
         switch (envio.Desfecho)
         {
             case DesfechoEnvioBanco.Aceito:
@@ -195,6 +196,15 @@ public sealed class CobrancaService(
         await cobrancas.UpdateAsync(c.Id, c);
         return c;
     }
+
+    /// <summary>Texto do boleto: primeiro a referência da cobrança, depois as instruções da integração (até 5 linhas de 78).</summary>
+    public static List<string> Mensagens(IReadOnlyList<string> referencia, RegrasBoleto regras) =>
+        referencia.Concat(regras.Instrucoes)
+            .Select(m => (m ?? string.Empty).Trim())
+            .Where(m => m.Length > 0)
+            .Select(m => m.Length <= RegrasBoleto.MaxCaracteresLinha ? m : m[..RegrasBoleto.MaxCaracteresLinha])
+            .Take(MaxLinhasBoleto)
+            .ToList();
 
     /// <summary>Próximo seu número da empresa: sequência numérica (até 15 caracteres, como o Inter aceita).</summary>
     private async Task<string> ProximoSeuNumeroAsync(string empresaId)

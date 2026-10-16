@@ -11,8 +11,9 @@ import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
 import { useUsuarios } from './store'
 import { UsuarioFormModal } from './UsuarioFormModal'
-import { TODAS_FUNCIONALIDADES } from './funcionalidades'
-import type { Usuario } from './types'
+import { useAuth } from '@/features/auth/auth-context'
+import { FUNCIONALIDADES_CONCEDIVEIS } from './funcionalidades'
+import { rotuloPerfil, temPoderDeGestor, type Usuario } from './types'
 import type { UsuarioForm } from './usuario-schema'
 
 function iniciais(nome: string) {
@@ -22,6 +23,7 @@ function iniciais(nome: string) {
 
 export function UsuariosPage() {
   const { usuarios, add, update } = useUsuarios()
+  const souAdmin = useAuth().user?.perfil === 'Admin'
   const [query, setQuery] = useState('')
   const [editing, setEditing] = useState<Usuario | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
@@ -61,7 +63,7 @@ export function UsuariosPage() {
     }
   }
 
-  const totalFuncs = TODAS_FUNCIONALIDADES.length
+  const totalFuncs = FUNCIONALIDADES_CONCEDIVEIS.length
 
   const columns: Column<Usuario>[] = [
     {
@@ -92,10 +94,10 @@ export function UsuariosPage() {
     {
       header: 'Perfil',
       largura: LARGURA.curta,
-      valor: (u) => u.perfil,
+      valor: (u) => rotuloPerfil(u.perfil),
       cell: (u) => (
-        <span className={`${ui.badge} ${u.perfil === 'Gestor' ? ui.badgeOk : ui.badgeOff}`}>
-          {u.perfil}
+        <span className={`${ui.badge} ${u.perfil === 'Admin' ? ui.badgeInfo : u.perfil === 'Gestor' ? ui.badgeOk : ui.badgeOff}`}>
+          {rotuloPerfil(u.perfil)}
         </span>
       ),
     },
@@ -105,7 +107,7 @@ export function UsuariosPage() {
       className: ui.right,
       cell: (u) => (
         <span className={ui.cellMut}>
-          {u.perfil === 'Gestor' ? 'Todas' : `${u.permissoes.length} de ${totalFuncs}`}
+          {temPoderDeGestor(u.perfil) ? 'Todas' : `${u.permissoes.filter((p) => FUNCIONALIDADES_CONCEDIVEIS.includes(p)).length} de ${totalFuncs}`}
         </span>
       ),
     },
@@ -120,6 +122,9 @@ export function UsuariosPage() {
           status={u.status}
           onEdit={() => openEdit(u)}
           onSetStatus={(st) => setStatus(u, st)}
+          // Suporte é da equipe ELROND: o cliente vê, mas não altera.
+          podeEditar={souAdmin || u.perfil !== 'Admin'}
+          motivoBloqueio="Usuário de suporte da equipe ELROND"
         />
       ),
     },

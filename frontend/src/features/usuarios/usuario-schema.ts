@@ -6,7 +6,7 @@ import { bancoVazio, enderecoVazio } from '@/features/parceiros/types'
 export const usuarioSchema = z.object({
   nome: z.string().min(2, 'Informe o nome'),
   email: z.string().email('E-mail inválido'),
-  perfil: z.enum(['Gestor', 'Colaborador']),
+  perfil: z.enum(['Admin', 'Gestor', 'Colaborador']),
   permissoes: z.array(z.string()).min(1, 'Libere ao menos uma funcionalidade'),
   status: z.enum(['ativo', 'inativo']),
   /** No cadastro é obrigatória (validada no modal); na edição, em branco = manter. */

@@ -16,6 +16,7 @@ import { nomeVeiculo } from '@/features/veiculos/types'
 import { margem as calcMargem, precoParaMargem, precoVenda } from '@/features/pricing/engine'
 import { useFator, usePrecoServidor } from '@/features/pricing/usePreco'
 import { useAuth } from '@/features/auth/auth-context'
+import { temPoderDeGestor } from '@/features/usuarios/types'
 import { useUsuarios } from '@/features/usuarios/store'
 import { usePropostas } from '@/features/propostas/store'
 import { useModelosProposta } from '@/features/modelosProposta/store'
@@ -63,7 +64,7 @@ export function PricingPage() {
   const campos = camposDo(tipoOperacaoId)
   const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichasDaEmpresa(empresaId)
   const { user } = useAuth()
-  const ehGestor = user?.perfil === 'Gestor'
+  const ehGestor = temPoderDeGestor(user?.perfil)
   const perms = user?.permissoes ?? []
   const podeVerCalculo = perms.includes('/simulador/calculo')
   const podeAlterarPagamento = perms.includes('/propostas/alterar-pagamento')

@@ -27,6 +27,7 @@ public static class InterMapeador
         var fone = DocumentoFiscal.Digitos(g.Telefone);
         var linhas = p.Mensagens.Where(m => !string.IsNullOrWhiteSpace(m)).Select(m => Cortar(m, 78)).Take(5).ToList();
         string? Linha(int i) => i < linhas.Count ? linhas[i] : null;
+        var r = p.Regras ?? new RegrasBoleto();
         return new InterEmitirCobranca(
             p.SeuNumero,
             Math.Round(p.Valor, 2, MidpointRounding.AwayFromZero),
@@ -46,8 +47,30 @@ public static class InterMapeador
                 Vazio(Cortar(g.Email, 50)),
                 fone.Length >= 10 ? fone[..2] : null,
                 fone.Length >= 10 ? fone[2..Math.Min(fone.Length, 11)] : null),
-            linhas.Count > 0 ? new InterMensagem(Linha(0), Linha(1), Linha(2), Linha(3), Linha(4)) : null);
+            linhas.Count > 0 ? new InterMensagem(Linha(0), Linha(1), Linha(2), Linha(3), Linha(4)) : null,
+            r.MultaTipo switch
+            {
+                RegrasBoleto.Percentual => new InterEncargo("PERCENTUAL", Taxa: Dinheiro(r.Multa)),
+                RegrasBoleto.Valor => new InterEncargo("VALORFIXO", Valor: Dinheiro(r.Multa)),
+                _ => null,
+            },
+            r.JurosTipo switch
+            {
+                RegrasBoleto.PercentualMes => new InterEncargo("TAXAMENSAL", Taxa: Dinheiro(r.Juros)),
+                RegrasBoleto.ValorDia => new InterEncargo("VALORDIA", Valor: Dinheiro(r.Juros)),
+                _ => null,
+            },
+            r.DescontoTipo switch
+            {
+                RegrasBoleto.Percentual => new InterEncargo("PERCENTUALDATAINFORMADA", Taxa: Dinheiro(r.Desconto), QuantidadeDias: r.DescontoDiasAntes),
+                RegrasBoleto.Valor => new InterEncargo("VALORFIXODATAINFORMADA", Valor: Dinheiro(r.Desconto), QuantidadeDias: r.DescontoDiasAntes),
+                _ => null,
+            },
+            // Sem informar, o Inter gera boleto + Pix (quando a conta tem chave): só restringe quando pedimos sem Pix.
+            r.ComPix ? null : ["BOLETO"]);
     }
+
+    private static decimal Dinheiro(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
     public static SituacaoNoBanco Situacao(InterCobrancaResposta r)
     {

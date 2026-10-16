@@ -298,6 +298,9 @@ public class AppDbContext : DbContext
             e.Property(i => i.Banco).IsRequired().HasMaxLength(30);
             e.Property(i => i.Ambiente).HasMaxLength(20);
             e.Property(i => i.Recursos).HasColumnType("text[]");
+            e.Property(i => i.CarteiraId).HasMaxLength(80).HasDefaultValue(string.Empty);
+            e.OwnsOne(i => i.Boleto, b => b.ToJson());
+            e.Ignore(i => i.RegrasDoBoleto);
             e.HasIndex(i => new { i.EmpresaId, i.Banco }).IsUnique();
         });
 

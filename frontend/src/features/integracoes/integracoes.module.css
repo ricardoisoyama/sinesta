@@ -1,0 +1,63 @@
+/* Administrativo › Integrações. Segue a paleta do ui.module.css (verde ELROND, laranja dos títulos). */
+
+.resumo { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; margin: 0 0 12px; font-size: 12.5px; color: #4f5f56; }
+.resumo span { display: inline-flex; align-items: center; gap: 6px; }
+
+.textoAlerta { color: #b5651d; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.badgeProducao { background: #fdecea; color: #a33a2a; }
+.btnLinha { padding: 6px 10px; font-size: 12px; }
+.btnLinha svg { width: 14px; height: 14px; }
+
+.footerEsq { margin-right: auto; }
+
+.rotulo { display: block; font-size: 11.5px; font-weight: 600; color: #3d4b43; margin-bottom: 6px; }
+.nota { display: block; font-size: 11.5px; color: #6b7b72; line-height: 1.45; margin-top: 6px; }
+
+.segmento { display: inline-flex; border: 1px solid #e6e3db; border-radius: 9px; overflow: hidden; background: #f6f5f1; }
+.segmentoOpcao { border: 0; background: transparent; padding: 8px 14px; font: inherit; font-size: 12.5px; font-weight: 600; color: #6b7b72; cursor: pointer; }
+.segmentoOpcao + .segmentoOpcao { border-left: 1px solid #e6e3db; }
+.segmentoOpcao:focus-visible { outline: 2px solid #1a4d1e; outline-offset: -2px; }
+.segmentoOn { background: #eef4ef; color: #1a4d1e; }
+.segmentoProducao { background: #fdecea; color: #a33a2a; }
+
+.linhaLigar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.linhaLigar .nota { margin-top: 0; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.aviso { display: flex; align-items: flex-start; gap: 8px; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45; margin-top: 10px; }
+.aviso svg { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+.aviso:first-child { margin: 0 0 14px; }
+.avisoOk { background: #e8f5ec; color: #2e7d44; }
+.avisoErro { background: #fdecea; color: #a33a2a; }
+.avisoAtencao { background: #fdf0e6; color: #8f4f15; }
+
+.cert { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: #2e7d44; margin-bottom: 8px; }
+.cert svg { width: 16px; height: 16px; }
+.certAlerta { color: #b5651d; }
+.arquivos { display: flex; flex-wrap: wrap; gap: 8px; }
+.arquivo { cursor: pointer; max-width: 100%; }
+.arquivo svg { width: 15px; height: 15px; }
+
+/* Padrões do boleto: campos à esquerda, prévia do que o pagador vê à direita. */
+.regras { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 18px; align-items: start; }
+.regrasCampos { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.par { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.instrucoes { display: flex; flex-direction: column; gap: 6px; }
+.instrucao { position: relative; }
+/* Mesmo padrão dos campos do ui.module.css (.field input). */
+.instrucao input { height: 36px; width: 100%; border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 52px 8px 11px; font-size: 13px; font-family: inherit; color: #1f2a24; background: #fff; outline: none; transition: 0.15s; }
+.instrucao input:focus { border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
+.contador { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-size: 10.5px; color: #8a978f; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+.previa { background: #f6f5f1; border: 1px dashed #d8d4c9; border-radius: 10px; padding: 12px 14px; font-size: 12px; color: #3d4b43; position: sticky; top: 0; }
+.previaTitulo { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; margin-bottom: 8px; }
+.previa ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+
+.secaoFutura { background: #fbfaf7; border-style: dashed; }
+
+@media (max-width: 720px) {
+  .regras { grid-template-columns: 1fr; }
+  .previa { position: static; }
+  .par { grid-template-columns: 1fr 1fr; }
+}

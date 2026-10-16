@@ -20,10 +20,12 @@ public static class DbSeeder
     {
         if (await db.Users.AnyAsync()) return;
 
+        // O admin inicial é da nossa equipe (perfil Admin, "Suporte" para o cliente); o gestor do
+        // cliente é cadastrado por ele na implantação.
         var usuarios = new List<User>
         {
             new(adminEmail, "Administrador",
-                hasher.Hash(adminSenha), "Gestor", Funcionalidades.Preset("Gestor")),
+                hasher.Hash(adminSenha), Perfis.Admin, Funcionalidades.Base),
         };
 
         if (demo)

@@ -15,6 +15,7 @@ import { PageHeader } from '@/features/common/PageHeader'
 import { formatBRL, formatPct } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { useAuth } from '@/features/auth/auth-context'
+import { temPoderDeGestor } from '@/features/usuarios/types'
 import { usePropostas } from '@/features/propostas/store'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { mesesDaMeta, mesesMeta, type CenarioMeta } from './mock'
@@ -56,7 +57,7 @@ export function MetasPage() {
   const { propostas } = usePropostas()
   const { user } = useAuth()
   // Só o gestor cria/edita/remove metas; o colaborador acompanha.
-  const ehGestor = user?.perfil === 'Gestor'
+  const ehGestor = temPoderDeGestor(user?.perfil)
 
   const [cenarioId, setCenarioId] = useState('')
   const [modalOpen, setModalOpen] = useState(false)

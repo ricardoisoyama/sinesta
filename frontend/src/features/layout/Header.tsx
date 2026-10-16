@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, LogOut } from 'lucide-react'
 import { useAuth } from '@/features/auth/auth-context'
+import { rotuloPerfil } from '@/features/usuarios/types'
 import { useParticleField, type ParticleOptions } from './use-particles'
 import { GlobalSearch } from './GlobalSearch'
 import styles from './AppLayout.module.css'
@@ -27,7 +28,7 @@ export function Header() {
   }, [])
 
   const name = user?.name ?? 'Usuário'
-  const role = user?.perfil ?? ''
+  const role = rotuloPerfil(user?.perfil)
 
   return (
     <header className={styles.topbar} ref={topbarRef}>

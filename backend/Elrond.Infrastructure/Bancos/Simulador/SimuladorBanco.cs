@@ -57,5 +57,7 @@ public sealed class SimuladorModulo(SimuladorCobranca cobranca) : IBancoModulo
 {
     public string Codigo => "simulador";
     public string Nome => "Simulador";
+    public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca];
     public ICobrancaBancaria? Cobranca => cobranca;
+    public Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default) => Task.FromResult<string?>(null);
 }

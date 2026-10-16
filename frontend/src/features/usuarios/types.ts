@@ -1,8 +1,18 @@
 import type { DadosBancarios, Endereco } from '@/features/parceiros/types'
 
-/** Perfil de acesso do usuário. */
-export type Perfil = 'Gestor' | 'Colaborador'
+/**
+ * Perfil de acesso do usuário. Admin = a nossa equipe (para o cliente aparece como "Suporte"):
+ * tem tudo, inclusive o que é só da equipe. Gestor = o máximo do cliente.
+ */
+export type Perfil = 'Admin' | 'Gestor' | 'Colaborador'
 export const PERFIS: Perfil[] = ['Gestor', 'Colaborador']
+
+/** Como o perfil aparece nas telas. */
+export const ROTULO_PERFIL: Record<Perfil, string> = { Admin: 'Suporte', Gestor: 'Gestor', Colaborador: 'Colaborador' }
+export const rotuloPerfil = (perfil?: string) => ROTULO_PERFIL[perfil as Perfil] ?? perfil ?? ''
+
+/** Admin e Gestor decidem o que é de gestor (metas, preço abaixo do mínimo...). */
+export const temPoderDeGestor = (perfil?: string) => perfil === 'Admin' || perfil === 'Gestor'
 
 /**
  * Funcionário do portal: o mesmo registro guarda o acesso (perfil e permissões)

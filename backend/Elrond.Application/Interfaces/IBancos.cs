@@ -11,8 +11,13 @@ public sealed record PagadorCobranca(
     string CpfCnpj, string Nome, string Endereco, string Numero, string Complemento, string Bairro,
     string Cidade, string Uf, string Cep, string Email, string Telefone);
 
-/// <summary>O que o banco precisa para registrar a cobrança.</summary>
-public sealed record PedidoCobranca(string SeuNumero, decimal Valor, string Vencimento, int DiasAgenda, PagadorCobranca Pagador, IReadOnlyList<string> Mensagens);
+/// <summary>
+/// O que o banco precisa para registrar a cobrança. As regras (multa, juros, desconto, baixa, Pix)
+/// vêm da integração; as mensagens já chegam juntas e cortadas (referência + instruções).
+/// </summary>
+public sealed record PedidoCobranca(
+    string SeuNumero, decimal Valor, string Vencimento, int DiasAgenda, PagadorCobranca Pagador, IReadOnlyList<string> Mensagens,
+    Domain.Entities.RegrasBoleto? Regras = null);
 
 public enum DesfechoEnvioBanco
 {
@@ -61,7 +66,11 @@ public interface IBancoModulo
     /// <summary>"inter", "simulador"...</summary>
     string Codigo { get; }
     string Nome { get; }
+    /// <summary>Recursos que o módulo oferece (cobranca, extrato, saldo), para a tela de Integrações.</summary>
+    IReadOnlyList<string> Recursos { get; }
     ICobrancaBancaria? Cobranca { get; }
+    /// <summary>Confere certificado e credenciais com uma chamada de leitura. Null = ok; senão, o motivo.</summary>
+    Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default);
 }
 
 /// <summary>Registro dos módulos de banco disponíveis.</summary>

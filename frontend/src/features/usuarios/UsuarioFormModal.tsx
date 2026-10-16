@@ -13,8 +13,9 @@ import ui from '@/features/common/ui.module.css'
 import { formatCpf, formatRg, formatTelefone } from '@/lib/format'
 import s from './usuarios.module.css'
 import { usuarioSchema, emptyUsuario, type UsuarioForm } from './usuario-schema'
+import { useAuth } from '@/features/auth/auth-context'
 import type { Perfil, Usuario } from './types'
-import { funcionalidadesPorGrupo, PERFIL_PRESET, GRUPO_ESPECIAIS, ehExtra } from './funcionalidades'
+import { funcionalidadesPorGrupo, PERFIL_PRESET, GRUPO_ESPECIAIS, GRUPO_EQUIPE, ehExtra, ehAdministrativa } from './funcionalidades'
 
 interface Props {
   open: boolean
@@ -24,9 +25,13 @@ interface Props {
   onSave: (data: UsuarioForm) => void
 }
 
-const grupos = funcionalidadesPorGrupo()
+const gruposCliente = funcionalidadesPorGrupo()
+const gruposEquipe = funcionalidadesPorGrupo(true)
 
 export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Props) {
+  // Quem está editando é da nossa equipe? Só ela vê e atribui o perfil Suporte.
+  const souAdmin = useAuth().user?.perfil === 'Admin'
+  const grupos = souAdmin ? gruposEquipe : gruposCliente
   const {
     register,
     handleSubmit,
@@ -50,6 +55,7 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
   const cep = useWatch({ control, name: 'endereco.cep' }) ?? ''
   const cidade = useWatch({ control, name: 'cidade' }) ?? ''
   const banco = useWatch({ control, name: 'banco' }) ?? emptyUsuario.banco
+  const isAdmin = perfil === 'Admin'
   const isGestor = perfil === 'Gestor'
 
   useEffect(() => {
@@ -78,8 +84,9 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
     setValue('permissoes', [...PERFIL_PRESET[p], ...especiais], { shouldValidate: true })
   }
 
-  // Gestor: as comuns são fixas (tem todas); as especiais ele liga uma a uma.
-  const bloqueada = (key: string) => isGestor && !ehExtra(key)
+  // Suporte: tudo fixo (tem todas). Gestor: as comuns são fixas; as especiais ele liga uma a uma.
+  // As da equipe nunca se ligam à mão: vêm do perfil Suporte.
+  const bloqueada = (key: string) => isAdmin || ehAdministrativa(key) || (isGestor && !ehExtra(key))
 
   const togglePerm = (key: string) => {
     if (bloqueada(key)) return
@@ -145,6 +152,7 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
             </Field>
             <Field className={ui.col2} label="Perfil" req error={errors.perfil?.message}>
               <select value={perfil} onChange={(e) => trocarPerfil(e.target.value as Perfil)}>
+                {(souAdmin || isAdmin) && <option value="Admin">Suporte (equipe ELROND)</option>}
                 <option value="Gestor">Gestor (acesso total)</option>
                 <option value="Colaborador">Colaborador (acesso restrito)</option>
               </select>
@@ -262,6 +270,13 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
             <ShieldCheck /> Permissões por funcionalidade
           </div>
 
+          {isAdmin && (
+            <div className={s.perfilNote}>
+              <ShieldCheck />
+              Suporte é a equipe ELROND: tem acesso a tudo, inclusive às funções da equipe. Para o
+              cliente, aparece como Suporte e não pode ser alterado por ele.
+            </div>
+          )}
           {isGestor && (
             <div className={s.perfilNote}>
               <ShieldCheck />
@@ -274,11 +289,12 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
             const keys = g.itens.map((i) => i.key)
             const todosOn = keys.every((k) => permissoes.includes(k))
             const especial = g.grupo === GRUPO_ESPECIAIS
+            const equipe = g.grupo === GRUPO_EQUIPE
             return (
               <div key={g.grupo} className={s.permGroup}>
                 <div className={s.permGroupHead}>
                   <span className={s.permGroupTitle}>{g.grupo}</span>
-                  {(!isGestor || especial) && (
+                  {!isAdmin && !equipe && (!isGestor || especial) && (
                     <button type="button" className={s.permAll} onClick={() => toggleGrupo(keys, !todosOn)}>
                       {todosOn ? 'Desmarcar grupo' : 'Marcar grupo'}
                     </button>
@@ -289,9 +305,14 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
                     Desligadas por padrão para todos os perfis. Ligue só para quem precisa.
                   </div>
                 )}
+                {equipe && (
+                  <div className={s.permHint}>
+                    Só o perfil Suporte tem. O cliente não vê este grupo.
+                  </div>
+                )}
                 <div className={s.permGrid}>
                   {g.itens.map((f) => {
-                    const on = bloqueada(f.key) || permissoes.includes(f.key)
+                    const on = isAdmin || (!equipe && (bloqueada(f.key) || permissoes.includes(f.key)))
                     return (
                       <div key={f.key} className={`${s.permRow} ${on ? s.permRowOn : ''}`}>
                         <span className={s.permName}>{f.label}</span>

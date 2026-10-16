@@ -175,8 +175,9 @@ export const ARTIGOS: Artigo[] = [
       'Abra o funcionário em Cadastros › Funcionários.',
       'Na matriz de permissões, ligue as telas e as funções especiais (ex.: ver o cálculo do preço).',
       'Gestor recebe as funcionalidades básicas automaticamente; as especiais começam desligadas.',
+      'Usuários com o perfil Suporte são da equipe ELROND: aparecem na lista, mas não podem ser alterados.',
     ],
-    palavras: ['permissao', 'acesso', 'liberar', 'usuario', 'funcionario', 'perfil', 'gestor', 'nao aparece', 'menu'],
+    palavras: ['permissao', 'acesso', 'liberar', 'usuario', 'funcionario', 'perfil', 'gestor', 'suporte', 'nao aparece', 'menu'],
   },
 ]
 

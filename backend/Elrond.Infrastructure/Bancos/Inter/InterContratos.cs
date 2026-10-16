@@ -20,8 +20,12 @@ public sealed record InterPagador(
 
 public sealed record InterMensagem(string? Linha1, string? Linha2, string? Linha3, string? Linha4, string? Linha5);
 
+/// <summary>Multa, mora ou desconto: código + taxa (percentual) ou valor; o desconto leva os dias antes do vencimento.</summary>
+public sealed record InterEncargo(string Codigo, decimal? Taxa = null, decimal? Valor = null, int? QuantidadeDias = null);
+
 public sealed record InterEmitirCobranca(
-    string SeuNumero, decimal ValorNominal, string DataVencimento, int NumDiasAgenda, InterPagador Pagador, InterMensagem? Mensagem);
+    string SeuNumero, decimal ValorNominal, string DataVencimento, int NumDiasAgenda, InterPagador Pagador, InterMensagem? Mensagem,
+    InterEncargo? Multa = null, InterEncargo? Mora = null, InterEncargo? Desconto = null, List<string>? FormasRecebimento = null);
 
 public sealed record InterEmitirResposta(string? CodigoSolicitacao);
 

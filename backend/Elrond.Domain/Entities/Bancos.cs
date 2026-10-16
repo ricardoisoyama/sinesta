@@ -32,8 +32,49 @@ public class IntegracaoBancaria : Rastreavel, IEntity, IInativavel
     /// <summary>Ligada pela nossa equipe. Desligada, nada é enviado ao banco.</summary>
     public bool Ativa { get; set; }
     public string Status { get; set; } = "ativo";
+    /// <summary>Conta do Caixa (carteira) que corresponde a esta conta no banco: liga o extrato e a baixa.</summary>
+    public string CarteiraId { get; set; } = string.Empty;
+    /// <summary>Padrões dos boletos desta conta. Nulo (integrações antigas) = <see cref="RegrasBoleto"/> padrão.</summary>
+    public RegrasBoleto? Boleto { get; set; }
 
     public bool Libera(string recurso) => Ativa && Status == "ativo" && Recursos.Contains(recurso);
+
+    public RegrasBoleto RegrasDoBoleto => Boleto ?? new RegrasBoleto();
+}
+
+/// <summary>
+/// Padrões do boleto de uma integração: o que vale depois do vencimento (multa e juros), o desconto
+/// por pagamento antecipado, as instruções impressas e quando o banco dá baixa sozinho.
+/// Iguais para qualquer banco; cada módulo traduz para o formato dele.
+/// </summary>
+public class RegrasBoleto
+{
+    public const string Nenhum = "nenhum";
+    public const string Percentual = "percentual";
+    public const string Valor = "valor";
+    /// <summary>Juros: percentual ao mês.</summary>
+    public const string PercentualMes = "percentual-mes";
+    /// <summary>Juros: valor por dia de atraso.</summary>
+    public const string ValorDia = "valor-dia";
+    /// <summary>Linhas de instrução por boleto (as outras 2 das 5 do banco ficam para a referência da cobrança).</summary>
+    public const int MaxInstrucoes = 3;
+    public const int MaxCaracteresLinha = 78;
+
+    /// <summary>nenhum | percentual | valor.</summary>
+    public string MultaTipo { get; set; } = Nenhum;
+    public decimal Multa { get; set; }
+    /// <summary>nenhum | percentual-mes | valor-dia.</summary>
+    public string JurosTipo { get; set; } = Nenhum;
+    public decimal Juros { get; set; }
+    /// <summary>nenhum | percentual | valor (até <see cref="DescontoDiasAntes"/> dias antes do vencimento).</summary>
+    public string DescontoTipo { get; set; } = Nenhum;
+    public decimal Desconto { get; set; }
+    public int DescontoDiasAntes { get; set; }
+    /// <summary>Dias corridos depois do vencimento até o banco cancelar sozinho (0 a 60).</summary>
+    public int DiasBaixa { get; set; } = 30;
+    /// <summary>Pix junto do boleto (QR Code no PDF).</summary>
+    public bool ComPix { get; set; } = true;
+    public List<string> Instrucoes { get; set; } = new();
 }
 
 /// <summary>

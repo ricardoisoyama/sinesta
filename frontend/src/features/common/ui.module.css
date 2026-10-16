@@ -76,6 +76,7 @@
 .badgeWarn { background: #fdf0e6; color: #b5651d; }
 .badgeOff { background: #f0eee7; color: #6b7b72; }
 .badgeErr { background: #fdecea; color: #c0392b; }
+.badgeInfo { background: #e7eef8; color: #2f5f9e; }
 
 /* row actions */
 .iconBtn { width: 30px; height: 30px; border-radius: 8px; border: 1px solid transparent; background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: #6b7b72; }

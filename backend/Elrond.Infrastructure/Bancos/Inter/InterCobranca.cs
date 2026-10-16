@@ -114,10 +114,29 @@ public sealed class InterCobranca(InterConexao conexao, ILogger<InterCobranca> l
     }
 }
 
-/// <summary>O módulo Inter: por enquanto, cobrança (extrato e saldo entram na próxima fase).</summary>
-public sealed class InterModulo(InterCobranca cobranca) : IBancoModulo
+/// <summary>O módulo Inter: cobrança (extrato e saldo entram na próxima fase).</summary>
+public sealed class InterModulo(InterCobranca cobranca, InterConexao conexao, ILogger<InterModulo> log) : IBancoModulo
 {
     public string Codigo => "inter";
     public string Nome => "Banco Inter";
+    public IReadOnlyList<string> Recursos => [Domain.Entities.IntegracaoBancaria.RecursoCobranca, Domain.Entities.IntegracaoBancaria.RecursoExtrato, Domain.Entities.IntegracaoBancaria.RecursoSaldo];
     public ICobrancaBancaria? Cobranca => cobranca;
+
+    /// <summary>Consulta o saldo (só leitura): exige token (credenciais) e mTLS (certificado) válidos.</summary>
+    public async Task<string?> TestarConexaoAsync(CredencialBanco c, CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await conexao.EnviarAsync(c, HttpMethod.Get, "/banking/v2/saldo", null, ct);
+            if (resp.IsSuccessStatusCode) return null;
+            if (resp.StatusCode == HttpStatusCode.Forbidden)
+                return "O certificado e as credenciais foram aceitos, mas a integração no Inter não libera a consulta de saldo e extrato (escopo extrato.read).";
+            return InterMapeador.Erro(await resp.Content.ReadAsStringAsync(ct), (int)resp.StatusCode);
+        }
+        catch (Exception e) when (e is InterIndisponivel or HttpRequestException or TaskCanceledException or System.Security.Cryptography.CryptographicException)
+        {
+            log.LogWarning(e, "Teste de conexão com o Inter falhou");
+            return e is TaskCanceledException ? "o Inter demorou demais para responder." : e.Message;
+        }
+    }
 }

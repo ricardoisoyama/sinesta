@@ -11,9 +11,15 @@ export interface Funcionalidade {
    * perfis (inclusive Gestor). Só entra quando alguém liga no cadastro do funcionário.
    */
   extra?: boolean
+  /**
+   * Administrativa: só o perfil Admin (a nossa equipe) tem, sempre. Não se concede e não
+   * aparece para o cliente no cadastro do funcionário.
+   */
+  admin?: boolean
 }
 
 export const GRUPO_ESPECIAIS = 'Permissões especiais'
+export const GRUPO_EQUIPE = 'Só a equipe ELROND (Suporte)'
 
 /**
  * Catálogo de funcionalidades (espelha o menu). A `key` é a rota, então a
@@ -62,30 +68,36 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/vendedores/transferir', label: 'Transferir a carteira de clientes de um vendedor', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/propostas/alterar-pagamento', label: 'Alterar forma e prazo de pagamento na proposta', grupo: GRUPO_ESPECIAIS, extra: true },
   { key: '/fiscal/nfse', label: 'Emitir, consultar e cancelar NFS-e (motor fiscal, em teste)', grupo: GRUPO_ESPECIAIS, extra: true },
-  { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (faturas da SIIMP → banco)', grupo: GRUPO_ESPECIAIS, extra: true },
-  { key: '/financeiro/integracao-bancaria', label: 'Configurar a integração bancária das empresas (implantação)', grupo: GRUPO_ESPECIAIS, extra: true },
-  { key: '/prototipos', label: 'Ver as telas em protótipo (Contratos, Modelos de Contrato, Faturamento, Projeção)', grupo: GRUPO_ESPECIAIS, extra: true },
+
+  // ── Administrativas: só o perfil Admin (a nossa equipe), sempre ─────────
+  { key: '/administrativo/integracoes', label: 'Integrações (bancos das empresas: credenciais, certificado, boleto)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/prototipos', label: 'Ver as telas em protótipo (Contratos, Modelos de Contrato, Faturamento, Projeção)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)
 /** Funcionalidades comuns (telas e ações do dia a dia). Gestor recebe todas. */
-export const FUNCIONALIDADES_BASE = FUNCIONALIDADES.filter((f) => !f.extra).map((f) => f.key)
+export const FUNCIONALIDADES_BASE = FUNCIONALIDADES.filter((f) => !f.extra && !f.admin).map((f) => f.key)
 export const FUNCIONALIDADES_EXTRAS = FUNCIONALIDADES.filter((f) => f.extra).map((f) => f.key)
+/** O que se concede no cadastro (comuns + especiais); as administrativas vêm do perfil Admin. */
+export const FUNCIONALIDADES_CONCEDIVEIS = [...FUNCIONALIDADES_BASE, ...FUNCIONALIDADES_EXTRAS]
 export const ehExtra = (key: string) => FUNCIONALIDADES_EXTRAS.includes(key)
+export const ehAdministrativa = (key: string) => FUNCIONALIDADES.some((f) => f.key === key && f.admin)
 
 /** Ordem dos grupos na matriz de permissões (espelha o menu). */
-export const GRUPOS_FUNCIONALIDADE = ['Geral', 'Cadastros', 'Comercial', 'Parametrizações', 'Financeiro', 'Relatórios', 'Administrativo', GRUPO_ESPECIAIS]
+export const GRUPOS_FUNCIONALIDADE = ['Geral', 'Cadastros', 'Comercial', 'Parametrizações', 'Financeiro', 'Relatórios', 'Administrativo', GRUPO_ESPECIAIS, GRUPO_EQUIPE]
 
-/** Funcionalidades agrupadas, na ordem de exibição. */
-export function funcionalidadesPorGrupo(): { grupo: string; itens: Funcionalidade[] }[] {
-  return GRUPOS_FUNCIONALIDADE.map((grupo) => ({
+/** Funcionalidades agrupadas, na ordem de exibição. O grupo da equipe só aparece para o Admin. */
+export function funcionalidadesPorGrupo(comEquipe = false): { grupo: string; itens: Funcionalidade[] }[] {
+  return GRUPOS_FUNCIONALIDADE.filter((g) => comEquipe || g !== GRUPO_EQUIPE).map((grupo) => ({
     grupo,
     itens: FUNCIONALIDADES.filter((f) => f.grupo === grupo),
   }))
 }
 
-/** Permissões padrão de cada perfil. Gestor = todas as comuns; as especiais ninguém tem por padrão. */
+/** Permissões padrão de cada perfil. Admin = todas; Gestor = todas as comuns; as especiais ninguém tem por padrão. */
 export const PERFIL_PRESET: Record<Perfil, string[]> = {
+  Admin: TODAS_FUNCIONALIDADES,
   Gestor: FUNCIONALIDADES_BASE,
   Colaborador: [
     '/dashboard',

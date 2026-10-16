@@ -9,7 +9,7 @@ namespace Elrond.API.Controllers;
 
 /// <summary>
 /// Implantação da integração bancária de uma empresa (Client ID/Secret, certificado, recursos,
-/// ligar/desligar). Permissão ESPECIAL, desligada para todos: quem ativa é a nossa equipe.
+/// ligar/desligar). Permissão ADMINISTRATIVA: só o perfil Admin (a nossa equipe).
 /// Nunca devolve segredos.
 /// </summary>
 [ApiController]
@@ -17,10 +17,14 @@ namespace Elrond.API.Controllers;
 [Authorize(Policy = "func:" + Permissao)]
 public class IntegracoesBancariasController(IIntegracaoBancariaService integracoes) : ControllerBase
 {
-    public const string Permissao = "/financeiro/integracao-bancaria";
+    public const string Permissao = "/administrativo/integracoes";
 
     [HttpGet]
     public async Task<IActionResult> Listar([FromQuery] string? empresaId) => Ok(await integracoes.ListarAsync(empresaId));
+
+    /// <summary>Bancos que o motor sabe usar e o que cada um oferece.</summary>
+    [HttpGet("bancos")]
+    public IActionResult Bancos() => Ok(integracoes.Bancos());
 
     [HttpPut("{empresaId}")]
     public async Task<IActionResult> Configurar(string empresaId, [FromBody] ConfigurarIntegracaoDto dto)
@@ -28,12 +32,20 @@ public class IntegracoesBancariasController(IIntegracaoBancariaService integraco
         var r = await integracoes.ConfigurarAsync(empresaId, dto);
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
+
+    /// <summary>Confere certificado e credenciais gravados com uma chamada de leitura ao banco.</summary>
+    [HttpPost("{integracaoId}/testar")]
+    public async Task<IActionResult> Testar(string integracaoId, CancellationToken ct)
+    {
+        var r = await integracoes.TestarAsync(integracaoId, ct);
+        return r.IsSuccess ? Ok(new { mensagem = r.Value }) : BadRequest(r.Error);
+    }
 }
 
 /// <summary>
 /// Página PROVISÓRIA de testes de boleto (/boleto): lista as faturas da SIIMP (só leitura) e emite
 /// o boleto da parcela pelo banco da empresa. Os dados do boleto vêm da SIIMP no servidor (a tela
-/// não informa valor nem pagador). Permissão especial "/financeiro/boleto-teste".
+/// não informa valor nem pagador). Permissão administrativa "/financeiro/boleto-teste" (só Admin).
 /// </summary>
 [ApiController]
 [Route("api/boleto-teste")]

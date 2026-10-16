@@ -1674,6 +1674,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)");
 
+                    b.Property<string>("CarteiraId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasDefaultValue("");
+
                     b.Property<byte[]>("CertificadoCifrado")
                         .IsRequired()
                         .HasColumnType("bytea");
@@ -4147,6 +4154,54 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("CamposCustomizados");
 
                     b.Navigation("Etapas");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.IntegracaoBancaria", b =>
+                {
+                    b.OwnsOne("Elrond.Domain.Entities.RegrasBoleto", "Boleto", b1 =>
+                        {
+                            b1.Property<string>("IntegracaoBancariaId");
+
+                            b1.Property<bool>("ComPix");
+
+                            b1.Property<decimal>("Desconto")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<int>("DescontoDiasAntes");
+
+                            b1.Property<string>("DescontoTipo")
+                                .IsRequired();
+
+                            b1.Property<int>("DiasBaixa");
+
+                            b1.PrimitiveCollection<string>("Instrucoes")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Juros")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("JurosTipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Multa")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("MultaTipo")
+                                .IsRequired();
+
+                            b1.HasKey("IntegracaoBancariaId");
+
+                            b1.ToTable("integracoes_bancarias");
+
+                            b1
+                                .ToJson("Boleto")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("IntegracaoBancariaId");
+                        });
+
+                    b.Navigation("Boleto");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.ModeloProposta", b =>

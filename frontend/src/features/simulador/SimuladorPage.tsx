@@ -42,6 +42,7 @@ import { useModelosProposta } from '@/features/modelosProposta/store'
 import type { CustoItemProposta, ItemProposta } from '@/features/propostas/types'
 import { useFator, usePrecoServidor } from '@/features/pricing/usePreco'
 import { useAuth } from '@/features/auth/auth-context'
+import { temPoderDeGestor } from '@/features/usuarios/types'
 import { useUsuarios } from '@/features/usuarios/store'
 import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
 import { FORMAS_PAGAMENTO, type Parceiro } from '@/features/parceiros/types'
@@ -100,7 +101,7 @@ export function SimuladorPage() {
   const unidades = (empresasData ?? []).filter((u) => u.status === 'ativo')
 
   const { user } = useAuth()
-  const ehGestor = user?.perfil === 'Gestor'
+  const ehGestor = temPoderDeGestor(user?.perfil)
   const perms = user?.permissoes ?? []
   // Permissões especiais (desligadas por padrão para todo mundo, inclusive gestor).
   const podeVerCalculo = perms.includes('/simulador/calculo')

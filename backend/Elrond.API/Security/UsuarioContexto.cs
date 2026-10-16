@@ -37,7 +37,11 @@ public sealed class UsuarioContexto : IUsuarioAtualProvider
         return _user;
     }
 
-    public async Task<bool> EhGestorAsync() => (await AtualAsync())?.Perfil == "Gestor";
+    /// <summary>Gestor ou Admin (o Admin tem tudo o que o gestor tem).</summary>
+    public async Task<bool> EhGestorAsync() => Perfis.TemPoderDeGestor((await AtualAsync())?.Perfil);
+
+    /// <summary>Admin: a nossa equipe.</summary>
+    public async Task<bool> EhAdminAsync() => (await AtualAsync())?.Perfil == Perfis.Admin;
 
     /// <summary>Tem a funcionalidade (comum ou especial), pelas permissões efetivas do banco.</summary>
     public async Task<bool> PodeAsync(string chave)

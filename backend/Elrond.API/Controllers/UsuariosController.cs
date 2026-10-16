@@ -9,16 +9,17 @@ using Microsoft.AspNetCore.Mvc;
 namespace Elrond.API.Controllers;
 
 /// <summary>
-/// Funcionários/usuários do portal. Regras de escalada: só Gestor cria/promove Gestor e
-/// concede permissões especiais; ninguém muda o próprio perfil, permissões ou status;
-/// o último Gestor ativo não pode ser rebaixado nem desativado.
+/// Funcionários/usuários do portal. Regras de escalada: só Admin (a nossa equipe, "Suporte")
+/// cria, promove ou altera Admin; só Gestor cria/promove Gestor e concede permissões especiais;
+/// ninguém muda o próprio perfil, permissões ou status; o último Gestor ativo não pode ser
+/// rebaixado nem desativado.
 /// </summary>
 [ApiController]
 [Authorize]
 [Route("api/usuarios")]
 public class UsuariosController : ControllerBase
 {
-    private static readonly string[] PerfisValidos = { "Gestor", "Colaborador" };
+    private static readonly IReadOnlyList<string> PerfisValidos = Perfis.Validos;
     public const int SenhaMinima = 8;
 
     private readonly IUsuarioRepository _repo;
@@ -124,9 +125,15 @@ public class UsuariosController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(dto.Nome)) return "Informe o nome.";
         if (string.IsNullOrWhiteSpace(dto.Email) || !dto.Email.Contains('@')) return "Informe um e-mail válido.";
-        if (!PerfisValidos.Contains(dto.Perfil)) return "Perfil inválido. Use Gestor ou Colaborador.";
-        if (!string.IsNullOrEmpty(dto.Senha) && dto.Senha.Length < SenhaMinima)
+        if (!PerfisValidos.Contains(dto.Perfil)) return "Perfil inválido. Use Gestor ou Colaborador.";        if (!string.IsNullOrEmpty(dto.Senha) && dto.Senha.Length < SenhaMinima)
             return $"A senha precisa ter ao menos {SenhaMinima} caracteres.";
+
+        // Admin (Suporte) é da nossa equipe: só outro Admin cria, promove ou mexe nele.
+        if (await _usuario.EhAdminAsync()) return null;
+        if (dto.Perfil == Perfis.Admin && atual?.Perfil != Perfis.Admin)
+            return "O perfil Suporte é da equipe ELROND e não pode ser atribuído aqui.";
+        if (atual?.Perfil == Perfis.Admin)
+            return "Este é um usuário de suporte da equipe ELROND: o cadastro dele não pode ser alterado por aqui.";
 
         var souGestor = await _usuario.EhGestorAsync();
         if (souGestor) return null;
@@ -142,9 +149,12 @@ public class UsuariosController : ControllerBase
         return null;
     }
 
-    /// <summary>Descarta chaves que não existem no catálogo (nada de permissão inventada no payload).</summary>
+    /// <summary>
+    /// Descarta chaves que não existem no catálogo (nada de permissão inventada no payload) e as
+    /// administrativas, que não se gravam: vêm do perfil Admin.
+    /// </summary>
     private static List<string> PermissoesConhecidas(IEnumerable<string> permissoes) =>
-        permissoes.Where(Funcionalidades.Todas.Contains).Distinct().ToList();
+        permissoes.Where(Funcionalidades.Concediveis.Contains).Distinct().ToList();
 
     private async Task<bool> EmailEmUsoAsync(string email, Guid? ignorarId)
     {

@@ -31,5 +31,5 @@ public record StatusPropostaDto(string Status);
 /// </summary>
 public record UsuarioAtual(string Id, string Nome, string Perfil, bool PodeAprovar = false)
 {
-    public bool EhGestor => Perfil == "Gestor";
+    public bool EhGestor => Common.Perfis.TemPoderDeGestor(Perfil);
 }
