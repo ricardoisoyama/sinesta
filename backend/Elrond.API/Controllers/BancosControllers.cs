@@ -42,6 +42,10 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
 {
     public const string Permissao = "/financeiro/boleto-teste";
     private const string Origem = "siimp-fatura";
+    private const string OrigemTeste = "boleto-teste";
+
+    private async Task<bool> EmProducaoAsync(string empresaId) =>
+        (await integracoes.ListarAsync(empresaId)).Any(i => i.Ativa && i.Ambiente == "producao" && i.Recursos.Contains(IntegracaoBancaria.RecursoCobranca));
 
     /// <summary>Empresas com integração de cobrança ativa (as que podem emitir aqui).</summary>
     [HttpGet("empresas")]
@@ -92,6 +96,10 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
         var f = await siimp.FaturaAsync(id, ct);
         if (f.Erro.Length > 0) return BadRequest(f.Erro);
         var fatura = f.Dados!;
+        // Em produção esta página não emite boleto de fatura da SIIMP (seria cobrança real a cliente real):
+        // só o boleto de teste, contra quem está testando.
+        if (await EmProducaoAsync(dto.EmpresaId))
+            return BadRequest("A integração desta empresa está em produção: aqui só o boleto de teste está liberado. Faturas da SIIMP geram boleto quando o faturamento for para o ELROND.");
         if (await OutraEmpresaAsync(fatura, dto.EmpresaId, ct) is { Length: > 0 } erro) return BadRequest(erro);
         if (fatura.Parcelas.FirstOrDefault(p => p.Id == parcelaId) is not { } parcela) return BadRequest("Parcela não encontrada nesta fatura.");
         var pessoa = await siimp.PessoaAsync(fatura.PagadorId, ct);
@@ -112,8 +120,33 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 
+    public sealed record BoletoTesteDto(
+        string EmpresaId, string Nome, string Documento, string Rua, string Numero, string? Complemento, string Bairro,
+        string Cidade, string Uf, string Cep, string? Email, string? Telefone, decimal Valor, string Vencimento);
+
+    /// <summary>
+    /// Boleto de TESTE, sem fatura: o pagador é quem está testando (o próprio CPF). Serve para provar o
+    /// ciclo inteiro (emitir, consultar, PDF, cancelar) inclusive em produção. Valor mínimo do banco.
+    /// </summary>
+    [HttpPost("teste")]
+    public async Task<IActionResult> Teste([FromBody] BoletoTesteDto dto, CancellationToken ct)
+    {
+        if (dto.Valor > 50) return BadRequest("Boleto de teste vai até R$ 50,00.");
+        var pedido = new NovaCobranca(
+            dto.Valor,
+            dto.Vencimento,
+            new PagadorCobranca(dto.Documento, dto.Nome, dto.Rua, dto.Numero, dto.Complemento ?? string.Empty, dto.Bairro, dto.Cidade, dto.Uf, dto.Cep, dto.Email ?? string.Empty, dto.Telefone ?? string.Empty),
+            new List<string> { "Boleto de teste do ELROND", "Pode ser cancelado: não é cobrança de serviço" });
+        // Cada teste é uma origem própria (não trava o próximo teste como "parcela já tem boleto").
+        var origem = new OrigemCobranca(OrigemTeste, Guid.NewGuid().ToString("N"), "1", $"Boleto de teste · {dto.Nome}");
+        var r = await cobrancas.EmitirAsync(dto.EmpresaId, origem, pedido, ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    /// <summary>Boletos da página: os das faturas da SIIMP e os de teste.</summary>
     [HttpGet("cobrancas")]
-    public async Task<IActionResult> Cobrancas([FromQuery] string empresaId) => Ok(await cobrancas.ListarAsync(empresaId, Origem));
+    public async Task<IActionResult> Cobrancas([FromQuery] string empresaId) =>
+        Ok((await cobrancas.ListarAsync(empresaId, Origem)).Concat(await cobrancas.ListarAsync(empresaId, OrigemTeste)).OrderByDescending(c => c.SeuNumero));
 
     [HttpPost("cobrancas/{id}/atualizar")]
     public async Task<IActionResult> Atualizar(string id, CancellationToken ct)

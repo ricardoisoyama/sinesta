@@ -102,6 +102,23 @@ export const obterFatura = (id: number, empresaId: string) =>
   apiFetch<{ fatura: FaturaDetalhe; pagador: PessoaSiimp | null; erroPagador: string; boletos: Cobranca[] }>(`${base}/faturas/${id}?empresaId=${encodeURIComponent(empresaId)}`)
 export const gerarBoleto = (faturaId: number, parcelaId: number, empresaId: string, vencimento?: string) =>
   apiFetch<Cobranca>(`${base}/faturas/${faturaId}/parcelas/${parcelaId}/boleto`, { method: 'POST', body: JSON.stringify({ empresaId, vencimento: vencimento || null }) })
+export interface BoletoTesteDados {
+  empresaId: string
+  nome: string
+  documento: string
+  rua: string
+  numero: string
+  complemento: string
+  bairro: string
+  cidade: string
+  uf: string
+  cep: string
+  email: string
+  valor: number
+  vencimento: string
+}
+/** Boleto de teste, sem fatura (o pagador é quem testa). */
+export const gerarBoletoTeste = (d: BoletoTesteDados) => apiFetch<Cobranca>(`${base}/teste`, { method: 'POST', body: JSON.stringify(d) })
 export const listCobrancas = (empresaId: string) => apiFetch<Cobranca[]>(`${base}/cobrancas?empresaId=${encodeURIComponent(empresaId)}`)
 export const atualizarCobranca = (id: string) => apiFetch<Cobranca>(`${base}/cobrancas/${id}/atualizar`, { method: 'POST' })
 export const cancelarCobranca = (id: string, motivo: string) =>

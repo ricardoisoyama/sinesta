@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Copy, FileText, Landmark, Loader2, RefreshCw, Search, XCircle } from 'lucide-react'
+import { AlertTriangle, Copy, FileText, FlaskConical, Landmark, Loader2, RefreshCw, Search, XCircle } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
@@ -22,6 +22,7 @@ import {
   type Cobranca,
   type ParcelaFatura,
 } from './api'
+import { BoletoTesteModal } from './BoletoTesteModal'
 import s from './boleto.module.css'
 
 const hojeISO = () => new Date().toISOString().slice(0, 10)
@@ -85,6 +86,7 @@ export function BoletoTestePage() {
   const atualizar = useMutation({ mutationFn: (c: Cobranca) => atualizarCobranca(c.id), onSuccess: recarregar, onError: falhou('Não foi possível consultar o banco') })
   const cancelar = useMutation({ mutationFn: (c: Cobranca) => cancelarCobranca(c.id, 'Teste ELROND'), onSuccess: recarregar, onError: falhou('Não foi possível cancelar') })
   const [abrindoPdf, setAbrindoPdf] = useState('')
+  const [testando, setTestando] = useState(false)
   const abrirPdf = async (c: Cobranca) => {
     setAbrindoPdf(c.id)
     try {
@@ -295,7 +297,25 @@ export function BoletoTestePage() {
       <section className={`${ui.card} ${s.painel} ${s.boletos}`}>
         <div className={s.cardTitulo}>
           Boletos gerados <span className={s.sub}>{empresa?.empresa} · {empresa?.banco} {empresa?.ambiente}</span>
+          <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnTeste}`} onClick={() => setTestando(true)} disabled={!empresaId}>
+            <FlaskConical /> Boleto de teste
+          </button>
         </div>
+        {testando && (
+          <BoletoTesteModal
+            empresaId={empresaId}
+            producao={empresa?.ambiente === 'producao'}
+            onClose={() => setTestando(false)}
+            onGerado={(c) => {
+              setTestando(false)
+              recarregar()
+              void avisar({
+                titulo: 'Boleto de teste enviado ao banco',
+                mensagem: `Seu nº ${c.seuNumero} · ${SITUACAO_COBRANCA[c.situacao].rotulo}. ${c.mensagem || ''} Quando aparecer a linha digitável, abra o PDF; depois, cancele.`,
+              })
+            }}
+          />
+        )}
         {(cobrancasQ.data ?? []).length === 0 ? (
           <div className={s.vazio}>Nenhum boleto gerado ainda. Escolha uma fatura e clique em "Gerar boleto".</div>
         ) : (
