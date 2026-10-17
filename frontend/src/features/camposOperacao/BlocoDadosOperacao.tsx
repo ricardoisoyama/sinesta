@@ -9,7 +9,9 @@ import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { UFS } from '@/lib/ufs'
 import { CadastroBusca, type OpcaoCadastro } from './CadastroBusca'
 import { EFEITOS, campoUfDaCidade, efeitoDe, numeroDe, textoCidade, type CampoOperacao, type ValoresOperacao } from './types'
-import { preencherAdValorem, taxaDaRota } from './advalorem'
+import { preencherAdValorem, taxaDaRota, ufDoValor } from './advalorem'
+import { aliquotaDaRota, preencherIcms } from './icms'
+import { listAliquotasIcms } from '@/features/icms/api'
 import { useApolices } from './useApolices'
 import { formatBRL, formatPct } from '@/lib/format'
 import s from './camposOperacao.module.css'
@@ -48,14 +50,27 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
   }
 
   // Ad valorem: mudar origem ou destino preenche o percentual pela apólice vigente (ajustável depois).
+  // ICMS: o mesmo gatilho, pela Tabela de ICMS.
   const temAdValorem = campos.some((c) => c.tipo === 'advalorem')
+  const temIcms = campos.some((c) => c.tipo === 'icms')
   const apoliceDe = useApolices(empresaId, temAdValorem)
+  const { data: tabelaIcms } = useQuery({ queryKey: ['aliquotas-icms'], queryFn: listAliquotasIcms, enabled: temIcms })
   const mudar = (chave: string, valor: string | number) => {
     onChange(chave, valor)
-    if (!temAdValorem) return
+    if (!temAdValorem && !temIcms) return
     const antes = { ...valores, [chave]: valor }
-    const depois = preencherAdValorem(campos, antes, chave, (t) => apoliceDe(t)?.apolice)
-    for (const c of campos) if (c.tipo === 'advalorem' && depois[c.chave] !== antes[c.chave]) onChange(c.chave, depois[c.chave])
+    let depois = preencherAdValorem(campos, antes, chave, (t) => apoliceDe(t)?.apolice)
+    depois = preencherIcms(campos, depois, chave, tabelaIcms ?? [])
+    for (const c of campos) if ((c.tipo === 'advalorem' || c.tipo === 'icms') && depois[c.chave] !== antes[c.chave]) onChange(c.chave, depois[c.chave])
+  }
+  /** De onde veio a alíquota de ICMS (ou quanto a tabela daria, quando foi ajustada). */
+  const notaIcms = (c: CampoOperacao) => {
+    const o = ufDoValor(valores[c.campoOrigem ?? ''])
+    const d = ufDoValor(valores[c.campoDestino ?? ''])
+    if (!o || !d) return ''
+    const aliq = aliquotaDaRota(tabelaIcms ?? [], o, d)
+    if (aliq === null) return `${o} → ${d} fora da Tabela de ICMS`
+    return Math.abs(aliq - numeroDe(valores[c.chave])) < 1e-9 ? `Tabela de ICMS ${o} → ${d}` : `ajustado (tabela ${o} → ${d}: ${formatPct(aliq)})`
   }
   /** De onde veio o percentual (ou quanto a apólice daria, quando foi ajustado). */
   const notaAdValorem = (c: CampoOperacao) => {
@@ -120,6 +135,12 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
             )}
             {c.tipo === 'valor' && <MoneyInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}
             {c.tipo === 'percentual' && <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}
+            {c.tipo === 'icms' && (
+              <>
+                <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />
+                {notaIcms(c) && <span className={s.notaCampo}>{notaIcms(c)}</span>}
+              </>
+            )}
             {c.tipo === 'advalorem' && (
               <>
                 <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />

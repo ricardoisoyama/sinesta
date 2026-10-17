@@ -24,6 +24,8 @@ import {
   UserRound,
   Tags,
   ShieldCheck,
+  ShieldPlus,
+  Percent,
   History,
   ArrowLeftRight,
   PiggyBank,
@@ -74,6 +76,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Vendedores', path: '/cadastros/vendedores', icon: UserRound },
       { label: 'Serviços', path: '/cadastros/servicos', icon: Briefcase },
       { label: 'Veículos', path: '/cadastros/veiculos', icon: Truck },
+      { label: 'Apólices de seguro', path: '/cadastros/apolices', icon: ShieldPlus },
       // Taxas e Seguros e Tipos de Custo ficam ocultos; as rotas continuam existindo.
       // O funcionário é o usuário do portal: cadastro e permissões no mesmo lugar.
       { label: 'Funcionários', path: '/cadastros/usuarios', icon: Users },
@@ -97,6 +100,7 @@ export const navGroups: NavGroup[] = [
     icon: Settings2,
     items: [
       { label: 'Dados da Operação', path: '/cadastros/campos-operacao', icon: SlidersHorizontal },
+      { label: 'Tabela de ICMS', path: '/cadastros/icms', icon: Percent },
       { label: 'Ficha Técnica', path: '/cadastros/fichas-tecnicas', icon: ListChecks },
       { label: 'Modelos de Proposta', path: '/cadastros/modelos-proposta', icon: FileText },
       { label: 'Funis do CRM', path: '/cadastros/funis', icon: Filter },

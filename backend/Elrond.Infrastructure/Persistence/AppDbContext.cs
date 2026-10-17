@@ -86,6 +86,32 @@ public class AppDbContext : DbContext
             e.OwnsOne(u => u.Banco, b => b.ToJson());
         });
 
+        modelBuilder.Entity<Apolice>(e =>
+        {
+            e.ToTable("apolices");
+            e.HasKey(a => a.Id);
+            e.Property(a => a.SeguradoraId).IsRequired().HasMaxLength(80);
+            e.Property(a => a.Tipo).IsRequired().HasMaxLength(20);
+            e.Property(a => a.Numero).HasMaxLength(60);
+            e.Property(a => a.VigenciaInicio).HasMaxLength(10);
+            e.Property(a => a.VigenciaFim).HasMaxLength(10);
+            e.Property(a => a.Observacao).HasMaxLength(400);
+            e.Property(a => a.EmpresaIds).HasColumnType("text[]");
+            e.Property(a => a.Documentos).HasColumnType("text[]");
+            e.OwnsMany(a => a.Taxas, b => b.ToJson());
+            e.HasIndex(a => a.SeguradoraId);
+        });
+
+        modelBuilder.Entity<AliquotaIcms>(e =>
+        {
+            e.ToTable("aliquotas_icms");
+            e.HasKey(a => a.Id);
+            e.Property(a => a.Id).HasMaxLength(5);
+            e.Property(a => a.UfOrigem).IsRequired().HasMaxLength(2);
+            e.Property(a => a.UfDestino).IsRequired().HasMaxLength(2);
+            e.Property(a => a.Fundamentacao).HasMaxLength(400);
+        });
+
         modelBuilder.Entity<Taxa>(e =>
         {
             e.ToTable("taxas");

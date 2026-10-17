@@ -17,7 +17,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public class ParametrizacaoService : IParametrizacaoService
 {
-    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual", "uf", "cidade", "advalorem" };
+    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual", "uf", "cidade", "advalorem", "icms" };
     private static readonly string[] Cadastros = { "cliente", "fornecedor", "vendedor", "servico", "veiculo" };
     private static readonly string[] TiposColuna = { "valor", "percentual", "calculo", "numero", "texto", "lista" };
     private const int MaxItens = 300;
@@ -178,6 +178,10 @@ public class ParametrizacaoService : IParametrizacaoService
             {
                 c.Seguro = ApolicesSeguro.Tipos.Contains(bruto.Seguro) ? bruto.Seguro : "RCTR-C";
                 c.CampoBase = Formula.ChaveDe(bruto.CampoBase ?? string.Empty);
+            }
+            // Ad valorem e ICMS buscam a taxa pela origem × destino.
+            if (tipo is "advalorem" or "icms")
+            {
                 c.CampoOrigem = Formula.ChaveDe(bruto.CampoOrigem ?? string.Empty);
                 c.CampoDestino = Formula.ChaveDe(bruto.CampoDestino ?? string.Empty);
             }

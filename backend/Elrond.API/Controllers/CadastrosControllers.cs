@@ -356,10 +356,38 @@ public class ClientesController(ICrudRepository<Cliente> repo, ICarteiraService 
 
 }
 
-[Route("api/fornecedores")]
-public class FornecedoresController(ICrudRepository<Fornecedor> repo) : CrudControllerBase<Fornecedor>(repo)
+/// <summary>Tabela de ICMS por UF de origem × destino (única do sistema). PUT grava só as linhas enviadas.</summary>
+[ApiController]
+[Authorize]
+[Route("api/aliquotas-icms")]
+public class AliquotasIcmsController(TabelaIcmsService service) : ControllerBase
 {
-    protected override Task<string?> AntesDeGravarAsync(Fornecedor entity) => Task.FromResult(ApolicesSeguro.Normalizar(entity));
+    [HttpGet]
+    public async Task<IActionResult> Listar() => Ok(await service.ListarAsync());
+
+    [HttpPut]
+    public async Task<IActionResult> Salvar([FromBody] List<AliquotaIcms> linhas)
+    {
+        var r = await service.SalvarAsync(linhas ?? new());
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+}
+
+[Route("api/fornecedores")]
+public class FornecedoresController(ICrudRepository<Fornecedor> repo) : CrudControllerBase<Fornecedor>(repo);
+
+/// <summary>Apólices de seguro (RCTR-C, RCF-DC...), cada uma ligada a um fornecedor seguradora.</summary>
+[Route("api/apolices")]
+public class ApolicesController(ICrudRepository<Apolice> repo, ICrudRepository<Fornecedor> fornecedores) : CrudControllerBase<Apolice>(repo)
+{
+    protected override string NomeEntidade => "Apólice";
+
+    protected override async Task<string?> AntesDeGravarAsync(Apolice entity)
+    {
+        if (ApolicesSeguro.Normalizar(entity) is { } erro) return erro;
+        var f = await fornecedores.GetByIdAsync(entity.SeguradoraId);
+        return f is { Seguradora: true } ? null : "Escolha uma seguradora (fornecedor com a caixa \"Seguradora\" marcada).";
+    }
 }
 
 [Route("api/vendedores")]

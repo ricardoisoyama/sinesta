@@ -1,4 +1,5 @@
-import type { ApoliceSeguro, Parceiro } from '@/features/parceiros/types'
+import type { Apolice } from '@/features/apolices/types'
+import type { Parceiro } from '@/features/parceiros/types'
 import { numeroDe, type CampoOperacao, type ValoresOperacao } from './types'
 
 /**
@@ -9,7 +10,7 @@ import { numeroDe, type CampoOperacao, type ValoresOperacao } from './types'
 
 /** Apólice escolhida para um tipo de seguro, com o nome da seguradora (para mostrar de onde veio). */
 export interface ApoliceDaSeguradora {
-  apolice: ApoliceSeguro
+  apolice: Apolice
   seguradora: string
 }
 
@@ -19,22 +20,21 @@ export const ufDoValor = (v: string | number | undefined): string => {
   return m ? m[1].toUpperCase() : ''
 }
 
-const vigente = (a: ApoliceSeguro, hoje: string) =>
+const vigente = (a: Apolice, hoje: string) =>
   (!a.vigenciaInicio || a.vigenciaInicio <= hoje) && (!a.vigenciaFim || a.vigenciaFim >= hoje)
 
 /**
  * Apólice que vale hoje para a empresa: seguradora ativa, apólice ativa do tipo pedido, vigente e
  * que cobre a empresa (sem empresas marcadas = cobre todas). Havendo mais de uma, a de início mais recente.
  */
-export function apoliceVigente(fornecedores: Parceiro[], tipo: string, empresaId: string, hoje: string): ApoliceDaSeguradora | undefined {
+export function apoliceVigente(apolices: Apolice[], fornecedores: Parceiro[], tipo: string, empresaId: string, hoje: string): ApoliceDaSeguradora | undefined {
   const candidatas: ApoliceDaSeguradora[] = []
-  for (const f of fornecedores) {
-    if (!f.seguradora || f.status !== 'ativo') continue
-    for (const a of f.apolices ?? []) {
-      if (a.status !== 'ativo' || a.tipo !== tipo || !vigente(a, hoje)) continue
-      if (a.empresaIds.length > 0 && !a.empresaIds.includes(empresaId)) continue
-      candidatas.push({ apolice: a, seguradora: f.nomeFantasia || f.nome })
-    }
+  for (const a of apolices) {
+    const f = fornecedores.find((x) => x.id === a.seguradoraId)
+    if (!f?.seguradora || f.status !== 'ativo') continue
+    if (a.status !== 'ativo' || a.tipo !== tipo || !vigente(a, hoje)) continue
+    if (a.empresaIds.length > 0 && !a.empresaIds.includes(empresaId)) continue
+    candidatas.push({ apolice: a, seguradora: f.nomeFantasia || f.nome })
   }
   return candidatas.sort((x, y) => y.apolice.vigenciaInicio.localeCompare(x.apolice.vigenciaInicio))[0]
 }
@@ -46,7 +46,7 @@ export type FonteTaxa = 'urbana' | 'tabela' | 'padrao'
  * Prêmio da rota: mesma cidade com taxa urbana → urbana; par de UFs na tabela → tabela;
  * senão a taxa padrão da apólice (0 = sem padrão → null, a pessoa digita).
  */
-export function taxaDaRota(a: ApoliceSeguro, origem: string | number | undefined, destino: string | number | undefined): { pct: number; fonte: FonteTaxa } | null {
+export function taxaDaRota(a: Apolice, origem: string | number | undefined, destino: string | number | undefined): { pct: number; fonte: FonteTaxa } | null {
   const o = String(origem ?? '').trim()
   const d = String(destino ?? '').trim()
   const ufO = ufDoValor(o)
@@ -67,7 +67,7 @@ export function preencherAdValorem(
   campos: CampoOperacao[],
   valores: ValoresOperacao,
   chaveAlterada: string,
-  apoliceDe: (tipo: string) => ApoliceSeguro | undefined,
+  apoliceDe: (tipo: string) => Apolice | undefined,
 ): ValoresOperacao {
   let novos = valores
   for (const c of campos) {

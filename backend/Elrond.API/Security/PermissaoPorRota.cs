@@ -25,6 +25,8 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
         ("api/categorias-custo", "/cadastros/categorias"),
         ("api/plano-contas", "/cadastros/plano-contas"),
         ("api/taxas", "/cadastros/taxas"),
+        ("api/aliquotas-icms", "/cadastros/icms"),
+        ("api/apolices", "/cadastros/apolices"),
         ("api/empresas", "/cadastros/unidades"),
         ("api/custos-fixos", "/cadastros/custos-fixos"),
         ("api/regras-aprovacao", "/cadastros/aprovadores"),

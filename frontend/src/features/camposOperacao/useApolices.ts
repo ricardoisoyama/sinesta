@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { listFornecedores } from '@/features/cadastros/api'
+import { listApolices } from '@/features/apolices/api'
+import { hojeLocal } from '@/features/apolices/types'
 import { apoliceVigente, type ApoliceDaSeguradora } from './advalorem'
 
-/** Data de hoje no fuso do navegador (yyyy-MM-dd), para comparar com a vigência das apólices. */
-const hojeLocal = () => new Date().toLocaleDateString('sv-SE')
-
-/** Apólice vigente da empresa por tipo de seguro (lê o cadastro de fornecedores só quando precisa). */
+/** Apólice vigente da empresa por tipo de seguro (lê apólices e seguradoras só quando precisa). */
 export function useApolices(empresaId: string, habilitado: boolean): (tipo: string) => ApoliceDaSeguradora | undefined {
-  const { data } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores, enabled: habilitado })
+  const { data: apolices } = useQuery({ queryKey: ['apolices'], queryFn: listApolices, enabled: habilitado })
+  const { data: fornecedores } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores, enabled: habilitado })
   const hoje = hojeLocal()
-  return (tipo) => apoliceVigente(data ?? [], tipo, empresaId, hoje)
+  return (tipo) => apoliceVigente(apolices ?? [], fornecedores ?? [], tipo, empresaId, hoje)
 }

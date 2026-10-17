@@ -12,6 +12,8 @@ export interface CalcularPrecoRequest {
   valorNf: number
   aplicaIcms: boolean
   ufDestinoId: string | null
+  /** Alíquota do campo ICMS (fração); quando vem, o servidor usa ela no lugar da UF de destino. */
+  aliquotaIcms?: number | null
   /** Soma dos custos cobrados em % do preço do serviço (fração). */
   custoPercentualServico: number
   /** Comissão desta operação (fração). Nulo = a do vendedor ou a da empresa. */

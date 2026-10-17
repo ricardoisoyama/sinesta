@@ -6,7 +6,8 @@ import { StatusToggle } from '@/features/common/StatusToggle'
 import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { PercentInput } from '@/features/common/PercentInput'
 import ui from '@/features/common/ui.module.css'
-import { formatCnpj, formatNumberBRL, formatPct } from '@/lib/format'
+import { formatCnpj, formatPct } from '@/lib/format'
+import { Link } from 'react-router-dom'
 import { Hint } from '@/features/common/Hint'
 import { mesclar } from '@/lib/mesclar'
 import { REGIMES, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
@@ -33,7 +34,6 @@ const IMPOSTOS: { key: ImpostoKey; nome: string }[] = [
   { key: 'cofins', nome: 'COFINS' },
   { key: 'iss', nome: 'ISS' },
 ]
-const SUL_SUDESTE = ['Sul', 'Sudeste']
 /** No Presumido e no Real estas alíquotas são obrigatórias (o INSS sobre a receita só existe em casos específicos). */
 const OBRIGATORIOS: ImpostoKey[] = ['ir', 'csll', 'pis', 'cofins', 'iss']
 
@@ -182,15 +182,6 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
 
   const setImp = (key: ImpostoKey, patch: Partial<ImpostoConfig>) =>
     setD((p) => ({ ...p, [key]: { ...p[key], ...patch } }))
-  const setIcms = (id: string, aliquota: number) =>
-    setD((p) => ({ ...p, icms: p.icms.map((r) => (r.id === id ? { ...r, aliquota } : r)) }))
-  const [qsul, setQsul] = useState(0.12)
-  const [qdemais, setQdemais] = useState(0.07)
-  const aplicarFaixas = () =>
-    setD((p) => ({
-      ...p,
-      icms: p.icms.map((r) => ({ ...r, aliquota: SUL_SUDESTE.includes(r.regiao) ? qsul : qdemais })),
-    }))
   const setDv = (patch: Partial<UnidadeForm['dv']>) => setD((p) => ({ ...p, dv: { ...p.dv, ...patch } }))
 
   // ── Validades da proposta (aba Proposta) ──
@@ -543,61 +534,22 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
       {tab === 'icms' && (
         <section className={ui.fsection}>
           <div className={ui.topRow} style={{ marginBottom: 12 }}>
-            <span className={ui.modalNote}>Ative o ICMS e edite a alíquota por UF (grid editável).</span>
+            <span className={ui.modalNote}>
+              <b>Contribuinte de ICMS</b> (fora do Simples Nacional). Ligado, o campo ICMS dos Dados da Operação aparece no Pricing e entra por
+              dentro no frete; desligado (Simples), o ICMS não é calculado.
+            </span>
             <button
               type="button"
               className={`${s.sw} ${d.icmsAtivo ? s.swOn : ''}`}
               onClick={() => set({ icmsAtivo: !d.icmsAtivo })}
-              title="ICMS ativo"
+              title="Contribuinte de ICMS"
             >
               <span className={s.swDot} />
             </button>
           </div>
-
-          <div className={s.quickFill}>
-            <span>Preencher faixas:</span>
-            <label>
-              Sul/Sudeste
-              <div className={s.qInput}>
-                <PercentInput value={qsul} onChange={setQsul} />
-              </div>
-            </label>
-            <label>
-              Demais
-              <div className={s.qInput}>
-                <PercentInput value={qdemais} onChange={setQdemais} />
-              </div>
-            </label>
-            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={aplicarFaixas}>
-              Aplicar
-            </button>
-          </div>
-
-          <div className={s.icmsScroll}>
-            <table className={ui.table}>
-              <thead>
-                <tr>
-                  <th>UF</th>
-                  <th>Estado</th>
-                  <th>Região</th>
-                  <th className={s.aliqCell}>Alíquota</th>
-                  <th className={ui.right}>Divisor (calc.)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {d.icms.map((uf) => (
-                  <tr key={uf.id}>
-                    <td>{uf.uf}</td>
-                    <td>{uf.nome}</td>
-                    <td>{uf.regiao}</td>
-                    <td className={s.aliqCell}>
-                      <PercentInput value={uf.aliquota} onChange={(n) => setIcms(uf.id, n)} />
-                    </td>
-                    <td className={`${ui.right} ${s.calc}`}>÷ {formatNumberBRL(1 - uf.aliquota)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className={ui.modalNote}>
+            A alíquota vem da <Link to="/cadastros/icms">Tabela de ICMS</Link> (UF de origem × destino), preenchida sozinha no Pricing pela origem e
+            pelo destino da operação. Para usar, crie um campo do tipo <b>ICMS</b> em <Link to="/cadastros/campos-operacao">Dados da Operação</Link>.
           </div>
         </section>
       )}

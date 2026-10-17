@@ -65,11 +65,22 @@ public class PricingService : IPricingService
         var aliqSeguro = taxas.FirstOrDefault(t => t.Id == "tx-seguro" && t.Status == "ativo")?.Valor ?? 0m;
         var seguro = PricingEngine.SeguroAdValorem(req.ValorNf, aliqSeguro);
 
-        // ICMS por UF de destino (respeita o toggle da empresa).
-        var aplicaIcms = req.AplicaIcms && empresa.IcmsAtivo;
-        var aliqIcms = 0m;
-        if (aplicaIcms && req.UfDestinoId is not null)
-            aliqIcms = empresa.Icms.FirstOrDefault(i => i.Id == req.UfDestinoId)?.Aliquota ?? 0m;
+        // ICMS só para empresa contribuinte (fora do Simples). O Pricing manda a alíquota do campo ICMS
+        // (origem × destino); o simulador antigo ainda manda a UF de destino da tabela da empresa.
+        bool aplicaIcms;
+        decimal aliqIcms;
+        if (req.AliquotaIcms is { } aliquota)
+        {
+            aliqIcms = empresa.IcmsAtivo ? Math.Clamp(aliquota, 0m, 0.5m) : 0m;
+            aplicaIcms = aliqIcms > 0;
+        }
+        else
+        {
+            aplicaIcms = req.AplicaIcms && empresa.IcmsAtivo;
+            aliqIcms = aplicaIcms && req.UfDestinoId is not null
+                ? empresa.Icms.FirstOrDefault(i => i.Id == req.UfDestinoId)?.Aliquota ?? 0m
+                : 0m;
+        }
 
         var fiscal = PricingEngine.CotacaoFiscal(pvComDesconto, seguro, aliqIcms, aplicaIcms);
         var precoFinal = Round2(fiscal.PrecoFinal);

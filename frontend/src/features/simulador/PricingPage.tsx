@@ -62,7 +62,8 @@ export function PricingPage() {
   const [tipoEscolhido, setTipoEscolhido] = useState('')
   const tipoOperacaoId = tiposOperacao.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (tiposOperacao[0]?.id ?? '')
   const tipoOperacao = tiposOperacao.find((t) => t.id === tipoOperacaoId)
-  const campos = camposDo(tipoOperacaoId)
+  // Empresa do Simples (sem ICMS): o campo ICMS nem aparece no Pricing.
+  const campos = camposDo(tipoOperacaoId).filter((c) => c.tipo !== 'icms' || !!empresa?.icmsAtivo)
   const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichasDaEmpresa(empresaId)
   const { user } = useAuth()
   const ehGestor = temPoderDeGestor(user?.perfil)
@@ -79,8 +80,6 @@ export function PricingPage() {
   const [desconto, setDesconto] = useState(0)
   const [comissaoEditada, setComissaoEditada] = useState<number | null>(null)
   const [lucroEditado, setLucroEditado] = useState<number | null>(null)
-  const [aplicaIcms, setAplicaIcms] = useState(false)
-  const [ufDestino, setUfDestino] = useState('sp')
   const [precoEditado, setPrecoEditado] = useState<number | null>(null)
   const [editandoPreco, setEditandoPreco] = useState(false)
   const [descricao, setDescricao] = useState('')
@@ -211,12 +210,10 @@ export function PricingPage() {
   const custoOperacao = round2((custoFichas + efeitos.custoExtra) * (1 + efeitos.pctCusto) * efeitos.multiplicador)
   const temCusto = custoOperacao > 0
 
-  // ── ICMS (só quando a empresa usa) ──
-  const icmsAtivoEmpresa = !!empresa?.icmsAtivo
-  const ufs = [...(empresa?.icms ?? [])].sort((a, b) => a.uf.localeCompare(b.uf))
-  const icmsItem = empresa?.icms.find((i) => i.id === ufDestino)
-  const aplicaIcmsEfetivo = aplicaIcms && icmsAtivoEmpresa
-  const aliqIcms = aplicaIcmsEfetivo ? (icmsItem?.aliquota ?? 0) : 0
+  // ── ICMS: o campo ICMS dos Dados da Operação (origem × destino), só em empresa contribuinte ──
+  const campoIcms = campos.find((c) => c.tipo === 'icms')
+  const aliqIcms = campoIcms ? Math.min(0.5, Math.max(0, numeroDe(valores[campoIcms.chave]))) : 0
+  const aplicaIcmsEfetivo = aliqIcms > 0
 
   // ── preço: servidor é a fonte da verdade; o local só cobre o instante até responder ──
   const srv = usePrecoServidor(
@@ -227,7 +224,8 @@ export function PricingPage() {
       desconto,
       valorNf: 0,
       aplicaIcms: aplicaIcmsEfetivo,
-      ufDestinoId: aplicaIcmsEfetivo ? ufDestino : null,
+      ufDestinoId: null,
+      aliquotaIcms: aliqIcms,
       custoPercentualServico: 0,
       comissoes: comissaoEditada,
       vendedorId: vendedorId || null,
@@ -272,13 +270,13 @@ export function PricingPage() {
   const retratoDados = (): DadoOperacaoItem[] =>
     campos.map((c) => {
       const v = valores[c.chave]
-      const numerico = c.tipo === 'numero' || c.tipo === 'valor' || c.tipo === 'percentual' || c.tipo === 'advalorem'
+      const numerico = c.tipo === 'numero' || c.tipo === 'valor' || c.tipo === 'percentual' || c.tipo === 'advalorem' || c.tipo === 'icms'
       const texto =
         c.tipo === 'cadastro'
           ? nomeCadastro(c.cadastro, String(v ?? ''))
           : c.tipo === 'valor'
             ? (v ? formatBRL(Number(v)) : '')
-            : c.tipo === 'percentual' || c.tipo === 'advalorem'
+            : c.tipo === 'percentual' || c.tipo === 'advalorem' || c.tipo === 'icms'
               ? (v ? formatPct(Number(v)) : '')
               : String(v ?? '')
       return { campoId: c.id, chave: c.chave, nome: c.nome, tipo: c.tipo, efeito: efeitoDe(c), texto, numero: numerico ? numeroDe(v) : 0 }
@@ -410,7 +408,7 @@ export function PricingPage() {
           origem === 'veiculo' ? (veiculosData ?? []).map((x) => ({ id: x.id, nome: nomeVeiculo(x) })) :
           (fornecedoresData ?? []).map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome }))
         v[campo.chave] = lista.find((x) => x.nome === d.texto)?.id ?? atual ?? ''
-      } else if (campo.tipo === 'numero' || campo.tipo === 'valor' || campo.tipo === 'percentual' || campo.tipo === 'advalorem') v[campo.chave] = d.numero
+      } else if (['numero', 'valor', 'percentual', 'advalorem', 'icms'].includes(campo.tipo)) v[campo.chave] = d.numero
       else v[campo.chave] = d.texto
     }
     setValores(v)
@@ -680,7 +678,7 @@ export function PricingPage() {
             <div className={base.finalBox}>
               <div>
                 <div className={base.finalLabel}>
-                  {temAdValorem ? 'Frete peso' : 'Preço final'}{aplicaIcmsEfetivo ? ' (com ICMS)' : ''}
+                  {temAdValorem ? 'Frete peso' : 'Preço final'}{aplicaIcmsEfetivo ? ` (com ICMS ${formatPct(aliqIcms)})` : ''}
                   {precoNegociado && <span className={base.negociadoTag}>negociado</span>}
                 </div>
                 {precoNegociado && editandoPreco ? (
@@ -774,21 +772,6 @@ export function PricingPage() {
                   </div>
                 )}
               </div>
-              {icmsAtivoEmpresa && (
-                <div className={base.inputBlock}>
-                  <label className={base.inputLabel}>ICMS</label>
-                  <div className={s.icmsLinha}>
-                    <label className={s.icmsCheck}><input type="checkbox" checked={aplicaIcms} onChange={(e) => setAplicaIcms(e.target.checked)} /> Aplicar</label>
-                    {aplicaIcms && (
-                      <select className={base.select} value={ufDestino} onChange={(e) => setUfDestino(e.target.value)} aria-label="UF de destino">
-                        {ufs.map((i) => (
-                          <option key={i.id} value={i.id}>{i.uf} ({formatPct(i.aliquota)})</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
 
             <div className={s.descricaoRow}>
@@ -824,6 +807,7 @@ export function PricingPage() {
                 <div className={base.memRow}><span className={base.memLabel}>× Fator (DF {formatPct(dfPct)} + DV {formatPct(dvSem)} + lucro {formatPct(lucro)})</span><span className={base.memVal}>{fator4(fatorVal)}</span></div>
                 <div className={base.memRow}><span className={base.memLabel}>= Preço de venda</span><span className={base.memVal}>{formatBRL(pv)}</span></div>
                 {desconto > 0 && <div className={base.memRow}><span className={base.memLabel}>(−) Desconto {formatPct(desconto)}</span><span className={base.memVal}>{formatBRL(pv - pvComDesconto)}</span></div>}
+                {aplicaIcmsEfetivo && <div className={base.memRow}><span className={base.memLabel}>÷ (1 − ICMS {formatPct(aliqIcms)}) = frete com ICMS</span><span className={base.memVal}>{formatBRL(precoCalculado)}</span></div>}
                 <div className={base.memRow}><span className={base.memLabel}>Margem líquida</span><span className={`${base.mlBadge} ${abaixoDoMinimo ? base.mlBadgeRuim : ''}`}>{formatPct(margemVigente.ml)}</span></div>
               </>
             )}

@@ -25,6 +25,60 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
             modelBuilder.HasSequence("contratos_numero_seq");
 
+            modelBuilder.Entity("Elrond.Domain.Entities.AliquotaIcms", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<decimal>("Aliquota")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Fundamentacao")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("UfDestino")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<string>("UfOrigem")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("aliquotas_icms", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Anexo", b =>
                 {
                     b.Property<string>("Id")
@@ -97,6 +151,104 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasIndex("Entidade", "EntidadeId");
 
                     b.ToTable("anexos", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Apolice", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("CustoEmissao")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.PrimitiveCollection<List<string>>("Documentos")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.PrimitiveCollection<List<string>>("EmpresaIds")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Iof")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("LimitePorEmbarque")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("Observacao")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("SeguradoraId")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("TaxaPadrao")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("TaxaUrbana")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("VigenciaFim")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("VigenciaInicio")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SeguradoraId");
+
+                    b.ToTable("apolices", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.AvisoNfseRecebido", b =>
@@ -3821,6 +3973,39 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("vinculos_google", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Apolice", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.TaxaApolice", "Taxas", b1 =>
+                        {
+                            b1.Property<string>("ApoliceId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<decimal>("Percentual")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("UfDestino")
+                                .IsRequired();
+
+                            b1.Property<string>("UfOrigem")
+                                .IsRequired();
+
+                            b1.HasKey("ApoliceId", "__synthesizedOrdinal");
+
+                            b1.ToTable("apolices");
+
+                            b1
+                                .ToJson("Taxas")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ApoliceId");
+                        });
+
+                    b.Navigation("Taxas");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.CenarioProjecao", b =>

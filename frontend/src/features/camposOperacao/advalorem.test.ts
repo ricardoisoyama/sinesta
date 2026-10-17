@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { novaApolice, type ApoliceSeguro, type Parceiro } from '@/features/parceiros/types'
+import { novaApolice, type Apolice } from '@/features/apolices/types'
+import type { Parceiro } from '@/features/parceiros/types'
 import { adValoremDosCampos, apoliceVigente, ligacoesSugeridas, preencherAdValorem, taxaDaRota, ufDoValor } from './advalorem'
 import { novoCampo, type CampoOperacao } from './types'
 
-const apolice = (p: Partial<ApoliceSeguro> = {}): ApoliceSeguro => ({
+const apolice = (p: Partial<Apolice> = {}): Apolice => ({
   ...novaApolice(),
+  id: 'x',
+  seguradoraId: 's',
   numero: '4465',
   taxas: [
     { ufOrigem: 'SP', ufDestino: 'RJ', percentual: 0.0014 },
@@ -13,8 +16,8 @@ const apolice = (p: Partial<ApoliceSeguro> = {}): ApoliceSeguro => ({
   ...p,
 })
 
-const seguradora = (apolices: ApoliceSeguro[], p: Partial<Parceiro> = {}) =>
-  ({ id: 's', nome: 'MAPFRE SEGUROS GERAIS S.A.', nomeFantasia: '', status: 'ativo', seguradora: true, apolices, ...p }) as Parceiro
+const seguradora = (p: Partial<Parceiro> = {}) =>
+  ({ id: 's', nome: 'MAPFRE SEGUROS GERAIS S.A.', nomeFantasia: '', status: 'ativo', seguradora: true, ...p }) as Parceiro
 
 const campo = (nome: string, tipo: CampoOperacao['tipo'], extra: Partial<CampoOperacao> = {}): CampoOperacao => ({
   ...novoCampo(nome, tipo),
@@ -44,12 +47,14 @@ describe('ad valorem', () => {
     const atual = apolice({ id: 'a', vigenciaInicio: '2026-01-01', vigenciaFim: '2026-12-31' })
     const outraEmpresa = apolice({ id: 'o', vigenciaInicio: '2026-06-01', empresaIds: ['outra'] })
     const rcf = apolice({ id: 'r', tipo: 'RCF-DC' })
-    const lista = [seguradora([vencida, atual, outraEmpresa, rcf])]
-    expect(apoliceVigente(lista, 'RCTR-C', 'emp', '2026-10-17')?.apolice.id).toBe('a')
-    expect(apoliceVigente(lista, 'RCTR-C', 'outra', '2026-10-17')?.apolice.id).toBe('o')
-    expect(apoliceVigente(lista, 'RCF-DC', 'emp', '2026-10-17')?.seguradora).toBe('MAPFRE SEGUROS GERAIS S.A.')
-    expect(apoliceVigente([seguradora([atual], { seguradora: false })], 'RCTR-C', 'emp', '2026-10-17')).toBeUndefined()
-    expect(apoliceVigente([seguradora([atual], { status: 'inativo' })], 'RCTR-C', 'emp', '2026-10-17')).toBeUndefined()
+    const lista = [vencida, atual, outraEmpresa, rcf]
+    const segs = [seguradora()]
+    expect(apoliceVigente(lista, segs, 'RCTR-C', 'emp', '2026-10-17')?.apolice.id).toBe('a')
+    expect(apoliceVigente(lista, segs, 'RCTR-C', 'outra', '2026-10-17')?.apolice.id).toBe('o')
+    expect(apoliceVigente(lista, segs, 'RCF-DC', 'emp', '2026-10-17')?.seguradora).toBe('MAPFRE SEGUROS GERAIS S.A.')
+    expect(apoliceVigente([atual], [seguradora({ seguradora: false })], 'RCTR-C', 'emp', '2026-10-17')).toBeUndefined()
+    expect(apoliceVigente([atual], [seguradora({ status: 'inativo' })], 'RCTR-C', 'emp', '2026-10-17')).toBeUndefined()
+    expect(apoliceVigente([{ ...atual, seguradoraId: 'outra' }], segs, 'RCTR-C', 'emp', '2026-10-17')).toBeUndefined()
   })
 
   it('gatilho: origem e destino preenchem o percentual; outro campo não sobrescreve o ajuste', () => {

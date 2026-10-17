@@ -19,7 +19,9 @@ public record CalcularPrecoRequest(
     /// <summary>Comissão desta operação (fração). Nulo = a do vendedor ou a da empresa.</summary>
     decimal? Comissoes = null,
     /// <summary>Vendedor da operação: a regra de comissão dele é o padrão.</summary>
-    string? VendedorId = null
+    string? VendedorId = null,
+    /// <summary>Alíquota do campo ICMS dos Dados da Operação (fração). Informada, substitui a busca por UfDestinoId.</summary>
+    decimal? AliquotaIcms = null
 );
 
 /// <summary>

@@ -140,19 +140,54 @@ public class Fornecedor : Rastreavel, IEntity, IInativavel
     public string EnderecoExterior { get; set; } = string.Empty;
     public string Site { get; set; } = string.Empty;
 
-    /// <summary>Fornecedor que é seguradora: libera a aba de apólices (RCTR-C, RCF-DC...).</summary>
+    /// <summary>Fornecedor que é seguradora: aparece na escolha da seguradora em Cadastros › Apólices.</summary>
     public bool Seguradora { get; set; }
-    /// <summary>Apólices contratadas com esta seguradora (só valem quando Seguradora = true).</summary>
+    /// <summary>
+    /// Legado (17/10/2026): as apólices moravam aqui e foram copiadas para a tabela apolices.
+    /// A coluna fica (o banco nunca perde dado); a tela não lê nem grava mais.
+    /// </summary>
     public List<ApoliceSeguro> Apolices { get; set; } = new();
 }
 
-/// <summary>
-/// Apólice de seguro de carga. A tabela de prêmio (por UF de origem e destino) é a base do
-/// ad valorem nos Dados da Operação: a precificação usa a apólice vigente do tipo escolhido.
-/// </summary>
+/// <summary>Formato antigo da apólice dentro do fornecedor (só para ler a coluna legada; congelado).</summary>
 public class ApoliceSeguro
 {
     public string Id { get; set; } = string.Empty;
+    /// <summary>RCTR-C | RCF-DC | RC-V | Ambiental | Outro.</summary>
+    public string Tipo { get; set; } = "RCTR-C";
+    public string Numero { get; set; } = string.Empty;
+    /// <summary>Empresas (CNPJ) cobertas. Vazio = todas.</summary>
+    public List<string> EmpresaIds { get; set; } = new();
+    /// <summary>yyyy-MM-dd; vazio = sem limite naquele lado.</summary>
+    public string VigenciaInicio { get; set; } = string.Empty;
+    public string VigenciaFim { get; set; } = string.Empty;
+    /// <summary>Limite máximo de garantia por embarque (R$).</summary>
+    public decimal LimitePorEmbarque { get; set; }
+    /// <summary>Custo de emissão da apólice (R$).</summary>
+    public decimal CustoEmissao { get; set; }
+    /// <summary>IOF sobre o prêmio (fração: 0,0738 = 7,38%).</summary>
+    public decimal Iof { get; set; }
+    /// <summary>Prêmio quando origem e destino são a mesma cidade (fração). 0 = usa a tabela.</summary>
+    public decimal TaxaUrbana { get; set; }
+    /// <summary>Prêmio das rotas que não estão na tabela (fração). 0 = sem padrão.</summary>
+    public decimal TaxaPadrao { get; set; }
+    /// <summary>Documentos em que a apólice se aplica: cte | nfse | minuta.</summary>
+    public List<string> Documentos { get; set; } = new();
+    public string Observacao { get; set; } = string.Empty;
+    public string Status { get; set; } = "ativo";
+    /// <summary>Prêmio por UF de origem × UF de destino.</summary>
+    public List<TaxaApolice> Taxas { get; set; } = new();
+}
+
+/// <summary>
+/// Apólice de seguro de carga (Cadastros › Apólices), ligada a um fornecedor seguradora. A tabela de
+/// prêmio (por UF de origem e destino) é a base do ad valorem: o Pricing usa a apólice vigente do tipo.
+/// </summary>
+public class Apolice : Rastreavel, IEntity, IInativavel
+{
+    public string Id { get; set; } = string.Empty;
+    /// <summary>Fornecedor com Seguradora = true.</summary>
+    public string SeguradoraId { get; set; } = string.Empty;
     /// <summary>RCTR-C | RCF-DC | RC-V | Ambiental | Outro.</summary>
     public string Tipo { get; set; } = "RCTR-C";
     public string Numero { get; set; } = string.Empty;

@@ -1,0 +1,5 @@
+/* Cadastro de apólices. Paleta do ui.module.css. */
+
+/* Opções marcáveis dentro de um Field: sem o caixa-alta do rótulo do campo. */
+.marcas { display: flex; flex-wrap: wrap; gap: 8px 18px; min-height: 36px; align-items: center; }
+section .marcas label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: #1f2a24; margin: 0; }

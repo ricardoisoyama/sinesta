@@ -30,7 +30,7 @@ import {
   type ValoresOperacao,
 } from './types'
 import { ligacoesSugeridas } from './advalorem'
-import { TIPOS_APOLICE } from '@/features/parceiros/types'
+import { TIPOS_APOLICE } from '@/features/apolices/types'
 import s from './camposOperacao.module.css'
 
 const notaOpcoes = { padding: '0 10px', fontSize: 12 } as const
@@ -104,7 +104,11 @@ export function CamposOperacaoPage() {
     const permitidos = EFEITOS_POR_TIPO[tipo]
     const efeito = permitidos.includes(c.efeito) ? c.efeito : permitidos[permitidos.length - 1]
     // Ad valorem já nasce ligado ao valor da mercadoria e à origem/destino, quando os nomes ajudam.
-    const ligacoes = tipo === 'advalorem' ? { seguro: c.seguro || 'RCTR-C', ...ligacoesSugeridas(ativos) } : {}
+    const sugeridas = ligacoesSugeridas(ativos)
+    const ligacoes =
+      tipo === 'advalorem' ? { seguro: c.seguro || 'RCTR-C', ...sugeridas }
+      : tipo === 'icms' ? { campoOrigem: c.campoOrigem || sugeridas.campoOrigem, campoDestino: c.campoDestino || sugeridas.campoDestino }
+      : {}
     upd(c.id, { tipo, efeito, cadastro: tipo === 'cadastro' ? c.cadastro || 'cliente' : '', opcoes: tipo === 'lista' ? c.opcoes : [], ...ligacoes })
   }
   /** Mover dentro da ordem dos ativos (os removidos ficam no fim). */
@@ -184,20 +188,22 @@ export function CamposOperacaoPage() {
               })()}
             </span>
           )}
-          {c.tipo === 'advalorem' && (
+          {(c.tipo === 'advalorem' || c.tipo === 'icms') && (
             <div className={s.ligacoes}>
-              <select value={c.seguro || 'RCTR-C'} disabled={removido} title="Apólice que dá o percentual" onChange={(e) => upd(c.id, { seguro: e.target.value })}>
-                {TIPOS_APOLICE.map((t) => (
-                  <option key={t} value={t}>Apólice {t}</option>
-                ))}
-              </select>
+              {c.tipo === 'advalorem' && (
+                <select value={c.seguro || 'RCTR-C'} disabled={removido} title="Apólice que dá o percentual" onChange={(e) => upd(c.id, { seguro: e.target.value })}>
+                  {TIPOS_APOLICE.map((t) => (
+                    <option key={t} value={t}>Apólice {t}</option>
+                  ))}
+                </select>
+              )}
               {(
                 [
                   ['campoBase', 'Sobre', ['valor']],
                   ['campoOrigem', 'Origem', ['uf', 'cidade']],
                   ['campoDestino', 'Destino', ['uf', 'cidade']],
                 ] as const
-              ).map(([prop, rotulo, tipos]) => (
+              ).filter(([prop]) => c.tipo === 'advalorem' || prop !== 'campoBase').map(([prop, rotulo, tipos]) => (
                 <select key={prop} value={c[prop] ?? ''} disabled={removido} title={rotulo} onChange={(e) => upd(c.id, { [prop]: e.target.value })}>
                   <option value="">{rotulo}: escolha</option>
                   {ativos
@@ -209,7 +215,7 @@ export function CamposOperacaoPage() {
               ))}
             </div>
           )}
-          {!['lista', 'cadastro', 'uf', 'cidade', 'advalorem'].includes(c.tipo) && <span className={sheet.mut} style={notaOpcoes}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
+          {!['lista', 'cadastro', 'uf', 'cidade', 'advalorem', 'icms'].includes(c.tipo) && <span className={sheet.mut} style={notaOpcoes}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
         </td>
         <td className={sheet[EFEITOS[ef].cor]} title={EFEITOS[ef].ajuda}>
           {efeitosPermitidos.length > 1 && !removido ? (
@@ -298,6 +304,7 @@ export function CamposOperacaoPage() {
           <span><i className={s.laranja} /> Multiplica o preço (número usado como quantidade)</span>
           <span><i className={s.verde} /> Soma ao custo (valor em R$, % sobre o custo)</span>
           {ativos.some((c) => c.tipo === 'advalorem') && <span>Ad valorem: fora do markup, soma ao frete (frete peso + ad valorem = frete total)</span>}
+          {ativos.some((c) => c.tipo === 'icms') && <span>ICMS: por dentro no frete peso, só para empresa contribuinte (fora do Simples)</span>}
           <span><i className={s.cinza} /> Só informa</span>
         </div>
       </div>

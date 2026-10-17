@@ -145,35 +145,66 @@ public class ParametrizacaoTests
     [Fact]
     public void Apolice_normaliza_a_tabela_de_premio_e_recusa_o_que_nao_faz_sentido()
     {
-        var f = new Fornecedor
+        var a = new Apolice
         {
-            Seguradora = true,
-            Apolices = new()
-            {
-                new()
-                {
-                    Tipo = "rctr-c", Numero = " 4465 ", VigenciaInicio = "2026-01-01", VigenciaFim = "2026-12-31", Documentos = new() { "cte", "xpto" },
-                    Taxas = new() { new() { UfOrigem = "sp", UfDestino = "rj", Percentual = 0.0014m }, new() { UfOrigem = "SP", UfDestino = "RJ", Percentual = 0.0016m }, new() { UfOrigem = "AC", UfDestino = "SP", Percentual = 0.003m } },
-                },
-            },
+            SeguradoraId = " mapfre ", Tipo = "rctr-c", Numero = " 4465 ", VigenciaInicio = "2026-01-01", VigenciaFim = "2026-12-31", Documentos = new() { "cte", "xpto" },
+            Taxas = new() { new() { UfOrigem = "sp", UfDestino = "rj", Percentual = 0.0014m }, new() { UfOrigem = "SP", UfDestino = "RJ", Percentual = 0.0016m }, new() { UfOrigem = "AC", UfDestino = "SP", Percentual = 0.003m } },
         };
-        Assert.Null(ApolicesSeguro.Normalizar(f));
-        var a = f.Apolices[0];
-        Assert.Equal(("RCTR-C", "4465"), (a.Tipo, a.Numero));
-        Assert.False(string.IsNullOrEmpty(a.Id));
+        Assert.Null(ApolicesSeguro.Normalizar(a));
+        Assert.Equal(("RCTR-C", "4465", "mapfre"), (a.Tipo, a.Numero, a.SeguradoraId));
         Assert.Equal(new List<string> { "cte" }, a.Documentos);
         Assert.Equal(2, a.Taxas.Count); // SP → RJ repetido: vale o último
         Assert.Equal(("AC", "SP"), (a.Taxas[0].UfOrigem, a.Taxas[0].UfDestino));
         Assert.Equal(0.0016m, a.Taxas[1].Percentual);
 
         a.VigenciaFim = "2025-12-31";
-        Assert.Contains("vigência", ApolicesSeguro.Normalizar(f));
+        Assert.Contains("vigência", ApolicesSeguro.Normalizar(a));
         a.VigenciaFim = "2026-12-31";
         a.Taxas.Add(new() { UfOrigem = "XX", UfDestino = "SP", Percentual = 0.001m });
-        Assert.Contains("UF inválida", ApolicesSeguro.Normalizar(f));
+        Assert.Contains("UF inválida", ApolicesSeguro.Normalizar(a));
         a.Taxas.RemoveAt(a.Taxas.Count - 1);
         a.Taxas[0].Percentual = 2m;
-        Assert.Contains("prêmio fora", ApolicesSeguro.Normalizar(f));
+        Assert.Contains("prêmio fora", ApolicesSeguro.Normalizar(a));
+        a.SeguradoraId = "";
+        Assert.Contains("seguradora", ApolicesSeguro.Normalizar(a));
+    }
+
+    [Fact]
+    public async Task Campo_icms_guarda_so_origem_e_destino()
+    {
+        var (svc, _, _, _, _, _, _) = Montar();
+        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        {
+            new() { Id = "i", Nome = "ICMS", Tipo = "icms", Seguro = "RCTR-C", CampoBase = "valor", CampoOrigem = "UF origem", CampoDestino = "uf_destino" },
+        });
+        var c = r.Value!.Single();
+        Assert.Equal(("icms", "informativo"), (c.Tipo, c.Efeito));
+        Assert.Equal(("uf_origem", "uf_destino"), (c.CampoOrigem, c.CampoDestino));
+        Assert.Equal((string.Empty, string.Empty), (c.Seguro, c.CampoBase));
+    }
+
+    [Fact]
+    public async Task Tabela_de_icms_grava_so_o_que_mudou_e_audita()
+    {
+        var repo = new MemRepo<AliquotaIcms>();
+        repo.Itens.Add(new AliquotaIcms { Id = "SP-RJ", UfOrigem = "SP", UfDestino = "RJ", Aliquota = 0.12m });
+        repo.Itens.Add(new AliquotaIcms { Id = "SP-BA", UfOrigem = "SP", UfDestino = "BA", Aliquota = 0.07m });
+        var auditoria = new FakeAuditoria();
+        var svc = new TabelaIcmsService(repo, auditoria);
+
+        var r = await svc.SalvarAsync(new()
+        {
+            new() { UfOrigem = "sp", UfDestino = "rj", Aliquota = 0.12m },               // igual: não grava
+            new() { UfOrigem = "SP", UfDestino = "BA", Aliquota = 0m, Fundamentacao = "isenção" }, // mudou
+            new() { UfOrigem = "RJ", UfDestino = "SP", Aliquota = 0.12m },               // nova
+        });
+        Assert.True(r.IsSuccess);
+        Assert.Equal(3, r.Value!.Count);
+        Assert.Equal(0m, repo.Itens.Single(a => a.Id == "SP-BA").Aliquota);
+        Assert.Equal(new[] { "editar", "criar" }, auditoria.Acoes);
+
+        Assert.False((await svc.SalvarAsync(new() { new() { UfOrigem = "EX", UfDestino = "SP", Aliquota = 0.1m } })).IsSuccess);
+        Assert.False((await svc.SalvarAsync(new() { new() { UfOrigem = "SP", UfDestino = "SP", Aliquota = 12m } })).IsSuccess); // 1200%: digitou em % em vez de fração
     }
 
     [Fact]

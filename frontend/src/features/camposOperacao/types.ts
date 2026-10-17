@@ -7,7 +7,7 @@
  * Remover é inativar. A proposta guarda um retrato (nome, tipo, efeito e valor de cada
  * campo) no dia em que o item entrou, então mudar os campos depois não altera propostas feitas.
  */
-export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual' | 'advalorem'
+export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual' | 'advalorem' | 'icms'
 
 export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico' | 'veiculo'
 
@@ -28,6 +28,11 @@ export const TIPOS_CAMPO: { valor: TipoCampoOperacao; label: string; ajuda: stri
     valor: 'advalorem',
     label: 'Ad valorem (seguro)',
     ajuda: 'Percentual do seguro sobre o valor da mercadoria. Preenche sozinho pela apólice da seguradora quando origem e destino são informados, e pode ser ajustado. Não mexe no markup: soma ao frete (frete peso + ad valorem = frete total).',
+  },
+  {
+    valor: 'icms',
+    label: 'ICMS (alíquota)',
+    ajuda: 'Alíquota de ICMS do frete. Preenche sozinha pela Tabela de ICMS (origem × destino) e pode ser ajustada. Só vale para empresa contribuinte (fora do Simples Nacional): entra por dentro no frete peso; o ad valorem fica fora.',
   },
 ]
 
@@ -50,6 +55,7 @@ export const EFEITOS_POR_TIPO: Record<TipoCampoOperacao, EfeitoCampo[]> = {
   valor: ['informativo', 'soma-custo'],
   percentual: ['informativo', 'pct-custo'],
   advalorem: ['informativo'],
+  icms: ['informativo'],
 }
 
 /** Efeito válido do campo (cai para "só informa" se o tipo não permite o escolhido). */
@@ -112,7 +118,7 @@ export interface CampoOperacao {
   seguro?: string
   /** Chave do campo com o valor da mercadoria. */
   campoBase?: string
-  /** Chaves dos campos de origem e destino (UF ou cidade). */
+  /** Chaves dos campos de origem e destino (UF ou cidade); também no ICMS. */
   campoOrigem?: string
   campoDestino?: string
 }

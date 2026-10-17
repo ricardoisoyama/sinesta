@@ -24,6 +24,8 @@ public static class Funcionalidades
         // Cadastros parametrizáveis (Dados da Operação e Ficha Técnica) que o Pricing usa.
         "/cadastros/fichas-tecnicas",
         "/cadastros/campos-operacao",
+        // Tabela de ICMS (origem × destino) que o campo ICMS dos Dados da Operação usa.
+        "/cadastros/icms",
         "/cadastros/plano-contas",
         "/cadastros/taxas",
         "/cadastros/unidades",
@@ -32,6 +34,8 @@ public static class Funcionalidades
         "/cadastros/unidades/markup",
         "/cadastros/clientes",
         "/cadastros/fornecedores",
+        // Apólices de seguro (base do ad valorem), separadas do fornecedor seguradora em 17/10/2026.
+        "/cadastros/apolices",
         "/cadastros/vendedores",
         "/cadastros/servicos",
         "/cadastros/veiculos",
