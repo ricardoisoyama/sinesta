@@ -42,9 +42,6 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 
-/** Permissão administrativa que mostra as telas em protótipo (só o perfil Suporte, a equipe ELROND). */
-export const PROTOTIPOS = '/prototipos'
-
 export interface NavItem {
   label: string
   path: string
@@ -53,8 +50,6 @@ export interface NavItem {
   acao?: 'suporte'
   /** Aparece para todos, sem permissão própria. */
   livre?: boolean
-  /** Permissão que libera o item, quando não é a própria rota (ex.: as telas em protótipo). */
-  permissao?: string
 }
 
 export interface NavGroup {
@@ -91,7 +86,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Pricing', path: '/simulador', icon: Calculator },
       { label: 'Proposta', path: '/propostas', icon: Route },
       // Protótipo (dados de exemplo): só com a permissão especial "Ver protótipos".
-      { label: 'Contratos', path: '/contratos', icon: FolderOpen, permissao: PROTOTIPOS },
+      { label: 'Contratos', path: '/contratos', icon: FolderOpen },
       { label: 'CRM', path: '/crm', icon: SquareKanban },
       { label: 'Agenda', path: '/agenda', icon: CalendarDays },
       { label: 'Metas', path: '/analises/metas', icon: Target },
@@ -105,7 +100,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Ficha Técnica', path: '/cadastros/fichas-tecnicas', icon: ListChecks },
       { label: 'Modelos de Proposta', path: '/cadastros/modelos-proposta', icon: FileText },
       { label: 'Funis do CRM', path: '/cadastros/funis', icon: Filter },
-      { label: 'Modelos de Contrato', path: '/cadastros/modelos-contrato', icon: LayoutTemplate, permissao: PROTOTIPOS },
+      { label: 'Modelos de Contrato', path: '/cadastros/modelos-contrato', icon: LayoutTemplate },
       { label: 'Aprovadores e Regras', path: '/cadastros/aprovadores', icon: ShieldCheck },
     ],
   },
@@ -114,7 +109,7 @@ export const navGroups: NavGroup[] = [
     icon: Landmark,
     items: [
       // Protótipo (dados de exemplo): só com a permissão especial "Ver protótipos".
-      { label: 'Faturamento', path: '/financeiro/faturamento', icon: ReceiptText, permissao: PROTOTIPOS },
+      { label: 'Faturamento', path: '/financeiro/faturamento', icon: ReceiptText },
       { label: 'Entradas e Saídas', path: '/financeiro/entradas-saidas', icon: ArrowLeftRight },
       { label: 'Caixa', path: '/financeiro/caixa', icon: PiggyBank },
       { label: 'Conciliação', path: '/financeiro/conciliacao', icon: Link2 },
@@ -128,7 +123,7 @@ export const navGroups: NavGroup[] = [
     icon: BarChart3,
     items: [
       // Protótipo: a base é real (DF, metas, fator); os cenários ficam no navegador.
-      { label: 'Projeção', path: '/analises/projecao', icon: LineChart, permissao: PROTOTIPOS },
+      { label: 'Projeção', path: '/analises/projecao', icon: LineChart },
       { label: 'Break-even', path: '/analises/break-even', icon: Scale },
       { label: 'Mix / Equilíbrio', path: '/analises/mix', icon: PieChart },
       { label: 'RPO (Orçado × Real)', path: '/analises/rpo', icon: ClipboardList },
@@ -156,7 +151,7 @@ export function visibleGroups(perms: string[] | null | undefined): NavGroup[] {
   return navGroups
     .map((g) => ({
       ...g,
-      items: g.items.filter((it) => !perms || it.livre || perms.includes(it.permissao ?? it.path)),
+      items: g.items.filter((it) => !perms || it.livre || perms.includes(it.path)),
     }))
     .filter((g) => g.items.length > 0)
 }

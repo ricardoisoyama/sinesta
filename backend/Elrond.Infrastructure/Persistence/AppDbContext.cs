@@ -49,6 +49,10 @@ public class AppDbContext : DbContext
     public DbSet<Movimento> Movimentos => Set<Movimento>();
     public DbSet<ExtratoLinha> ExtratoLinhas => Set<ExtratoLinha>();
     public DbSet<RegraConciliacao> RegrasConciliacao => Set<RegraConciliacao>();
+    public DbSet<ModeloContrato> ModelosContrato => Set<ModeloContrato>();
+    public DbSet<Contrato> Contratos => Set<Contrato>();
+    public DbSet<Fatura> Faturas => Set<Fatura>();
+    public DbSet<CenarioProjecao> CenariosProjecao => Set<CenarioProjecao>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -111,6 +115,8 @@ public class AppDbContext : DbContext
             e.ToTable("empresas");
             e.HasKey(x => x.Id);
             e.Property(x => x.PropostaPrefixo).HasMaxLength(15).HasDefaultValue(string.Empty);
+            e.Property(x => x.ContratoPrefixo).HasMaxLength(15).HasDefaultValue(string.Empty);
+            e.Property(x => x.ContratoDigitos).HasDefaultValue(4);
             e.Property(x => x.PropostaDigitos).HasDefaultValue(4);
             e.Property(x => x.InscricaoMunicipal).HasMaxLength(20).HasDefaultValue(string.Empty);
             e.Property(x => x.InscricaoEstadual).HasMaxLength(20).HasDefaultValue(string.Empty);
@@ -302,6 +308,75 @@ public class AppDbContext : DbContext
             e.OwnsOne(i => i.Boleto, b => b.ToJson());
             e.Ignore(i => i.RegrasDoBoleto);
             e.HasIndex(i => new { i.EmpresaId, i.Banco }).IsUnique();
+        });
+
+        // ── Contratos, faturas e projeção (estruturas da pasta em JSON) ──
+        modelBuilder.Entity<ModeloContrato>(e =>
+        {
+            e.ToTable("modelos_contrato");
+            e.HasKey(m => m.Id);
+            e.OwnsMany(m => m.Campos, b => b.ToJson());
+            e.OwnsMany(m => m.Componentes, b => b.ToJson());
+        });
+
+        modelBuilder.HasSequence<long>("contratos_numero_seq");
+        modelBuilder.Entity<Contrato>(e =>
+        {
+            e.ToTable("contratos");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Numero).HasMaxLength(40);
+            e.HasIndex(c => c.Numero).IsUnique();
+            e.HasIndex(c => c.ClienteId);
+            e.OwnsMany(c => c.Escopo, b =>
+            {
+                b.ToJson();
+                b.OwnsMany(v => v.Itens);
+            });
+            e.OwnsOne(c => c.Condicoes, b => b.ToJson());
+            e.OwnsMany(c => c.Caracteristicas, b => b.ToJson());
+            e.OwnsMany(c => c.Componentes, b => b.ToJson());
+            e.OwnsMany(c => c.Extras, b =>
+            {
+                b.ToJson();
+                b.Ignore(x => x.Valor);
+            });
+            e.OwnsMany(c => c.Documentos, b => b.ToJson());
+            e.OwnsMany(c => c.Eventos, b => b.ToJson());
+            e.Ignore(c => c.Spot);
+            e.Ignore(c => c.PorDocumento);
+        });
+
+        modelBuilder.Entity<NumeracaoContrato>(e =>
+        {
+            e.ToTable("contrato_numeracao");
+            e.HasKey(n => n.EmpresaId);
+            e.Property(n => n.EmpresaId).HasMaxLength(80);
+        });
+
+        modelBuilder.Entity<Fatura>(e =>
+        {
+            e.ToTable("faturas");
+            e.HasKey(f => f.Id);
+            // A mesma fatura (mês, período, documento) nunca aparece duas vezes no contrato.
+            e.HasIndex(f => new { f.ContratoId, f.Chave }).IsUnique();
+            e.HasIndex(f => f.Competencia);
+            e.Property(f => f.ExtrasFora).HasColumnType("text[]");
+            e.OwnsMany(f => f.Composicao, b => b.ToJson());
+            e.OwnsMany(f => f.Documentos, b => b.ToJson());
+            e.OwnsMany(f => f.Extras, b =>
+            {
+                b.ToJson();
+                b.Ignore(x => x.Valor);
+            });
+            e.OwnsMany(f => f.Versoes, b => b.ToJson());
+            e.Ignore(f => f.Travada);
+        });
+
+        modelBuilder.Entity<CenarioProjecao>(e =>
+        {
+            e.ToTable("cenarios_projecao");
+            e.HasKey(c => c.Id);
+            e.OwnsMany(c => c.Hipoteses, b => b.ToJson());
         });
 
         modelBuilder.Entity<CobrancaBancaria>(e =>

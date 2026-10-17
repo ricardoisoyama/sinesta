@@ -50,7 +50,7 @@ export const updateEmpresa = (e: Unidade) =>
   apiFetch<Unidade>(`/empresas/${e.id}`, { method: 'PUT', body: JSON.stringify(e) })
 /** Quantas propostas a empresa já emitiu no prefixo próprio (travado = o padrão não muda mais). */
 export const getNumeracaoEmpresa = (id: string) =>
-  apiFetch<{ emitidas: number; travado: boolean }>(`/empresas/${id}/numeracao`)
+  apiFetch<{ emitidas: number; travado: boolean; contratos: number; contratoTravado: boolean }>(`/empresas/${id}/numeracao`)
 /** Certificado A1 da empresa: só a situação (titular, CNPJ, validade); `disponivel` = o servidor tem a chave para guardar. */
 export const getCertificadoEmpresa = (id: string) =>
   apiFetch<{ disponivel: boolean; certificado: CertificadoInfo | null }>(`/empresas/${id}/certificado`)

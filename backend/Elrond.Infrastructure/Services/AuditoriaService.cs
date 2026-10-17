@@ -179,3 +179,25 @@ public class PropostaNumerador : IPropostaNumerador
     public static string Formatar(string prefixo, int digitos, long n) =>
         $"{prefixo}-{n.ToString("D" + Math.Clamp(digitos, 3, 8))}";
 }
+
+/// <summary>Número do contrato: mesmo esquema da proposta (prefixo da empresa ou CTR-0001, atômico).</summary>
+public class ContratoNumerador(AppDbContext db) : IContratoNumerador
+{
+    public async Task<string> ProximoAsync(string empresaId)
+    {
+        var empresa = await db.Set<Empresa>().AsNoTracking().FirstOrDefaultAsync(e => e.Id == empresaId);
+        if (empresa is { ContratoPrefixo.Length: > 0 })
+        {
+            var n = (await db.Database.SqlQueryRaw<long>(
+                "INSERT INTO contrato_numeracao (\"EmpresaId\", \"Ultimo\") VALUES ({0}, 1) " +
+                "ON CONFLICT (\"EmpresaId\") DO UPDATE SET \"Ultimo\" = contrato_numeracao.\"Ultimo\" + 1 RETURNING \"Ultimo\" AS \"Value\"",
+                empresa.Id).ToListAsync()).First();
+            return PropostaNumerador.Formatar(empresa.ContratoPrefixo, empresa.ContratoDigitos, n);
+        }
+        var seq = await db.Database.SqlQueryRaw<long>("SELECT nextval('contratos_numero_seq') AS \"Value\"").FirstAsync();
+        return PropostaNumerador.Formatar("CTR", 4, seq);
+    }
+
+    public async Task<long> EmitidosAsync(string empresaId) =>
+        (await db.Set<NumeracaoContrato>().AsNoTracking().FirstOrDefaultAsync(n => n.EmpresaId == empresaId))?.Ultimo ?? 0;
+}

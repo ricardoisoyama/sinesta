@@ -1,4 +1,4 @@
-/* Projeção (protótipo). Paleta do sistema; verde = bom, vermelho = no prejuízo, laranja = equilíbrio. */
+/* Projeção. Paleta do sistema; verde = bom, vermelho = no prejuízo, laranja = equilíbrio. */
 .avisoFator { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 9px 14px; border-radius: 10px; background: #fbf1db; border: 1px solid #f0dfb0; color: #8a5a0c; font-size: 12.5px; }
 
 /* cenários */
@@ -45,8 +45,6 @@
 .hipTexto { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.3; }
 .hipTexto b { font-size: 13px; color: #143d18; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hipTexto span { font-size: 11.5px; color: #6b7b72; }
-.efetivar { border: 1px solid #cfe0d4; background: #eef4ef; color: #1a4d1e; font: inherit; font-size: 11.5px; font-weight: 700; border-radius: 7px; padding: 4px 9px; cursor: pointer; white-space: nowrap; }
-.efetivar:hover { background: #1a4d1e; color: #fff; }
 .hipForm { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; border: 1px solid #f0dfb0; background: #fdf8ee; border-radius: 12px; }
 .hipForm label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; font-weight: 600; color: #6b7b72; min-width: 0; }
 .hipForm input, .hipForm select { font: inherit; font-size: 13px; color: #1f2a24; border: 1px solid #e6e3db; border-radius: 8px; padding: 7px 10px; background: #fff; min-width: 0; }
@@ -69,9 +67,49 @@
 /* tabelas */
 .tabela tbody td { font-variant-numeric: tabular-nums; }
 .tabela tbody tr { cursor: pointer; }
-.linhaAtiva td { background: #fdf3ea; }
 .mesAMes { margin-top: 14px; }
 .mesAMes summary { cursor: pointer; font-size: 13px; font-weight: 700; color: #143d18; padding: 2px 0; }
 .mesAMes[open] summary { margin-bottom: 10px; }
 .metaRepetida { margin-left: 8px; font-size: 10.5px; font-weight: 700; color: #8a5a0c; background: #fbf1db; border-radius: 6px; padding: 1px 6px; }
 .semMeta { margin-left: 8px; font-size: 10.5px; font-weight: 700; color: #b42318; background: #fbe6e2; border-radius: 6px; padding: 1px 6px; }
+
+/* comparação de cenários */
+.cmpTopo { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.cmpTopo .cartaoTitulo { margin-bottom: 0; }
+.cmpEscolha { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmpChip { display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border-radius: 999px; border: 1px solid #e6e3db; background: #fff; font: inherit; font-size: 12.5px; font-weight: 600; color: #4b5a51; cursor: pointer; }
+.cmpChip i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid; flex-shrink: 0; }
+.cmpChip[aria-disabled='true'] { cursor: default; }
+.cmpChip:disabled { opacity: 0.5; cursor: not-allowed; }
+.cmpChipOn { border-color: #cfe0d4; background: #f4f8f5; color: #143d18; }
+.cmpChip:focus-visible, .cmpMetricas button:focus-visible { outline: 2px solid #e8702f; outline-offset: 2px; }
+.cmpTraco, .cmpTracoTh { display: inline-block; width: 16px; height: 0; border-top: 2px dashed #8a918b; border-radius: 0 !important; vertical-align: middle; }
+.cmpTraco { border-left: 0 !important; border-right: 0 !important; border-bottom: 0 !important; }
+.cmpPonto { display: inline-block; width: 9px; height: 9px; border-radius: 50%; vertical-align: middle; }
+.cmpMetricas { display: inline-flex; flex-wrap: wrap; border: 1px solid #e6e3db; border-radius: 9px; overflow: hidden; background: #f6f5f1; margin: 4px 0 6px; }
+.cmpMetricas button { border: 0; background: transparent; padding: 7px 12px; font: inherit; font-size: 12px; font-weight: 600; color: #6b7b72; cursor: pointer; }
+.cmpMetricas button + button { border-left: 1px solid #e6e3db; }
+.cmpMetricaOn { background: #143d18 !important; color: #fff !important; }
+
+.ponteGrade { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin: 14px 0; }
+.ponte { border: 1px solid #efebe2; border-radius: 12px; background: #fdfcf9; padding: 12px 14px; min-width: 0; }
+.ponteTitulo { display: flex; align-items: center; gap: 7px; font-size: 13.5px; font-weight: 700; color: #143d18; margin-bottom: 8px; }
+.ponteTitulo i { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.ponteLucro { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12px; color: #6b7b72; padding-bottom: 8px; border-bottom: 1px solid #efebe2; }
+.ponteLucro b { font-size: 14px; color: #143d18; font-variant-numeric: tabular-nums; }
+.ponteSub { font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; margin: 10px 0 6px; }
+.barra { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(70px, 1fr) auto; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; }
+.barraRotulo { color: #1f2a24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barraTrilho { position: relative; height: 10px; background: #f0eee7; border-radius: 5px; }
+.barraTrilho::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: #c9c4b8; }
+.barraTrilho i { position: absolute; top: 0; bottom: 0; }
+.barraMais { background: #2e7d44; border-radius: 0 4px 4px 0; }
+.barraMenos { background: #c0392b; border-radius: 4px 0 0 4px; }
+.barra b { font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 12px; }
+
+.cmpTabela tbody tr { cursor: default; }
+.cmpTabela td { vertical-align: top; }
+.cmpMes { color: #6b7b72; font-weight: 500; }
+.delta { display: flex; align-items: center; justify-content: flex-end; gap: 2px; font-size: 11px; font-weight: 600; color: #6b7b72; margin-top: 2px; }
+.deltaBom { color: #1d6b3e; }
+.deltaRuim { color: #b42318; }

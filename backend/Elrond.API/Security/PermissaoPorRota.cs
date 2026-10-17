@@ -45,6 +45,10 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
         ("api/financeiro/conciliacao", "/financeiro/conciliacao"),
         ("api/financeiro/regras-conciliacao", "/financeiro/conciliacao"),
         ("api/fichas-tecnicas", "/cadastros/fichas-tecnicas"),
+        ("api/modelos-contrato", "/cadastros/modelos-contrato"),
+        ("api/contratos", "/contratos"),
+        ("api/faturas", "/financeiro/faturamento"),
+        ("api/cenarios-projecao", "/analises/projecao"),
     };
 
     /// <summary>Rotas cujo controller confere a permissão por conta própria (depende de dado da requisição).</summary>

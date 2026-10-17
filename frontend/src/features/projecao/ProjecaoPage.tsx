@@ -4,66 +4,26 @@ import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContai
 import { AlertTriangle, BadgeCheck, CalendarClock, Copy, Gauge, Layers, LineChart, Plus, Scale, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
-import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
-import { avisar } from '@/features/common/dialogo/dialogo'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { formatBRL, formatPct } from '@/lib/format'
 import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hooks'
 import { useMetas } from '@/features/metas/store'
 import { calcularFator, type FatorResultado } from '@/features/pricing/api'
 import { percentualDaEmpresa } from '@/features/custosFixos/regras'
 import { custoNoMes, dfDoMes, projetar, proximosMeses, receitaDoMes, resumir, ROTULO_HIPOTESE, type Hipotese, type LinhaMes, type Mes, type TipoHipotese } from './motor'
+import { useCenarios, type Cenario } from './api'
+import { Comparacao } from './Comparacao'
 import s from './projecao.module.css'
 
-interface Cenario {
-  id: string
-  nome: string
-  hipoteses: Hipotese[]
-}
-
-const CHAVE = 'elrond.projecao.cenarios.v1'
-/** Id novo (fora dos componentes: Date.now não é puro). */
+/** Id novo da hipótese (fora dos componentes: Date.now não é puro). */
 const novoId = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
 const kBRL = (v: number) => `${v < 0 ? '−' : ''}R$ ${Math.round(Math.abs(v) / 1000)}k`
 const fatorTxt = (f: number) => (f > 0 ? f.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—')
 const PORCENTO: TipoHipotese[] = ['reajuste-custos', 'variacao-meta']
 
-/** Cenários de exemplo, montados em volta do mês corrente (só na primeira vez neste navegador). */
-function exemplos(meses: Mes[]): Cenario[] {
-  const jan = `${meses[0].ano + 1}-01`
-  return [
-    { id: 'supervisor', nome: 'Contratar supervisor', hipoteses: [{ id: 'h1', tipo: 'novo-custo', nome: 'Supervisor operacional (salário + encargos)', valor: 7800, inicio: meses[1].chave, ativa: true }] },
-    {
-      id: 'otimista',
-      nome: 'Otimista',
-      hipoteses: [
-        { id: 'h2', tipo: 'nova-receita', nome: 'Cliente novo: condomínio (terceirização)', valor: 25000, inicio: meses[2].chave, ativa: true },
-        { id: 'h3', tipo: 'variacao-meta', nome: 'Meta 10% acima', valor: 0.1, inicio: meses[3].chave, ativa: true },
-      ],
-    },
-    {
-      id: 'pessimista',
-      nome: 'Pessimista',
-      hipoteses: [
-        { id: 'h4', tipo: 'variacao-meta', nome: 'Perder 15% do faturamento', valor: -0.15, inicio: meses[1].chave, ativa: true },
-        { id: 'h5', tipo: 'reajuste-custos', nome: 'Dissídio e reajustes de janeiro', valor: 0.06, inicio: jan, ativa: true },
-      ],
-    },
-  ]
-}
-
-function lerCenarios(meses: Mes[]): Cenario[] {
-  try {
-    const bruto = localStorage.getItem(CHAVE)
-    if (bruto) return JSON.parse(bruto) as Cenario[]
-  } catch {
-    // armazenamento indisponível: usa os exemplos
-  }
-  return exemplos(meses)
-}
-
 /**
- * Projeção (protótipo): 12 meses para frente com a META como receita e a DF dos cadastros (reais).
- * Hipóteses só existem no cenário; os cadastros não mudam. "Efetivar" (fase 3) cria o registro real.
+ * Projeção: 12 meses para frente com a META como receita e a DF dos cadastros (reais).
+ * Hipóteses só existem no cenário (gravado no servidor); os cadastros não mudam.
  */
 export function ProjecaoPage() {
   const [meses] = useState(() => proximosMeses(new Date()))
@@ -82,17 +42,9 @@ export function ProjecaoPage() {
   const fatorDe = (id: string): FatorResultado | undefined => fatores.find((q) => q.data?.empresaId === id)?.data
 
   const [escopo, setEscopo] = useState<string>('grupo')
-  const [cenarios, setCenariosEstado] = useState<Cenario[]>(() => lerCenarios(meses))
-  const [ativo, setAtivo] = useState<string>(() => cenarios[0]?.id ?? 'base')
+  const { cenarios, alterar, novo, remover, erro: erroCenarios } = useCenarios()
+  const [ativo, setAtivo] = useState<string>('base')
   const [sensibilidade, setSensibilidade] = useState(0)
-  const salvarCenarios = (lista: Cenario[]) => {
-    setCenariosEstado(lista)
-    try {
-      localStorage.setItem(CHAVE, JSON.stringify(lista))
-    } catch {
-      // sem armazenamento: vale só nesta visita
-    }
-  }
 
   const ids = escopo === 'grupo' ? empresas.map((e) => e.id) : [escopo]
   const nomeEscopo = escopo === 'grupo' ? 'Grupo (todas as empresas)' : empresas.find((e) => e.id === escopo)?.nome ?? ''
@@ -126,14 +78,10 @@ export function ProjecaoPage() {
   const soma = (lista: LinhaMes[], ate: number) => lista.slice(0, ate + 1).reduce((a, l) => a + l.lucro, 0)
   const dados = linhas.map((l, i) => ({ ...l, receitaBase: linhasBase[i].receita, acumulado: soma(linhas, i), acumuladoBase: soma(linhasBase, i) }))
 
-  const alterarHipoteses = (fn: (h: Hipotese[]) => Hipotese[]) => {
-    if (!cenario) return
-    salvarCenarios(cenarios.map((c) => (c.id === cenario.id ? { ...c, hipoteses: fn(c.hipoteses) } : c)))
-  }
-  const novoCenario = (copiar?: Cenario) => {
-    const id = novoId('c')
-    salvarCenarios([...cenarios, { id, nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: `${h.id}-${id}` })) : [] }])
-    setAtivo(id)
+  const alterarHipoteses = (fn: (h: Hipotese[]) => Hipotese[]) => cenario && alterar({ ...cenario, hipoteses: fn(cenario.hipoteses) })
+  const novoCenario = async (copiar?: Cenario) => {
+    const c = await novo({ nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: novoId('h') })) : [] })
+    if (c) setAtivo(c.id)
   }
 
   // Alertas do horizonte: despesas que começam ou acabam, meses sem meta, meses no vermelho.
@@ -166,7 +114,9 @@ export function ProjecaoPage() {
           </select>
         }
       />
-      <AvisoPrototipo>a base vem dos seus cadastros reais (despesas fixas, metas e o fator de cada empresa); os cenários ficam guardados só neste navegador.</AvisoPrototipo>
+      {erroCenarios && (
+        <div className={s.avisoFator} role="alert"><AlertTriangle size={15} /> <span>Não foi possível gravar o cenário: {erroCenarios}</span></div>
+      )}
 
       {semFator.length > 0 && !carregando && (
         <div className={s.avisoFator}>
@@ -188,7 +138,7 @@ export function ProjecaoPage() {
             {c.nome} <small>{c.hipoteses.filter((h) => h.ativa).length} hipótese(s)</small>
           </button>
         ))}
-        <button type="button" className={s.cenarioNovo} onClick={() => novoCenario()}><Plus size={14} /> Novo cenário</button>
+        <button type="button" className={s.cenarioNovo} onClick={() => void novoCenario()}><Plus size={14} /> Novo cenário</button>
       </div>
 
       {/* números do período */}
@@ -249,11 +199,11 @@ export function ProjecaoPage() {
             meses={meses}
             custos={doEscopo.map((c) => ({ id: c.id, nome: c.descricao, valor: c.valorMensal }))}
             onAlterar={alterarHipoteses}
-            onRenomear={(nome) => cenario && salvarCenarios(cenarios.map((c) => (c.id === cenario.id ? { ...c, nome } : c)))}
-            onDuplicar={() => cenario && novoCenario(cenario)}
-            onExcluir={() => {
-              if (!cenario) return
-              salvarCenarios(cenarios.filter((c) => c.id !== cenario.id))
+            onRenomear={(nome) => cenario && alterar({ ...cenario, nome })}
+            onDuplicar={() => cenario && void novoCenario(cenario)}
+            onExcluir={async () => {
+              if (!cenario || !(await confirmar({ titulo: 'Excluir cenário', mensagem: `Excluir "${cenario.nome}" e as hipóteses dele? Os cadastros não mudam.`, confirmar: 'Excluir', perigo: true }))) return
+              remover(cenario.id)
               setAtivo('base')
             }}
           />
@@ -287,40 +237,13 @@ export function ProjecaoPage() {
         </div>
       </div>
 
-      {/* comparação */}
-      <div className={s.cartao}>
-        <div className={s.cartaoTitulo}><Layers size={15} /> Cenários lado a lado · {nomeEscopo}</div>
-        <div className={ui.tableScroll}>
-          <table className={`${ui.table} ${s.tabela}`}>
-            <thead>
-              <tr>
-                <th>Cenário</th>
-                <th className={ui.right}>Receita 12m</th>
-                <th className={ui.right}>Despesas fixas 12m</th>
-                <th className={ui.right}>Lucro 12m</th>
-                <th className={ui.right}>Meses no vermelho</th>
-                <th className={ui.right}>Fator {linhas[0]?.rotulo}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[{ id: 'base', nome: 'Base (cadastros)', hipoteses: [] as Hipotese[] }, ...cenarios].map((c) => {
-                const l = rodar(c.hipoteses)
-                const x = resumir(l, parametros.contribuicao)
-                return (
-                  <tr key={c.id} className={c.id === ativo ? s.linhaAtiva : undefined} onClick={() => setAtivo(c.id)}>
-                    <td className={ui.cellStrong}>{c.nome}</td>
-                    <td className={ui.right}>{formatBRL(x.receita)}</td>
-                    <td className={ui.right}>{formatBRL(x.df)}</td>
-                    <td className={`${ui.right} ${x.lucro < 0 ? s.ruim : s.bom}`}>{formatBRL(x.lucro)}</td>
-                    <td className={ui.right}>{x.mesesNoVermelho}</td>
-                    <td className={ui.right}>{fatorTxt(l[0]?.fator ?? 0)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {/* comparação: base + até três cenários */}
+      <Comparacao
+        escopo={nomeEscopo}
+        contribuicao={parametros.contribuicao}
+        rodar={(h) => rodar(h)}
+        series={[{ id: 'base', nome: 'Base', hipoteses: [], linhas: linhasBase }, ...cenarios.map((c) => ({ id: c.id, nome: c.nome, hipoteses: c.hipoteses, linhas: rodar(c.hipoteses) }))]}
+      />
 
       <details className={`${s.cartao} ${s.mesAMes}`}>
         <summary>Ver mês a mês</summary>
@@ -401,7 +324,6 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
                 {h.tipo === 'cortar-custo' ? '' : ' · '}a partir de {rotulo(h.inicio)}{h.fim ? ` até ${rotulo(h.fim)}` : ''}
               </span>
             </div>
-            <button type="button" className={s.efetivar} title="Efetivar: criar o registro de verdade" onClick={() => void avisar({ titulo: 'Efetivar hipótese', mensagem: 'Efetivar cria o registro real (a despesa fixa, o ajuste da meta) com a data da hipótese e tira a hipótese do cenário. Fica para a fase 3; no protótipo não grava.' })}>Efetivar</button>
             <button type="button" className={ui.iconBtn} title="Tirar a hipótese" onClick={() => onAlterar((l) => l.filter((x) => x.id !== h.id))}><Trash2 /></button>
           </li>
         ))}

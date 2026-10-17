@@ -93,3 +93,5 @@
 .exemploNota code { font-family: ui-monospace, Consolas, monospace; font-size: 11.5px; background: #fff; border-radius: 4px; padding: 1px 5px; }
 
 @media (prefers-reduced-motion: reduce) { .chave span, .chave span::after { transition: none; } }
+
+.carregando { padding: 48px 24px; text-align: center; color: #6b7b72; font-size: 13px; }

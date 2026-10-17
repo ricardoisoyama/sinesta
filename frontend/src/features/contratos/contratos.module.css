@@ -246,3 +246,11 @@
 
 @media (prefers-reduced-motion: reduce) { .aba, .linkBtn, .chave span, .chave span::after { transition: none; } }
 .acoesTopo { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* Dica de primeiro uso (sem modelo de contrato ainda). */
+.dica { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; background: #fdf0e6; color: #8f4f15; font-size: 12.5px; }
+/* Etiqueta que também é botão (canhoto ok/falta). */
+.badgeBotao { border: 0; cursor: pointer; font: inherit; font-size: 11px; font-weight: 600; }
+.badgeBotao:focus-visible { outline: 2px solid #1a4d1e; outline-offset: 2px; }
+.tabelaClicavel tbody tr { cursor: pointer; }
+.tabelaClicavel tbody tr:hover td { background: #fbfaf7; }

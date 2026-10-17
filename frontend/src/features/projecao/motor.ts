@@ -177,6 +177,48 @@ export interface Resumo {
   altaParaZerar: number
 }
 
+/** Ponte do lucro: quanto do lucro a mais (ou a menos) veio da receita e quanto das despesas. Soma exata da diferença. */
+export function ponteDoLucro(base: LinhaMes[], cenario: LinhaMes[], contribuicao: number) {
+  const soma = (l: LinhaMes[], k: 'receita' | 'df') => l.reduce((a, x) => a + x[k], 0)
+  return {
+    receita: r2((soma(cenario, 'receita') - soma(base, 'receita')) * contribuicao),
+    despesas: r2(soma(base, 'df') - soma(cenario, 'df')),
+  }
+}
+
+export interface ImpactoHipotese {
+  hipotese: Hipotese
+  /** Quanto o lucro do período muda por causa desta hipótese (com as outras ligadas). */
+  lucro: number
+}
+
+/**
+ * Impacto de cada hipótese ligada: o lucro com todas menos o lucro sem ela. As hipóteses se
+ * influenciam (um reajuste pesa sobre a despesa nova), então a soma pode diferir um pouco do total.
+ */
+export function impactoDasHipoteses(rodar: (h: Hipotese[]) => LinhaMes[], hipoteses: Hipotese[]): ImpactoHipotese[] {
+  const lucro = (h: Hipotese[]) => rodar(h).reduce((a, l) => a + l.lucro, 0)
+  const ativas = hipoteses.filter((h) => h.ativa)
+  const total = lucro(ativas)
+  return ativas
+    .map((h) => ({ hipotese: h, lucro: r2(total - lucro(ativas.filter((x) => x.id !== h.id))) }))
+    .sort((a, b) => Math.abs(b.lucro) - Math.abs(a.lucro))
+}
+
+/** Indicadores para comparar cenários lado a lado. */
+export function indicadores(linhas: LinhaMes[], contribuicao: number) {
+  const r = resumir(linhas, contribuicao)
+  const pior = linhas.reduce((m, l) => (l.lucro < m.lucro ? l : m), linhas[0])
+  const comReceita = linhas.filter((l) => l.fator > 0)
+  return {
+    ...r,
+    margem: r.receita > 0 ? r.lucro / r.receita : 0,
+    equilibrioMedio: linhas.length ? r2(linhas.reduce((a, l) => a + l.equilibrio, 0) / linhas.length) : 0,
+    piorMes: pior ? { rotulo: pior.rotulo, lucro: pior.lucro } : null,
+    fatorMedio: comReceita.length ? comReceita.reduce((a, l) => a + l.fator, 0) / comReceita.length : 0,
+  }
+}
+
 export function resumir(linhas: LinhaMes[], contribuicao: number): Resumo {
   const receita = linhas.reduce((a, l) => a + l.receita, 0)
   const df = linhas.reduce((a, l) => a + l.df, 0)

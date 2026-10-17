@@ -1,36 +1,47 @@
 import { useState } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Copy, LayoutTemplate, ListChecks, Plus, Receipt, Save, Trash2 } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
-import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
+import { listServicos } from '@/features/cadastros/api'
+import { getErrorMessage } from '@/lib/api'
 import { referencias } from '@/lib/formula'
-import { AJUDA_REGRA, apelidoDe, ROTULO_REGRA, ROTULO_TIPO_CAMPO, type CampoModelo, type ComponenteModelo, type ModeloContrato, type TipoCampo } from './modelos'
-import { prototipo, usePrototipo } from './store'
+import { salvarModeloContrato, useContratos, useModelosContrato } from './api'
+import { AJUDA_REGRA, apelidoDe, CAMPOS_NUMERICOS, modeloVazio, ROTULO_REGRA, ROTULO_TIPO_CAMPO, type CampoModelo, type ComponenteModelo, type ModeloContrato, type TipoCampo } from './modelos'
 import type { RegraComponente } from './types'
 import s from './form.module.css'
 
 const CADASTROS = ['Veículos', 'Funcionários', 'Fornecedores', 'Serviços']
-const novoId = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`
+const NOVO = '__novo__'
 
 /**
- * Modelos de Contrato (protótipo, Parametrizações): o cliente monta os modelos do negócio dele.
+ * Modelos de Contrato (Parametrizações): o cliente monta os modelos do negócio dele.
  * Campos (características, com apelido) + componentes de cobrança (o que entra na fatura e a regra).
  * Mesma ideia da Ficha Técnica e dos Dados da Operação.
  */
 export function ModelosContratoPage() {
-  const { modelos, contratos } = usePrototipo()
-  const [selecionado, setSelecionado] = useState(modelos[0]?.id ?? '')
-  const original = modelos.find((m) => m.id === selecionado)
-  const [rascunho, setRascunho] = useState<ModeloContrato | null>(original ?? null)
-  const [editandoId, setEditandoId] = useState(selecionado)
-  if (editandoId !== selecionado) {
-    setEditandoId(selecionado)
-    setRascunho(modelos.find((m) => m.id === selecionado) ?? null)
+  const qc = useQueryClient()
+  const { data: modelosData, isLoading } = useModelosContrato()
+  const { data: contratosData } = useContratos()
+  const { data: servicos } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const modelos = modelosData ?? []
+  const contratos = contratosData?.contratos ?? []
+
+  const [selecionado, setSelecionado] = useState('')
+  const [rascunho, setRascunho] = useState<ModeloContrato | null>(null)
+  const [salvando, setSalvando] = useState(false)
+  // Abre no primeiro modelo assim que a lista chega (ou num em branco, se ainda não há nenhum).
+  const atualId = selecionado || modelos[0]?.id || (isLoading ? '' : NOVO)
+  const original = modelos.find((m) => m.id === atualId) ?? null
+  const [editandoId, setEditandoId] = useState('')
+  if (atualId && editandoId !== atualId) {
+    setEditandoId(atualId)
+    setRascunho(atualId === NOVO ? modeloVazio() : original)
   }
-  const tipos = [...new Set(modelos.map((m) => m.tipoOperacao))]
-  const usados = contratos.filter((c) => c.modeloId === selecionado).length
-  const mudou = !!rascunho && JSON.stringify(rascunho) !== JSON.stringify(original)
+  const tipos = [...new Set(modelos.map((m) => m.tipoOperacao).filter(Boolean))]
+  const usados = contratos.filter((c) => c.modeloId === rascunho?.id).length
+  const mudou = !!rascunho && (atualId === NOVO || JSON.stringify(rascunho) !== JSON.stringify(original))
 
   const set = (p: Partial<ModeloContrato>) => rascunho && setRascunho({ ...rascunho, ...p })
   const setCampo = (id: string, p: Partial<CampoModelo>) => rascunho && set({ campos: rascunho.campos.map((c) => (c.id === id ? { ...c, ...p } : c)) })
@@ -39,7 +50,7 @@ export function ModelosContratoPage() {
   // Fórmulas só podem usar apelidos que existem: componentes fixos, outras fórmulas, campos numéricos e "subtotal".
   const conhecidos = new Set<string>(['subtotal'])
   rascunho?.componentes.filter((c) => c.regra === 'fixo' || c.regra === 'formula').forEach((c) => conhecidos.add(c.apelido))
-  rascunho?.campos.filter((c) => ['numero', 'valor', 'percentual'].includes(c.tipo)).forEach((c) => conhecidos.add(c.apelido))
+  rascunho?.campos.filter((c) => CAMPOS_NUMERICOS.includes(c.tipo)).forEach((c) => conhecidos.add(c.apelido))
   const erroFormula = (c: ComponenteModelo) => {
     if (c.regra !== 'formula') return ''
     if (!c.formula.trim()) return 'Escreva a fórmula'
@@ -53,38 +64,54 @@ export function ModelosContratoPage() {
   })()
   const temErro = !!rascunho && (rascunho.componentes.some((c) => erroFormula(c)) || apelidosRepetidos.size > 0 || !rascunho.nome.trim())
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!rascunho || temErro) return
-    prototipo.salvarModelo(rascunho)
-    void avisar({ titulo: 'Modelo salvo', mensagem: `"${rascunho.nome}" já aparece no cadastro de contrato. Contratos existentes continuam com o que têm; campos novos aparecem vazios na pasta.` })
-  }
-  const novoModelo = (base?: ModeloContrato) => {
-    const m: ModeloContrato = base
-      ? { ...base, id: novoId('m'), nome: `${base.nome} (cópia)`, campos: base.campos.map((c) => ({ ...c, id: novoId('cp') })), componentes: base.componentes.map((c) => ({ ...c, id: novoId('co') })) }
-      : { id: novoId('m'), nome: 'Novo modelo', tipoOperacao: '', descricao: '', campos: [], componentes: [{ id: novoId('co'), apelido: 'mensalidade', nome: 'Mensalidade', regra: 'fixo', unidade: 'mês', valorPadrao: 0, formula: '', documento: '', servicoNfse: '', opcional: false }], agrupamento: 'periodo', fechamento: 'mensal', status: 'ativo' }
-    prototipo.salvarModelo(m)
-    setSelecionado(m.id)
+    setSalvando(true)
+    try {
+      const salvo = await salvarModeloContrato(rascunho)
+      await qc.invalidateQueries({ queryKey: ['modelos-contrato'] })
+      setSelecionado(salvo.id)
+      setEditandoId('')
+      void avisar({ titulo: 'Modelo salvo', mensagem: `"${salvo.nome}" já aparece no cadastro de contrato. Contratos existentes continuam com o que têm; campos novos aparecem vazios na pasta.` })
+    } catch (err) {
+      void avisar({ titulo: 'Não foi possível salvar', mensagem: getErrorMessage(err) })
+    } finally {
+      setSalvando(false)
+    }
   }
   const trocar = async (id: string) => {
     if (mudou && !(await confirmar({ titulo: 'Descartar alterações', mensagem: 'O modelo tem alterações não salvas. Trocar mesmo assim?', confirmar: 'Descartar', perigo: true }))) return
     setSelecionado(id)
+    setEditandoId('')
+  }
+  const duplicar = () => {
+    if (!rascunho) return
+    setSelecionado(NOVO)
+    setEditandoId(NOVO)
+    setRascunho({
+      ...rascunho,
+      id: '',
+      nome: `${rascunho.nome} (cópia)`,
+      campos: rascunho.campos.map((c) => ({ ...c, id: crypto.randomUUID() })),
+      componentes: rascunho.componentes.map((c) => ({ ...c, id: crypto.randomUUID() })),
+    })
   }
 
   return (
     <div>
       <PageHeader breadcrumb="Parametrizações" title="Modelos de Contrato" subtitle="Cada negócio monta os seus: os campos do contrato (com apelido) e o que entra na fatura, com a regra de cada componente." />
-      <AvisoPrototipo>modelos de exemplo, guardados só neste navegador; o que salvar aqui já vale no cadastro de contrato do protótipo.</AvisoPrototipo>
 
       <div className={s.modelosGrade}>
         <div className={s.listaModelos}>
           {modelos.map((m) => (
-            <button key={m.id} type="button" className={`${s.cartaoModelo} ${m.id === selecionado ? s.modeloOn : ''}`} onClick={() => void trocar(m.id)}>
-              <b>{m.nome}</b>
+            <button key={m.id} type="button" className={`${s.cartaoModelo} ${m.id === atualId ? s.modeloOn : ''}`} onClick={() => void trocar(m.id)}>
+              <b>{m.nome}{m.status === 'inativo' ? ' (inativo)' : ''}</b>
               <span>{m.tipoOperacao || 'sem tipo de operação'} · {m.campos.length} campo(s) · {m.componentes.length} componente(s)</span>
               <span>{contratos.filter((c) => c.modeloId === m.id).length} contrato(s) usando</span>
             </button>
           ))}
-          <button type="button" className={s.novoModelo} onClick={() => novoModelo()}><Plus size={14} /> Novo modelo</button>
+          {atualId === NOVO && <div className={`${s.cartaoModelo} ${s.modeloOn}`}><b>{rascunho?.nome || 'Novo modelo'}</b><span>ainda não salvo</span></div>}
+          <button type="button" className={s.novoModelo} onClick={() => void trocar(NOVO)}><Plus size={14} /> Novo modelo</button>
         </div>
 
         {rascunho ? (
@@ -102,6 +129,13 @@ export function ModelosContratoPage() {
                   <datalist id="tipos-op">{tipos.map((t) => <option key={t} value={t} />)}</datalist>
                 </label>
                 <label className={s.campo}>
+                  Serviço da nota (padrão)
+                  <select value={rascunho.servicoId} onChange={(e) => set({ servicoId: e.target.value })}>
+                    <option value="">Escolher no contrato</option>
+                    {(servicos ?? []).filter((x) => x.status !== 'inativo').map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+                  </select>
+                </label>
+                <label className={s.campo}>
                   Situação
                   <select value={rascunho.status} onChange={(e) => set({ status: e.target.value as ModeloContrato['status'] })}>
                     <option value="ativo">Ativo</option>
@@ -114,9 +148,9 @@ export function ModelosContratoPage() {
                 </label>
               </div>
               <div className={s.rodape} style={{ marginTop: 14 }}>
-                <span className={s.mut} style={{ marginRight: 'auto', alignSelf: 'center' }}>{usados} contrato(s) usando este modelo</span>
-                <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => novoModelo(rascunho)}><Copy /> Duplicar</button>
-                <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!mudou || temErro} onClick={salvar}><Save /> Salvar modelo</button>
+                <span className={s.mut} style={{ marginRight: 'auto', alignSelf: 'center' }}>{rascunho.id ? `${usados} contrato(s) usando este modelo` : 'Modelo novo, ainda não salvo'}</span>
+                {rascunho.id && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={duplicar}><Copy /> Duplicar</button>}
+                <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!mudou || temErro || salvando} onClick={() => void salvar()}><Save /> {salvando ? 'Salvando...' : 'Salvar modelo'}</button>
               </div>
             </section>
 
@@ -168,7 +202,7 @@ export function ModelosContratoPage() {
                   </tbody>
                 </table>
               </div>
-              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ campos: [...rascunho.campos, { id: novoId('cp'), apelido: `campo_${rascunho.campos.length + 1}`, nome: '', tipo: 'texto', opcoes: [], obrigatorio: false, ajuda: '' }] })}>
+              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ campos: [...rascunho.campos, { id: crypto.randomUUID(), apelido: `campo_${rascunho.campos.length + 1}`, nome: '', tipo: 'texto', opcoes: [], obrigatorio: false, ajuda: '' }] })}>
                 <Plus /> Incluir campo
               </button>
             </section>
@@ -184,7 +218,6 @@ export function ModelosContratoPage() {
                       <th>Apelido</th>
                       <th>Regra</th>
                       <th>Cálculo</th>
-                      <th>Serviço da nota</th>
                       <th>Opcional</th>
                       <th />
                     </tr>
@@ -220,7 +253,6 @@ export function ModelosContratoPage() {
                             </div>
                           )}
                         </td>
-                        <td><input value={c.servicoNfse} onChange={(e) => setComp(c.id, { servicoNfse: e.target.value })} placeholder="do cadastro de serviços" /></td>
                         <td><input type="checkbox" checked={c.opcional} onChange={(e) => setComp(c.id, { opcional: e.target.checked })} style={{ width: 16 }} /></td>
                         <td><button type="button" className={ui.iconBtn} title="Tirar o componente" onClick={() => set({ componentes: rascunho.componentes.filter((x) => x.id !== c.id) })}><Trash2 /></button></td>
                       </tr>
@@ -228,7 +260,7 @@ export function ModelosContratoPage() {
                   </tbody>
                 </table>
               </div>
-              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ componentes: [...rascunho.componentes, { id: novoId('co'), apelido: `componente_${rascunho.componentes.length + 1}`, nome: '', regra: 'lancamento', unidade: '', valorPadrao: 0, formula: '', documento: '', servicoNfse: '', opcional: true }] })}>
+              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ componentes: [...rascunho.componentes, { id: crypto.randomUUID(), apelido: `componente_${rascunho.componentes.length + 1}`, nome: '', regra: 'lancamento', unidade: '', valorPadrao: 0, formula: '', documento: 'CT-e', opcional: true }] })}>
                 <Plus /> Incluir componente
               </button>
 
@@ -257,7 +289,7 @@ export function ModelosContratoPage() {
             </section>
           </div>
         ) : (
-          <div className={s.secao}>Escolha um modelo ou crie um novo.</div>
+          <div className={s.secao}>{isLoading ? 'Carregando...' : 'Escolha um modelo ou crie um novo.'}</div>
         )}
       </div>
     </div>

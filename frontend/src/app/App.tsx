@@ -22,8 +22,6 @@ import { CentralFaturamentoPage } from '@/features/faturamento/CentralFaturament
 import { ProjecaoPage } from '@/features/projecao/ProjecaoPage'
 import { ContratoFormPage } from '@/features/contratos/ContratoFormPage'
 import { ModelosContratoPage } from '@/features/contratos/ModelosContratoPage'
-import { ExigePermissao } from '@/features/auth/ExigePermissao'
-import { PROTOTIPOS } from '@/features/layout/nav'
 import { UnidadesPage } from '@/features/unidades/UnidadesPage'
 import { UsuariosPage } from '@/features/usuarios/UsuariosPage'
 import { ModelosPropostaPage } from '@/features/modelosProposta/ModelosPropostaPage'
@@ -66,12 +64,11 @@ export function App() {
           <Route path="/simulador/antigo" element={<SimuladorPage />} />
           <Route path="/simulador/nova" element={<Navigate to="/simulador" replace />} />
           <Route path="/propostas" element={<PropostasPage />} />
-          {/* Telas em protótipo: só com a permissão especial "Ver protótipos". */}
-          <Route path="/contratos" element={<ExigePermissao chave={PROTOTIPOS}><ContratosPage /></ExigePermissao>} />
-          <Route path="/contratos/novo" element={<ExigePermissao chave={PROTOTIPOS}><ContratoFormPage /></ExigePermissao>} />
-          <Route path="/contratos/:id" element={<ExigePermissao chave={PROTOTIPOS}><PastaContratoPage /></ExigePermissao>} />
-          <Route path="/contratos/:id/editar" element={<ExigePermissao chave={PROTOTIPOS}><ContratoFormPage /></ExigePermissao>} />
-          <Route path="/cadastros/modelos-contrato" element={<ExigePermissao chave={PROTOTIPOS}><ModelosContratoPage /></ExigePermissao>} />
+          <Route path="/contratos" element={<ContratosPage />} />
+          <Route path="/contratos/novo" element={<ContratoFormPage />} />
+          <Route path="/contratos/:id" element={<PastaContratoPage />} />
+          <Route path="/contratos/:id/editar" element={<ContratoFormPage />} />
+          <Route path="/cadastros/modelos-contrato" element={<ModelosContratoPage />} />
           <Route path="/crm" element={<CrmPage />} />
           <Route path="/agenda" element={<AgendaPage />} />
 
@@ -94,14 +91,14 @@ export function App() {
           <Route path="/cadastros/modelos-proposta" element={<ModelosPropostaPage />} />
           <Route path="/cadastros/usuarios" element={<UsuariosPage />} />
           <Route path="/cadastros/auditoria" element={<AuditoriaPage />} />
-          {/* Administrativo: só o perfil Suporte (a chave também protege a rota no RotaPermitida). */}
-          <Route path="/administrativo/integracoes" element={<ExigePermissao chave="/administrativo/integracoes"><IntegracoesPage /></ExigePermissao>} />
+          {/* Administrativo: só o perfil Suporte (a chave protege a rota no RotaPermitida). */}
+          <Route path="/administrativo/integracoes" element={<IntegracoesPage />} />
           {/* Cadastros parametrizáveis (fase de layout) */}
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/fichas-tecnicas" element={<FichasTecnicasPage />} />
 
           {/* Financeiro (fase de layout) */}
-          <Route path="/financeiro/faturamento" element={<ExigePermissao chave={PROTOTIPOS}><CentralFaturamentoPage /></ExigePermissao>} />
+          <Route path="/financeiro/faturamento" element={<CentralFaturamentoPage />} />
           <Route path="/financeiro/entradas-saidas" element={<EntradasSaidasPage />} />
           <Route path="/financeiro/caixa" element={<CaixaPage />} />
           <Route path="/financeiro/conciliacao" element={<ConciliacaoPage />} />
@@ -110,7 +107,7 @@ export function App() {
           <Route path="/analises/break-even" element={<BreakEvenPage />} />
           <Route path="/analises/mix" element={<MixPage />} />
           <Route path="/analises/rpo" element={<RpoPage />} />
-          <Route path="/analises/projecao" element={<ExigePermissao chave={PROTOTIPOS}><ProjecaoPage /></ExigePermissao>} />
+          <Route path="/analises/projecao" element={<ProjecaoPage />} />
           <Route path="/analises/metas" element={<MetasPage />} />
         </Route>
       </Route>

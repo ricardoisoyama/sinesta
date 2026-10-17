@@ -1,33 +1,29 @@
 import { useState } from 'react'
-import { CheckCircle2, ClipboardCheck, FileText, FolderOpen, History, Landmark, Receipt, Undo2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileText, FolderOpen, History, Landmark, Receipt, Undo2 } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import ui from '@/features/common/ui.module.css'
 import { formatBRL } from '@/lib/format'
 import { BadgeFatura } from '@/features/contratos/componentes'
 import { dataBR, valorExtra } from '@/features/contratos/regras'
-import type { AjusteFatura } from '@/features/contratos/faturas'
-import { totalDaFatura, type FaturaCentral } from './dados'
+import type { FaturaCentral } from '@/features/contratos/faturas'
+import type { DadosEtapa } from '@/features/contratos/api'
 import s from './faturamento.module.css'
 
 interface Props {
   fatura: FaturaCentral | null
   onClose: () => void
   onAbrirPasta: (contratoId: string) => void
-  onAprovar: (f: FaturaCentral, ajuste: AjusteFatura, emitir: boolean, totalNovo: number) => void
-  onDevolver: (f: FaturaCentral, motivo: string, totalAtual: number) => void
+  /** Aprova (com desconto e extras tirados) e, com `nf`, já registra a nota. */
+  onAprovar: (f: FaturaCentral, dados: DadosEtapa, nf: string | null) => Promise<void>
+  onDevolver: (f: FaturaCentral, motivo: string) => Promise<void>
 }
 
-/** Alíquota do ISS lida do texto do serviço ("ISS 5% retido"). Só para a prévia do protótipo. */
-const aliquotaIss = (detalhe: string) => {
-  const m = /ISS\s+(\d+(?:[.,]\d+)?)%/i.exec(detalhe)
-  return m ? Number(m[1].replace(',', '.')) / 100 : 0
-}
 const quando = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
 /**
- * Conferência (o "olho humano" antes de emitir): o que compõe a fatura, a prévia da nota e da
- * cobrança. Dá para tirar um extra (vai para a fatura seguinte) ou dar desconto; aprovar pode já
- * emitir a NFS-e. Devolver exige o motivo: a fatura volta para alguém ajustar o contrato.
+ * Conferência (o "olho humano" antes de emitir): o que compõe a fatura, a nota e a cobrança.
+ * Dá para tirar um extra (vai para a fatura seguinte) ou dar desconto; aprovar pode já registrar a
+ * nota. Devolver exige o motivo: a fatura volta para alguém ajustar o contrato.
  */
 export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, onDevolver }: Props) {
   const [aberta, setAberta] = useState<string | null>(null)
@@ -35,19 +31,20 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
   const [desconto, setDesconto] = useState(0)
   const [devolvendo, setDevolvendo] = useState(false)
   const [motivo, setMotivo] = useState('')
+  const [nf, setNf] = useState('')
+  const [enviando, setEnviando] = useState(false)
   if ((f?.id ?? null) !== aberta) {
     setAberta(f?.id ?? null)
     setFora(new Set())
     setDesconto(f?.descontos ?? 0)
     setDevolvendo(false)
     setMotivo('')
+    setNf('')
   }
   if (!f) return null
 
   const extras = f.extras.filter((e) => !fora.has(e.id))
-  const total = totalDaFatura({ previsto: f.previsto, extras, descontos: desconto })
-  const iss = aliquotaIss(f.servicoNfseDetalhe)
-  const retido = /retido/i.test(f.servicoNfseDetalhe)
+  const total = Math.round((f.previsto + extras.reduce((a, e) => a + valorExtra(e), 0) - desconto) * 100) / 100
   const podeConferir = f.situacao === 'prevista' || f.situacao === 'a-conferir'
   const texto = f.avulsa
     ? `${f.descricao} · Contrato ${f.numero} · Vencto. ${dataBR(f.vencimento)}`
@@ -55,8 +52,22 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
       ? `${f.descricao} · ${f.numero} · Vencto. ${dataBR(f.vencimento)}`
       : `Contrato ${f.numero} · Ref. ${f.referencia} · Vencto. ${dataBR(f.vencimento)}`
   const alternar = (id: string) => setFora((x) => { const n = new Set(x); if (n.has(id)) n.delete(id); else n.add(id); return n })
-  const ajuste: AjusteFatura = { descontos: desconto, extrasFora: [...fora] }
-  const linhasComposicao = !f.travada && f.composicao.length > 0 && !f.documentos.length
+  const dados: DadosEtapa = { descontos: desconto, extrasFora: [...fora] }
+  const comComposicao = f.composicao.some((l) => l.valor !== null) && !f.documentos.length
+  // O que falta para emitir (o checklist olha o cadastro de verdade).
+  const checklist = [
+    { ok: !!f.servicoNome && f.servicoNome !== 'nenhum escolhido', texto: 'Serviço da nota escolhido no contrato' },
+    { ok: f.carteiraNome !== 'nenhuma escolhida', texto: 'Conta que recebe escolhida no contrato' },
+    { ok: total > 0, texto: 'Valor maior que zero' },
+  ]
+  const executar = async (fn: () => Promise<void>) => {
+    setEnviando(true)
+    try {
+      await fn()
+    } finally {
+      setEnviando(false)
+    }
+  }
 
   return (
     <Modal
@@ -66,6 +77,7 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
       subtitle={`${f.numero} · ${f.clienteNome} · ${f.referencia}`}
       icon={<ClipboardCheck />}
       maxWidth={780}
+      busy={enviando}
       footer={
         <>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => onAbrirPasta(f.contratoId)}><FolderOpen /> Abrir a pasta</button>
@@ -75,16 +87,17 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
           ) : devolvendo ? (
             <>
               <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setDevolvendo(false)}>Voltar</button>
-              <button type="button" className={`${ui.btn} ${ui.btnPrimary} ${s.btnDevolver}`} disabled={!motivo.trim()} onClick={() => onDevolver(f, motivo.trim(), total)}>
+              <button type="button" className={`${ui.btn} ${ui.btnPrimary} ${s.btnDevolver}`} disabled={!motivo.trim() || enviando} onClick={() => void executar(() => onDevolver(f, motivo.trim()))}>
                 <Undo2 /> Devolver para ajuste
               </button>
             </>
           ) : (
             <>
               <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setDevolvendo(true)}><Undo2 /> Devolver</button>
-              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => onAprovar(f, ajuste, false, total)}>Aprovar conferência</button>
-              <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => onAprovar(f, ajuste, true, total)}>
-                <CheckCircle2 /> Aprovar e {f.documentoDaOperacao ? 'liberar a cobrança' : 'emitir a NFS-e'}
+              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={enviando} onClick={() => void executar(() => onAprovar(f, dados, null))}>Aprovar conferência</button>
+              <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={enviando || (!f.documentoDaOperacao && !nf.trim())} title={!f.documentoDaOperacao && !nf.trim() ? 'Informe o número da NF emitida (na seção Nota fiscal)' : undefined}
+                onClick={() => void executar(() => onAprovar(f, dados, nf.trim()))}>
+                <CheckCircle2 /> Aprovar e {f.documentoDaOperacao ? 'liberar a cobrança' : 'registrar a NF'}
               </button>
             </>
           )}
@@ -93,8 +106,8 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
     >
       <div className={s.confTopo}>
         <BadgeFatura situacao={f.situacao} />
-        <span>{f.empresaNome} · {f.tipoOperacao}</span>
-        {f.travada && <span className={s.travadaTag}>NF emitida: a fatura não recalcula mais</span>}
+        <span>{f.empresaNome}{f.tipoOperacao ? ` · ${f.tipoOperacao}` : ''}</span>
+        {f.travada && <span className={s.travadaTag}>NF registrada: a fatura não recalcula mais</span>}
       </div>
 
       {f.situacao === 'devolvida' && (
@@ -110,17 +123,17 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
       {devolvendo && (
         <label className={s.motivo}>
           <span>Motivo da devolução (quem ajustar o contrato vai ler isto)</span>
-          <textarea autoFocus rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: faltou lançar as 6 horas extras do evento do dia 20; o cliente pediu desconto de R$ 200 combinado com o André." />
+          <textarea autoFocus rows={3} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ex.: faltou lançar as 6 horas extras do evento do dia 20; o cliente pediu desconto de R$ 200." />
         </label>
       )}
 
       <h4 className={s.confTitulo}><Receipt size={14} /> Composição</h4>
       <div className={s.comp}>
-        {linhasComposicao ? (
+        {comComposicao ? (
           f.composicao.filter((l) => l.valor !== null).map((l) => (
-            <div key={`${l.apelido}-${l.nome}`} className={s.compLinha}>
+            <div key={`${l.apelido}-${l.nome}-${l.regra}`} className={s.compLinha}>
               <span>
-                {l.nome} <small>({l.regra === 'formula' ? l.detalhe : l.regra === 'unico' ? 'cobrança única' : l.detalhe})</small>
+                {l.nome} <small>({l.regra === 'unico' ? 'cobrança única' : l.detalhe})</small>
                 {l.erro && <small className={s.erroTxt}> · {l.erro}</small>}
               </span>
               <b>{formatBRL(l.valor ?? 0)}</b>
@@ -129,13 +142,13 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
         ) : f.documentos.length ? (
           f.documentos.map((d) => (
             <div key={d.id} className={s.compLinha}>
-              <span>{d.tipo} {d.numero} · {d.descricao} <small>({dataBR(d.data)}{d.mdfe ? ` · MDF-e ${d.mdfe}` : ''}{d.canhoto ? ' · canhoto ok' : ' · sem canhoto'})</small></span>
+              <span>{d.tipo} {d.numero}{d.descricao ? ` · ${d.descricao}` : ''} <small>({dataBR(d.data)}{d.mdfe ? ` · MDF-e ${d.mdfe}` : ''}{d.canhoto ? ' · canhoto ok' : ' · sem canhoto'})</small></span>
               <b>{formatBRL(d.valor)}</b>
             </div>
           ))
         ) : (
           <div className={s.compLinha}>
-            <span>{f.avulsa ? f.descricao : f.modalidade === 'spot' ? `Serviço spot · ${f.descricao}` : 'Mensalidade do contrato (fotografia da NF emitida)'}</span>
+            <span>{f.avulsa ? f.descricao : f.modalidade === 'spot' ? `Serviço spot · ${f.descricao}` : 'Mensalidade do contrato'}</span>
             <b>{formatBRL(f.previsto)}</b>
           </div>
         )}
@@ -164,29 +177,35 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
           <h4 className={s.confTitulo}><FileText size={14} /> Nota fiscal</h4>
           {f.documentoDaOperacao ? (
             <div className={s.confCaixa}>
-              <b>{f.nf}</b> emitido{f.documentos.length > 1 ? 's' : ''} na viagem. Transporte não gera NFS-e: a cobrança usa o documento da operação.
+              <b>{f.documentos.map((d) => `CT-e ${d.numero}`).join(', ')}</b> emitido{f.documentos.length > 1 ? 's' : ''} na viagem. Transporte não gera NFS-e: a cobrança usa o documento da operação.
             </div>
           ) : (
-            <dl className={s.confDefs}>
-              <dt>Serviço</dt><dd>{f.servicoNfse}</dd>
-              <dt>Tributação</dt><dd>{f.servicoNfseDetalhe}</dd>
-              {iss > 0 && <><dt>ISS{retido ? ' retido' : ''}</dt><dd>{formatBRL(total * iss)}{retido ? ` · líquido ${formatBRL(total - total * iss)}` : ''}</dd></>}
-              <dt>Descrição</dt><dd><code className={s.codigo}>{texto}</code></dd>
-            </dl>
+            <>
+              <dl className={s.confDefs}>
+                <dt>Serviço</dt><dd>{f.servicoNome}</dd>
+                <dt>Descrição</dt><dd><code className={s.codigo}>{texto}{f.textoAdicionalNota ? ` · ${f.textoAdicionalNota}` : ''}</code></dd>
+              </dl>
+              {podeConferir && (
+                <label className={s.campoModal}>
+                  Número da NF emitida (para aprovar e registrar)
+                  <input value={nf} onChange={(e) => setNf(e.target.value)} placeholder="Ex.: 1171" />
+                </label>
+              )}
+            </>
           )}
         </div>
         <div>
           <h4 className={s.confTitulo}><Landmark size={14} /> Cobrança</h4>
           <dl className={s.confDefs}>
-            <dt>Carteira</dt><dd>{f.carteira}</dd>
+            <dt>Conta</dt><dd>{f.carteiraNome}</dd>
             <dt>Forma</dt><dd>{f.formaCobranca}</dd>
             <dt>Vencimento</dt><dd>{dataBR(f.vencimento)}</dd>
             {f.boleto && <><dt>Boleto</dt><dd>{f.boleto}</dd></>}
           </dl>
           <ul className={s.checklist}>
-            <li><CheckCircle2 size={13} /> Cliente com endereço e CNPJ completos</li>
-            <li><CheckCircle2 size={13} /> Serviço com código municipal e alíquota</li>
-            <li><CheckCircle2 size={13} /> Carteira com integração de boleto ativa</li>
+            {checklist.map((x) => (
+              <li key={x.texto} className={x.ok ? undefined : s.checkFalta}>{x.ok ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />} {x.texto}</li>
+            ))}
           </ul>
         </div>
       </div>

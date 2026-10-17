@@ -69,6 +69,9 @@ export interface Unidade {
   propostaPrefixo?: string
   /** Dígitos do número (3 a 8). */
   propostaDigitos?: number
+  /** Prefixo do número dos contratos (ex.: MIR → MIR-0001). Vazio = padrão CTR-0001. */
+  contratoPrefixo?: string
+  contratoDigitos?: number
   /** Validades oferecidas no Pricing para as propostas desta empresa. */
   validadesProposta?: ValidadeEmpresa[]
 

@@ -1,22 +1,23 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
-  ArrowLeft, Banknote, CalendarRange, CircleDollarSign, Clock, DownloadCloud, FileSignature, FileText, FolderOpen, History, Landmark, ListChecks, Lock, MapPin,
-  Paperclip, Pencil, Plus, Receipt, RefreshCcw, ScrollText, Settings2, Sparkles, TrendingDown, TrendingUp, Truck, Undo2, Upload, Wrench,
+  ArrowLeft, Banknote, CalendarRange, CircleDollarSign, Clock, FileSignature, FileText, FolderOpen, History, Landmark, ListChecks, Lock, MapPin,
+  Paperclip, Pencil, Plus, Receipt, RefreshCcw, ScrollText, Settings2, Sparkles, TrendingUp, Truck, Undo2, Wrench,
 } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
-import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
-import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
-import { formatBRL, formatPct } from '@/lib/format'
+import { avisar } from '@/features/common/dialogo/dialogo'
+import { AnexosTab } from '@/features/anexos/AnexosTab'
+import { formatBRL, formatCpfCnpj, formatPct } from '@/lib/format'
+import { getErrorMessage } from '@/lib/api'
+import { alternarComponente, avancarFatura, lancarExtra, mudarCobrancaExtra, salvarDocumento, useContrato, useModelosContrato, useRecarregarContratos } from './api'
 import {
-  alertasDoContrato, custoItem, dataBR, diasEntre, diasParaFim, ehTabela, ETAPAS_FATURA, escopoVigente, extrasPendentes,
-  hojeISO, margemPrecificada, mesAnoCurto, progressoVigencia, proximoFaturamento, proximoReajuste, ROTULO_SITUACAO_FATURA, totalEscopo,
-  totalItem, valorContrato, valorExtra,
+  alertasDoContrato, custoItem, dataBR, diasEntre, diasParaFim, ehTabela, ETAPAS_FATURA, escopoVigente, extrasPendentes, hojeISO, margemPrecificada, mesAnoCurto,
+  porDocumento as fatPorDocumento, progressoVigencia, proximaFatura, proximoReajuste, ROTULO_SITUACAO_FATURA, situacaoDe, somaDias, totalAReceber, totalEmitido,
+  totalEscopo, totalItem, valorContrato, valorExtra,
 } from './regras'
-import { EMITIDAS, faturaPorDocumento, faturasDoContrato, totalDaFatura, type FaturaCentral } from './faturas'
+import { faturasCentrais, useNomes, type FaturaCentral, type Nomes } from './faturas'
 import { ROTULO_REGRA, ROTULO_TIPO_CAMPO, type ModeloContrato } from './modelos'
-import { gerarId, prototipo, usePrototipo } from './store'
-import type { CobrancaExtra, ComponenteContrato, Contrato, ExtraContrato, TipoEvento, TipoExtra } from './types'
+import type { CobrancaExtra, ComponenteContrato, Contrato, DocumentoVinculado, ExtraContrato, TipoEvento, TipoExtra } from './types'
 import { Alertas, BadgeFatura, BadgeModalidade, BadgeSituacao } from './componentes'
 import s from './contratos.module.css'
 
@@ -29,88 +30,71 @@ const ICONE_EVENTO: Record<TipoEvento, typeof Clock> = {
   renovacao: RefreshCcw, documento: Paperclip, encerramento: FolderOpen,
 }
 
-const r2 = (v: number) => Math.round(v * 100) / 100
-
-/** Pasta do contrato (protótipo): tudo de um contrato ou spot num lugar só. */
+/** Pasta do contrato: tudo de um contrato ou spot num lugar só. */
 export function PastaContratoPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { contratos, modelos, ajustes } = usePrototipo()
-  const c = contratos.find((x) => x.id === id)
+  const recarregar = useRecarregarContratos()
+  const nomes = useNomes()
+  const { data, isLoading, isError } = useContrato(id)
+  const { data: modelos } = useModelosContrato()
   const [aba, setAba] = useState<Aba>('resumo')
   const hoje = hojeISO()
+  const c = data?.contratos[0]
 
   if (!c)
     return (
       <div>
         <Link to="/contratos" className={s.voltar}><ArrowLeft size={15} /> Contratos</Link>
-        <div className={s.vazio}>Contrato não encontrado.</div>
+        <div className={s.vazio}>{isLoading ? 'Carregando...' : isError ? 'Contrato não encontrado.' : ''}</div>
       </div>
     )
 
-  const modelo = modelos.find((m) => m.id === c.modeloId)
+  const faturas = faturasCentrais([c], data!.faturas, nomes)
+  const modelo = modelos?.find((m) => m.id === c.modeloId)
   const spot = c.modalidade === 'spot'
-  const porDocumento = faturaPorDocumento(c)
+  const porDocumento = fatPorDocumento(c)
   const escopo = escopoVigente(c, hoje)
-  const margemPrec = margemPrecificada(escopo)
   const pendentes = extrasPendentes(c)
-  const faturas = faturasDoContrato(c, hoje, ajustes)
-  const emitidas = faturas.filter((f) => EMITIDAS.includes(f.situacao))
-  const faturado = r2(emitidas.reduce((a, f) => a + totalDaFatura(f), 0))
-  const aReceber = r2(faturas.filter((f) => ['nf-emitida', 'boleto-emitido', 'atrasada'].includes(f.situacao)).reduce((a, f) => a + totalDaFatura(f), 0))
   const devolvidas = faturas.filter((f) => f.situacao === 'devolvida')
-  const docsDoMes = (c.documentosVinculados ?? []).filter((d) => d.data.slice(0, 7) === hoje.slice(0, 7) && d.situacao !== 'cancelado')
+  const docsDoMes = c.documentos.filter((d) => d.data.slice(0, 7) === hoje.slice(0, 7) && d.situacao !== 'cancelado')
+  const alertas = alertasDoContrato(c, data!.faturas, hoje)
+  const prox = proximaFatura(c, data!.faturas)
+
+  /** Toda ação da pasta: chama o servidor, recarrega e mostra o erro, se houver. */
+  const acao = async (fn: () => Promise<unknown>) => {
+    try {
+      await fn()
+      await recarregar()
+    } catch (err) {
+      void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
+    }
+  }
 
   const abas: { id: Aba; rotulo: string; icone: typeof Clock; n?: number }[] = [
     { id: 'resumo', rotulo: 'Resumo', icone: Sparkles },
-    ...(modelo ? [{ id: 'caracteristicas' as const, rotulo: 'Características', icone: ListChecks }] : []),
+    ...(modelo?.campos.length ? [{ id: 'caracteristicas' as const, rotulo: 'Características', icone: ListChecks }] : []),
     { id: 'escopo', rotulo: porDocumento ? 'Tabela e cobrança' : 'Escopo e cobrança', icone: ScrollText },
     { id: 'condicoes', rotulo: 'Condições', icone: Settings2 },
-    ...(porDocumento ? [{ id: 'fretes' as const, rotulo: 'Fretes', icone: Truck, n: (c.documentosVinculados ?? []).length }] : []),
+    ...(porDocumento || spot ? [{ id: 'fretes' as const, rotulo: porDocumento ? 'Fretes' : 'Documentos da operação', icone: Truck, n: c.documentos.length }] : []),
     { id: 'faturas', rotulo: spot ? 'Fatura' : 'Faturas', icone: Receipt, n: spot ? undefined : faturas.length },
     ...(spot ? [] : [{ id: 'extras' as const, rotulo: 'Extras', icone: Plus, n: pendentes.length || undefined }]),
-    { id: 'documentos', rotulo: 'Documentos', icone: Paperclip, n: c.documentos.length },
+    { id: 'documentos', rotulo: 'Anexos', icone: Paperclip },
     { id: 'historico', rotulo: 'Histórico', icone: History },
   ]
-
-  const evento = (texto: string, tipo: TipoEvento = 'extra') => ({ data: hoje, tipo, texto, quem: 'você' })
-  const atualizarExtra = (e: ExtraContrato) => prototipo.atualizarContrato(c.id, (x) => ({ ...x, extras: x.extras.map((y) => (y.id === e.id ? e : y)) }))
-  const lancarExtra = (e: ExtraContrato) =>
-    prototipo.atualizarContrato(c.id, (x) => ({
-      ...x,
-      extras: [e, ...x.extras],
-      eventos: [evento(`${ROTULO_EXTRA[e.tipo]} lançado: ${e.descricao} (${formatBRL(valorExtra(e))}, ${ROTULO_COBRANCA[e.cobranca].toLowerCase()})`), ...x.eventos],
-    }))
-  const alternarComponente = (comp: ComponenteContrato) =>
-    prototipo.atualizarContrato(c.id, (x) => ({
-      ...x,
-      componentes: (x.componentes ?? []).map((y) => (y.id === comp.id ? { ...y, ativo: !y.ativo } : y)),
-      eventos: [evento(`${comp.nome} ${comp.ativo ? 'desligado' : 'ligado'} no contrato`, 'aditivo'), ...x.eventos],
-    }))
-  const reenviar = (f: FaturaCentral) => {
-    prototipo.ajustarFatura(f.id, { situacao: 'a-conferir', motivo: undefined }, { quem: 'você', texto: 'Atualizada a partir do contrato e reenviada para conferência', total: totalDaFatura(f) })
-    prototipo.atualizarContrato(c.id, (x) => ({ ...x, eventos: [evento(`Fatura de ${mesAnoCurto(f.competencia)} atualizada e reenviada para conferência (${formatBRL(totalDaFatura(f))})`, 'fatura'), ...x.eventos] }))
-  }
 
   return (
     <div>
       <Link to="/contratos" className={s.voltar}><ArrowLeft size={15} /> Contratos</Link>
-      <AvisoPrototipo
-        onRestaurar={async () => {
-          if (await confirmar({ titulo: 'Restaurar os exemplos', mensagem: 'Voltar contratos, modelos e faturas do protótipo para os dados de exemplo? O que foi mexido neste navegador some.', confirmar: 'Restaurar' })) prototipo.restaurarExemplos()
-        }}
-      >
-        dados de exemplo, guardados só neste navegador (extras, componentes e faturas que você mexer continuam aqui).
-      </AvisoPrototipo>
 
       {devolvidas.map((f) => (
         <div key={f.id} className={s.devolvida} role="alert">
           <Undo2 size={16} />
           <div className={s.devolvidaTexto}>
-            <b>A conferência devolveu a fatura de {mesAnoCurto(f.competencia)}:</b> {f.motivo}
-            <span>Ajuste aqui no contrato (extras, componentes, escopo). A fatura ainda não foi emitida, então ela já se recalcula: agora está em {formatBRL(totalDaFatura(f))}.</span>
+            <b>A conferência devolveu a fatura {f.referencia}:</b> {f.motivo}
+            <span>Ajuste aqui no contrato (extras, componentes, escopo). A fatura ainda não foi emitida, então ela já se recalcula: agora está em {formatBRL(f.total)}.</span>
           </div>
-          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => reenviar(f)}><RefreshCcw /> Atualizar e reenviar para conferência</button>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => void acao(() => avancarFatura(f.id, 'reenviar'))}><RefreshCcw /> Atualizar e reenviar para conferência</button>
         </div>
       ))}
 
@@ -123,14 +107,14 @@ export function PastaContratoPage() {
           <div className={s.capaTopo}>
             <div className={s.capaQuem}>
               <h1 className={s.capaCliente}>{c.clienteNome}</h1>
-              <div className={s.capaSub}>{c.clienteDocumento} · {c.contato}</div>
+              <div className={s.capaSub}>{c.clienteDocumento ? formatCpfCnpj(c.clienteDocumento) : 'sem documento'}{c.contato ? ` · ${c.contato}` : ''}</div>
               <div className={s.capaChips}>
                 <BadgeModalidade modalidade={c.modalidade} />
-                <span className={`${s.badge} ${s.badgeNeutro}`}>{c.tipoOperacao}</span>
+                {c.tipoOperacao && <span className={`${s.badge} ${s.badgeNeutro}`}>{c.tipoOperacao}</span>}
                 {modelo && <span className={`${s.badge} ${s.badgeNeutro}`}>Modelo: {modelo.nome}</span>}
-                <span className={`${s.badge} ${s.badgeNeutro}`}><Landmark size={12} /> {c.empresaNome}</span>
-                <BadgeSituacao situacao={c.situacao} />
-                {alertasDoContrato(c, hoje).length > 0 && <Alertas alertas={alertasDoContrato(c, hoje)} />}
+                <span className={`${s.badge} ${s.badgeNeutro}`}><Landmark size={12} /> {nomes.empresa(c.empresaId)}</span>
+                <BadgeSituacao situacao={situacaoDe(c, data!.faturas)} />
+                {alertas.length > 0 && <Alertas alertas={alertas} />}
               </div>
             </div>
             <div className={s.capaValor}>
@@ -146,33 +130,18 @@ export function PastaContratoPage() {
                 </>
               )}
               <div className={s.capaBotoes}>
-                {proximoFaturamento(c, hoje) && (
-                  <span className={s.capaProx}><CalendarRange size={13} /> {spot ? 'vence em' : porDocumento ? `fecha ${c.condicoes.fechamento === 'quinzenal' ? 'por quinzena' : c.condicoes.fechamento === 'semanal' ? 'por semana' : 'no mês'} · próximo` : 'próximo faturamento'} {dataBR(proximoFaturamento(c, hoje)!)}</span>
-                )}
+                {prox && <span className={s.capaProx}><CalendarRange size={13} /> próxima fatura {prox.referencia} · vence {dataBR(prox.vencimento)}</span>}
                 <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnCompacto}`} onClick={() => navigate(`/contratos/${c.id}/editar`)}><Pencil /> Editar</button>
               </div>
             </div>
           </div>
 
-          {spot ? <FaixaSpot c={c} fatura={faturas[0]} /> : <LinhaVigencia c={c} hoje={hoje} />}
+          {spot ? <FaixaSpot c={c} fatura={faturas.find((f) => !f.avulsa)} /> : <LinhaVigencia c={c} hoje={hoje} />}
 
           <div className={s.capaNumeros}>
-            <Numero rotulo={spot ? 'Faturado' : 'Faturado na vigência'} valor={formatBRL(faturado)} sub={`${emitidas.length} fatura(s) emitida(s)`} />
-            <Numero rotulo="A receber" valor={formatBRL(aReceber)} sub={faturas.some((f) => f.situacao === 'atrasada') ? 'tem fatura em atraso' : 'em dia'} alerta={faturas.some((f) => f.situacao === 'atrasada')} />
-            <Numero
-              rotulo={porDocumento ? 'Margem da tabela → realizada' : 'Margem precificada → realizada'}
-              valor={
-                <span className={s.margens}>
-                  {formatPct(margemPrec, 1)}
-                  <span className={s.seta}>→</span>
-                  <span className={c.margemRealizada && c.margemRealizada < margemPrec - 0.005 ? s.pior : s.melhor}>
-                    {c.margemRealizada ? formatPct(c.margemRealizada, 1) : '—'}
-                    {c.margemRealizada ? c.margemRealizada < margemPrec - 0.005 ? <TrendingDown size={15} /> : <TrendingUp size={15} /> : null}
-                  </span>
-                </span>
-              }
-              sub={c.margemRealizada ? 'custo real lançado (RPO)' : 'ainda sem custo realizado'}
-            />
+            <Numero rotulo={spot ? 'Faturado' : 'Faturado na vigência'} valor={formatBRL(totalEmitido(faturas))} sub={`${faturas.filter((f) => f.travada).length} fatura(s) emitida(s)`} />
+            <Numero rotulo="A receber" valor={formatBRL(totalAReceber(faturas))} sub={faturas.some((f) => f.situacao === 'atrasada') ? 'tem fatura em atraso' : 'em dia'} alerta={faturas.some((f) => f.situacao === 'atrasada')} />
+            <Numero rotulo={porDocumento ? 'Margem da tabela' : 'Margem precificada'} valor={formatPct(margemPrecificada(escopo), 1)} sub="preço − custo do escopo em vigor" />
             {!spot && <Numero rotulo="Extras a faturar" valor={formatBRL(pendentes.reduce((a, e) => a + valorExtra(e), 0))} sub={`${pendentes.length} lançamento(s)`} />}
           </div>
         </section>
@@ -188,14 +157,14 @@ export function PastaContratoPage() {
         ))}
       </div>
       <section className={s.folha}>
-        {aba === 'resumo' && <AbaResumo c={c} hoje={hoje} faturas={faturas} irPara={setAba} abrirCentral={() => navigate(`/financeiro/faturamento?contrato=${c.id}`)} />}
+        {aba === 'resumo' && <AbaResumo c={c} hoje={hoje} faturas={faturas} irPara={setAba} abrirCentral={() => navigate(`/financeiro/faturamento?contrato=${c.id}&mes=${(prox ?? faturas[faturas.length - 1])?.competencia ?? hoje.slice(0, 7)}`)} />}
         {aba === 'caracteristicas' && modelo && <AbaCaracteristicas c={c} modelo={modelo} onEditar={() => navigate(`/contratos/${c.id}/editar`)} />}
-        {aba === 'escopo' && <AbaEscopo c={c} hoje={hoje} onAlternar={alternarComponente} />}
-        {aba === 'condicoes' && <AbaCondicoes c={c} hoje={hoje} />}
-        {aba === 'fretes' && <AbaFretes c={c} faturas={faturas} />}
-        {aba === 'faturas' && <AbaFaturas faturas={faturas} abrirCentral={() => navigate(`/financeiro/faturamento?contrato=${c.id}`)} />}
-        {aba === 'extras' && <AbaExtras c={c} onAtualizar={atualizarExtra} onLancar={lancarExtra} />}
-        {aba === 'documentos' && <AbaDocumentos c={c} />}
+        {aba === 'escopo' && <AbaEscopo c={c} hoje={hoje} onAlternar={(comp) => void acao(() => alternarComponente(c.id, comp.id))} onAditivo={() => navigate(`/contratos/${c.id}/editar`)} />}
+        {aba === 'condicoes' && <AbaCondicoes c={c} hoje={hoje} nomes={nomes} />}
+        {aba === 'fretes' && <AbaFretes c={c} faturas={faturas} onSalvar={(d) => acao(() => salvarDocumento(c.id, d))} />}
+        {aba === 'faturas' && <AbaFaturas faturas={faturas} abrirCentral={(comp) => navigate(`/financeiro/faturamento?contrato=${c.id}&mes=${comp}`)} />}
+        {aba === 'extras' && <AbaExtras c={c} onCobranca={(e, cobranca) => void acao(() => mudarCobrancaExtra(c.id, e.id, cobranca))} onLancar={(e) => acao(() => lancarExtra(c.id, e))} />}
+        {aba === 'documentos' && <AnexosTab entidade="contrato" entidadeId={c.id} />}
         {aba === 'historico' && <LinhaDoTempo c={c} />}
       </section>
     </div>
@@ -220,11 +189,7 @@ function LinhaVigencia({ c, hoje }: { c: Contrato; hoje: string }) {
   const total = Math.max(1, diasEntre(c.inicio, c.fim))
   const pos = (iso: string) => `${Math.min(100, Math.max(0, (diasEntre(c.inicio, iso) / total) * 100))}%`
   const reaj = proximoReajuste(c, hoje)
-  const avisoAte = (() => {
-    const d = new Date(`${c.fim}T12:00:00`)
-    d.setDate(d.getDate() - c.condicoes.avisoPrevioDias)
-    return d.toISOString().slice(0, 10)
-  })()
+  const avisoAte = somaDias(c.fim, -c.condicoes.avisoPrevioDias)
   const prog = progressoVigencia(c, hoje)
   const dias = diasParaFim(c, hoje)
   return (
@@ -265,9 +230,7 @@ function FaixaSpot({ c, fatura }: { c: Contrato; fatura?: FaturaCentral }) {
       </div>
       {c.documentos.length > 0 && (
         <div className={s.spotDocs}>
-          {c.documentos.map((d) => (
-            <span key={d.id} className={s.docChip}><FileText size={12} /> {d.nome.replace(/\.(xml|pdf|jpg)$/i, '')}</span>
-          ))}
+          {c.documentos.map((d) => <span key={d.id} className={s.docChip}><FileText size={12} /> {d.tipo} {d.numero}</span>)}
         </div>
       )}
       {fatura && <EtapasFatura situacao={fatura.situacao} />}
@@ -276,7 +239,7 @@ function FaixaSpot({ c, fatura }: { c: Contrato; fatura?: FaturaCentral }) {
 }
 
 function EtapasFatura({ situacao }: { situacao: FaturaCentral['situacao'] }) {
-  const especial = situacao === 'atrasada' || situacao === 'devolvida' || situacao === 'problema'
+  const especial = situacao === 'atrasada' || situacao === 'devolvida'
   const idx = ETAPAS_FATURA.indexOf(situacao === 'atrasada' ? 'boleto-emitido' : especial ? 'a-conferir' : situacao)
   return (
     <ol className={s.etapas}>
@@ -292,7 +255,8 @@ function EtapasFatura({ situacao }: { situacao: FaturaCentral['situacao'] }) {
 
 function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; hoje: string; faturas: FaturaCentral[]; irPara: (a: Aba) => void; abrirCentral: () => void }) {
   const mes = hoje.slice(0, 7)
-  const doMes = faturas.find((f) => f.competencia === mes && f.situacao !== 'recebida') ?? faturas.find((f) => f.competencia === mes) ?? faturas[faturas.length - 1]
+  const abertas = faturas.filter((f) => !f.travada && !f.avulsa)
+  const doMes = abertas[0] ?? [...faturas].sort((a, b) => b.vencimento.localeCompare(a.vencimento))[0]
   const reaj = proximoReajuste(c, hoje)
   const pend = extrasPendentes(c)
   return (
@@ -300,17 +264,15 @@ function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; ho
       <div>
         <h3 className={s.secTitulo}><History size={15} /> Últimos acontecimentos</h3>
         <LinhaDoTempo c={c} max={5} />
-        {c.eventos.length > 5 && (
-          <button type="button" className={s.linkBtn} onClick={() => irPara('historico')}>Ver o histórico inteiro</button>
-        )}
+        {c.eventos.length > 5 && <button type="button" className={s.linkBtn} onClick={() => irPara('historico')}>Ver o histórico inteiro</button>}
       </div>
       <div className={s.resumoLado}>
-        {doMes && (
+        {doMes ? (
           <div className={s.cartao}>
             <h3 className={s.secTitulo}><Receipt size={15} /> Fatura · {doMes.referencia}</h3>
             <div className={s.faturaMes}>
               <div>
-                <div className={s.faturaMesValor}>{formatBRL(totalDaFatura(doMes))}</div>
+                <div className={s.faturaMesValor}>{formatBRL(doMes.total)}</div>
                 <div className={s.numSub}>
                   {formatBRL(doMes.previsto)} {doMes.documentos.length ? `em ${doMes.documentos.length} CT-e(s)` : 'do contrato'}
                   {doMes.extras.length ? ` + ${formatBRL(doMes.extras.reduce((a, e) => a + valorExtra(e), 0))} de extras` : ''} · vence {dataBR(doMes.vencimento)}
@@ -319,10 +281,13 @@ function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; ho
               <BadgeFatura situacao={doMes.situacao} />
             </div>
             <EtapasFatura situacao={doMes.situacao} />
-            <div className={s.numSub} style={{ marginTop: 10 }}>{doMes.travada ? 'NF emitida: esta fatura não muda mais.' : 'Ainda não emitida: muda junto com o contrato (extras, componentes).'}</div>
-            <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnBloco}`} onClick={abrirCentral}>
-              <Banknote /> Abrir na Central de Faturamento
-            </button>
+            <div className={s.numSub} style={{ marginTop: 10 }}>{doMes.travada ? 'NF registrada: esta fatura não muda mais.' : 'Ainda não emitida: muda junto com o contrato (extras, componentes).'}</div>
+            <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnBloco}`} onClick={abrirCentral}><Banknote /> Abrir na Central de Faturamento</button>
+          </div>
+        ) : (
+          <div className={s.cartao}>
+            <h3 className={s.secTitulo}><Receipt size={15} /> Faturas</h3>
+            <div className={s.numSub}>Nenhuma fatura ainda: a primeira aparece a partir de {mesAnoCurto(c.condicoes.faturarDesde || mes)}{fatPorDocumento(c) ? ', quando houver frete vinculado' : ''}.</div>
           </div>
         )}
         {c.modalidade === 'recorrente' && (
@@ -352,7 +317,7 @@ function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; ho
           <h3 className={s.secTitulo}><FileSignature size={15} /> Origem</h3>
           <div className={s.origem}>
             <span>
-              {c.propostaNumero !== '—' ? <>Proposta <b>{c.propostaNumero}</b>, aprovada em {dataBR(c.propostaAprovadaEm)}</> : <>Lançado direto (sem proposta) em {dataBR(c.propostaAprovadaEm)}</>} · responsável {c.responsavel}
+              {c.propostaNumero ? <>Proposta <b>{c.propostaNumero}</b></> : <>Lançado direto (sem proposta)</>} · cadastrado em {dataBR(c.criadoEm.slice(0, 10))} por {c.criadoPor || '—'}
             </span>
             <button type="button" className={s.linkBtn} onClick={() => irPara('escopo')}>ver o que foi precificado</button>
           </div>
@@ -363,9 +328,8 @@ function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; ho
 }
 
 function AbaCaracteristicas({ c, modelo, onEditar }: { c: Contrato; modelo: ModeloContrato; onEditar: () => void }) {
-  const v = c.caracteristicas ?? {}
   const mostrar = (k: string, tipo: string) => {
-    const x = v[k]
+    const x = c.caracteristicas[k]
     if (x === undefined || x === '') return <span className={s.mut}>—</span>
     if (tipo === 'percentual' && typeof x === 'number') return formatPct(x, 2)
     if (tipo === 'valor' && typeof x === 'number') return formatBRL(x)
@@ -391,14 +355,14 @@ function AbaCaracteristicas({ c, modelo, onEditar }: { c: Contrato; modelo: Mode
   )
 }
 
-function AbaEscopo({ c, hoje, onAlternar }: { c: Contrato; hoje: string; onAlternar: (comp: ComponenteContrato) => void }) {
+function AbaEscopo({ c, hoje, onAlternar, onAditivo }: { c: Contrato; hoje: string; onAlternar: (comp: ComponenteContrato) => void; onAditivo: () => void }) {
   const vigente = escopoVigente(c, hoje)
   const [versao, setVersao] = useState(vigente.versao)
   const v = c.escopo.find((x) => x.versao === versao) ?? vigente
   const anterior = c.escopo.find((x) => x.versao === versao - 1)
   const novos = new Set(anterior ? v.itens.filter((i) => !anterior.itens.some((a) => a.id === i.id)).map((i) => i.id) : [])
   const tabela = ehTabela(v)
-  const outros = (c.componentes ?? []).filter((x) => x.regra !== 'fixo')
+  const outros = c.componentes.filter((x) => x.regra !== 'fixo')
   return (
     <div>
       <div className={s.escopoTopo}>
@@ -412,7 +376,7 @@ function AbaEscopo({ c, hoje, onAlternar }: { c: Contrato; hoje: string; onAlter
         <div className={s.escopoNota}>
           <b>{v.motivo}</b> · desde {dataBR(v.vigenteDesde)}. {tabela ? 'Tabela de preços: cada frete (CT-e) sai com o preço da rota.' : 'Retrato do que foi precificado; um aditivo cria a versão seguinte.'}
         </div>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void avisar({ titulo: 'Registrar aditivo', mensagem: 'O aditivo abre o escopo no Pricing para reprecificar (incluir ou tirar posto, mudar quantidade, mudar a tabela). Ao aprovar, vira a versão seguinte a partir da data do aditivo; as faturas ainda não emitidas já usam o novo valor.' })}>
+        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onAditivo} title="No cadastro, mudar o escopo pede a data do aditivo e cria a versão seguinte">
           <ScrollText /> Registrar aditivo
         </button>
       </div>
@@ -511,15 +475,16 @@ const Def = ({ k, v }: { k: string; v: ReactNode }) => (
   </>
 )
 
-function AbaCondicoes({ c, hoje }: { c: Contrato; hoje: string }) {
+function AbaCondicoes({ c, hoje, nomes }: { c: Contrato; hoje: string; nomes: Nomes }) {
   const k = c.condicoes
   const spot = c.modalidade === 'spot'
-  const porDocumento = faturaPorDocumento(c)
+  const porDocumento = fatPorDocumento(c)
   const reaj = proximoReajuste(c, hoje)
   return (
     <div className={s.condGrade}>
       {!spot && (
         <Bloco titulo="Faturamento" icone={Receipt}>
+          <Def k="Primeira fatura pelo ELROND" v={k.faturarDesde ? mesAnoCurto(k.faturarDesde) : '—'} />
           {porDocumento ? (
             <>
               <Def k="Como fatura" v={k.agrupamento === 'por-documento' ? 'uma cobrança por CT-e' : 'uma fatura juntando os CT-es do período'} />
@@ -531,13 +496,14 @@ function AbaCondicoes({ c, hoje }: { c: Contrato; hoje: string }) {
               <Def k="O que cobra" v={k.referencia === 'mes-anterior' ? 'o serviço do mês anterior' : 'o serviço do próprio mês'} />
             </>
           )}
-          <Def k="Extras" v="entram na fatura seguinte, salvo os marcados para faturar separado" />
+          <Def k="Extras" v="entram na fatura do mês do serviço, salvo os marcados para faturar separado" />
         </Bloco>
       )}
       <Bloco titulo="Vencimento e cobrança" icone={CircleDollarSign}>
-        <Def k="Vencimento" v={spot || !k.diaVencimento ? `${k.prazoPagamentoDias} dias após o fechamento` : `dia ${k.diaVencimento} · ${k.anteciparFimDeSemana ? 'antecipa' : 'posterga'} em fim de semana e feriado`} />
+        <Def k="Vencimento" v={spot || porDocumento ? `${k.prazoPagamentoDias} dias após o ${spot ? 'serviço' : 'fechamento'}` : `dia ${k.diaVencimento}`} />
+        <Def k="Fim de semana" v={k.anteciparFimDeSemana ? 'antecipa para sexta' : 'adia para segunda'} />
         <Def k="Forma" v={k.formaCobranca} />
-        <Def k="Carteira" v={k.carteira} />
+        <Def k="Conta que recebe" v={nomes.carteira(k.carteiraId)} />
       </Bloco>
       {!spot && (
         <Bloco titulo="Vigência e renovação" icone={CalendarRange}>
@@ -556,87 +522,111 @@ function AbaCondicoes({ c, hoje }: { c: Contrato; hoje: string }) {
       <Bloco
         titulo="Nota fiscal"
         icone={FileText}
-        nota={
-          <span className={s.travado}>
-            <Lock size={12} /> Código do serviço, alíquota e retenção vêm do <Link to="/cadastros/servicos">cadastro de serviços</Link>; o contrato só escolhe o serviço e o texto adicional.
-          </span>
-        }
+        nota={<span className={s.travado}><Lock size={12} /> Código municipal, alíquota e retenção ficam com o serviço (entram com a emissão de NFS-e pela Central); o contrato só escolhe o serviço e o texto adicional.</span>}
       >
-        <Def k="Serviço" v={c.servicoNfse} />
-        <Def k="Tributação" v={c.servicoNfseDetalhe} />
+        <Def k="Serviço" v={nomes.servico(c.servicoId)} />
         <Def k="Texto adicional" v={c.textoAdicionalNota || '—'} />
-        {!spot && !porDocumento && <Def k="Descrição gerada" v={<code className={s.codigo}>Contrato {c.numero} · Ref. {mesAnoCurto(hoje.slice(0, 7))} · Vencto. dia {k.diaVencimento}</code>} />}
       </Bloco>
-      {!spot && (
+      {!spot && k.multaRescisoria && (
         <Bloco titulo="Rescisão" icone={ScrollText}>
           <Def k="Multa" v={k.multaRescisoria} />
-          <Def k="Centro de custo" v={c.centroCusto} />
         </Bloco>
       )}
     </div>
   )
 }
 
-/** Fretes (documentos da operação) vinculados ao contrato: cada viagem com o seu CT-e, MDF-e e canhoto. */
-function AbaFretes({ c, faturas }: { c: Contrato; faturas: FaturaCentral[] }) {
-  const docs = [...(c.documentosVinculados ?? [])].sort((a, b) => b.data.localeCompare(a.data))
+const DOC_VAZIO = { numero: '', data: '', descricao: '', valor: 0, mdfe: '' }
+
+/** Fretes (documentos da operação) vinculados: cada viagem com o seu CT-e, MDF-e e canhoto. */
+function AbaFretes({ c, faturas, onSalvar }: { c: Contrato; faturas: FaturaCentral[]; onSalvar: (d: DocumentoVinculado) => Promise<void> }) {
+  const docs = [...c.documentos].sort((a, b) => b.data.localeCompare(a.data))
   const faturaDe = (id: string) => faturas.find((f) => f.documentos.some((d) => d.id === id))
+  const [form, setForm] = useState({ ...DOC_VAZIO, data: hojeISO() })
+  const [aberto, setAberto] = useState(false)
+  const incluir = async () => {
+    await onSalvar({ id: '', tipo: 'CT-e', canhoto: false, situacao: 'entregue', ...form, numero: form.numero.trim() })
+    setForm({ ...DOC_VAZIO, data: form.data })
+    setAberto(false)
+  }
   return (
     <div>
       <div className={s.faturasTopo}>
-        <span className={s.numSub}>Cada viagem do contrato com os seus documentos. Na v1 os CT-es vêm da SIIMP (busca, XML e DACT-e pela API) e entram vinculados pelo cliente e pelo contrato.</span>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void avisar({ titulo: 'Importar CT-es da SIIMP', mensagem: 'Busca na SIIMP os CT-es emitidos para este cliente depois do último importado, baixa o XML e o DACT-e e vincula cada um a este contrato (com o preço da tabela conferido). No protótipo não busca.' })}>
-          <DownloadCloud /> Importar CT-es da SIIMP
-        </button>
+        <span className={s.numSub}>Cada viagem com os seus documentos. Por enquanto o CT-e é incluído aqui; a busca automática na SIIMP (CT-es do cliente ainda sem fatura) vem na próxima etapa.</span>
+        <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setAberto((a) => !a)}><Plus /> Incluir CT-e</button>
       </div>
-      <div className={ui.tableScroll}>
-        <table className={`${ui.table} ${s.tabela}`}>
-          <thead>
-            <tr>
-              <th>Data</th>
-              <th>CT-e</th>
-              <th>Rota / carga</th>
-              <th>MDF-e</th>
-              <th>Canhoto</th>
-              <th className={ui.right}>Valor</th>
-              <th>Situação</th>
-              <th>Fatura</th>
-            </tr>
-          </thead>
-          <tbody>
-            {docs.map((d) => {
-              const f = faturaDe(d.id)
-              return (
-                <tr key={d.id}>
-                  <td>{dataBR(d.data)}</td>
-                  <td className={ui.cellStrong}>{d.tipo} {d.numero}</td>
-                  <td>{d.descricao}</td>
-                  <td className={ui.cellMut}>{d.mdfe ?? '—'}</td>
-                  <td>{d.canhoto ? <span className={`${s.badge} ${s.fRecebida}`}>ok</span> : <span className={`${s.badge} ${s.fConferir}`}>falta</span>}</td>
-                  <td className={`${ui.right} ${ui.cellStrong}`}>{formatBRL(d.valor)}</td>
-                  <td>{d.situacao === 'em-transito' ? <span className={`${s.badge} ${s.fConferida}`}>Em trânsito</span> : d.situacao === 'entregue' ? <span className={`${s.badge} ${s.fEmitida}`}>Entregue</span> : <span className={`${s.badge} ${s.badgeNeutro}`}>Cancelado</span>}</td>
-                  <td>{f ? <span className={s.faturaRef}>{f.referencia} · <BadgeFatura situacao={f.situacao} /></span> : '—'}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {aberto && (
+        <div className={s.extraForm}>
+          <label>Número do CT-e<input autoFocus value={form.numero} onChange={(e) => setForm({ ...form, numero: e.target.value })} /></label>
+          <label>Data<input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} /></label>
+          <label className={s.extraDesc}>Rota / carga<input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex.: Santos → Jaguaré · Truck" /></label>
+          <label>MDF-e<input value={form.mdfe} onChange={(e) => setForm({ ...form, mdfe: e.target.value })} placeholder="opcional" /></label>
+          <label>Valor (R$)<input type="number" min={0} step="0.01" value={form.valor} onChange={(e) => setForm({ ...form, valor: Number(e.target.value) })} /></label>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!form.numero.trim() || !form.data} onClick={() => void incluir()}>Incluir</button>
+        </div>
+      )}
+      {docs.length === 0 ? (
+        <div className={s.vazio}>Nenhum CT-e vinculado ainda.</div>
+      ) : (
+        <div className={ui.tableScroll}>
+          <table className={`${ui.table} ${s.tabela}`}>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>CT-e</th>
+                <th>Rota / carga</th>
+                <th>MDF-e</th>
+                <th>Canhoto</th>
+                <th className={ui.right}>Valor</th>
+                <th>Situação</th>
+                <th>Fatura</th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.map((d) => {
+                const f = faturaDe(d.id)
+                const travado = !!f?.travada
+                return (
+                  <tr key={d.id}>
+                    <td>{dataBR(d.data)}</td>
+                    <td className={ui.cellStrong}>{d.tipo} {d.numero}</td>
+                    <td>{d.descricao || '—'}</td>
+                    <td className={ui.cellMut}>{d.mdfe || '—'}</td>
+                    <td>
+                      <button type="button" className={`${s.badge} ${d.canhoto ? s.fRecebida : s.fConferir} ${s.badgeBotao}`} onClick={() => void onSalvar({ ...d, canhoto: !d.canhoto })} title="Marcar ou desmarcar o canhoto">
+                        {d.canhoto ? 'ok' : 'falta'}
+                      </button>
+                    </td>
+                    <td className={`${ui.right} ${ui.cellStrong}`}>{formatBRL(d.valor)}</td>
+                    <td>
+                      <select className={s.selectMini} value={d.situacao} disabled={travado} onChange={(e) => void onSalvar({ ...d, situacao: e.target.value as DocumentoVinculado['situacao'] })} aria-label="Situação do CT-e">
+                        <option value="em-transito">Em trânsito</option>
+                        <option value="entregue">Entregue</option>
+                        <option value="cancelado">Cancelado</option>
+                      </select>
+                    </td>
+                    <td>{f ? <span className={s.faturaRef}>{f.referencia} · <BadgeFatura situacao={f.situacao} /></span> : '—'}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
 
-function AbaFaturas({ faturas, abrirCentral }: { faturas: FaturaCentral[]; abrirCentral: () => void }) {
+function AbaFaturas({ faturas, abrirCentral }: { faturas: FaturaCentral[]; abrirCentral: (competencia: string) => void }) {
   const lista = [...faturas].sort((a, b) => b.competencia.localeCompare(a.competencia) || b.referencia.localeCompare(a.referencia))
-  const emitido = r2(faturas.filter((f) => EMITIDAS.includes(f.situacao)).reduce((a, f) => a + totalDaFatura(f), 0))
+  if (lista.length === 0) return <div className={s.vazio}>Nenhuma fatura ainda.</div>
   return (
     <div>
       <div className={s.faturasTopo}>
-        <span className={s.numSub}>O histórico de faturas e notas do contrato. Conferir, emitir NF e boleto é na Central de Faturamento.</span>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={abrirCentral}><Banknote /> Central de Faturamento</button>
+        <span className={s.numSub}>O histórico de faturas e notas do contrato. Conferir, registrar NF e boleto é na Central de Faturamento (clique na linha).</span>
       </div>
       <div className={ui.tableScroll}>
-        <table className={`${ui.table} ${s.tabela}`}>
+        <table className={`${ui.table} ${s.tabela} ${s.tabelaClicavel}`}>
           <thead>
             <tr>
               <th>Referência</th>
@@ -651,14 +641,14 @@ function AbaFaturas({ faturas, abrirCentral }: { faturas: FaturaCentral[]; abrir
           </thead>
           <tbody>
             {lista.map((f) => (
-              <tr key={f.id}>
+              <tr key={f.id} onClick={() => abrirCentral(f.competencia)} title="Abrir na Central de Faturamento">
                 <td className={ui.cellStrong}>{f.avulsa ? `Extra · ${f.descricao}` : f.referencia}</td>
                 <td>{dataBR(f.vencimento)}</td>
                 <td className={ui.right}>{formatBRL(f.previsto)}</td>
                 <td className={`${ui.right} ${ui.cellMut}`}>{f.extras.length ? formatBRL(f.extras.reduce((a, e) => a + valorExtra(e), 0)) : '—'}</td>
-                <td className={`${ui.right} ${ui.cellStrong}`}>{formatBRL(totalDaFatura(f))}</td>
+                <td className={`${ui.right} ${ui.cellStrong}`}>{formatBRL(f.total)}</td>
                 <td className={ui.cellMut}>{f.nf ? (f.documentoDaOperacao ? f.nf : `NF ${f.nf}`) : '—'}</td>
-                <td className={ui.cellMut}>{f.boleto ?? '—'}</td>
+                <td className={ui.cellMut}>{f.boleto || '—'}</td>
                 <td><BadgeFatura situacao={f.situacao} /></td>
               </tr>
             ))}
@@ -666,7 +656,7 @@ function AbaFaturas({ faturas, abrirCentral }: { faturas: FaturaCentral[]; abrir
           <tfoot>
             <tr>
               <td colSpan={4}>Emitido (NF ou documento)</td>
-              <td className={ui.right}>{formatBRL(emitido)}</td>
+              <td className={ui.right}>{formatBRL(totalEmitido(faturas))}</td>
               <td colSpan={3} />
             </tr>
           </tfoot>
@@ -676,26 +666,28 @@ function AbaFaturas({ faturas, abrirCentral }: { faturas: FaturaCentral[]; abrir
   )
 }
 
-function AbaExtras({ c, onAtualizar, onLancar }: { c: Contrato; onAtualizar: (e: ExtraContrato) => void; onLancar: (e: ExtraContrato) => void }) {
-  const lancaveis = (c.componentes ?? []).filter((x) => x.regra === 'lancamento' && x.ativo)
-  const vazio = { componente: lancaveis[0]?.apelido ?? '', tipo: 'hora-extra' as TipoExtra, descricao: '', quantidade: 1, valorUnitario: lancaveis[0]?.valorUnitario ?? 0, cobranca: 'proxima-fatura' as CobrancaExtra }
+type NovoExtra = Omit<ExtraContrato, 'id' | 'faturadoEm' | 'lancadoPor'>
+
+function AbaExtras({ c, onCobranca, onLancar }: { c: Contrato; onCobranca: (e: ExtraContrato, cobranca: CobrancaExtra) => void; onLancar: (e: NovoExtra) => Promise<void> }) {
+  const lancaveis = c.componentes.filter((x) => x.regra === 'lancamento' && x.ativo)
+  const vazio = { componente: lancaveis[0]?.apelido ?? '', tipo: 'hora-extra' as TipoExtra, descricao: '', data: hojeISO(), quantidade: 1, valorUnitario: lancaveis[0]?.valorUnitario ?? 0, cobranca: 'proxima-fatura' as CobrancaExtra }
   const [form, setForm] = useState(vazio)
   const [aberto, setAberto] = useState(false)
   const escolherComponente = (apelido: string) => {
     const comp = lancaveis.find((x) => x.apelido === apelido)
     setForm({ ...form, componente: apelido, valorUnitario: comp?.valorUnitario ?? form.valorUnitario, tipo: comp && /hora|di[aá]ria/i.test(comp.unidade) ? 'hora-extra' : 'custo-extra' })
   }
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.descricao.trim()) return
     const comp = lancaveis.find((x) => x.apelido === form.componente)
-    onLancar({ id: gerarId('n'), data: hojeISO(), lancadoPor: 'você', tipo: form.tipo, descricao: comp ? `${comp.nome}: ${form.descricao.trim()}` : form.descricao.trim(), quantidade: form.quantidade, valorUnitario: form.valorUnitario, cobranca: form.cobranca })
+    await onLancar({ data: form.data, tipo: form.tipo, descricao: comp ? `${comp.nome}: ${form.descricao.trim()}` : form.descricao.trim(), quantidade: form.quantidade, valorUnitario: form.valorUnitario, cobranca: form.cobranca })
     setForm(vazio)
     setAberto(false)
   }
   return (
     <div>
       <div className={s.faturasTopo}>
-        <span className={s.numSub}>Lançamentos do contrato (horas extras, custos extras, ocorrências). Os "na próxima fatura" entram sozinhos na primeira fatura ainda não emitida.</span>
+        <span className={s.numSub}>Lançamentos do contrato (horas extras, custos extras, ocorrências). Os "na próxima fatura" entram sozinhos na fatura ainda não emitida do mês do serviço.</span>
         <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setAberto((a) => !a)}><Plus /> Lançar extra</button>
       </div>
       {aberto && (
@@ -720,6 +712,10 @@ function AbaExtras({ c, onAtualizar, onLancar }: { c: Contrato; onAtualizar: (e:
             <input autoFocus value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex.: cobertura de folga na portaria (8h)" />
           </label>
           <label>
+            Data
+            <input type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+          </label>
+          <label>
             Qtd
             <input type="number" min={0} value={form.quantidade} onChange={(e) => setForm({ ...form, quantidade: Number(e.target.value) })} />
           </label>
@@ -733,7 +729,7 @@ function AbaExtras({ c, onAtualizar, onLancar }: { c: Contrato; onAtualizar: (e:
               {Object.entries(ROTULO_COBRANCA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
           </label>
-          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={salvar} disabled={!form.descricao.trim()}>Lançar</button>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => void salvar()} disabled={!form.descricao.trim()}>Lançar</button>
         </div>
       )}
       {c.extras.length === 0 ? (
@@ -767,7 +763,7 @@ function AbaExtras({ c, onAtualizar, onLancar }: { c: Contrato; onAtualizar: (e:
                     {e.faturadoEm ? (
                       <span className={s.mut}>{ROTULO_COBRANCA[e.cobranca]}</span>
                     ) : (
-                      <select className={s.selectMini} value={e.cobranca} onChange={(ev) => onAtualizar({ ...e, cobranca: ev.target.value as CobrancaExtra })} aria-label="Como cobrar">
+                      <select className={s.selectMini} value={e.cobranca} onChange={(ev) => onCobranca(e, ev.target.value as CobrancaExtra)} aria-label="Como cobrar">
                         {Object.entries(ROTULO_COBRANCA).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                       </select>
                     )}
@@ -791,40 +787,21 @@ function AbaExtras({ c, onAtualizar, onLancar }: { c: Contrato; onAtualizar: (e:
   )
 }
 
-function AbaDocumentos({ c }: { c: Contrato }) {
-  return (
-    <div>
-      <div className={s.docsGrade}>
-        {c.documentos.map((d) => (
-          <div key={d.id} className={s.docCard}>
-            <span className={`${s.docIcone} ${s[`doc_${d.tipo}`] ?? ''}`}><FileText size={18} /></span>
-            <div className={s.docTexto}>
-              <b title={d.nome}>{d.nome}</b>
-              <span>{dataBR(d.data)} · {d.tamanho}</span>
-            </div>
-          </div>
-        ))}
-        <button type="button" className={s.docSoltar} onClick={() => void avisar({ titulo: 'Anexar documento', mensagem: 'Usa os anexos que o sistema já tem (os mesmos de cliente e fornecedor): contrato assinado, aditivos, CT-e, canhoto. No protótipo não grava.' })}>
-          <Upload size={18} />
-          <span>Anexar contrato, aditivo ou documento da operação</span>
-        </button>
-      </div>
-    </div>
-  )
-}
+const quando = (iso: string) => (iso.length > 10 ? new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : dataBR(iso))
 
 function LinhaDoTempo({ c, max }: { c: Contrato; max?: number }) {
-  const lista = [...c.eventos].sort((a, b) => b.data.localeCompare(a.data)).slice(0, max)
+  const lista = [...c.eventos].sort((a, b) => b.em.localeCompare(a.em)).slice(0, max)
+  if (lista.length === 0) return <div className={s.numSub}>Nada registrado ainda.</div>
   return (
     <ol className={s.tempo}>
       {lista.map((e, i) => {
-        const Ic = ICONE_EVENTO[e.tipo]
+        const Ic = ICONE_EVENTO[e.tipo] ?? Clock
         return (
           <li key={i} className={s[`ev_${e.tipo}`]}>
             <span className={s.tempoIcone}><Ic size={13} /></span>
             <div>
               <div className={s.tempoTexto}>{e.texto}</div>
-              <div className={s.numSub}>{dataBR(e.data)} · {e.quem}</div>
+              <div className={s.numSub}>{quando(e.em)} · {e.quem}</div>
             </div>
           </li>
         )

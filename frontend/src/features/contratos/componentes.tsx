@@ -32,8 +32,8 @@ const FATURA_CLS: Record<SituacaoFatura, string> = {
   'boleto-emitido': s.fEmitida,
   recebida: s.fRecebida,
   atrasada: s.fAtrasada,
-  problema: s.fAtrasada,
   devolvida: s.fDevolvida,
+  cancelada: s.badgeNeutro,
 }
 
 export function BadgeFatura({ situacao }: { situacao: SituacaoFatura }) {

@@ -23,6 +23,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.HasSequence("contratos_numero_seq");
+
             modelBuilder.Entity("Elrond.Domain.Entities.Anexo", b =>
                 {
                     b.Property<string>("Id")
@@ -333,6 +335,48 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("categorias_custo", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.CenarioProjecao", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("cenarios_projecao", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.CertificadoEmpresa", b =>
@@ -907,6 +951,114 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("configuracoes_fiscais", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.Contrato", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClienteDocumento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClienteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClienteNome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Contato")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Fim")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Inicio")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LocalServico")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Modalidade")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ModeloId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("PropostaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PropostaNumero")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ServicoId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TextoAdicionalNota")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TipoOperacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClienteId");
+
+                    b.HasIndex("Numero")
+                        .IsUnique();
+
+                    b.ToTable("contratos", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.CustoFixo", b =>
                 {
                     b.Property<string>("Id")
@@ -1011,6 +1163,18 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("Cnpj")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("ContratoDigitos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(4);
+
+                    b.Property<string>("ContratoPrefixo")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(15)
+                        .HasColumnType("character varying(15)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("CriadoEm")
                         .IsRequired()
@@ -1188,6 +1352,112 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("extrato_linhas", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Fatura", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Avulsa")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Boleto")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Competencia")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ContratoId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Descontos")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("ExtrasFora")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nf")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Previsto")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("RecebidaEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Referencia")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("Vencimento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Competencia");
+
+                    b.HasIndex("ContratoId", "Chave")
+                        .IsUnique();
+
+                    b.ToTable("faturas", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.FichaColuna", b =>
@@ -1838,6 +2108,68 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("metas", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.ModeloContrato", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Agrupamento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Fechamento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ServicoId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TipoOperacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("modelos_contrato", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.ModeloProposta", b =>
                 {
                     b.Property<string>("Id")
@@ -2243,6 +2575,20 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasIndex("Situacao", "ProximaConsultaEm");
 
                     b.ToTable("notas_fiscais_servico", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.NumeracaoContrato", b =>
+                {
+                    b.Property<string>("EmpresaId")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<long>("Ultimo")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("EmpresaId");
+
+                    b.ToTable("contrato_numeracao", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.NumeracaoProposta", b =>
@@ -3422,6 +3768,52 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("vinculos_google", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.CenarioProjecao", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.HipoteseProjecao", "Hipoteses", b1 =>
+                        {
+                            b1.Property<string>("CenarioProjecaoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<bool>("Ativa");
+
+                            b1.Property<string>("CustoId")
+                                .IsRequired();
+
+                            b1.Property<string>("Fim")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Inicio")
+                                .IsRequired();
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Valor")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("CenarioProjecaoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("cenarios_projecao");
+
+                            b1
+                                .ToJson("Hipoteses")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("CenarioProjecaoId");
+                        });
+
+                    b.Navigation("Hipoteses");
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.CertificadoEmpresa", b =>
                 {
                     b.HasOne("Elrond.Domain.Entities.Empresa", null)
@@ -3558,6 +3950,343 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("Contatos");
 
                     b.Navigation("Endereco");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Contrato", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.CaracteristicaContrato", "Caracteristicas", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Apelido")
+                                .IsRequired();
+
+                            b1.Property<string>("Valor")
+                                .IsRequired();
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Caracteristicas")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.ComponenteContrato", "Componentes", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Apelido")
+                                .IsRequired();
+
+                            b1.Property<bool>("Ativo");
+
+                            b1.Property<string>("Documento")
+                                .IsRequired();
+
+                            b1.Property<string>("Formula")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Quantidade")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("Regra")
+                                .IsRequired();
+
+                            b1.Property<string>("Unidade")
+                                .IsRequired();
+
+                            b1.Property<decimal>("ValorUnitario")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Componentes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsOne("Elrond.Domain.Entities.CondicoesContrato", "Condicoes", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<string>("Agrupamento")
+                                .IsRequired();
+
+                            b1.Property<bool>("AnteciparFimDeSemana");
+
+                            b1.Property<int>("AvisoPrevioDias");
+
+                            b1.Property<string>("CarteiraId")
+                                .IsRequired();
+
+                            b1.Property<int>("DiaFaturamento");
+
+                            b1.Property<int>("DiaVencimento");
+
+                            b1.Property<string>("FaturarDesde")
+                                .IsRequired();
+
+                            b1.Property<string>("Fechamento")
+                                .IsRequired();
+
+                            b1.Property<string>("FormaCobranca")
+                                .IsRequired();
+
+                            b1.Property<string>("MultaRescisoria")
+                                .IsRequired();
+
+                            b1.Property<int>("PrazoPagamentoDias");
+
+                            b1.Property<string>("ReajusteIndice")
+                                .IsRequired();
+
+                            b1.Property<int>("ReajusteMesBase");
+
+                            b1.Property<string>("Referencia")
+                                .IsRequired();
+
+                            b1.Property<bool>("RenovacaoAutomatica");
+
+                            b1.HasKey("ContratoId");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Condicoes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.DocumentoVinculado", "Documentos", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<bool>("Canhoto");
+
+                            b1.Property<string>("Data")
+                                .IsRequired();
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("Id")
+                                .IsRequired();
+
+                            b1.Property<string>("Mdfe")
+                                .IsRequired();
+
+                            b1.Property<string>("Numero")
+                                .IsRequired();
+
+                            b1.Property<string>("Situacao")
+                                .IsRequired();
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Valor")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Documentos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.ExtraContrato", "Extras", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Cobranca")
+                                .IsRequired();
+
+                            b1.Property<string>("Data")
+                                .IsRequired();
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("FaturadoEm")
+                                .IsRequired();
+
+                            b1.Property<string>("Id")
+                                .IsRequired();
+
+                            b1.Property<string>("LancadoPor")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Quantidade")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("ValorUnitario")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Extras")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.EventoContrato", "Eventos", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Em")
+                                .IsRequired();
+
+                            b1.Property<string>("Quem")
+                                .IsRequired();
+
+                            b1.Property<string>("Texto")
+                                .IsRequired();
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Eventos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.VersaoEscopo", "Escopo", b1 =>
+                        {
+                            b1.Property<string>("ContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Motivo")
+                                .IsRequired();
+
+                            b1.Property<int>("Versao");
+
+                            b1.Property<string>("VigenteDesde")
+                                .IsRequired();
+
+                            b1.HasKey("ContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("contratos");
+
+                            b1
+                                .ToJson("Escopo")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ContratoId");
+
+                            b1.OwnsMany("Elrond.Domain.Entities.ItemEscopo", "Itens", b2 =>
+                                {
+                                    b2.Property<string>("VersaoEscopoContratoId");
+
+                                    b2.Property<int>("VersaoEscopo__synthesizedOrdinal");
+
+                                    b2.Property<int>("__synthesizedOrdinal")
+                                        .ValueGeneratedOnAdd();
+
+                                    b2.Property<string>("Apelido")
+                                        .IsRequired();
+
+                                    b2.Property<decimal>("CustoUnitario")
+                                        .HasPrecision(18, 6);
+
+                                    b2.Property<string>("Descricao")
+                                        .IsRequired();
+
+                                    b2.Property<string>("Id");
+
+                                    b2.Property<decimal>("Quantidade")
+                                        .HasPrecision(18, 6);
+
+                                    b2.Property<string>("Servico")
+                                        .IsRequired();
+
+                                    b2.Property<bool>("Tabela");
+
+                                    b2.Property<string>("Unidade")
+                                        .IsRequired();
+
+                                    b2.Property<decimal>("ValorUnitario")
+                                        .HasPrecision(18, 6);
+
+                                    b2.HasKey("VersaoEscopoContratoId", "VersaoEscopo__synthesizedOrdinal", "__synthesizedOrdinal");
+
+                                    b2.ToTable("contratos");
+
+                                    b2.WithOwner()
+                                        .HasForeignKey("VersaoEscopoContratoId", "VersaoEscopo__synthesizedOrdinal");
+                                });
+
+                            b1.Navigation("Itens");
+                        });
+
+                    b.Navigation("Caracteristicas");
+
+                    b.Navigation("Componentes");
+
+                    b.Navigation("Condicoes")
+                        .IsRequired();
+
+                    b.Navigation("Documentos");
+
+                    b.Navigation("Escopo");
+
+                    b.Navigation("Eventos");
+
+                    b.Navigation("Extras");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.CustoFixo", b =>
@@ -3961,6 +4690,174 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("ValidadesProposta");
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.Fatura", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.DocumentoVinculado", "Documentos", b1 =>
+                        {
+                            b1.Property<string>("FaturaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<bool>("Canhoto");
+
+                            b1.Property<string>("Data")
+                                .IsRequired();
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Mdfe")
+                                .IsRequired();
+
+                            b1.Property<string>("Numero")
+                                .IsRequired();
+
+                            b1.Property<string>("Situacao")
+                                .IsRequired();
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Valor")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("FaturaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("faturas");
+
+                            b1
+                                .ToJson("Documentos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FaturaId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.ExtraContrato", "Extras", b1 =>
+                        {
+                            b1.Property<string>("FaturaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Cobranca")
+                                .IsRequired();
+
+                            b1.Property<string>("Data")
+                                .IsRequired();
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("FaturadoEm")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("LancadoPor")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Quantidade")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("ValorUnitario")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("FaturaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("faturas");
+
+                            b1
+                                .ToJson("Extras")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FaturaId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.LinhaComposicao", "Composicao", b1 =>
+                        {
+                            b1.Property<string>("FaturaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Apelido")
+                                .IsRequired();
+
+                            b1.Property<string>("Detalhe")
+                                .IsRequired();
+
+                            b1.Property<string>("Erro")
+                                .IsRequired();
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<string>("Regra")
+                                .IsRequired();
+
+                            b1.Property<decimal?>("Valor")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("FaturaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("faturas");
+
+                            b1
+                                .ToJson("Composicao")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FaturaId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.VersaoFatura", "Versoes", b1 =>
+                        {
+                            b1.Property<string>("FaturaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Em")
+                                .IsRequired();
+
+                            b1.Property<string>("Quem")
+                                .IsRequired();
+
+                            b1.Property<string>("Texto")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Total")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("FaturaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("faturas");
+
+                            b1
+                                .ToJson("Versoes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("FaturaId");
+                        });
+
+                    b.Navigation("Composicao");
+
+                    b.Navigation("Documentos");
+
+                    b.Navigation("Extras");
+
+                    b.Navigation("Versoes");
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Fornecedor", b =>
                 {
                     b.OwnsOne("Elrond.Domain.Entities.DadosBancarios", "Banco", b1 =>
@@ -4202,6 +5099,95 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Boleto");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.ModeloContrato", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.CampoModelo", "Campos", b1 =>
+                        {
+                            b1.Property<string>("ModeloContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Ajuda")
+                                .IsRequired();
+
+                            b1.Property<string>("Apelido")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<bool>("Obrigatorio");
+
+                            b1.PrimitiveCollection<string>("Opcoes")
+                                .IsRequired();
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.HasKey("ModeloContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("modelos_contrato");
+
+                            b1
+                                .ToJson("Campos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ModeloContratoId");
+                        });
+
+                    b.OwnsMany("Elrond.Domain.Entities.ComponenteModelo", "Componentes", b1 =>
+                        {
+                            b1.Property<string>("ModeloContratoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Apelido")
+                                .IsRequired();
+
+                            b1.Property<string>("Documento")
+                                .IsRequired();
+
+                            b1.Property<string>("Formula")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<bool>("Opcional");
+
+                            b1.Property<string>("Regra")
+                                .IsRequired();
+
+                            b1.Property<string>("Unidade")
+                                .IsRequired();
+
+                            b1.Property<decimal>("ValorPadrao")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("ModeloContratoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("modelos_contrato");
+
+                            b1
+                                .ToJson("Componentes")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ModeloContratoId");
+                        });
+
+                    b.Navigation("Campos");
+
+                    b.Navigation("Componentes");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.ModeloProposta", b =>

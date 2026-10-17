@@ -1,30 +1,34 @@
 /**
- * Contrato (protótipo). Duas modalidades:
- * - recorrente: contrato fixo, fatura todo mês enquanto estiver vigente;
+ * Contrato (espelho de Domain/Entities/Contratos.cs). Duas modalidades:
+ * - recorrente: contrato fixo, fatura todo período enquanto estiver vigente;
  * - spot: serviço avulso, uma fatura só, com os documentos do próprio serviço
  *   (3 fretes na semana = 3 spots).
- * Vale para qualquer tipo de operação (os mesmos tipos dos Dados da Operação).
+ * Vale para qualquer tipo de operação: quem define campos e cobrança é o Modelo de Contrato.
  */
 export type Modalidade = 'recorrente' | 'spot'
 
+/** Recorrente: a gravada. Spot: vem da fatura (a faturar → faturado). */
 export type SituacaoContrato = 'vigente' | 'suspenso' | 'encerrado' | 'a-faturar' | 'faturado'
 
-/** Etapas da fatura (o que anda todo mês). A pasta do contrato só mostra; quem move é a Central de Faturamento. */
-export type SituacaoFatura = 'prevista' | 'a-conferir' | 'conferida' | 'nf-emitida' | 'boleto-emitido' | 'recebida' | 'atrasada' | 'problema' | 'devolvida'
+/** Etapas da fatura (quem move é a Central de Faturamento; a pasta só mostra e reenvia a devolvida). */
+export type SituacaoFatura = 'prevista' | 'a-conferir' | 'conferida' | 'devolvida' | 'nf-emitida' | 'boleto-emitido' | 'atrasada' | 'recebida' | 'cancelada'
+
+/** Regra de um componente de cobrança (o que entra na fatura e como se calcula). */
+export type RegraComponente = 'fixo' | 'lancamento' | 'documento' | 'formula' | 'unico'
 
 export interface ItemEscopo {
   id: string
-  /** Apelido do componente de cobrança (usado nas fórmulas: `posto * 20%`). */
-  apelido?: string
+  /** Apelido do componente fixo (usado nas fórmulas: `posto * 20%`). */
+  apelido: string
   /** Linha de tabela de preços (ex.: frete por rota): não entra na mensalidade, só referencia o preço. */
-  tabela?: boolean
+  tabela: boolean
   servico: string
   descricao: string
   quantidade: number
   unidade: string
   /** Preço de venda unitário (vem do Pricing). */
   valorUnitario: number
-  /** Custo unitário precificado (custo logístico/ficha). */
+  /** Custo unitário precificado. */
   custoUnitario: number
 }
 
@@ -37,8 +41,10 @@ export interface VersaoEscopo {
 }
 
 export interface CondicoesContrato {
+  /** yyyy-MM da primeira fatura pelo ELROND (as anteriores foram cobradas fora). */
+  faturarDesde: string
   diaFaturamento: number
-  /** Mês de referência do serviço cobrado na fatura. */
+  /** Mês do serviço cobrado na fatura. */
   referencia: 'mes-anterior' | 'mes-atual'
   diaVencimento: number
   anteciparFimDeSemana: boolean
@@ -48,19 +54,14 @@ export interface CondicoesContrato {
   /** Mês-base do reajuste (1–12). Começa só como aviso para alguém aplicar. */
   reajusteMesBase: number
   multaRescisoria: string
-  carteira: string
+  /** Conta do Caixa que recebe. */
+  carteiraId: string
   formaCobranca: string
   prazoPagamentoDias: number
-  /**
-   * Contrato com documentos vinculados (fretes com CT-e): uma fatura juntando os documentos do
-   * período ou uma cobrança por documento. Depende do cliente.
-   */
-  agrupamento?: 'periodo' | 'por-documento'
-  fechamento?: 'mensal' | 'quinzenal' | 'semanal'
+  /** Documentos vinculados (fretes com CT-e): uma fatura com os do período ou uma por documento. */
+  agrupamento: 'periodo' | 'por-documento'
+  fechamento: 'mensal' | 'quinzenal' | 'semanal'
 }
-
-/** Regra de um componente de cobrança (o que entra na fatura e como se calcula). */
-export type RegraComponente = 'fixo' | 'lancamento' | 'documento' | 'formula' | 'unico'
 
 /** Componente de cobrança do contrato que não é a mensalidade fixa (essa mora no escopo). */
 export interface ComponenteContrato {
@@ -68,16 +69,13 @@ export interface ComponenteContrato {
   apelido: string
   nome: string
   regra: RegraComponente
-  /** Lançamento: unidade e preço de referência (hora, diária, pallet...). */
   unidade: string
   valorUnitario: number
   /** Único: quantidade cobrada uma vez, na primeira fatura. */
   quantidade: number
-  /** Fórmula sobre apelidos (escopo, características e "subtotal"). */
   formula: string
   /** Documento vinculado: CT-e, NF-e, OS... */
   documento: string
-  servicoNfse: string
   ativo: boolean
 }
 
@@ -89,25 +87,9 @@ export interface DocumentoVinculado {
   data: string
   descricao: string
   valor: number
-  mdfe?: string
+  mdfe: string
   canhoto: boolean
   situacao: 'em-transito' | 'entregue' | 'cancelado'
-}
-
-export interface FaturaContrato {
-  id: string
-  /** yyyy-MM. */
-  competencia: string
-  /** yyyy-MM-dd. */
-  vencimento: string
-  previsto: number
-  extras: number
-  descontos: number
-  situacao: SituacaoFatura
-  nf?: string
-  boleto?: string
-  recebidoEm?: string
-  problema?: string
 }
 
 export type TipoExtra = 'hora-extra' | 'custo-extra' | 'ocorrencia'
@@ -121,23 +103,16 @@ export interface ExtraContrato {
   quantidade: number
   valorUnitario: number
   cobranca: CobrancaExtra
-  /** Competência em que entrou (vazio = ainda não faturado). */
-  faturadoEm?: string
+  /** Competência da fatura emitida em que entrou (vazio = ainda a faturar). */
+  faturadoEm: string
   lancadoPor: string
-}
-
-export interface DocumentoContrato {
-  id: string
-  nome: string
-  tipo: 'contrato' | 'aditivo' | 'proposta' | 'cte' | 'mdfe' | 'canhoto' | 'outro'
-  data: string
-  tamanho: string
 }
 
 export type TipoEvento = 'assinatura' | 'fatura' | 'aditivo' | 'reajuste' | 'extra' | 'ocorrencia' | 'renovacao' | 'documento' | 'encerramento'
 
 export interface EventoContrato {
-  data: string
+  /** Data e hora (ISO 8601). */
+  em: string
   tipo: TipoEvento
   texto: string
   quem: string
@@ -147,41 +122,87 @@ export interface Contrato {
   id: string
   numero: string
   empresaId: string
-  empresaNome: string
+  clienteId: string
+  /** Retrato do cliente no cadastro do contrato. */
   clienteNome: string
   clienteDocumento: string
   contato: string
-  /** Mesmo tipo dos Dados da Operação (Terceirização, Armazenagem, Transporte...). */
+  modeloId: string
   tipoOperacao: string
   modalidade: Modalidade
+  /** Gravada no recorrente (vigente | suspenso | encerrado). No spot, use `situacaoDe`. */
   situacao: SituacaoContrato
-  /** yyyy-MM-dd. No spot, início = data do serviço e fim = início. */
+  /** yyyy-MM-dd. No spot, início = fim = data do serviço. */
   inicio: string
   fim: string
+  localServico: string
+  propostaId: string
   propostaNumero: string
-  propostaAprovadaEm: string
-  /** Serviço do cadastro de serviços: os parâmetros da NFS-e (código, ISS, retenção) vêm de lá. */
-  servicoNfse: string
-  servicoNfseDetalhe: string
+  /** Serviço do cadastro de serviços: é ele que sai na nota. */
+  servicoId: string
   textoAdicionalNota: string
-  centroCusto: string
-  responsavel: string
   escopo: VersaoEscopo[]
   condicoes: CondicoesContrato
-  faturas: FaturaContrato[]
-  extras: ExtraContrato[]
-  documentos: DocumentoContrato[]
-  eventos: EventoContrato[]
-  /** Spot: origem e destino ou local do serviço. */
-  localServico?: string
-  /** Margem realizada no período (custo real lançado ÷ receita), do RPO. */
-  margemRealizada: number
-  /** Modelo de contrato (Parametrizações) que define os campos e os componentes. */
-  modeloId?: string
   /** Valores das características do modelo, por apelido. */
-  caracteristicas?: Record<string, string | number>
+  caracteristicas: Record<string, string | number>
   /** Componentes além da mensalidade: fórmulas, lançamentos, documentos, cobrança única. */
-  componentes?: ComponenteContrato[]
+  componentes: ComponenteContrato[]
+  extras: ExtraContrato[]
   /** Documentos da operação vinculados (fretes com CT-e...). */
-  documentosVinculados?: DocumentoVinculado[]
+  documentos: DocumentoVinculado[]
+  eventos: EventoContrato[]
+  criadoEm: string
+  criadoPor: string
+}
+
+/** Linha da composição da fatura (fixos, fórmulas, cobrança única; lançamento e documento = variável). */
+export interface LinhaComposicao {
+  apelido: string
+  nome: string
+  regra: RegraComponente
+  /** Null = variável ou fórmula com erro. */
+  valor: number | null
+  detalhe: string
+  erro: string
+}
+
+export interface VersaoFatura {
+  em: string
+  quem: string
+  texto: string
+  total: number
+}
+
+/** Fatura (fotografia calculada do contrato; com a NF registrada, trava). */
+export interface Fatura {
+  id: string
+  chave: string
+  contratoId: string
+  empresaId: string
+  /** Fatura de um extra cobrado separado do contrato. */
+  avulsa: boolean
+  descricao: string
+  /** yyyy-MM. */
+  competencia: string
+  referencia: string
+  vencimento: string
+  previsto: number
+  descontos: number
+  total: number
+  composicao: LinhaComposicao[]
+  documentos: DocumentoVinculado[]
+  extras: ExtraContrato[]
+  extrasFora: string[]
+  situacao: SituacaoFatura
+  nf: string
+  boleto: string
+  recebidaEm: string
+  motivo: string
+  versoes: VersaoFatura[]
+}
+
+/** O que o servidor devolve: contratos e as faturas deles (a tela junta com os cadastros). */
+export interface ContratosEFaturas {
+  contratos: Contrato[]
+  faturas: Fatura[]
 }

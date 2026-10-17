@@ -1,0 +1,90 @@
+import { useState } from 'react'
+import { FileCheck2, HandCoins, Landmark } from 'lucide-react'
+import { Modal } from '@/features/common/Modal'
+import ui from '@/features/common/ui.module.css'
+import { formatBRL } from '@/lib/format'
+import { dataBR, hojeISO } from '@/features/contratos/regras'
+import type { FaturaCentral } from '@/features/contratos/faturas'
+import type { DadosEtapa } from '@/features/contratos/api'
+import s from './faturamento.module.css'
+
+export type Registro = 'nf' | 'boleto' | 'recebimento'
+
+const TEXTO: Record<Registro, { titulo: string; icone: typeof Landmark; botao: string }> = {
+  nf: { titulo: 'Registrar a nota fiscal', icone: FileCheck2, botao: 'Registrar NF' },
+  boleto: { titulo: 'Registrar o boleto', icone: Landmark, botao: 'Registrar boleto' },
+  recebimento: { titulo: 'Registrar o recebimento', icone: HandCoins, botao: 'Marcar como recebida' },
+}
+
+/**
+ * NF, boleto e recebimento, por enquanto REGISTRADOS à mão (o número que saiu na prefeitura, no
+ * banco ou no extrato). Quando a emissão pela Central entrar, este é o passo que vira automático.
+ */
+export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar }: { fatura: FaturaCentral; etapa: Registro; onClose: () => void; onConfirmar: (dados: DadosEtapa) => Promise<void> }) {
+  const [numero, setNumero] = useState('')
+  const [data, setData] = useState(hojeISO())
+  const [enviando, setEnviando] = useState(false)
+  const t = TEXTO[etapa]
+  const ctePronto = etapa === 'nf' && f.documentoDaOperacao
+  const valido = etapa === 'recebimento' ? !!data && data <= hojeISO() : etapa === 'nf' ? ctePronto || !!numero.trim() : true
+
+  const confirmar = async () => {
+    setEnviando(true)
+    try {
+      await onConfirmar(etapa === 'recebimento' ? { data } : { numero: numero.trim() })
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={t.titulo}
+      subtitle={`${f.numero} · ${f.clienteNome} · ${f.referencia} · ${formatBRL(f.total)}`}
+      icon={<t.icone />}
+      maxWidth={520}
+      maximizavel={false}
+      busy={enviando}
+      footer={
+        <>
+          <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onClose}>Cancelar</button>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!valido || enviando} onClick={() => void confirmar()}>{t.botao}</button>
+        </>
+      }
+    >
+      {etapa === 'nf' && (
+        <>
+          <p className={s.confNota}>
+            {ctePronto
+              ? 'Frete com CT-e: o documento fiscal já saiu na viagem. Deixe em branco para usar os CT-es da fatura, ou informe outro número.'
+              : `Informe o número da NFS-e de ${f.servicoNome} emitida para este valor. Com a nota registrada a fatura trava (não recalcula mais) e os extras dela ficam faturados.`}
+          </p>
+          <label className={s.campoModal}>
+            {ctePronto ? 'Documento (opcional)' : 'Número da NF'}
+            <input autoFocus value={numero} onChange={(e) => setNumero(e.target.value)} placeholder={ctePronto ? f.documentos.map((d) => `CT-e ${d.numero}`).join(', ') : 'Ex.: 1171'} />
+          </label>
+        </>
+      )}
+      {etapa === 'boleto' && (
+        <>
+          <p className={s.confNota}>Boleto de {formatBRL(f.total)} com vencimento em {dataBR(f.vencimento)}, pela {f.carteiraNome}. Informe o nosso número ou a referência, se tiver.</p>
+          <label className={s.campoModal}>
+            Nosso número / referência (opcional)
+            <input autoFocus value={numero} onChange={(e) => setNumero(e.target.value)} />
+          </label>
+        </>
+      )}
+      {etapa === 'recebimento' && (
+        <>
+          <p className={s.confNota}>Quando o dinheiro entrou. A baixa no extrato e em Entradas e Saídas entra quando o boleto passar a sair por aqui.</p>
+          <label className={s.campoModal}>
+            Recebida em
+            <input type="date" value={data} max={hojeISO()} onChange={(e) => setData(e.target.value)} />
+          </label>
+        </>
+      )}
+    </Modal>
+  )
+}

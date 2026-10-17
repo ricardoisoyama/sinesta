@@ -84,6 +84,8 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
           padrao: initial.padrao ?? false,
           propostaPrefixo: initial.propostaPrefixo ?? '',
           propostaDigitos: initial.propostaDigitos || 4,
+          contratoPrefixo: initial.contratoPrefixo ?? '',
+          contratoDigitos: initial.contratoDigitos || 4,
           validadesProposta: initial.validadesProposta ?? [],
           dv: { ...initial.dv, outras: initial.dv.outras ?? [] },
           // Simples cadastrado antes só com o total: o total vira o DAS (no Simples é a mesma coisa).
@@ -669,6 +671,37 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
               </Field>
               <Field label="Próxima proposta">
                 <input value={proximoNumero} readOnly />
+              </Field>
+            </div>
+          </div>
+
+          <div className={s.numeracao} style={{ marginTop: 16 }}>
+            <div className={s.numeracaoTitulo}>
+              Numeração dos contratos
+              <span>
+                {numeracao.data?.contratoTravado
+                  ? `travada: a empresa já tem ${numeracao.data.contratos} contrato(s) neste padrão`
+                  : 'mesmo esquema da proposta: defina antes do primeiro contrato'}
+              </span>
+            </div>
+            <div className={ui.grid}>
+              <Field className={ui.col2} label="Prefixo" hint="Ex.: MIR ou MIRAI. Em branco = padrão do sistema (CTR-0001).">
+                <input
+                  value={d.contratoPrefixo}
+                  onChange={(e) => set({ contratoPrefixo: e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 15) })}
+                  placeholder="CTR (padrão)"
+                  disabled={numeracao.data?.contratoTravado}
+                />
+              </Field>
+              <Field label="Dígitos">
+                <select value={d.contratoDigitos} onChange={(e) => set({ contratoDigitos: Number(e.target.value) })} disabled={numeracao.data?.contratoTravado || !d.contratoPrefixo}>
+                  {[3, 4, 5, 6, 7, 8].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Próximo contrato">
+                <input value={d.contratoPrefixo ? `${d.contratoPrefixo}-${String((numeracao.data?.contratos ?? 0) + 1).padStart(d.contratoDigitos, '0')}` : 'CTR-0000 (sequência do sistema)'} readOnly />
               </Field>
             </div>
           </div>

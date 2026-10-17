@@ -45,7 +45,7 @@
 .avulsa { color: #b5541b; font-weight: 700; }
 .valorCel { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2; }
 .valorCel small { color: #b5541b; font-size: 11px; font-weight: 600; }
-.docs { display: flex; flex-direction: column; font-size: 12.5px; color: #1f2a24; line-height: 1.25; }
+.docs { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; font-size: 12.5px; color: #1f2a24; line-height: 1.25; }
 .docs small { color: #6b7b72; font-size: 11px; }
 .atrasado { color: #b42318; font-weight: 700; }
 
@@ -97,3 +97,9 @@
 .versoes small { color: #6b7b72; font-size: 11.5px; }
 .checklist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 5px; font-size: 12px; color: #1d6b3e; }
 .checklist li { display: flex; align-items: center; gap: 6px; }
+
+/* Campo de texto dentro das janelas (número da NF, boleto, data do recebimento). */
+.campoModal { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 12px; font-weight: 600; color: #6b7b72; }
+.campoModal input { font: inherit; font-size: 13px; color: #1f2a24; border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px; }
+.campoModal input:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
+.checklist .checkFalta { color: #b5651d; }

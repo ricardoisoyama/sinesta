@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { FileText, Eye, Mail, ShieldCheck, Pencil, ClipboardCheck } from 'lucide-react'
+import { FileText, Eye, Mail, ShieldCheck, Pencil, ClipboardCheck, FileSignature } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Modal } from '@/features/common/Modal'
@@ -41,6 +41,8 @@ export function PropostasPage() {
   const podeAprovar = !user?.permissoes || user.permissoes.includes('/propostas/aprovar')
   // Conferência do resultado: permissão especial, desligada por padrão (o gestor liga no perfil).
   const podeConferir = !!user?.permissoes?.includes('/propostas/conferencia')
+  // Proposta aprovada vira contrato (ou spot): o cadastro abre com cliente, empresa e escopo dela.
+  const podeContrato = !!user?.permissoes?.includes('/contratos')
   const [conferindo, setConferindo] = useState<Proposta | null>(null)
   const [detalhe, setDetalhe] = useState<Proposta | null>(null)
   const [salvandoCustos, setSalvandoCustos] = useState(false)
@@ -135,6 +137,11 @@ export function PropostasPage() {
           {podeConferir && (
             <button className={s.ic} title="Conferir o resultado (custo, DF, DV, margem)" onClick={() => setConferindo(p)}>
               <ClipboardCheck />
+            </button>
+          )}
+          {p.status === 'aprovada' && podeContrato && (
+            <button className={s.ic} title="Gerar contrato a partir desta proposta" onClick={() => navigate(`/contratos/novo?proposta=${p.id}`)}>
+              <FileSignature />
             </button>
           )}
           <button className={s.ic} title="Ver itens" onClick={() => setDetalhe(p)}>

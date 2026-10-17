@@ -13,7 +13,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public partial class AnexoService : IAnexoService
 {
-    private static readonly string[] Entidades = { "cliente", "fornecedor", "veiculo" };
+    private static readonly string[] Entidades = { "cliente", "fornecedor", "veiculo", "contrato" };
     private static readonly Dictionary<string, string> TiposPorExtensao = new(StringComparer.OrdinalIgnoreCase)
     {
         [".pdf"] = "application/pdf",
@@ -45,6 +45,8 @@ public partial class AnexoService : IAnexoService
     private readonly IArquivoStorage _storage;
     private readonly ICrudRepository<Cliente> _clientes;
     private readonly ICrudRepository<Fornecedor> _fornecedores;
+    private readonly ICrudRepository<Veiculo> _veiculos;
+    private readonly ICrudRepository<Contrato> _contratos;
     private readonly IUsuarioAtualProvider _usuario;
 
     public AnexoService(
@@ -52,12 +54,16 @@ public partial class AnexoService : IAnexoService
         IArquivoStorage storage,
         ICrudRepository<Cliente> clientes,
         ICrudRepository<Fornecedor> fornecedores,
+        ICrudRepository<Veiculo> veiculos,
+        ICrudRepository<Contrato> contratos,
         IUsuarioAtualProvider usuario)
     {
         _anexos = anexos;
         _storage = storage;
         _clientes = clientes;
         _fornecedores = fornecedores;
+        _veiculos = veiculos;
+        _contratos = contratos;
         _usuario = usuario;
     }
 
@@ -148,6 +154,8 @@ public partial class AnexoService : IAnexoService
     {
         "cliente" => await _clientes.GetByIdAsync(entidadeId) is not null,
         "fornecedor" => await _fornecedores.GetByIdAsync(entidadeId) is not null,
+        "veiculo" => await _veiculos.GetByIdAsync(entidadeId) is not null,
+        "contrato" => await _contratos.GetByIdAsync(entidadeId) is not null,
         _ => false,
     };
 

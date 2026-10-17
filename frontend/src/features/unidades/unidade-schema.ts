@@ -46,6 +46,8 @@ export const unidadeSchema = z.object({
   padrao: z.boolean(),
   propostaPrefixo: z.string(),
   propostaDigitos: z.number().int().min(3).max(8),
+  contratoPrefixo: z.string(),
+  contratoDigitos: z.number().int().min(3).max(8),
   validadesProposta: z.array(z.object({ id: z.string(), descricao: z.string(), padrao: z.boolean() })),
 
   dv: dvSchema,
@@ -91,6 +93,8 @@ export const emptyUnidade: UnidadeForm = {
   padrao: false,
   propostaPrefixo: '',
   propostaDigitos: 4,
+  contratoPrefixo: '',
+  contratoDigitos: 4,
   validadesProposta: [
     { id: 'v15', descricao: '15 dias', padrao: true },
     { id: 'v30', descricao: '30 dias', padrao: false },

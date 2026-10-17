@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { CustoFixo } from '@/features/custosFixos/types'
 import type { CenarioMeta } from '@/features/metas/mock'
-import { custoNoMes, dfDoMes, projetar, proximosMeses, receitaDoMes, resumir, type Hipotese } from './motor'
+import { custoNoMes, dfDoMes, impactoDasHipoteses, indicadores, ponteDoLucro, projetar, proximosMeses, receitaDoMes, resumir, type Hipotese } from './motor'
 
 const meses = proximosMeses(new Date(2026, 9, 15), 3) // out, nov, dez
 const custo = (p: Partial<CustoFixo>): CustoFixo => ({
@@ -68,6 +68,31 @@ describe('projeção (motor)', () => {
     expect(receitaDoMes([meta], 'a', out26)).toEqual({ valor: 100, repetida: false })
     expect(receitaDoMes([meta], 'a', fev27)).toEqual({ valor: 20, repetida: true })
     expect(receitaDoMes([meta], 'b', fev27)).toBeNull()
+  })
+
+  it('ponte do lucro: efeito da receita + efeito das despesas = diferença do lucro', () => {
+    const novo: Hipotese = { id: 'h', tipo: 'novo-custo', nome: 'Supervisor', valor: 5_000, inicio: '2026-11', ativa: true }
+    const receita: Hipotese = { id: 'r', tipo: 'nova-receita', nome: 'Cliente', valor: 20_000, inicio: '2026-10', ativa: true }
+    const base = projetar(entrada())
+    const cenario = projetar(entrada([novo, receita]))
+    const p = ponteDoLucro(base, cenario, params.contribuicao)
+    expect(p).toEqual({ receita: 15_000, despesas: -10_000 })
+    expect(p.receita + p.despesas).toBe(resumir(cenario, 0.25).lucro - resumir(base, 0.25).lucro)
+  })
+
+  it('impacto de cada hipótese no lucro do período, do maior para o menor', () => {
+    const novo: Hipotese = { id: 'h', tipo: 'novo-custo', nome: 'Supervisor', valor: 5_000, inicio: '2026-11', ativa: true }
+    const receita: Hipotese = { id: 'r', tipo: 'nova-receita', nome: 'Cliente', valor: 20_000, inicio: '2026-10', ativa: true }
+    const imp = impactoDasHipoteses((h) => projetar(entrada(h)), [novo, receita, { ...novo, id: 'off', ativa: false }])
+    expect(imp.map((x) => [x.hipotese.id, x.lucro])).toEqual([['r', 15_000], ['h', -10_000]])
+  })
+
+  it('indicadores: margem, pior mês e equilíbrio médio', () => {
+    const queda: Hipotese = { id: 'q', tipo: 'variacao-meta', nome: '', valor: -0.5, inicio: '2026-12', ativa: true }
+    const i = indicadores(projetar(entrada([queda])), params.contribuicao)
+    expect(i.piorMes).toEqual({ rotulo: 'dez/26', lucro: -2_500 })
+    expect(i.margem).toBeCloseTo(17_500 / 250_000)
+    expect(i.equilibrioMedio).toBe(60_000)
   })
 
   it('resumo: meses no vermelho e quanto a receita pode cair até zerar o lucro', () => {

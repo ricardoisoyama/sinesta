@@ -4,56 +4,58 @@ import { CalendarClock, FilePlus2, FolderOpen, LayoutTemplate, Repeat, Truck } f
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
-import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
 import type { Column } from '@/features/common/DataTable'
 import { LARGURA } from '@/features/common/grid'
-import { confirmar } from '@/features/common/dialogo/dialogo'
 import { formatBRL } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
-import { prototipo, usePrototipo } from './store'
-import { faturaPorDocumento } from './faturas'
-import { alertasDoContrato, dataBR, diasParaFim, hojeISO, mesAnoNum, progressoVigencia, proximoFaturamento, valorContrato } from './regras'
-import type { Contrato, Modalidade, SituacaoContrato } from './types'
+import { useContratos, useModelosContrato } from './api'
+import { useNomes } from './faturas'
+import { alertasDoContrato, dataBR, diasParaFim, emAndamento, hojeISO, mesAnoNum, porDocumento, progressoVigencia, proximaFatura, situacaoDe, valorContrato } from './regras'
+import type { Contrato, Modalidade } from './types'
 import { BadgeModalidade, BadgeSituacao, Alertas } from './componentes'
 import s from './contratos.module.css'
 
 type FiltroSituacao = 'ativos' | 'encerrados' | 'todos'
 
-const ATIVOS: SituacaoContrato[] = ['vigente', 'suspenso', 'a-faturar']
-
 /**
- * Lista de contratos (protótipo). Recorrente e spot na mesma lista; cada linha abre a pasta
- * do contrato. Os números do topo respondem "quanto entra todo mês" e "o que pede atenção".
+ * Lista de contratos. Recorrente e spot na mesma lista; cada linha abre a pasta do contrato.
+ * Os números do topo respondem "quanto entra todo mês" e "o que pede atenção".
  */
 export function ContratosPage() {
   const navigate = useNavigate()
   const hoje = hojeISO()
+  const nomes = useNomes()
   const [busca, setBusca] = useState('')
   const [empresa, setEmpresa] = useState('todas')
   const [modalidade, setModalidade] = useState<'todas' | Modalidade>('todas')
   const [situacao, setSituacao] = useState<FiltroSituacao>('ativos')
-  const { contratos } = usePrototipo()
+  const { data, isLoading } = useContratos()
+  const { data: modelos } = useModelosContrato()
+  const contratos = data?.contratos ?? []
+  const faturas = data?.faturas ?? []
+  const sit = (c: Contrato) => situacaoDe(c, faturas)
+  const alertas = (c: Contrato) => alertasDoContrato(c, faturas, hoje)
 
-  const empresas = [...new Map(contratos.map((c) => [c.empresaId, c.empresaNome])).entries()]
+  const empresas = [...new Set(contratos.map((c) => c.empresaId))]
   const q = semAcento(busca.trim())
   const linhas = contratos.filter((c) => empresa === 'todas' || c.empresaId === empresa)
     .filter((c) => modalidade === 'todas' || c.modalidade === modalidade)
-    .filter((c) => (situacao === 'todos' ? true : situacao === 'ativos' ? ATIVOS.includes(c.situacao) : !ATIVOS.includes(c.situacao)))
+    .filter((c) => (situacao === 'todos' ? true : situacao === 'ativos' ? emAndamento(sit(c)) : !emAndamento(sit(c))))
     .filter((c) => !q || buscaPeloNumero(busca.replace(/\D/g, ''), Number(c.numero.replace(/\D/g, ''))) || semAcento(`${c.numero} ${c.clienteNome} ${c.clienteDocumento} ${c.tipoOperacao} ${c.propostaNumero}`).includes(q))
     // Em andamento primeiro; dentro de cada grupo, pela numeração.
-    .sort((a, b) => Number(!ATIVOS.includes(a.situacao)) - Number(!ATIVOS.includes(b.situacao)) || a.numero.localeCompare(b.numero))
+    .sort((a, b) => Number(!emAndamento(sit(a))) - Number(!emAndamento(sit(b))) || a.numero.localeCompare(b.numero))
 
   const columns: Column<Contrato>[] = [
     { header: 'Nº', fixa: true, largura: LARGURA.curta, valor: (c) => c.numero, cell: (c) => <span className={s.numero}>{c.numero}</span> },
     {
       header: 'Cliente',
       fixa: true,
-      valor: (c) => `${c.clienteNome} · ${c.tipoOperacao} · ${c.empresaNome}`,
+      valor: (c) => `${c.clienteNome} · ${c.tipoOperacao} · ${nomes.empresa(c.empresaId)}`,
       cell: (c) => (
         <div className={s.cliente}>
           <span className={ui.cellStrong}>{c.clienteNome}</span>
           <small>
-            {c.tipoOperacao} · {c.empresaNome}
+            {c.tipoOperacao} · {nomes.empresa(c.empresaId)}
             {c.localServico ? ` · ${c.localServico}` : ''}
           </small>
         </div>
@@ -72,9 +74,7 @@ export function ContratosPage() {
           </div>
         ) : (
           <div className={s.vigCel}>
-            <span>
-              {mesAnoNum(c.inicio)} → {mesAnoNum(c.fim)}
-            </span>
+            <span>{mesAnoNum(c.inicio)} → {mesAnoNum(c.fim)}</span>
             <i className={s.vigMini}>
               <i style={{ width: `${Math.round(progressoVigencia(c, hoje) * 100)}%` }} />
             </i>
@@ -84,20 +84,23 @@ export function ContratosPage() {
     {
       header: 'Valor',
       className: ui.right,
-      largura: LARGURA.valor,
+      largura: LARGURA.media,
       valor: (c) => valorContrato(c, hoje),
-      cell: (c) => (
-        <div className={s.valorCel}>
-          <span className={ui.cellStrong}>{faturaPorDocumento(c) ? 'por frete' : formatBRL(valorContrato(c, hoje))}</span>
-          <small>
-            {faturaPorDocumento(c) ? 'tabela do contrato' : c.modalidade === 'spot' ? 'total' : 'por mês'}
-            {proximoFaturamento(c, hoje) ? ` · fatura ${dataBR(proximoFaturamento(c, hoje)!).slice(0, 5)}` : ''}
-          </small>
-        </div>
-      ),
+      cell: (c) => {
+        const prox = proximaFatura(c, faturas)
+        return (
+          <div className={s.valorCel}>
+            <span className={ui.cellStrong}>{porDocumento(c) ? 'por frete' : formatBRL(valorContrato(c, hoje))}</span>
+            <small>
+              {porDocumento(c) ? 'tabela do contrato' : c.modalidade === 'spot' ? 'total' : 'por mês'}
+              {prox ? ` · vence ${dataBR(prox.vencimento).slice(0, 5)}` : ''}
+            </small>
+          </div>
+        )
+      },
     },
-    { header: 'Atenção', largura: LARGURA.longa, valor: (c) => alertasDoContrato(c, hoje).map((a) => a.texto).join(' · '), cell: (c) => <Alertas alertas={alertasDoContrato(c, hoje)} max={1} /> },
-    { header: 'Situação', largura: LARGURA.situacao, valor: (c) => c.situacao, cell: (c) => <BadgeSituacao situacao={c.situacao} /> },
+    { header: 'Atenção', largura: LARGURA.longa, valor: (c) => alertas(c).map((a) => a.texto).join(' · '), cell: (c) => <Alertas alertas={alertas(c)} max={1} /> },
+    { header: 'Situação', largura: LARGURA.situacao, valor: (c) => sit(c), cell: (c) => <BadgeSituacao situacao={sit(c)} /> },
     {
       header: 'Ações',
       fixa: true,
@@ -113,7 +116,7 @@ export function ContratosPage() {
 
   const resumo = (visiveis: Contrato[]) => {
     const recorrentes = visiveis.filter((c) => c.modalidade === 'recorrente' && c.situacao === 'vigente')
-    const mensal = recorrentes.reduce((a, c) => a + valorContrato(c, hoje), 0)
+    const mensal = recorrentes.filter((c) => !porDocumento(c)).reduce((a, c) => a + valorContrato(c, hoje), 0)
     const vencendo = recorrentes.filter((c) => diasParaFim(c, hoje) <= 90)
     const mes = hoje.slice(0, 7)
     const spots = visiveis.filter((c) => c.modalidade === 'spot' && c.inicio.slice(0, 7) === mes)
@@ -136,12 +139,14 @@ export function ContratosPage() {
         </div>
         <div className={s.kpi}>
           <div className={s.kpiLabel}>Pedem atenção</div>
-          <div className={s.kpiVal}>{visiveis.filter((c) => alertasDoContrato(c, hoje).some((a) => a.tom !== 'info')).length}</div>
-          <div className={s.kpiSub}>atraso, vencimento ou reajuste perto</div>
+          <div className={s.kpiVal}>{visiveis.filter((c) => alertas(c).some((a) => a.tom !== 'info')).length}</div>
+          <div className={s.kpiSub}>atraso, devolução, vencimento ou reajuste perto</div>
         </div>
       </div>
     )
   }
+
+  const semModelo = modelos !== undefined && modelos.every((m) => m.status !== 'ativo')
 
   return (
     <div>
@@ -154,19 +159,17 @@ export function ContratosPage() {
             <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => navigate('/cadastros/modelos-contrato')}>
               <LayoutTemplate /> Modelos de contrato
             </button>
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/contratos/novo')}>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/contratos/novo')} disabled={semModelo} title={semModelo ? 'Crie um modelo de contrato primeiro' : undefined}>
               <FilePlus2 /> Novo contrato
             </button>
           </div>
         }
       />
-      <AvisoPrototipo
-        onRestaurar={async () => {
-          if (await confirmar({ titulo: 'Restaurar os exemplos', mensagem: 'Voltar contratos, modelos e faturas do protótipo para os dados de exemplo? O que foi mexido neste navegador some.', confirmar: 'Restaurar' })) prototipo.restaurarExemplos()
-        }}
-      >
-        dados de exemplo, guardados só neste navegador. Crie, edite e lance à vontade.
-      </AvisoPrototipo>
+      {semModelo && (
+        <div className={s.dica}>
+          <LayoutTemplate size={15} /> O contrato nasce de um modelo (os campos e a cobrança do seu negócio). Crie o primeiro em <button type="button" className={s.linkBtn} onClick={() => navigate('/cadastros/modelos-contrato')}>Parametrizações › Modelos de Contrato</button>.
+        </div>
+      )}
       <CrudList
         id="contratos"
         query={busca}
@@ -178,14 +181,12 @@ export function ContratosPage() {
         rotulo={['contrato', 'contratos']}
         onRowClick={(c) => navigate(`/contratos/${c.id}`)}
         resumo={resumo}
-        empty="Nenhum contrato com esses filtros."
+        empty={isLoading ? 'Carregando...' : contratos.length === 0 ? 'Nenhum contrato ainda. Crie o primeiro em "Novo contrato" ou pelo botão "Gerar contrato" de uma proposta aprovada.' : 'Nenhum contrato com esses filtros.'}
         filters={
           <>
             <select className={ui.filterSelect} value={empresa} onChange={(e) => setEmpresa(e.target.value)} aria-label="Empresa">
               <option value="todas">Todas as empresas</option>
-              {empresas.map(([id, nome]) => (
-                <option key={id} value={id}>{nome}</option>
-              ))}
+              {empresas.map((id) => <option key={id} value={id}>{nomes.empresa(id)}</option>)}
             </select>
             <div className={s.segmento} role="group" aria-label="Modalidade">
               {(['todas', 'recorrente', 'spot'] as const).map((m) => (

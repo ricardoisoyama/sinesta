@@ -1,179 +1,163 @@
 import { useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowLeft, Calculator, FilePlus2, FileSignature, ListChecks, Plus, Save, ScrollText, Settings2, Trash2 } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
-import { AvisoPrototipo } from '@/features/common/AvisoPrototipo'
 import { formatBRL } from '@/lib/format'
+import { getErrorMessage } from '@/lib/api'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
+import { listClientes, listPropostas, listServicos } from '@/features/cadastros/api'
+import { listCarteiras } from '@/features/financeiro/api'
+import { carteiraDaEmpresa } from '@/features/financeiro/types'
+import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
+import type { Proposta } from '@/features/propostas/types'
+import { atualizarContrato, criarContrato, useContrato, useModelosContrato, useRecarregarContratos, type SalvarContrato } from './api'
 import { componenteDoModelo, previaCobranca, ROTULO_REGRA, type CampoModelo, type ModeloContrato } from './modelos'
 import { escopoVigente, hojeISO } from './regras'
-import { gerarId, prototipo, proximoNumero, usePrototipo } from './store'
 import type { ComponenteContrato, CondicoesContrato, Contrato, ItemEscopo, Modalidade } from './types'
 import s from './form.module.css'
 
-/** Propostas aprovadas de exemplo (no sistema: as do Pricing com "Gerar contrato"). */
-interface PropostaExemplo {
-  numero: string
-  cliente: string
-  documento: string
-  empresaId: string
-  modeloId: string
-  modalidade: Modalidade
-  itens: ItemEscopo[]
-}
-const PROPOSTAS: PropostaExemplo[] = [
-  {
-    numero: 'MS-00025', cliente: 'Condomínio Vila Rica', documento: '11.222.333/0001-44', empresaId: 'matriz', modeloId: 'm-terceirizacao', modalidade: 'recorrente',
-    itens: [
-      { id: 'p1', apelido: 'posto', servico: 'Portaria', descricao: 'Porteiro · escala 12x36', quantidade: 2, unidade: 'posto', valorUnitario: 7250, custoUnitario: 5940 },
-      { id: 'p2', apelido: 'posto', servico: 'Terceirização de mão de obra', descricao: 'Auxiliar de limpeza · escala 6x1', quantidade: 1, unidade: 'posto', valorUnitario: 6400, custoUnitario: 5150 },
-    ],
-  },
-  {
-    numero: 'MF-00027', cliente: 'Atacadão Baixada S.A.', documento: '78.901.234/0001-56', empresaId: 'filial', modeloId: 'm-frete', modalidade: 'recorrente',
-    itens: [
-      { id: 'p3', apelido: 'fretes', tabela: true, servico: 'Frete', descricao: 'Santos → São Paulo (CD Jaguaré) · Truck', quantidade: 1, unidade: 'viagem', valorUnitario: 2980, custoUnitario: 2210 },
-      { id: 'p4', apelido: 'fretes', tabela: true, servico: 'Frete', descricao: 'Santos → Guarulhos · Carreta', quantidade: 1, unidade: 'viagem', valorUnitario: 4650, custoUnitario: 3520 },
-    ],
-  },
-  {
-    numero: 'SN-00003', cliente: 'Transportadora Litoral', documento: '22.333.444/0001-55', empresaId: 'matriz', modeloId: 'm-saas', modalidade: 'recorrente',
-    itens: [{ id: 'p5', apelido: 'licenca', servico: 'Licença mensal', descricao: 'ELROND · Pricing, CRM e Financeiro · até 10 usuários', quantidade: 1, unidade: 'mês', valorUnitario: 1890, custoUnitario: 420 }],
-  },
-]
-
-const CONDICOES_PADRAO: CondicoesContrato = {
-  diaFaturamento: 1, referencia: 'mes-anterior', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: true, avisoPrevioDias: 60,
-  reajusteIndice: 'IPCA', reajusteMesBase: 1, multaRescisoria: '', carteira: 'Sicredi · Matriz', formaCobranca: 'Boleto com Pix', prazoPagamentoDias: 15,
-  agrupamento: 'periodo', fechamento: 'mensal',
-}
 const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 const r2 = (v: number) => Math.round(v * 100) / 100
-const umAno = (iso: string) => `${Number(iso.slice(0, 4)) + 1}${iso.slice(4, 8)}${String(Math.min(28, Number(iso.slice(8, 10)))).padStart(2, '0')}`
 const proximoMes = (iso: string) => {
   const d = new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)), 1)
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
 }
+const umAnoDepois = (iso: string) => {
+  const d = new Date(Number(iso.slice(0, 4)) + 1, Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)) - 1)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
-/** Cadastro do contrato (protótipo): parte fixa + características e componentes do modelo. */
+const condicoesPadrao = (hoje: string): CondicoesContrato => ({
+  faturarDesde: hoje.slice(0, 7), diaFaturamento: 1, referencia: 'mes-anterior', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: true,
+  avisoPrevioDias: 60, reajusteIndice: 'IPCA', reajusteMesBase: 1, multaRescisoria: '', carteiraId: '', formaCobranca: 'Boleto com Pix', prazoPagamentoDias: 15,
+  agrupamento: 'periodo', fechamento: 'mensal',
+})
+
+/** Cadastro do contrato: parte fixa + características e componentes do modelo. Espera os dados para abrir já preenchido. */
 export function ContratoFormPage() {
   const { id } = useParams()
+  const contrato = useContrato(id)
+  const modelos = useModelosContrato()
+  if ((id && !contrato.data) || !modelos.data) return <div className={s.carregando}>{contrato.isError ? 'Contrato não encontrado.' : 'Carregando...'}</div>
+  return <Formulario key={id ?? 'novo'} existente={contrato.data?.contratos[0]} modelos={modelos.data} />
+}
+
+function Formulario({ existente, modelos }: { existente?: Contrato; modelos: ModeloContrato[] }) {
   const navigate = useNavigate()
-  const { contratos, modelos } = usePrototipo()
-  const existente = contratos.find((c) => c.id === id)
+  const recarregar = useRecarregarContratos()
+  const [params] = useSearchParams()
   const editando = !!existente
   const hoje = hojeISO()
-  const ativos = modelos.filter((m) => m.status === 'ativo')
+  const ativos = modelos.filter((m) => m.status === 'ativo' || m.id === existente?.modeloId)
+  const { data: empresasData } = useEmpresasQuery()
+  const { data: clientes } = useQuery({ queryKey: ['clientes'], queryFn: listClientes })
+  const { data: servicos } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const { data: carteiras } = useQuery({ queryKey: ['carteiras'], queryFn: listCarteiras })
+  const { data: propostasData } = useQuery({ queryKey: ['propostas'], queryFn: listPropostas, enabled: !editando })
+  const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo' || e.id === existente?.empresaId)
+  const aprovadas = (propostasData ?? []).filter((p) => p.status === 'aprovada')
 
   const [origem, setOrigem] = useState<'proposta' | 'branco'>(editando ? 'branco' : 'proposta')
-  const [propostaNum, setPropostaNum] = useState('')
+  const [propostaId, setPropostaId] = useState('')
   const [d, setD] = useState(() => ({
-    cliente: existente?.clienteNome ?? '',
-    documento: existente?.clienteDocumento ?? '',
+    clienteId: existente?.clienteId ?? '',
+    clienteTexto: existente?.clienteNome ?? '',
     contato: existente?.contato ?? '',
-    empresaId: existente?.empresaId ?? 'matriz',
+    empresaId: existente?.empresaId ?? '',
     modeloId: existente?.modeloId ?? ativos[0]?.id ?? '',
     modalidade: existente?.modalidade ?? ('recorrente' as Modalidade),
+    situacao: existente?.situacao ?? 'vigente',
     inicio: existente?.inicio ?? proximoMes(hoje),
-    fim: existente?.fim ?? umAno(proximoMes(hoje)).replace(/-\d{2}$/, '-01'),
+    fim: existente?.fim ?? umAnoDepois(proximoMes(hoje)),
     local: existente?.localServico ?? '',
-    servicoNfse: existente?.servicoNfse ?? '',
+    servicoId: existente?.servicoId ?? ativos[0]?.servicoId ?? '',
     textoNota: existente?.textoAdicionalNota ?? '',
-    responsavel: existente?.responsavel ?? 'você',
   }))
-  const [cond, setCond] = useState<CondicoesContrato>(existente?.condicoes ?? CONDICOES_PADRAO)
+  const [cond, setCond] = useState<CondicoesContrato>(existente?.condicoes ?? condicoesPadrao(hoje))
   const [carac, setCarac] = useState<Record<string, string | number>>(existente?.caracteristicas ?? {})
   const [itens, setItens] = useState<ItemEscopo[]>(() => (existente ? escopoVigente(existente, hoje).itens : []))
   const [componentes, setComponentes] = useState<ComponenteContrato[]>(() => existente?.componentes ?? (ativos[0] ? ativos[0].componentes.filter((c) => c.regra !== 'fixo').map(componenteDoModelo) : []))
-  const [vigenteDesde, setVigenteDesde] = useState(proximoMes(hoje))
+  const [aditivo, setAditivo] = useState({ desde: proximoMes(hoje), motivo: '' })
   const [tentou, setTentou] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState('')
 
   const modelo = modelos.find((m) => m.id === d.modeloId)
   const fixosDoModelo = modelo?.componentes.filter((c) => c.regra === 'fixo') ?? []
   const porDocumento = componentes.some((c) => c.regra === 'documento' && c.ativo)
   const spot = d.modalidade === 'spot'
+  const carteirasDaEmpresa = (carteiras ?? []).filter((c) => c.status !== 'inativo' && carteiraDaEmpresa(c, d.empresaId))
 
   const trocarModelo = (m: ModeloContrato | undefined, manterItens = false) => {
-    setD((x) => ({ ...x, modeloId: m?.id ?? '' }))
+    setD((x) => ({ ...x, modeloId: m?.id ?? '', servicoId: m?.servicoId || x.servicoId }))
     setComponentes(m ? m.componentes.filter((c) => c.regra !== 'fixo').map(componenteDoModelo) : [])
     setCond((c) => ({ ...c, agrupamento: m?.agrupamento ?? 'periodo', fechamento: m?.fechamento ?? 'mensal' }))
     if (!manterItens) setItens([])
   }
-  const usarProposta = (numero: string) => {
-    setPropostaNum(numero)
-    const p = PROPOSTAS.find((x) => x.numero === numero)
-    if (!p) return
-    const m = modelos.find((x) => x.id === p.modeloId)
-    trocarModelo(m, true)
-    setD((x) => ({ ...x, cliente: p.cliente, documento: p.documento, empresaId: p.empresaId, modeloId: p.modeloId, modalidade: p.modalidade }))
-    setItens(p.itens.map((i) => ({ ...i, id: gerarId(`${i.id}-`) })))
+  const escolherCliente = (id: string, nome: string) => {
+    const cli = clientes?.find((x) => x.id === id)
+    setD((x) => ({ ...x, clienteId: id, clienteTexto: nome, contato: x.contato || cli?.contato || '' }))
+    if (cli?.prazoPagamentoDias) setCond((c) => ({ ...c, prazoPagamentoDias: cli.prazoPagamentoDias ?? c.prazoPagamentoDias }))
   }
+  // A proposta traz cliente, empresa e o que foi precificado (cada item vira uma linha do escopo).
+  const usarProposta = (p: Proposta | undefined) => {
+    setPropostaId(p?.id ?? '')
+    if (!p) return
+    if (p.clienteId) escolherCliente(p.clienteId, p.cliente)
+    setD((x) => ({ ...x, empresaId: p.itens[0]?.empresaId || x.empresaId }))
+    const fixo = fixosDoModelo[0]
+    setItens(p.itens.map((i) => ({
+      id: crypto.randomUUID(), apelido: fixo?.apelido ?? '', tabela: porDocumento, servico: servicos?.find((x) => x.id === i.servicoId)?.nome ?? fixo?.nome ?? 'Serviço',
+      descricao: i.descricao, quantidade: 1, unidade: fixo?.unidade || 'un.', valorUnitario: r2(i.precoFinal), custoUnitario: r2(i.custoTotal),
+    })))
+  }
+  // "Gerar contrato" na lista de propostas abre aqui com ?proposta=: aplica uma vez, quando a lista chega.
+  const [urlAplicada, setUrlAplicada] = useState(false)
+  const propostaDaUrl = params.get('proposta')
+  if (propostaDaUrl && !urlAplicada && aprovadas.length) {
+    setUrlAplicada(true)
+    usarProposta(aprovadas.find((p) => p.id === propostaDaUrl))
+  }
+
   const novoItem = () =>
-    setItens((l) => [...l, { id: gerarId('i'), apelido: porDocumento ? componentes.find((c) => c.regra === 'documento')?.apelido : fixosDoModelo[0]?.apelido, tabela: porDocumento, servico: porDocumento ? 'Frete' : fixosDoModelo[0]?.nome ?? 'Serviço', descricao: '', quantidade: 1, unidade: porDocumento ? 'viagem' : fixosDoModelo[0]?.unidade || 'un.', valorUnitario: 0, custoUnitario: 0 }])
+    setItens((l) => [...l, { id: crypto.randomUUID(), apelido: porDocumento ? componentes.find((c) => c.regra === 'documento')?.apelido ?? '' : fixosDoModelo[0]?.apelido ?? '', tabela: porDocumento, servico: porDocumento ? 'Frete' : fixosDoModelo[0]?.nome ?? 'Serviço', descricao: '', quantidade: 1, unidade: porDocumento ? 'viagem' : fixosDoModelo[0]?.unidade || 'un.', valorUnitario: 0, custoUnitario: 0 }])
   const mudarItem = (i: number, p: Partial<ItemEscopo>) => setItens((l) => l.map((x, k) => (k === i ? { ...x, ...p } : x)))
   const mudarComp = (cid: string, p: Partial<ComponenteContrato>) => setComponentes((l) => l.map((x) => (x.id === cid ? { ...x, ...p } : x)))
 
   const previa = previaCobranca(itens, componentes, carac, true)
+  const escopoMudou = editando && JSON.stringify(escopoVigente(existente, hoje).itens) !== JSON.stringify(itens)
   const faltas = [
-    !d.cliente.trim() && 'o cliente',
+    !d.clienteId && 'escolher o cliente no cadastro',
+    !d.empresaId && 'a empresa',
     !modelo && 'o modelo',
     ...(modelo?.campos.filter((c) => c.obrigatorio && (carac[c.apelido] === undefined || carac[c.apelido] === '')).map((c) => c.nome) ?? []),
     itens.length === 0 && (porDocumento ? 'pelo menos uma linha na tabela' : 'pelo menos um componente fixo no escopo'),
     !spot && d.fim <= d.inicio && 'um fim de vigência depois do início',
     previa.linhas.some((l) => l.erro) && 'corrigir a fórmula com erro',
+    escopoMudou && !aditivo.desde && 'a data do aditivo',
   ].filter(Boolean) as string[]
 
-  const escopoMudou = editando && JSON.stringify(escopoVigente(existente, hoje).itens) !== JSON.stringify(itens)
-
-  const salvar = () => {
+  const salvar = async () => {
     setTentou(true)
+    setErro('')
     if (faltas.length) return
-    const empresaNome = d.empresaId === 'filial' ? 'Mirai - Filial 02' : 'Mirai - Matriz'
-    const servico = d.servicoNfse || modelo?.componentes.find((c) => c.servicoNfse)?.servicoNfse || 'Prestação de serviço'
-    const fim = spot ? d.inicio : d.fim
-    const prop = PROPOSTAS.find((x) => x.numero === propostaNum)
-    const base: Contrato = existente ?? {
-      id: gerarId('n'),
-      numero: proximoNumero(contratos, d.empresaId),
-      empresaId: d.empresaId, empresaNome, clienteNome: '', clienteDocumento: '', contato: '', tipoOperacao: '', modalidade: d.modalidade,
-      situacao: spot ? 'a-faturar' : 'vigente', inicio: d.inicio, fim, propostaNumero: prop?.numero ?? '—', propostaAprovadaEm: hoje,
-      servicoNfse: servico, servicoNfseDetalhe: 'Parâmetros fiscais do cadastro de serviços', textoAdicionalNota: '', centroCusto: modelo?.tipoOperacao ?? 'Geral',
-      responsavel: d.responsavel, escopo: [], condicoes: cond, faturas: [], extras: [], documentos: [], eventos: [], margemRealizada: 0,
+    const dados: SalvarContrato = {
+      empresaId: d.empresaId, clienteId: d.clienteId, modeloId: d.modeloId, modalidade: d.modalidade, inicio: d.inicio, fim: spot ? d.inicio : d.fim,
+      condicoes: cond, itens, contato: d.contato, situacao: spot ? undefined : d.situacao, localServico: spot ? d.local : '', propostaId: propostaId || undefined,
+      servicoId: d.servicoId, textoAdicionalNota: d.textoNota, caracteristicas: carac, componentes,
+      aditivoDesde: escopoMudou ? aditivo.desde : undefined, aditivoMotivo: escopoMudou ? aditivo.motivo : undefined,
     }
-    const escopo = !existente
-      ? [{ versao: 1, vigenteDesde: d.inicio, motivo: prop ? `Proposta ${prop.numero} aprovada` : 'Cadastro do contrato', itens }]
-      : escopoMudou
-        ? [...existente.escopo, { versao: existente.escopo.length + 1, vigenteDesde, motivo: 'Alteração do escopo no cadastro', itens }]
-        : existente.escopo
-    const c: Contrato = {
-      ...base,
-      clienteNome: d.cliente.trim(),
-      clienteDocumento: d.documento || '—',
-      contato: d.contato,
-      empresaId: d.empresaId,
-      empresaNome,
-      tipoOperacao: modelo?.tipoOperacao ?? base.tipoOperacao,
-      modalidade: d.modalidade,
-      inicio: d.inicio,
-      fim,
-      localServico: spot ? d.local : undefined,
-      servicoNfse: servico,
-      servicoNfseDetalhe: servico.includes('CT-e') ? 'Documento fiscal de cada viagem (CT-e emitido na saída)' : base.servicoNfseDetalhe,
-      textoAdicionalNota: d.textoNota,
-      responsavel: d.responsavel,
-      condicoes: cond,
-      escopo,
-      modeloId: modelo?.id,
-      caracteristicas: carac,
-      componentes,
-      // Spot nasce com a sua fatura única para a Central.
-      faturas: !existente && spot ? [{ id: `${base.id}-f`, competencia: d.inicio.slice(0, 7), vencimento: d.inicio, previsto: previa.total, extras: 0, descontos: 0, situacao: 'prevista' }] : base.faturas,
-      eventos: [
-        { data: hoje, tipo: existente ? (escopoMudou ? 'aditivo' : 'documento') : 'assinatura', texto: existente ? (escopoMudou ? `Escopo alterado: versão ${existente.escopo.length + 1} a partir de ${vigenteDesde.split('-').reverse().join('/')}` : 'Cadastro do contrato alterado') : `Contrato cadastrado${prop ? ` a partir da proposta ${prop.numero}` : ''}`, quem: 'você' },
-        ...base.eventos,
-      ],
+    setSalvando(true)
+    try {
+      const c = existente ? await atualizarContrato(existente.id, dados) : await criarContrato(dados)
+      await recarregar()
+      navigate(`/contratos/${c.id}`)
+    } catch (err) {
+      setErro(getErrorMessage(err))
+    } finally {
+      setSalvando(false)
     }
-    prototipo.salvarContrato(c)
-    navigate(`/contratos/${c.id}`)
   }
 
   const campoInput = (campo: CampoModelo) => {
@@ -189,8 +173,9 @@ export function ContratoFormPage() {
     if (campo.tipo === 'numero' || campo.tipo === 'valor') return <input type="number" step={campo.tipo === 'valor' ? '0.01' : '1'} value={v === undefined ? '' : String(v)} onChange={(e) => set(e.target.value === '' ? '' : Number(e.target.value))} />
     if (campo.tipo === 'percentual') return <input type="number" step="0.01" value={typeof v === 'number' ? r2(v * 100) : ''} onChange={(e) => set(e.target.value === '' ? '' : Number(e.target.value) / 100)} placeholder="%" />
     if (campo.tipo === 'data') return <input type="date" value={String(v ?? '')} onChange={(e) => set(e.target.value)} />
-    return <input value={String(v ?? '')} onChange={(e) => set(e.target.value)} placeholder={campo.tipo === 'cadastro' ? `Escolha no cadastro de ${campo.opcoes[0] ?? '...'}` : ''} />
+    return <input value={String(v ?? '')} onChange={(e) => set(e.target.value)} placeholder={campo.tipo === 'cadastro' ? `Do cadastro de ${campo.opcoes[0] ?? '...'}` : ''} />
   }
+  const n = (k: number) => (editando ? k - 1 : k)
 
   return (
     <div>
@@ -200,12 +185,11 @@ export function ContratoFormPage() {
           <h1 className={s.titulo}>{existente ? `Editar contrato ${existente.numero}` : 'Novo contrato'}</h1>
           <div className={s.sub}>A parte fixa vale para todo contrato; características e componentes de cobrança vêm do modelo (Parametrizações › Modelos de Contrato).</div>
         </div>
-        <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={salvar}><Save /> {existente ? 'Salvar alterações' : 'Criar contrato'}</button>
+        <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => void salvar()} disabled={salvando}><Save /> {salvando ? 'Salvando...' : existente ? 'Salvar alterações' : 'Criar contrato'}</button>
       </div>
-      <AvisoPrototipo>dados de exemplo, guardados só neste navegador; o contrato criado aparece na lista, na pasta e na Central.</AvisoPrototipo>
 
-      {tentou && faltas.length > 0 && (
-        <div className={s.faltas} role="alert"><AlertTriangle size={15} /> Falta {faltas.join(', ')}.</div>
+      {((tentou && faltas.length > 0) || erro) && (
+        <div className={s.faltas} role="alert"><AlertTriangle size={15} /> {erro || `Falta ${faltas.join(', ')}.`}</div>
       )}
 
       {!editando && (
@@ -213,9 +197,9 @@ export function ContratoFormPage() {
           <div className={s.origens}>
             <button type="button" className={origem === 'proposta' ? s.origemOn : ''} onClick={() => setOrigem('proposta')}>
               <b>A partir de uma proposta aprovada</b>
-              <span>Escopo, preço e cliente vêm do Pricing (o botão "Gerar contrato" da proposta faz isto).</span>
+              <span>Cliente, empresa e o que foi precificado vêm da proposta (o botão "Gerar contrato" na lista de propostas faz isto).</span>
             </button>
-            <button type="button" className={origem === 'branco' ? s.origemOn : ''} onClick={() => { setOrigem('branco'); setPropostaNum('') }}>
+            <button type="button" className={origem === 'branco' ? s.origemOn : ''} onClick={() => { setOrigem('branco'); setPropostaId('') }}>
               <b>Em branco</b>
               <span>Para contratos que não passaram pelo Pricing.</span>
             </button>
@@ -223,29 +207,28 @@ export function ContratoFormPage() {
           {origem === 'proposta' && (
             <label className={s.campo}>
               Proposta aprovada
-              <select value={propostaNum} onChange={(e) => usarProposta(e.target.value)}>
-                <option value="">Escolha a proposta</option>
-                {PROPOSTAS.map((p) => (
-                  <option key={p.numero} value={p.numero}>
-                    {p.numero} · {p.cliente} · {modelos.find((m) => m.id === p.modeloId)?.nome ?? ''}
-                  </option>
-                ))}
+              <select value={propostaId} onChange={(e) => usarProposta(aprovadas.find((p) => p.id === e.target.value))}>
+                <option value="">{aprovadas.length ? 'Escolha a proposta' : 'Nenhuma proposta aprovada'}</option>
+                {aprovadas.map((p) => <option key={p.id} value={p.id}>{p.numero} · {p.cliente} · {formatBRL(p.total)}</option>)}
               </select>
             </label>
           )}
         </Secao>
       )}
 
-      <Secao icone={Settings2} titulo={`${editando ? '1' : '2'} · Dados gerais`}>
+      <Secao icone={Settings2} titulo={`${n(2)} · Dados gerais`}>
         <div className={s.grade}>
           <label className={`${s.campo} ${s.largo}`}>
             Cliente
-            <input list="clientes-form" value={d.cliente} onChange={(e) => setD({ ...d, cliente: e.target.value })} placeholder="Nome do cliente" />
-            <datalist id="clientes-form">{[...new Set(contratos.map((c) => c.clienteNome))].map((n) => <option key={n} value={n} />)}</datalist>
-          </label>
-          <label className={s.campo}>
-            CNPJ / CPF
-            <input value={d.documento} onChange={(e) => setD({ ...d, documento: e.target.value })} />
+            <ClienteAutocomplete
+              clientes={clientes ?? []}
+              value={d.clienteTexto}
+              clienteId={d.clienteId}
+              onChange={(t) => setD({ ...d, clienteTexto: t, clienteId: '' })}
+              onSelect={(c) => escolherCliente(c.id, c.nome)}
+              placeholder="Nome, fantasia ou CNPJ do cadastro"
+              invalid={tentou && !d.clienteId}
+            />
           </label>
           <label className={s.campo}>
             Contato
@@ -254,14 +237,14 @@ export function ContratoFormPage() {
           <label className={s.campo}>
             Empresa
             <select value={d.empresaId} onChange={(e) => setD({ ...d, empresaId: e.target.value })} disabled={editando}>
-              <option value="matriz">Mirai - Matriz</option>
-              <option value="filial">Mirai - Filial 02</option>
+              <option value="">Escolha</option>
+              {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
           </label>
           <label className={s.campo}>
             Modelo de contrato
-            <select value={d.modeloId} onChange={(e) => trocarModelo(modelos.find((m) => m.id === e.target.value))} disabled={editando}>
-              {ativos.map((m) => <option key={m.id} value={m.id}>{m.nome} · {m.tipoOperacao}</option>)}
+            <select value={d.modeloId} onChange={(e) => trocarModelo(modelos.find((m) => m.id === e.target.value), !!propostaId)} disabled={editando}>
+              {ativos.map((m) => <option key={m.id} value={m.id}>{m.nome}{m.tipoOperacao ? ` · ${m.tipoOperacao}` : ''}</option>)}
             </select>
           </label>
           <div className={`${s.campo} ${s.largo}`}>
@@ -299,13 +282,23 @@ export function ContratoFormPage() {
                 Aviso prévio (dias)
                 <input type="number" min={0} value={cond.avisoPrevioDias} onChange={(e) => setCond({ ...cond, avisoPrevioDias: Number(e.target.value) })} />
               </label>
+              {editando && (
+                <label className={s.campo}>
+                  Situação
+                  <select value={d.situacao} onChange={(e) => setD({ ...d, situacao: e.target.value as Contrato['situacao'] })}>
+                    <option value="vigente">Vigente</option>
+                    <option value="suspenso">Suspenso (não gera fatura nova)</option>
+                    <option value="encerrado">Encerrado</option>
+                  </select>
+                </label>
+              )}
             </>
           )}
         </div>
       </Secao>
 
-      {modelo && (
-        <Secao icone={ListChecks} titulo={`${editando ? '2' : '3'} · Características · ${modelo.nome}`} nota="Campos do modelo. Quem monta é o cliente, em Parametrizações › Modelos de Contrato; o apelido (em laranja) é o nome que as fórmulas usam.">
+      {modelo && modelo.campos.length > 0 && (
+        <Secao icone={ListChecks} titulo={`${n(3)} · Características · ${modelo.nome}`} nota="Campos do modelo. Quem monta é o cliente, em Parametrizações › Modelos de Contrato; o apelido (em laranja) é o nome que as fórmulas usam.">
           <div className={s.grade}>
             {modelo.campos.map((campo) => (
               <label key={campo.id} className={s.campo}>
@@ -320,7 +313,7 @@ export function ContratoFormPage() {
         </Secao>
       )}
 
-      <Secao icone={ScrollText} titulo={`${editando ? '3' : '4'} · Cobrança`}>
+      <Secao icone={ScrollText} titulo={`${n(4)} · Cobrança`}>
         <h3 className={s.subtitulo}>{porDocumento ? 'Tabela de preços (cada documento sai com o preço da linha)' : spot ? 'O que é cobrado' : 'Mensalidade (componentes fixos)'}</h3>
         <div className={ui.tableScroll}>
           <table className={`${ui.table} ${s.itens}`}>
@@ -343,9 +336,9 @@ export function ContratoFormPage() {
                     {porDocumento ? (
                       <span className={s.mut}>linha da tabela</span>
                     ) : (
-                      <select value={i.apelido ?? ''} onChange={(e) => { const f = fixosDoModelo.find((x) => x.apelido === e.target.value); mudarItem(k, { apelido: e.target.value, servico: f?.nome ?? i.servico, unidade: f?.unidade || i.unidade }) }}>
+                      <select value={i.apelido} onChange={(e) => { const f = fixosDoModelo.find((x) => x.apelido === e.target.value); mudarItem(k, { apelido: e.target.value, servico: f?.nome ?? i.servico, unidade: f?.unidade || i.unidade }) }}>
                         {fixosDoModelo.map((f) => <option key={f.apelido} value={f.apelido}>{f.nome}</option>)}
-                        {!fixosDoModelo.some((f) => f.apelido === i.apelido) && <option value={i.apelido ?? ''}>{i.servico}</option>}
+                        {!fixosDoModelo.some((f) => f.apelido === i.apelido) && <option value={i.apelido}>{i.servico}</option>}
                       </select>
                     )}
                   </td>
@@ -366,11 +359,12 @@ export function ContratoFormPage() {
         </div>
         <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={novoItem}><Plus /> {porDocumento ? 'Incluir linha na tabela' : 'Incluir componente fixo'}</button>
         {escopoMudou && (
-          <label className={s.aditivo}>
-            <span>O escopo mudou: vira a versão {existente!.escopo.length + 1}, valendo a partir de</span>
-            <input type="date" value={vigenteDesde} onChange={(e) => setVigenteDesde(e.target.value)} />
+          <div className={s.aditivo}>
+            <span>O escopo mudou: vira a versão {existente!.escopo.length + 1} (aditivo), valendo a partir de</span>
+            <input type="date" value={aditivo.desde} onChange={(e) => setAditivo({ ...aditivo, desde: e.target.value })} aria-label="Vale a partir de" />
+            <input value={aditivo.motivo} onChange={(e) => setAditivo({ ...aditivo, motivo: e.target.value })} placeholder="Motivo (ex.: inclusão de 1 posto)" aria-label="Motivo do aditivo" />
             <small>As faturas ainda não emitidas a partir dessa data já usam o escopo novo; as emitidas ficam como foram.</small>
-          </label>
+          </div>
         )}
 
         {componentes.length > 0 && (
@@ -417,7 +411,7 @@ export function ContratoFormPage() {
           {previa.linhas.map((l) => (
             <div key={`${l.apelido}-${l.nome}-${l.regra}`} className={`${s.previaLinha} ${l.valor === null ? s.previaVar : ''}`}>
               <span>
-                {l.nome} <small>{l.regra === 'formula' ? l.detalhe : l.regra === 'fixo' ? l.detalhe : l.detalhe}</small>
+                {l.nome} <small>{l.detalhe}</small>
                 {l.erro && <small className={s.erro}> · {l.erro}</small>}
               </span>
               <b>{l.valor === null ? 'variável' : formatBRL(l.valor)}</b>
@@ -430,8 +424,15 @@ export function ContratoFormPage() {
         </div>
       </Secao>
 
-      <Secao icone={FilePlus2} titulo={`${editando ? '4' : '5'} · Condições`}>
+      <Secao icone={FilePlus2} titulo={`${n(5)} · Condições`}>
         <div className={s.grade}>
+          {!spot && (
+            <label className={s.campo}>
+              Primeira fatura pelo ELROND
+              <input type="month" value={cond.faturarDesde} onChange={(e) => setCond({ ...cond, faturarDesde: e.target.value })} />
+              <small className={s.ajuda}>As de antes já foram cobradas fora (ex.: na SIIMP) e não entram na Central.</small>
+            </label>
+          )}
           {!spot && !porDocumento && (
             <>
               <label className={s.campo}>
@@ -455,14 +456,14 @@ export function ContratoFormPage() {
             <>
               <label className={s.campo}>
                 Como fatura os documentos
-                <select value={cond.agrupamento ?? 'periodo'} onChange={(e) => setCond({ ...cond, agrupamento: e.target.value as CondicoesContrato['agrupamento'] })}>
+                <select value={cond.agrupamento} onChange={(e) => setCond({ ...cond, agrupamento: e.target.value as CondicoesContrato['agrupamento'] })}>
                   <option value="periodo">Uma fatura juntando os CT-es do período</option>
                   <option value="por-documento">Uma cobrança por CT-e</option>
                 </select>
               </label>
               <label className={s.campo}>
                 Fechamento
-                <select value={cond.fechamento ?? 'mensal'} onChange={(e) => setCond({ ...cond, fechamento: e.target.value as CondicoesContrato['fechamento'] })} disabled={cond.agrupamento === 'por-documento'}>
+                <select value={cond.fechamento} onChange={(e) => setCond({ ...cond, fechamento: e.target.value as CondicoesContrato['fechamento'] })} disabled={cond.agrupamento === 'por-documento'}>
                   <option value="semanal">Semanal</option>
                   <option value="quinzenal">Quinzenal</option>
                   <option value="mensal">Mensal</option>
@@ -476,6 +477,9 @@ export function ContratoFormPage() {
               <input type="number" min={0} value={cond.prazoPagamentoDias} onChange={(e) => setCond({ ...cond, prazoPagamentoDias: Number(e.target.value) })} />
             </label>
           )}
+          <label className={s.check}>
+            <input type="checkbox" checked={cond.anteciparFimDeSemana} onChange={(e) => setCond({ ...cond, anteciparFimDeSemana: e.target.checked })} /> Vencimento no fim de semana antecipa para sexta
+          </label>
           {!spot && (
             <>
               <label className={s.campo}>
@@ -493,25 +497,23 @@ export function ContratoFormPage() {
             </>
           )}
           <label className={s.campo}>
-            Carteira
-            <select value={cond.carteira} onChange={(e) => setCond({ ...cond, carteira: e.target.value })}>
-              <option>Sicredi · Matriz</option>
-              <option>Inter · Filial</option>
+            Conta que recebe
+            <select value={cond.carteiraId} onChange={(e) => setCond({ ...cond, carteiraId: e.target.value })}>
+              <option value="">{d.empresaId ? 'Escolha a conta' : 'Escolha a empresa antes'}</option>
+              {carteirasDaEmpresa.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           </label>
           <label className={s.campo}>
             Forma de cobrança
             <select value={cond.formaCobranca} onChange={(e) => setCond({ ...cond, formaCobranca: e.target.value })}>
-              <option>Boleto com Pix</option>
-              <option>Pix</option>
-              <option>Transferência</option>
+              {['Boleto com Pix', 'Pix', 'Transferência', 'Boleto'].map((x) => <option key={x}>{x}</option>)}
             </select>
           </label>
           <label className={s.campo}>
             Serviço da nota fiscal
-            <select value={d.servicoNfse} onChange={(e) => setD({ ...d, servicoNfse: e.target.value })}>
-              <option value="">O do modelo</option>
-              {[...new Set(modelos.flatMap((m) => m.componentes.map((c) => c.servicoNfse)).filter(Boolean))].map((x) => <option key={x} value={x}>{x}</option>)}
+            <select value={d.servicoId} onChange={(e) => setD({ ...d, servicoId: e.target.value })}>
+              <option value="">Escolha o serviço</option>
+              {(servicos ?? []).filter((x) => x.status !== 'inativo' || x.id === d.servicoId).map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
             </select>
           </label>
           <label className={`${s.campo} ${s.largo}`}>
@@ -525,12 +527,12 @@ export function ContratoFormPage() {
             </label>
           )}
         </div>
-        <div className={s.notaFiscal}>Código do serviço, alíquota e retenção ficam no cadastro de serviços; aqui o contrato só escolhe o serviço e o texto adicional.</div>
+        <div className={s.notaFiscal}>O contrato escolhe o serviço e o texto adicional da nota; código municipal, alíquota e retenção ficam com o serviço (entram junto com a emissão de NFS-e pela Central).</div>
       </Secao>
 
       <div className={s.rodape}>
         <Link to={existente ? `/contratos/${existente.id}` : '/contratos'} className={`${ui.btn} ${ui.btnGhost}`}>Cancelar</Link>
-        <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={salvar}><Save /> {existente ? 'Salvar alterações' : 'Criar contrato'}</button>
+        <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => void salvar()} disabled={salvando}><Save /> {existente ? 'Salvar alterações' : 'Criar contrato'}</button>
       </div>
     </div>
   )

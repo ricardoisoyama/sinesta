@@ -1,72 +1,69 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { FilePlus2 } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import ui from '@/features/common/ui.module.css'
-import { formatBRL } from '@/lib/format'
-import { gerarId, prototipo, proximoNumero, usePrototipo } from '@/features/contratos/store'
+import { getErrorMessage } from '@/lib/api'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
+import { listClientes, listServicos } from '@/features/cadastros/api'
+import { listCarteiras } from '@/features/financeiro/api'
+import { carteiraDaEmpresa } from '@/features/financeiro/types'
+import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
+import { criarContrato, useModelosContrato, useRecarregarContratos } from '@/features/contratos/api'
+import { componenteDoModelo } from '@/features/contratos/modelos'
 import { hojeISO } from '@/features/contratos/regras'
-import type { Contrato } from '@/features/contratos/types'
 import s from './faturamento.module.css'
 
 type Tipo = 'spot' | 'avulsa'
 
-const somaDias = (iso: string, n: number) => {
-  const d = new Date(`${iso}T12:00:00`)
-  d.setDate(d.getDate() + n)
-  return d.toISOString().slice(0, 10)
-}
-
 /**
  * Novo spot (serviço avulso, ganha a sua pasta) ou cobrança avulsa (reembolso, venda pontual).
  * Os dois viram uma pasta de spot por trás: nenhuma fatura existe solta, sem origem.
- * No sistema, o spot nasce normalmente da proposta aprovada; aqui é o atalho rápido.
+ * O spot nasce normalmente da proposta aprovada; aqui é o atalho rápido.
  */
 export function NovaCobrancaModal({ onClose, onCriado }: { onClose: () => void; onCriado: (contratoId: string, competencia: string) => void }) {
-  const { contratos, modelos } = usePrototipo()
-  const clientes = [...new Map(contratos.map((c) => [c.clienteNome, c])).values()]
-  const [tipo, setTipo] = useState<Tipo>('spot')
-  const [f, setF] = useState({ cliente: '', empresaId: 'matriz', modeloId: modelos[0]?.id ?? '', data: hojeISO(), descricao: '', valor: 0, prazo: 15, servico: '' })
-  const modelo = modelos.find((m) => m.id === f.modeloId)
-  const servicos = [...new Set(modelos.flatMap((m) => m.componentes.map((c) => c.servicoNfse)).filter(Boolean))]
-  const valido = f.cliente.trim() && f.descricao.trim() && f.valor > 0
+  const recarregar = useRecarregarContratos()
+  const { data: modelosData } = useModelosContrato()
+  const { data: empresasData } = useEmpresasQuery()
+  const { data: clientes } = useQuery({ queryKey: ['clientes'], queryFn: listClientes })
+  const { data: servicos } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const { data: carteiras } = useQuery({ queryKey: ['carteiras'], queryFn: listCarteiras })
+  const modelos = (modelosData ?? []).filter((m) => m.status === 'ativo')
+  const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
+  const [escolhido, setTipo] = useState<Tipo>('spot')
+  // Sem modelo ativo, só dá para lançar cobrança avulsa.
+  const tipo: Tipo = modelos.length ? escolhido : 'avulsa'
+  const [f, setF] = useState({ clienteId: '', clienteTexto: '', empresaId: '', modeloId: '', data: hojeISO(), descricao: '', valor: 0, prazo: 15, servicoId: '', carteiraId: '' })
+  const [erro, setErro] = useState('')
+  const [salvando, setSalvando] = useState(false)
+  const empresaId = f.empresaId || empresas[0]?.id || ''
+  const modeloId = f.modeloId || modelos[0]?.id || ''
+  const modelo = tipo === 'spot' ? modelos.find((m) => m.id === modeloId) : undefined
+  const valido = !!f.clienteId && !!empresaId && f.descricao.trim() && f.valor > 0 && (tipo === 'avulsa' || !!modelo)
 
-  const criar = () => {
-    const ref = clientes.find((c) => c.clienteNome === f.cliente.trim())
-    const id = gerarId('n')
-    const empresaNome = f.empresaId === 'filial' ? 'Mirai - Filial 02' : 'Mirai - Matriz'
-    const servico = f.servico || modelo?.componentes.find((c) => c.servicoNfse)?.servicoNfse || 'Prestação de serviço'
-    const vencimento = somaDias(f.data, f.prazo)
-    const c: Contrato = {
-      id,
-      numero: proximoNumero(contratos, f.empresaId),
-      empresaId: f.empresaId,
-      empresaNome,
-      clienteNome: f.cliente.trim(),
-      clienteDocumento: ref?.clienteDocumento ?? '—',
-      contato: ref?.contato ?? '',
-      tipoOperacao: tipo === 'avulsa' ? 'Cobrança avulsa' : modelo?.tipoOperacao ?? 'Serviço',
-      modalidade: 'spot',
-      situacao: 'a-faturar',
-      inicio: f.data,
-      fim: f.data,
-      propostaNumero: '—',
-      propostaAprovadaEm: f.data,
-      servicoNfse: servico,
-      servicoNfseDetalhe: servico.includes('CT-e') ? 'Documento fiscal da própria viagem' : 'Parâmetros fiscais do cadastro de serviços',
-      textoAdicionalNota: '',
-      centroCusto: modelo?.tipoOperacao ?? 'Geral',
-      responsavel: 'você',
-      escopo: [{ versao: 1, vigenteDesde: f.data, motivo: tipo === 'avulsa' ? 'Cobrança avulsa' : 'Spot lançado na Central', itens: [{ id: `${id}-i`, servico: tipo === 'avulsa' ? 'Cobrança avulsa' : modelo?.nome ?? 'Serviço', descricao: f.descricao.trim(), quantidade: 1, unidade: 'serviço', valorUnitario: f.valor, custoUnitario: 0 }] }],
-      condicoes: { ...(contratos[0]?.condicoes ?? ({} as Contrato['condicoes'])), diaVencimento: 0, prazoPagamentoDias: f.prazo, renovacaoAutomatica: false, carteira: f.empresaId === 'filial' ? 'Inter · Filial' : 'Sicredi · Matriz' },
-      faturas: [{ id: `${id}-f`, competencia: f.data.slice(0, 7), vencimento, previsto: f.valor, extras: 0, descontos: 0, situacao: 'a-conferir' }],
-      extras: [],
-      documentos: [],
-      eventos: [{ data: hojeISO(), tipo: 'assinatura', texto: tipo === 'avulsa' ? `Cobrança avulsa lançada na Central (${formatBRL(f.valor)})` : `Spot lançado na Central (${formatBRL(f.valor)})`, quem: 'você' }],
-      margemRealizada: 0,
-      modeloId: tipo === 'spot' ? f.modeloId : undefined,
+  const criar = async () => {
+    setErro('')
+    setSalvando(true)
+    try {
+      const fixo = modelo?.componentes.find((c) => c.regra === 'fixo')
+      const c = await criarContrato({
+        empresaId, clienteId: f.clienteId, modeloId: modelo?.id ?? '', modalidade: 'spot', inicio: f.data, fim: f.data,
+        condicoes: {
+          faturarDesde: f.data.slice(0, 7), diaFaturamento: 1, referencia: 'mes-atual', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: false, avisoPrevioDias: 0,
+          reajusteIndice: 'IPCA', reajusteMesBase: 1, multaRescisoria: '', carteiraId: f.carteiraId, formaCobranca: 'Boleto com Pix', prazoPagamentoDias: f.prazo,
+          agrupamento: 'periodo', fechamento: 'mensal',
+        },
+        itens: [{ id: crypto.randomUUID(), apelido: fixo?.apelido ?? '', tabela: false, servico: tipo === 'avulsa' ? 'Cobrança avulsa' : fixo?.nome ?? modelo?.nome ?? 'Serviço', descricao: f.descricao.trim(), quantidade: 1, unidade: 'serviço', valorUnitario: f.valor, custoUnitario: 0 }],
+        contato: '', localServico: '', servicoId: f.servicoId || modelo?.servicoId || '', textoAdicionalNota: '', caracteristicas: {},
+        componentes: modelo?.componentes.filter((x) => x.regra !== 'fixo').map(componenteDoModelo) ?? [],
+      })
+      await recarregar()
+      onCriado(c.id, f.data.slice(0, 7))
+    } catch (err) {
+      setErro(getErrorMessage(err))
+    } finally {
+      setSalvando(false)
     }
-    prototipo.salvarContrato(c)
-    onCriado(id, f.data.slice(0, 7))
   }
 
   return (
@@ -74,19 +71,21 @@ export function NovaCobrancaModal({ onClose, onCriado }: { onClose: () => void; 
       open
       onClose={onClose}
       title="Novo spot ou cobrança avulsa"
-      subtitle="Cria a pasta do spot e a fatura já entra na Central como A conferir."
+      subtitle="Cria a pasta do spot e a fatura já entra na Central para conferir."
       icon={<FilePlus2 />}
       maxWidth={640}
       maximizavel={false}
+      error={erro}
+      busy={salvando}
       footer={
         <>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onClose}>Cancelar</button>
-          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!valido} onClick={criar}><FilePlus2 /> Criar</button>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!valido || salvando} onClick={() => void criar()}><FilePlus2 /> Criar</button>
         </>
       }
     >
       <div className={s.tipoEscolha} role="radiogroup" aria-label="O que é">
-        <button type="button" role="radio" aria-checked={tipo === 'spot'} className={tipo === 'spot' ? s.tipoOn : ''} onClick={() => setTipo('spot')}>
+        <button type="button" role="radio" aria-checked={tipo === 'spot'} className={tipo === 'spot' ? s.tipoOn : ''} onClick={() => setTipo('spot')} disabled={!modelos.length} title={modelos.length ? undefined : 'Crie um modelo de contrato primeiro'}>
           <b>Spot</b>
           <span>Serviço avulso (um frete, um mutirão). Usa um modelo de contrato.</span>
         </button>
@@ -98,21 +97,19 @@ export function NovaCobrancaModal({ onClose, onCriado }: { onClose: () => void; 
       <div className={s.formGrade}>
         <label className={s.largo}>
           Cliente
-          <input list="clientes-proto" value={f.cliente} onChange={(e) => setF({ ...f, cliente: e.target.value })} placeholder="Nome do cliente" />
-          <datalist id="clientes-proto">{clientes.map((c) => <option key={c.clienteNome} value={c.clienteNome} />)}</datalist>
+          <ClienteAutocomplete clientes={clientes ?? []} value={f.clienteTexto} clienteId={f.clienteId} onChange={(t) => setF({ ...f, clienteTexto: t, clienteId: '' })} onSelect={(c) => setF({ ...f, clienteId: c.id, clienteTexto: c.nome, prazo: c.prazoPagamentoDias || f.prazo })} placeholder="Nome, fantasia ou CNPJ do cadastro" />
         </label>
         <label>
           Empresa
-          <select value={f.empresaId} onChange={(e) => setF({ ...f, empresaId: e.target.value })}>
-            <option value="matriz">Mirai - Matriz</option>
-            <option value="filial">Mirai - Filial 02</option>
+          <select value={empresaId} onChange={(e) => setF({ ...f, empresaId: e.target.value, carteiraId: '' })}>
+            {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
           </select>
         </label>
         {tipo === 'spot' && (
           <label>
             Modelo
-            <select value={f.modeloId} onChange={(e) => setF({ ...f, modeloId: e.target.value })}>
-              {modelos.filter((m) => m.status === 'ativo').map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
+            <select value={modeloId} onChange={(e) => setF({ ...f, modeloId: e.target.value })}>
+              {modelos.map((m) => <option key={m.id} value={m.id}>{m.nome}</option>)}
             </select>
           </label>
         )}
@@ -134,9 +131,16 @@ export function NovaCobrancaModal({ onClose, onCriado }: { onClose: () => void; 
         </label>
         <label>
           Serviço da nota
-          <select value={f.servico} onChange={(e) => setF({ ...f, servico: e.target.value })}>
-            <option value="">{tipo === 'spot' ? 'O do modelo' : 'Prestação de serviço'}</option>
-            {servicos.map((x) => <option key={x} value={x}>{x}</option>)}
+          <select value={f.servicoId} onChange={(e) => setF({ ...f, servicoId: e.target.value })}>
+            <option value="">{modelo?.servicoId ? 'O do modelo' : 'Escolha'}</option>
+            {(servicos ?? []).filter((x) => x.status !== 'inativo').map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
+          </select>
+        </label>
+        <label>
+          Conta que recebe
+          <select value={f.carteiraId} onChange={(e) => setF({ ...f, carteiraId: e.target.value })}>
+            <option value="">Escolha</option>
+            {(carteiras ?? []).filter((c) => c.status !== 'inativo' && carteiraDaEmpresa(c, empresaId)).map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
           </select>
         </label>
       </div>

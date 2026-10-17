@@ -20,6 +20,7 @@ public class AnexosController : ControllerBase
         ["cliente"] = "/cadastros/clientes",
         ["fornecedor"] = "/cadastros/fornecedores",
         ["veiculo"] = "/cadastros/veiculos",
+        ["contrato"] = "/contratos",
     };
 
     /// <summary>Nome da entidade na trilha de auditoria.</summary>
@@ -27,6 +28,7 @@ public class AnexosController : ControllerBase
     {
         "cliente" => "Cliente",
         "veiculo" => "Veiculo",
+        "contrato" => "Contrato",
         _ => "Fornecedor",
     };
 

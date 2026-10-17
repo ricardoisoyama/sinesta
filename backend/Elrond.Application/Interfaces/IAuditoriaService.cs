@@ -33,3 +33,10 @@ public interface IPropostaNumerador
     /// <summary>Quantas propostas a empresa já emitiu no prefixo próprio (0 = o padrão ainda pode mudar).</summary>
     Task<long> EmitidasAsync(string empresaId);
 }
+
+/// <summary>Número do contrato, no mesmo esquema da proposta (prefixo da empresa ou CTR-0001).</summary>
+public interface IContratoNumerador
+{
+    Task<string> ProximoAsync(string empresaId);
+    Task<long> EmitidosAsync(string empresaId);
+}

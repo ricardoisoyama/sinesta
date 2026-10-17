@@ -28,7 +28,7 @@ public class CustosFixosController(ICrudRepository<CustoFixo> repo, ICompraServi
 }
 
 [Route("api/empresas")]
-public class EmpresasController(ICrudRepository<Empresa> repo, UsuarioContexto usuario, IPropostaNumerador numerador, ICertificadoService certificados) : CrudControllerBase<Empresa>(repo)
+public class EmpresasController(ICrudRepository<Empresa> repo, UsuarioContexto usuario, IPropostaNumerador numerador, IContratoNumerador numeradorContrato, ICertificadoService certificados) : CrudControllerBase<Empresa>(repo)
 {
     private const string PermissaoMarkup = "/cadastros/unidades/markup";
 
@@ -83,39 +83,46 @@ public class EmpresasController(ICrudRepository<Empresa> repo, UsuarioContexto u
         e.ValidadesProposta = lista;
     }
 
-    /// <summary>Situação da numeração das propostas da empresa (a tela trava o campo quando já emitiu).</summary>
+    /// <summary>Situação da numeração das propostas e dos contratos da empresa (a tela trava o campo quando já emitiu).</summary>
     [HttpGet("{id}/numeracao")]
     public async Task<IActionResult> Numeracao(string id)
     {
         var e = await Repo.GetByIdAsync(id);
         if (e is null) return NotFound();
         var emitidas = await numerador.EmitidasAsync(id);
-        return Ok(new { emitidas, travado = emitidas > 0 });
+        var contratos = await numeradorContrato.EmitidosAsync(id);
+        return Ok(new { emitidas, travado = emitidas > 0, contratos, contratoTravado = contratos > 0 });
     }
 
     /// <summary>
-    /// Prefixo do número da proposta: letras, números e hífen (até 15), único entre as empresas,
-    /// "PROP" reservado (é o padrão do sistema) e travado depois da primeira proposta emitida nele.
+    /// Prefixos do número da proposta e do contrato: letras, números e hífen (até 15), únicos entre as
+    /// empresas, o padrão do sistema reservado (PROP, CTR) e travados depois do primeiro documento emitido.
     /// </summary>
     private async Task<string?> ValidarNumeracaoAsync(Empresa e, Empresa? atual)
     {
         e.PropostaPrefixo = (e.PropostaPrefixo ?? string.Empty).Trim().ToUpperInvariant();
+        e.ContratoPrefixo = (e.ContratoPrefixo ?? string.Empty).Trim().ToUpperInvariant();
         if (e.PropostaDigitos is < 3 or > 8) e.PropostaDigitos = 4;
-        var p = e.PropostaPrefixo;
+        if (e.ContratoDigitos is < 3 or > 8) e.ContratoDigitos = 4;
+        return await ValidarPrefixoAsync("da proposta", "proposta(s)", "PROP", e.PropostaPrefixo, e.PropostaDigitos, atual?.PropostaPrefixo, atual?.PropostaDigitos,
+                x => x.Id != e.Id && x.PropostaPrefixo == e.PropostaPrefixo, () => numerador.EmitidasAsync(e.Id))
+            ?? await ValidarPrefixoAsync("do contrato", "contrato(s)", "CTR", e.ContratoPrefixo, e.ContratoDigitos, atual?.ContratoPrefixo, atual?.ContratoDigitos,
+                x => x.Id != e.Id && x.ContratoPrefixo == e.ContratoPrefixo, () => numeradorContrato.EmitidosAsync(e.Id));
+    }
+
+    private async Task<string?> ValidarPrefixoAsync(string de, string docs, string padrao, string p, int digitos, string? antes, int? digitosAntes,
+        System.Linq.Expressions.Expression<Func<Empresa, bool>> mesmoPrefixo, Func<Task<long>> emitidos)
+    {
         if (p.Length > 0)
         {
             if (!System.Text.RegularExpressions.Regex.IsMatch(p, "^[A-Z0-9][A-Z0-9-]{0,14}$") || p.EndsWith('-'))
-                return "O prefixo da proposta aceita só letras, números e hífen (até 15 caracteres), sem hífen no fim. Ex.: SIN ou SINESTA.";
-            if (p == "PROP") return "\"PROP\" é o padrão do sistema. Escolha outro prefixo para a empresa (ex.: SIN).";
-            var outras = await Repo.ListarAsync(x => x.Id != e.Id && x.PropostaPrefixo == p);
+                return $"O prefixo {de} aceita só letras, números e hífen (até 15 caracteres), sem hífen no fim. Ex.: SIN ou SINESTA.";
+            if (p == padrao) return $"\"{padrao}\" é o padrão do sistema. Escolha outro prefixo para a empresa (ex.: SIN).";
+            var outras = await Repo.ListarAsync(mesmoPrefixo);
             if (outras.Count > 0) return $"O prefixo \"{p}\" já é usado pela empresa {outras[0].Nome}. Cada empresa precisa do seu.";
         }
-        if (atual is not null && (atual.PropostaPrefixo != e.PropostaPrefixo || atual.PropostaDigitos != e.PropostaDigitos))
-        {
-            var emitidas = await numerador.EmitidasAsync(atual.Id);
-            if (emitidas > 0)
-                return $"A empresa já emitiu {emitidas} proposta(s) no padrão {atual.PropostaPrefixo}-{new string('0', Math.Max(0, atual.PropostaDigitos - 1))}1: o padrão não pode mais mudar.";
-        }
+        if (antes is not null && (antes != p || digitosAntes != digitos) && await emitidos() is > 0 and var n)
+            return $"A empresa já emitiu {n} {docs} no padrão {antes}-{new string('0', Math.Max(0, (digitosAntes ?? 4) - 1))}1: o padrão não pode mais mudar.";
         return null;
     }
 

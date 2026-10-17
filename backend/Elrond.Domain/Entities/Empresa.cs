@@ -83,6 +83,9 @@ public class Empresa : Rastreavel, IEntity, IInativavel
     public string PropostaPrefixo { get; set; } = string.Empty;
     /// <summary>Quantidade de dígitos do número (3 a 8): 4 → SIN-0001.</summary>
     public int PropostaDigitos { get; set; } = 4;
+    /// <summary>Prefixo do número dos contratos (ex.: "MIR" → MIR-0001), como o da proposta. Vazio = CTR-0001.</summary>
+    public string ContratoPrefixo { get; set; } = string.Empty;
+    public int ContratoDigitos { get; set; } = 4;
     /// <summary>Validades oferecidas no Pricing para as propostas desta empresa.</summary>
     public List<ValidadeEmpresa> ValidadesProposta { get; set; } = new();
 

@@ -72,7 +72,11 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   // ── Administrativas: só o perfil Admin (a nossa equipe), sempre ─────────
   { key: '/administrativo/integracoes', label: 'Integrações (bancos das empresas: credenciais, certificado, boleto)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
-  { key: '/prototipos', label: 'Ver as telas em protótipo (Contratos, Modelos de Contrato, Faturamento, Projeção)', grupo: GRUPO_EQUIPE, admin: true },
+  // Em validação com o Suporte. Para liberar ao cliente: tirar o admin e mudar o grupo (e no servidor, Administrativas → Base).
+  { key: '/contratos', label: 'Contratos (em validação)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/cadastros/modelos-contrato', label: 'Modelos de Contrato (em validação)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/financeiro/faturamento', label: 'Central de Faturamento (em validação)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/analises/projecao', label: 'Projeção (em validação)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)
