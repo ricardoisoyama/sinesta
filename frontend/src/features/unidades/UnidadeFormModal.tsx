@@ -535,7 +535,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
         <section className={ui.fsection}>
           <div className={ui.topRow} style={{ marginBottom: 12 }}>
             <span className={ui.modalNote}>
-              <b>Contribuinte de ICMS</b> (fora do Simples Nacional). Ligado, o campo ICMS dos Dados da Operação aparece no Pricing e entra por
+              <b>Contribuinte de ICMS</b>. Ligado, o campo ICMS dos Dados da Operação aparece no Pricing e entra por
               dentro no frete; desligado (Simples), o ICMS não é calculado.
             </span>
             <button
