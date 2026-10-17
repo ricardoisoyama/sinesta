@@ -50,6 +50,11 @@ public static class Funcionalidades
         "/analises/mix",
         "/analises/rpo",
         "/analises/metas",
+        // Contratos, Central de Faturamento e Projeção (liberadas por perfil em 17/10/2026).
+        "/contratos",
+        "/cadastros/modelos-contrato",
+        "/financeiro/faturamento",
+        "/analises/projecao",
     };
 
     /// <summary>
@@ -80,11 +85,6 @@ public static class Funcionalidades
         "/administrativo/integracoes",
         // Página provisória de testes de boleto (/boleto).
         "/financeiro/boleto-teste",
-        // Em validação com o Suporte (16/10/2026). Para liberar ao cliente: mover para Base (e no front tirar o admin).
-        "/contratos",
-        "/cadastros/modelos-contrato",
-        "/financeiro/faturamento",
-        "/analises/projecao",
     };
 
     /// <summary>O que pode ficar gravado no cadastro (as administrativas não se gravam: vêm do perfil).</summary>

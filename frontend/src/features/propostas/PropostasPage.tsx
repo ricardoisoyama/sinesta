@@ -234,7 +234,10 @@ export function PropostasPage() {
                     )}
                     <td className={ui.right}>{it.desconto > 0 ? formatPct(it.desconto) : '—'}</td>
                     <td className={ui.right}>{formatPct(it.ml)}</td>
-                    <td className={`${ui.right} ${ui.cellStrong}`}>{formatBRL(it.precoFinal)}</td>
+                    <td className={`${ui.right} ${ui.cellStrong}`}>
+                      {formatBRL(it.precoFinal)}
+                      {(it.adValorem ?? 0) > 0 && <div className={ui.cellMut} style={{ fontWeight: 500 }}>+ ad valorem {formatBRL(it.adValorem ?? 0)}</div>}
+                    </td>
                   </tr>
                 ))}
               </tbody>

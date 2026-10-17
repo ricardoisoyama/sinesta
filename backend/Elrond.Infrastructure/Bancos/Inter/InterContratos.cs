@@ -45,6 +45,11 @@ public sealed record InterPdfResposta(string? Pdf);
 
 public sealed record InterCancelar(string MotivoCancelamento);
 
+public sealed record InterWebhook(string WebhookUrl);
+
+/// <summary>Um item do aviso (callback) de cobrança que o Inter manda para o webhook.</summary>
+public sealed record InterAviso(string? CodigoSolicitacao, string? SeuNumero, string? Situacao, string? DataHoraSituacao);
+
 /// <summary>Erro padrão do Inter: title, detail e a lista de violações (campo e razão).</summary>
 public sealed record InterProblema(string? Title, string? Detail, List<InterViolacao>? Violacoes);
 

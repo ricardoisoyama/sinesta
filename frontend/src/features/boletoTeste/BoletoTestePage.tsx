@@ -19,6 +19,7 @@ import {
   listFaturas,
   obterFatura,
   pdfCobranca,
+  tempoDoAviso,
   type Cobranca,
   type ParcelaFatura,
 } from './api'
@@ -336,7 +337,8 @@ export function BoletoTestePage() {
                       <td className={s.dir}>{formatBRL(c.valor)}</td>
                       <td>
                         <span className={`${s.pill} ${s[sit.tom]}`} title={c.situacaoBanco ? `No banco: ${c.situacaoBanco}` : undefined}>{sit.rotulo}</span>
-                        {c.situacao === 'recebida' && <div className={s.mini}>{formatBRL(c.valorRecebido)} por {c.recebidaPor || '—'} em {dataBR(c.recebidaEm)}</div>}
+                        {c.situacao === 'recebida' && <div className={s.mini}>{formatBRL(c.valorRecebido)} por {c.recebidaPor || '—'} em {c.pagaEm ? new Date(c.pagaEm).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : dataBR(c.recebidaEm)}</div>}
+                        {c.situacao === 'recebida' && tempoDoAviso(c) && <div className={s.mini}>{tempoDoAviso(c)}</div>}
                         {c.mensagem && <div className={s.mini}>{c.mensagem}</div>}
                       </td>
                       <td className={s.linha}>

@@ -58,7 +58,12 @@ public interface ICobrancaBancaria
     Task<ConsultaBanco> ConsultarPorSeuNumeroAsync(CredencialBanco credencial, string seuNumero, string vencimento, CancellationToken ct = default);
     Task<byte[]?> PdfAsync(CredencialBanco credencial, string idBanco, CancellationToken ct = default);
     Task<EnvioBanco> CancelarAsync(CredencialBanco credencial, string idBanco, string motivo, CancellationToken ct = default);
+    /// <summary>Cadastra no banco o endereço que ele chama quando a cobrança é paga, cancelada ou expira. Null = ok.</summary>
+    Task<string?> RegistrarAvisoAsync(CredencialBanco credencial, string url, CancellationToken ct = default);
 }
+
+/// <summary>O que o banco mandou no aviso de uma cobrança (o ELROND confere no banco antes de dar baixa).</summary>
+public sealed record AvisoCobranca(string IdBanco, string SeuNumero, string Situacao, string DataHora);
 
 /// <summary>Um banco: o que ele oferece. Capacidade nula = o banco não tem (ou ainda não fizemos).</summary>
 public interface IBancoModulo
@@ -71,6 +76,8 @@ public interface IBancoModulo
     ICobrancaBancaria? Cobranca { get; }
     /// <summary>Confere certificado e credenciais com uma chamada de leitura. Null = ok; senão, o motivo.</summary>
     Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default);
+    /// <summary>Lê o corpo do aviso (webhook) no formato deste banco. Corpo estranho = lista vazia.</summary>
+    IReadOnlyList<AvisoCobranca> LerAviso(string corpo);
 }
 
 /// <summary>Registro dos módulos de banco disponíveis.</summary>

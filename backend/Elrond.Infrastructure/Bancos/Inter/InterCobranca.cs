@@ -97,6 +97,21 @@ public sealed class InterCobranca(InterConexao conexao, ILogger<InterCobranca> l
         }
     }
 
+    /// <summary>PUT /cobrancas/webhook: o Inter passa a chamar a URL em pagamento, cancelamento e expiração.</summary>
+    public async Task<string?> RegistrarAvisoAsync(CredencialBanco c, string url, CancellationToken ct = default)
+    {
+        try
+        {
+            using var resp = await conexao.EnviarAsync(c, HttpMethod.Put, $"{Base}/webhook", new InterWebhook(url), ct);
+            return resp.IsSuccessStatusCode ? null : InterMapeador.Erro(await resp.Content.ReadAsStringAsync(ct), (int)resp.StatusCode);
+        }
+        catch (Exception e) when (e is InterIndisponivel or HttpRequestException or TaskCanceledException)
+        {
+            log.LogWarning(e, "Cadastro do aviso (webhook) no Inter falhou");
+            return e is TaskCanceledException ? "o Inter demorou demais para responder." : e.Message;
+        }
+    }
+
     private static bool Recusa(HttpStatusCode s) => s is HttpStatusCode.BadRequest or HttpStatusCode.Forbidden or HttpStatusCode.NotFound
         or HttpStatusCode.UnprocessableEntity or HttpStatusCode.Unauthorized or HttpStatusCode.Conflict;
 
@@ -121,6 +136,8 @@ public sealed class InterModulo(InterCobranca cobranca, InterConexao conexao, IL
     public string Nome => "Banco Inter";
     public IReadOnlyList<string> Recursos => [Domain.Entities.IntegracaoBancaria.RecursoCobranca, Domain.Entities.IntegracaoBancaria.RecursoExtrato, Domain.Entities.IntegracaoBancaria.RecursoSaldo];
     public ICobrancaBancaria? Cobranca => cobranca;
+
+    public IReadOnlyList<AvisoCobranca> LerAviso(string corpo) => InterMapeador.Aviso(corpo);
 
     /// <summary>Consulta o saldo (só leitura): exige token (credenciais) e mTLS (certificado) válidos.</summary>
     public async Task<string?> TestarConexaoAsync(CredencialBanco c, CancellationToken ct = default)

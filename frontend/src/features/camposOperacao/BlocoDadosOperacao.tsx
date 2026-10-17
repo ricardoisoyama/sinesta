@@ -8,10 +8,15 @@ import ui from '@/features/common/ui.module.css'
 import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { UFS } from '@/lib/ufs'
 import { CadastroBusca, type OpcaoCadastro } from './CadastroBusca'
-import { EFEITOS, campoUfDaCidade, efeitoDe, textoCidade, type CampoOperacao, type ValoresOperacao } from './types'
+import { EFEITOS, campoUfDaCidade, efeitoDe, numeroDe, textoCidade, type CampoOperacao, type ValoresOperacao } from './types'
+import { preencherAdValorem, taxaDaRota } from './advalorem'
+import { useApolices } from './useApolices'
+import { formatBRL, formatPct } from '@/lib/format'
 import s from './camposOperacao.module.css'
 
 interface Props {
+  /** Empresa dos campos: escolhe a apólice do ad valorem. */
+  empresaId: string
   campos: CampoOperacao[]
   valores: ValoresOperacao
   onChange: (chave: string, valor: string | number) => void
@@ -25,7 +30,7 @@ interface Props {
  * O bloco "Dados da operação" montado a partir da configuração da empresa. É o mesmo
  * componente na prévia do cadastro e na Precificação: o que se configura é o que se vê.
  */
-export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, mostrarEfeito }: Props) {
+export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostrarFaltas, mostrarEfeito }: Props) {
   const precisaCadastro = campos.some((c) => c.tipo === 'cadastro')
   const { data: clientes } = useQuery({ queryKey: ['clientes'], queryFn: listClientes, enabled: precisaCadastro })
   const { data: fornecedores } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores, enabled: precisaCadastro })
@@ -42,6 +47,28 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
     return []
   }
 
+  // Ad valorem: mudar origem ou destino preenche o percentual pela apólice vigente (ajustável depois).
+  const temAdValorem = campos.some((c) => c.tipo === 'advalorem')
+  const apoliceDe = useApolices(empresaId, temAdValorem)
+  const mudar = (chave: string, valor: string | number) => {
+    onChange(chave, valor)
+    if (!temAdValorem) return
+    const antes = { ...valores, [chave]: valor }
+    const depois = preencherAdValorem(campos, antes, chave, (t) => apoliceDe(t)?.apolice)
+    for (const c of campos) if (c.tipo === 'advalorem' && depois[c.chave] !== antes[c.chave]) onChange(c.chave, depois[c.chave])
+  }
+  /** De onde veio o percentual (ou quanto a apólice daria, quando foi ajustado). */
+  const notaAdValorem = (c: CampoOperacao) => {
+    const pct = numeroDe(valores[c.chave])
+    const base = c.campoBase ? numeroDe(valores[c.campoBase]) : 0
+    const emReais = pct > 0 && base > 0 ? `${formatBRL(pct * base)} sobre ${formatBRL(base)}` : ''
+    const a = c.seguro ? apoliceDe(c.seguro) : undefined
+    if (!a) return [emReais, c.seguro ? `sem apólice ${c.seguro} vigente` : ''].filter(Boolean).join(' · ')
+    const taxa = taxaDaRota(a.apolice, valores[c.campoOrigem ?? ''], valores[c.campoDestino ?? ''])
+    const fonte = !taxa ? '' : Math.abs(taxa.pct - pct) < 1e-9 ? `apólice ${a.apolice.numero || a.apolice.tipo}` : `ajustado (apólice: ${formatPct(taxa.pct)})`
+    return [emReais, fonte].filter(Boolean).join(' · ')
+  }
+
   // Cidade ligada a um campo de UF: busca só naquela UF quando ela está preenchida.
   const ufDe = (cidade: CampoOperacao) => {
     const campoUf = campoUfDaCidade(campos, cidade)
@@ -49,10 +76,10 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
   }
   // Trocar a UF limpa as cidades ligadas a ela que eram de outra UF ("SP - Santos" com UF = RJ).
   const trocarUf = (campoUf: CampoOperacao, uf: string) => {
-    onChange(campoUf.chave, uf)
+    mudar(campoUf.chave, uf)
     for (const cidade of campos.filter((x) => x.tipo === 'cidade' && campoUfDaCidade(campos, x)?.id === campoUf.id)) {
       const atual = String(valores[cidade.chave] ?? '')
-      if (uf && atual && !atual.startsWith(textoCidade(uf, ''))) onChange(cidade.chave, '')
+      if (uf && atual && !atual.startsWith(textoCidade(uf, ''))) mudar(cidade.chave, '')
     }
   }
 
@@ -93,6 +120,12 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
             )}
             {c.tipo === 'valor' && <MoneyInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}
             {c.tipo === 'percentual' && <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}
+            {c.tipo === 'advalorem' && (
+              <>
+                <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />
+                {notaAdValorem(c) && <span className={s.notaCampo}>{notaAdValorem(c)}</span>}
+              </>
+            )}
             {c.tipo === 'lista' && (
               <select value={String(v ?? '')} onChange={(e) => onChange(c.chave, e.target.value)}>
                 <option value="">Selecione</option>
@@ -112,7 +145,7 @@ export function BlocoDadosOperacao({ campos, valores, onChange, mostrarFaltas, m
             {c.tipo === 'cidade' && (
               <CidadeAutocomplete
                 value={String(v ?? '')}
-                onChange={(t) => onChange(c.chave, t)}
+                onChange={(t) => mudar(c.chave, t)}
                 uf={ufDe(c)}
                 formato="uf-cidade"
                 placeholder={ufDe(c) ? `Cidade de ${ufDe(c)}` : 'Digite a cidade'}

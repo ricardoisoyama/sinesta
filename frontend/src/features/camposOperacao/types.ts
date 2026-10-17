@@ -7,7 +7,7 @@
  * Remover é inativar. A proposta guarda um retrato (nome, tipo, efeito e valor de cada
  * campo) no dia em que o item entrou, então mudar os campos depois não altera propostas feitas.
  */
-export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual'
+export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual' | 'advalorem'
 
 export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico' | 'veiculo'
 
@@ -24,6 +24,11 @@ export const TIPOS_CAMPO: { valor: TipoCampoOperacao; label: string; ajuda: stri
   { valor: 'numero', label: 'Número', ajuda: 'Quantidade, peso, metragem. Pode multiplicar o preço.' },
   { valor: 'valor', label: 'Valor (R$)', ajuda: 'Valor em reais. Pode entrar como custo da operação.' },
   { valor: 'percentual', label: 'Percentual', ajuda: 'Percentual. Pode ser aplicado sobre o custo da operação.' },
+  {
+    valor: 'advalorem',
+    label: 'Ad valorem (seguro)',
+    ajuda: 'Percentual do seguro sobre o valor da mercadoria. Preenche sozinho pela apólice da seguradora quando origem e destino são informados, e pode ser ajustado. Não mexe no markup: soma ao frete (frete peso + ad valorem = frete total).',
+  },
 ]
 
 export const EFEITOS: Record<EfeitoCampo, { label: string; cor: string; ajuda: string }> = {
@@ -44,6 +49,7 @@ export const EFEITOS_POR_TIPO: Record<TipoCampoOperacao, EfeitoCampo[]> = {
   numero: ['informativo', 'multiplica'],
   valor: ['informativo', 'soma-custo'],
   percentual: ['informativo', 'pct-custo'],
+  advalorem: ['informativo'],
 }
 
 /** Efeito válido do campo (cai para "só informa" se o tipo não permite o escolhido). */
@@ -101,6 +107,14 @@ export interface CampoOperacao {
   ajuda: string
   /** Remover = inativar (o campo continua existindo para as propostas antigas). */
   status: 'ativo' | 'inativo'
+  // ── Só no ad valorem ──
+  /** Tipo de apólice que dá o percentual (RCTR-C...). */
+  seguro?: string
+  /** Chave do campo com o valor da mercadoria. */
+  campoBase?: string
+  /** Chaves dos campos de origem e destino (UF ou cidade). */
+  campoOrigem?: string
+  campoDestino?: string
 }
 
 export const novoCampo = (nome = '', tipo: TipoCampoOperacao = 'texto', tipoOperacaoId = ''): CampoOperacao => ({

@@ -38,12 +38,22 @@ public sealed class SimuladorCobranca : ICobrancaBancaria
         return Task.FromResult(EnvioBanco.Aceito(idBanco));
     }
 
+    public Task<string?> RegistrarAvisoAsync(CredencialBanco c, string url, CancellationToken ct = default) => Task.FromResult<string?>(null);
+
+    /// <summary>Simula o pagamento (usado pelo aviso de RECEBIDO).</summary>
+    public void Pagar(string idBanco)
+    {
+        if (_cobrancas.TryGetValue(idBanco, out var r)) _cobrancas[idBanco] = r with { Situacao = CobrancaBancaria.Recebida };
+    }
+
     private static SituacaoNoBanco Situacao(Registro r)
     {
         var numero = r.Pedido.SeuNumero.PadLeft(10, '0');
+        var paga = r.Situacao == CobrancaBancaria.Recebida;
         return new SituacaoNoBanco(r.Situacao, r.Situacao.ToUpperInvariant(), numero,
             $"07790.00116 {numero[..5]}.{numero[5..]}1 00000.000001 1 {DateTime.Today:yyMMdd}{(long)(r.Pedido.Valor * 100):D10}",
-            $"0779{(long)(r.Pedido.Valor * 100):D10}{numero}", $"00020126SIMULADO{numero}", 0m, string.Empty, string.Empty, string.Empty);
+            $"0779{(long)(r.Pedido.Valor * 100):D10}{numero}", $"00020126SIMULADO{numero}",
+            paga ? r.Pedido.Valor : 0m, paga ? DateTime.Today.ToString("yyyy-MM-dd") : string.Empty, paga ? "PIX" : string.Empty, string.Empty);
     }
 
     private static string PdfMinimo(string texto) =>
@@ -60,4 +70,11 @@ public sealed class SimuladorModulo(SimuladorCobranca cobranca) : IBancoModulo
     public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca];
     public ICobrancaBancaria? Cobranca => cobranca;
     public Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default) => Task.FromResult<string?>(null);
+    /// <summary>Mesmo formato do Inter. Aviso de RECEBIDO "paga" a cobrança no simulador (para a conferência achar paga).</summary>
+    public IReadOnlyList<AvisoCobranca> LerAviso(string corpo)
+    {
+        var avisos = Inter.InterMapeador.Aviso(corpo);
+        foreach (var a in avisos.Where(a => a.Situacao == "RECEBIDO")) cobranca.Pagar(a.IdBanco);
+        return avisos;
+    }
 }

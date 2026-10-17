@@ -17,7 +17,7 @@ public sealed record ConfigurarIntegracaoDto(
 public sealed record IntegracaoResumoDto(
     string Id, string EmpresaId, string Banco, string Ambiente, string ContaCorrente, List<string> Recursos,
     bool Ativa, string CertificadoValidoAte, bool Configurada, string ClientId, string CarteiraId, RegrasBoleto Boleto,
-    string AlteradoEm, string AlteradoPor);
+    string AlteradoEm, string AlteradoPor, string AvisoRegistradoEm);
 
 /// <summary>Banco que o motor sabe usar (para a tela escolher).</summary>
 public sealed record BancoDisponivelDto(string Codigo, string Nome, List<string> Recursos);
@@ -29,6 +29,8 @@ public interface IIntegracaoBancariaService
     IReadOnlyList<BancoDisponivelDto> Bancos();
     /// <summary>Confere credenciais e certificado gravados no banco (só leitura, nada é gravado).</summary>
     Task<Result<string>> TestarAsync(string integracaoId, CancellationToken ct = default);
+    /// <summary>Cadastra no banco o endereço de aviso deste ambiente (urlBase = https://ambiente).</summary>
+    Task<Result<IntegracaoResumoDto>> RegistrarAvisoAsync(string integracaoId, string urlBase, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -61,6 +63,23 @@ public sealed class IntegracaoBancariaService(
         return erro is null
             ? Result.Success($"Conexão OK: o {modulo.Nome} aceitou o certificado e as credenciais ({(i.Ambiente == "producao" ? "produção" : "sandbox")}).")
             : Result.Failure<string>(erro);
+    }
+
+    public async Task<Result<IntegracaoResumoDto>> RegistrarAvisoAsync(string integracaoId, string urlBase, CancellationToken ct = default)
+    {
+        if (await integracoes.GetByIdAsync(integracaoId) is not { } i) return Result.Failure<IntegracaoResumoDto>("Integração não encontrada.");
+        if (bancos.Modulo(i.Banco)?.Cobranca is not { } cobranca) return Result.Failure<IntegracaoResumoDto>($"O banco \"{i.Banco}\" não emite cobrança.");
+        if (!Uri.TryCreate(urlBase, UriKind.Absolute, out var u) || (u.Scheme != "https" && i.Banco != "simulador"))
+            return Result.Failure<IntegracaoResumoDto>("O banco só avisa em endereço https (o deste ambiente publicado).");
+        if (!cofre.Configurado) return Result.Failure<IntegracaoResumoDto>("A chave de cifra das credenciais não está configurada neste ambiente.");
+        // O segredo no endereço é o que identifica a integração no aviso (e impede aviso falso de outra origem).
+        if (i.AvisoToken.Length == 0) i.AvisoToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        var url = $"{u.GetLeftPart(UriPartial.Authority)}/api/bancos/aviso/{i.AvisoToken}";
+        if (await cobranca.RegistrarAvisoAsync(cofre.Abrir(i), url, ct) is { } erro) return Result.Failure<IntegracaoResumoDto>($"O banco recusou o cadastro do aviso: {erro}");
+        i.AvisoRegistradoEm = DateTime.UtcNow.ToString("o");
+        await integracoes.UpdateAsync(i.Id, i);
+        await auditoria.RegistrarAsync("editar", "IntegracaoBancaria", i.Id, $"Aviso de pagamento cadastrado no {i.Banco}/{i.Ambiente} ({u.Host})");
+        return Result.Success(Resumo(i));
     }
 
     public async Task<Result<IntegracaoResumoDto>> ConfigurarAsync(string empresaId, ConfigurarIntegracaoDto dto)
@@ -156,5 +175,5 @@ public sealed class IntegracaoBancariaService(
     private static IntegracaoResumoDto Resumo(IntegracaoBancaria i) =>
         new(i.Id, i.EmpresaId, i.Banco, i.Ambiente, i.ContaCorrente, i.Recursos, i.Ativa, i.CertificadoValidoAte, i.SegredoCifrado.Length > 0,
             i.ClientId, i.CarteiraId, i.RegrasDoBoleto,
-            i.AlteradoEm.Length > 0 ? i.AlteradoEm : i.CriadoEm, i.AlteradoEm.Length > 0 ? i.AlteradoPor : i.CriadoPor);
+            i.AlteradoEm.Length > 0 ? i.AlteradoEm : i.CriadoEm, i.AlteradoEm.Length > 0 ? i.AlteradoPor : i.CriadoPor, i.AvisoRegistradoEm);
 }

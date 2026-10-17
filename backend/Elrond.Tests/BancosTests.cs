@@ -268,6 +268,27 @@ public class BancosTests
         Assert.Null(simples.FormasRecebimento);
     }
 
+    [Fact]
+    public async Task Aviso_do_banco_confere_a_cobranca_e_guarda_a_metrica()
+    {
+        var (svc, cobrancas, integracoes, _) = Montar();
+        var token = new string('a', 48);
+        integracoes.Itens.Single().AvisoToken = token;
+        var c = (await svc.EmitirAsync("emp", Parcela1, Pedido())).Value!;
+
+        Assert.False((await svc.ReceberAvisoAsync("token-errado-de-outra-origem-000000", "[]")).IsSuccess);
+        var corpo = $$"""[{"codigoSolicitacao":"{{c.IdBanco}}","seuNumero":"{{c.SeuNumero}}","situacao":"RECEBIDO","dataHoraSituacao":"2026-10-17T10:02:00-03:00"},{"codigoSolicitacao":"de-outro-sistema","situacao":"RECEBIDO","dataHoraSituacao":"2026-10-17T10:00:00-03:00"}]""";
+        var r = await svc.ReceberAvisoAsync(token, corpo);
+
+        Assert.Equal(1, r.Value); // a de outro sistema é ignorada
+        var paga = cobrancas.Itens.Single();
+        Assert.Equal(CobrancaBancaria.Recebida, paga.Situacao); // confirmada pela consulta ao banco
+        Assert.Equal("aviso", paga.ConfirmadaPor);
+        Assert.Equal("2026-10-17T10:02:00-03:00", paga.PagaEm);
+        Assert.NotEmpty(paga.AvisoEm);
+        Assert.Equal(0, await svc.ConferirAbertasAsync()); // nada mais em aberto
+    }
+
     // ── tradução do Inter ──
 
     [Theory]

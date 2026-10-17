@@ -90,7 +90,32 @@ export interface Cobranca {
   valorRecebido: number
   recebidaEm: string
   recebidaPor: string
+  /** Data e hora do pagamento segundo o banco (vem no aviso). */
+  pagaEm: string
+  /** Quando o primeiro aviso do banco chegou. */
+  avisoEm: string
+  confirmadaEm: string
+  /** aviso | rotina | tela: quem descobriu o pagamento. */
+  confirmadaPor: string
   criadoEm: string
+}
+
+const QUEM: Record<string, string> = { aviso: 'pelo aviso do banco', rotina: 'pela conferência automática', tela: 'pela consulta na tela' }
+const duracao = (ms: number) => {
+  const min = Math.round(ms / 60000)
+  return min < 1 ? 'menos de 1 min' : min < 120 ? `${min} min` : `${(min / 60).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} h`
+}
+
+/** Métrica do aviso: quanto o banco demorou para avisar o pagamento e quem confirmou a baixa. */
+export function tempoDoAviso(c: Pick<Cobranca, 'pagaEm' | 'avisoEm' | 'confirmadaEm' | 'confirmadaPor'>): string {
+  const partes: string[] = []
+  const paga = Date.parse(c.pagaEm)
+  const aviso = Date.parse(c.avisoEm)
+  if (!Number.isNaN(paga) && !Number.isNaN(aviso)) partes.push(`aviso chegou ${duracao(Math.max(0, aviso - paga))} depois do pagamento`)
+  else if (c.confirmadaPor && c.confirmadaPor !== 'aviso') partes.push('sem aviso do banco')
+  if (c.confirmadaPor) partes.push(`baixa ${QUEM[c.confirmadaPor] ?? c.confirmadaPor}`)
+  if (!Number.isNaN(paga) && c.confirmadaEm) partes.push(`${duracao(Math.max(0, Date.parse(c.confirmadaEm) - paga))} até a baixa`)
+  return partes.join(' · ')
 }
 
 const base = '/boleto-teste'

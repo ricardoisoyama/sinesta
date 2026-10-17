@@ -125,6 +125,58 @@ public class ParametrizacaoTests
     }
 
     [Fact]
+    public async Task Campo_advalorem_guarda_as_ligacoes_e_nao_mexe_no_custo()
+    {
+        var (svc, _, _, _, _, _, _) = Montar();
+        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        {
+            new() { Id = "a", Nome = "Ad valorem", Tipo = "advalorem", Efeito = "pct-custo", Seguro = "rcf-dc?", CampoBase = "Valor da NF", CampoOrigem = "uf_origem", CampoDestino = "uf_destino" },
+            new() { Id = "t", Nome = "Observação", Tipo = "texto", Seguro = "RCTR-C", CampoBase = "x" },
+        });
+        Assert.True(r.IsSuccess);
+        var a = r.Value![0];
+        Assert.Equal(("advalorem", "informativo"), (a.Tipo, a.Efeito));
+        Assert.Equal("RCTR-C", a.Seguro); // tipo de apólice desconhecido cai no RCTR-C
+        Assert.Equal(("valor_da_nf", "uf_origem", "uf_destino"), (a.CampoBase, a.CampoOrigem, a.CampoDestino));
+        Assert.Equal(string.Empty, r.Value![1].Seguro); // ligações só valem para o ad valorem
+        Assert.Equal(string.Empty, r.Value![1].CampoBase);
+    }
+
+    [Fact]
+    public void Apolice_normaliza_a_tabela_de_premio_e_recusa_o_que_nao_faz_sentido()
+    {
+        var f = new Fornecedor
+        {
+            Seguradora = true,
+            Apolices = new()
+            {
+                new()
+                {
+                    Tipo = "rctr-c", Numero = " 4465 ", VigenciaInicio = "2026-01-01", VigenciaFim = "2026-12-31", Documentos = new() { "cte", "xpto" },
+                    Taxas = new() { new() { UfOrigem = "sp", UfDestino = "rj", Percentual = 0.0014m }, new() { UfOrigem = "SP", UfDestino = "RJ", Percentual = 0.0016m }, new() { UfOrigem = "AC", UfDestino = "SP", Percentual = 0.003m } },
+                },
+            },
+        };
+        Assert.Null(ApolicesSeguro.Normalizar(f));
+        var a = f.Apolices[0];
+        Assert.Equal(("RCTR-C", "4465"), (a.Tipo, a.Numero));
+        Assert.False(string.IsNullOrEmpty(a.Id));
+        Assert.Equal(new List<string> { "cte" }, a.Documentos);
+        Assert.Equal(2, a.Taxas.Count); // SP → RJ repetido: vale o último
+        Assert.Equal(("AC", "SP"), (a.Taxas[0].UfOrigem, a.Taxas[0].UfDestino));
+        Assert.Equal(0.0016m, a.Taxas[1].Percentual);
+
+        a.VigenciaFim = "2025-12-31";
+        Assert.Contains("vigência", ApolicesSeguro.Normalizar(f));
+        a.VigenciaFim = "2026-12-31";
+        a.Taxas.Add(new() { UfOrigem = "XX", UfDestino = "SP", Percentual = 0.001m });
+        Assert.Contains("UF inválida", ApolicesSeguro.Normalizar(f));
+        a.Taxas.RemoveAt(a.Taxas.Count - 1);
+        a.Taxas[0].Percentual = 2m;
+        Assert.Contains("prêmio fora", ApolicesSeguro.Normalizar(f));
+    }
+
+    [Fact]
     public async Task Tipos_de_operacao_separam_os_campos_e_a_chave_so_e_unica_dentro_do_tipo()
     {
         var (svc, campos, _, _, _, auditoria, _) = Montar();

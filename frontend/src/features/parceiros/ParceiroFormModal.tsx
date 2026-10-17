@@ -10,7 +10,7 @@ import ui from '@/features/common/ui.module.css'
 import { formatCpfCnpj } from '@/lib/format'
 import { Loader2 } from 'lucide-react'
 import { mesclar } from '@/lib/mesclar'
-import { listCategoriasCusto, listVendedores } from '@/features/cadastros/api'
+import { listCategoriasCusto, listEmpresas, listVendedores } from '@/features/cadastros/api'
 import { usePlanoContas } from '@/features/planoContas/store'
 import { parceiroSchema, emptyParceiro, type ParceiroForm } from './parceiro-schema'
 import {
@@ -28,6 +28,7 @@ import {
   type TipoFornecimento,
 } from './types'
 import { ContatosEditor } from './ContatosEditor'
+import { ApolicesEditor } from './ApolicesEditor'
 import { DadosBancariosFields } from './DadosBancariosFields'
 import { PaisAutocomplete } from '@/features/common/PaisAutocomplete'
 import { paisPorNome } from '@/lib/paises'
@@ -37,7 +38,7 @@ import { CampoCep } from '@/features/common/CampoCep'
 import { AnexosTab } from '@/features/anexos/AnexosTab'
 import s from './parceiros.module.css'
 
-type Aba = 'dados' | 'contatos' | 'comercial' | 'banco' | 'documentos'
+type Aba = 'dados' | 'contatos' | 'comercial' | 'apolices' | 'banco' | 'documentos'
 
 interface Props {
   open: boolean
@@ -120,6 +121,8 @@ export function ParceiroFormModal({
   const externo = useWatch({ control, name: 'externo' }) ?? false
   const pais = useWatch({ control, name: 'pais' }) ?? ''
   const moeda = useWatch({ control, name: 'moeda' }) ?? ''
+  const seguradora = useWatch({ control, name: 'seguradora' }) ?? false
+  const apolices = useWatch({ control, name: 'apolices' }) ?? []
   const juridica = tipo === 'juridica'
 
   // ── Consulta pública: CNPJ (Receita) preenche o cadastro; CEP preenche o endereço ──
@@ -163,6 +166,7 @@ export function ParceiroFormModal({
   // Cadastros de apoio das abas.
   const { data: categorias } = useQuery({ queryKey: ['categorias-custo'], queryFn: listCategoriasCusto })
   const { data: vendedores } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores, enabled: ehCliente })
+  const { data: empresas } = useQuery({ queryKey: ['empresas'], queryFn: listEmpresas, enabled: !ehCliente })
   const { analiticas } = usePlanoContas()
   const centros = (categorias ?? []).filter((c) => c.status === 'ativo')
   const vendedoresAtivos = (vendedores ?? []).filter((v) => v.status === 'ativo')
@@ -201,6 +205,8 @@ export function ParceiroFormModal({
         moeda: initial.moeda ?? '',
         enderecoExterior: initial.enderecoExterior ?? '',
         site: initial.site ?? '',
+        seguradora: initial.seguradora ?? false,
+        apolices: initial.apolices ?? [],
       })
     } else {
       reset({ ...emptyParceiro, nome: nomeInicial })
@@ -289,6 +295,7 @@ export function ParceiroFormModal({
           {tabBtn('dados', 'Dados')}
           {tabBtn('contatos', 'Contatos', contatos.length)}
           {tabBtn('comercial', ehCliente ? 'Comercial' : 'Compras e financeiro')}
+          {!ehCliente && seguradora && tabBtn('apolices', 'Apólices', apolices.length)}
           {tabBtn('banco', 'Dados bancários')}
           {tabBtn('documentos', 'Documentos')}
         </div>
@@ -313,6 +320,12 @@ export function ParceiroFormModal({
                   }}
                 />
                 Fornecedor do exterior (sem CNPJ)
+              </label>
+            )}
+            {!ehCliente && (
+              <label className={`${ui.checkItem} ${s.externoCheck}`}>
+                <input type="checkbox" checked={seguradora} onChange={(e) => setValue('seguradora', e.target.checked)} />
+                Seguradora (libera a aba Apólices: tipo, vigência e tabela de prêmio por UF)
               </label>
             )}
             <div className={ui.grid}>
@@ -599,6 +612,16 @@ export function ParceiroFormModal({
                 Compras), onde este fornecedor pode entrar como exceção.
               </div>
             </div>
+          </section>
+        )}
+
+        {aba === 'apolices' && !ehCliente && (
+          <section className={ui.fsection}>
+            <ApolicesEditor
+              value={apolices}
+              onChange={(v) => setValue('apolices', v)}
+              empresas={(empresas ?? []).map((e) => ({ id: e.id, nome: e.nome }))}
+            />
           </section>
         )}
 

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { bancoVazio, enderecoVazio } from './types'
+import { bancoVazio, enderecoVazio, type ApoliceSeguro } from './types'
 
 const emailOpcional = z.string().email('E-mail inválido').or(z.literal(''))
 
@@ -77,6 +77,9 @@ export const parceiroSchema = z.object({
   moeda: z.string(),
   enderecoExterior: z.string(),
   site: z.string(),
+  seguradora: z.boolean(),
+  // A aba de apólices tem editor próprio; aqui só passa adiante.
+  apolices: z.array(z.custom<ApoliceSeguro>()),
 })
 
 export type ParceiroForm = z.infer<typeof parceiroSchema>
@@ -121,6 +124,8 @@ export const emptyParceiro: ParceiroForm = {
   moeda: '',
   enderecoExterior: '',
   site: '',
+  seguradora: false,
+  apolices: [],
 }
 
 export const vendedorSchema = z.object({

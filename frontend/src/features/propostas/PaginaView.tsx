@@ -197,7 +197,10 @@ export function PaginaView({ pagina, modelo, proposta, logo, numero, total, cont
                 <div className={s.tabServico}><b>{it.descricao}</b>{l.servico && <span>{l.servico}</span>}</div>
                 <span className={s.tabDetalhe}>{l.detalhes || '—'}</span>
                 <span className={s.num}>{formatNumberBRL(l.qtd).replace(/,00$/, '')}</span>
-                <span className={s.valor}>{formatBRL(it.precoFinal)}</span>
+                <span className={s.valor}>
+                  {formatBRL(it.precoFinal + (it.adValorem ?? 0))}
+                  {(it.adValorem ?? 0) > 0 && <small style={{ display: 'block', fontWeight: 400, fontSize: '0.8em' }}>frete {formatBRL(it.precoFinal)} + ad valorem {formatBRL(it.adValorem ?? 0)}</small>}
+                </span>
               </div>
             )
           })}

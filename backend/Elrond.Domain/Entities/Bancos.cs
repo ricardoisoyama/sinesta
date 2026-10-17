@@ -36,6 +36,10 @@ public class IntegracaoBancaria : Rastreavel, IEntity, IInativavel
     public string CarteiraId { get; set; } = string.Empty;
     /// <summary>Padrões dos boletos desta conta. Nulo (integrações antigas) = <see cref="RegrasBoleto"/> padrão.</summary>
     public RegrasBoleto? Boleto { get; set; }
+    /// <summary>Segredo do endereço de aviso (webhook): o banco chama .../api/bancos/aviso/{token}.</summary>
+    public string AvisoToken { get; set; } = string.Empty;
+    /// <summary>Quando o aviso foi cadastrado no banco (vazio = ainda não). ISO 8601.</summary>
+    public string AvisoRegistradoEm { get; set; } = string.Empty;
 
     public bool Libera(string recurso) => Ativa && Status == "ativo" && Recursos.Contains(recurso);
 
@@ -129,6 +133,16 @@ public class CobrancaBancaria : Rastreavel, IEntity
     public string RecebidaEm { get; set; } = string.Empty;
     /// <summary>"BOLETO" | "PIX".</summary>
     public string RecebidaPor { get; set; } = string.Empty;
+
+    // ── Métrica do aviso: quanto o banco demora para avisar que foi pago ──
+    /// <summary>Data e hora do pagamento segundo o banco (vem no aviso). ISO 8601.</summary>
+    public string PagaEm { get; set; } = string.Empty;
+    /// <summary>Quando o primeiro aviso desta cobrança chegou. ISO 8601.</summary>
+    public string AvisoEm { get; set; } = string.Empty;
+    /// <summary>Quando o ELROND confirmou que foi paga. ISO 8601.</summary>
+    public string ConfirmadaEm { get; set; } = string.Empty;
+    /// <summary>Quem descobriu o pagamento: aviso (do banco) | rotina (conferência de hora em hora) | tela (alguém clicou).</summary>
+    public string ConfirmadaPor { get; set; } = string.Empty;
 
     /// <summary>Ocupa a parcela: enquanto existir uma assim, a mesma parcela não gera outro boleto.</summary>
     public bool Vigente => Situacao is not (Cancelada or Expirada or Falha);

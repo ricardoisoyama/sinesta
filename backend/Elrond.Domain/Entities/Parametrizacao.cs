@@ -18,7 +18,8 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     public string Chave { get; set; } = string.Empty;
     /// <summary>
     /// texto | lista | cadastro | data | numero | valor | percentual | uf (combo das UFs) |
-    /// cidade (busca na base IBGE, filtrada pela UF do campo uf mais próximo).
+    /// cidade (busca na base IBGE, filtrada pela UF do campo uf mais próximo) |
+    /// advalorem (percentual do seguro: preenche sozinho pela apólice e pela origem/destino).
     /// </summary>
     public string Tipo { get; set; } = "texto";
     /// <summary>informativo | multiplica (numero) | soma-custo (valor) | pct-custo (percentual).</summary>
@@ -34,6 +35,15 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     /// <summary>Texto do balão de ajuda na Precificação.</summary>
     public string Ajuda { get; set; } = string.Empty;
     public string Status { get; set; } = "ativo";
+
+    // ── Tipo advalorem: de onde vem o percentual e sobre o que ele incide ──
+    /// <summary>Tipo de apólice que dá o percentual (RCTR-C, RCF-DC...).</summary>
+    public string Seguro { get; set; } = string.Empty;
+    /// <summary>Chave do campo com o valor da mercadoria (o ad valorem incide sobre ele).</summary>
+    public string CampoBase { get; set; } = string.Empty;
+    /// <summary>Chaves dos campos de origem e destino (uf ou cidade).</summary>
+    public string CampoOrigem { get; set; } = string.Empty;
+    public string CampoDestino { get; set; } = string.Empty;
 }
 
 /// <summary>

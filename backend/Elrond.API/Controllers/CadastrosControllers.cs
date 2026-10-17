@@ -2,6 +2,7 @@ using Elrond.API.Security;
 using Elrond.Application.Interfaces;
 using Elrond.Application.Services;
 using Elrond.Domain.Entities;
+using Elrond.Domain.Regras;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -356,7 +357,10 @@ public class ClientesController(ICrudRepository<Cliente> repo, ICarteiraService 
 }
 
 [Route("api/fornecedores")]
-public class FornecedoresController(ICrudRepository<Fornecedor> repo) : CrudControllerBase<Fornecedor>(repo);
+public class FornecedoresController(ICrudRepository<Fornecedor> repo) : CrudControllerBase<Fornecedor>(repo)
+{
+    protected override Task<string?> AntesDeGravarAsync(Fornecedor entity) => Task.FromResult(ApolicesSeguro.Normalizar(entity));
+}
 
 [Route("api/vendedores")]
 public class VendedoresController(ICrudRepository<Vendedor> repo, ICarteiraService carteira) : CrudControllerBase<Vendedor>(repo)

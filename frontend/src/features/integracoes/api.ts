@@ -53,6 +53,8 @@ export interface Integracao {
   boleto: RegrasBoleto
   alteradoEm: string
   alteradoPor: string
+  /** Quando o aviso de pagamento (webhook) foi cadastrado no banco; vazio = ainda não. */
+  avisoRegistradoEm: string
 }
 
 export interface BancoDisponivel {
@@ -82,4 +84,7 @@ export const listIntegracoes = () => apiFetch<Integracao[]>(base)
 export const listBancos = () => apiFetch<BancoDisponivel[]>(`${base}/bancos`)
 export const configurarIntegracao = (empresaId: string, d: ConfigurarIntegracao) =>
   apiFetch<Integracao>(`${base}/${encodeURIComponent(empresaId)}`, { method: 'PUT', body: JSON.stringify(d) })
+/** Cadastra no banco o aviso de pagamento apontando para este ambiente (o endereço que está aberto). */
+export const registrarAviso = (id: string) =>
+  apiFetch<Integracao>(`${base}/${encodeURIComponent(id)}/aviso`, { method: 'POST', body: JSON.stringify({ urlBase: window.location.origin }) })
 export const testarIntegracao = (id: string) => apiFetch<{ mensagem: string }>(`${base}/${encodeURIComponent(id)}/testar`, { method: 'POST' })

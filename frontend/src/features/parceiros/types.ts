@@ -157,7 +157,67 @@ export interface Parceiro {
   /** Endereço livre (rua, cidade, estado/província, código postal). */
   enderecoExterior?: string
   site?: string
+  /** Fornecedor que é seguradora: libera a aba de apólices. */
+  seguradora?: boolean
+  apolices?: ApoliceSeguro[] | null
 }
+
+/** Tipos de apólice de seguro de carga. */
+export const TIPOS_APOLICE = ['RCTR-C', 'RCF-DC', 'RC-V', 'Ambiental', 'Outro'] as const
+export type TipoApolice = (typeof TIPOS_APOLICE)[number]
+
+export const DOCUMENTOS_APOLICE: { valor: 'cte' | 'nfse' | 'minuta'; label: string }[] = [
+  { valor: 'cte', label: 'CT-e' },
+  { valor: 'nfse', label: 'NFS-e' },
+  { valor: 'minuta', label: 'Minuta' },
+]
+
+/** Prêmio da rota, em fração do valor da mercadoria (0,0014 = 0,14%). */
+export interface TaxaApolice {
+  ufOrigem: string
+  ufDestino: string
+  percentual: number
+}
+
+/** Apólice de seguro de carga; a tabela de prêmio por UF é a base do ad valorem no Pricing. */
+export interface ApoliceSeguro {
+  id: string
+  tipo: TipoApolice
+  numero: string
+  /** Empresas cobertas; vazio = todas. */
+  empresaIds: string[]
+  /** yyyy-MM-dd; vazio = sem limite naquele lado. */
+  vigenciaInicio: string
+  vigenciaFim: string
+  limitePorEmbarque: number
+  custoEmissao: number
+  /** Frações. */
+  iof: number
+  taxaUrbana: number
+  taxaPadrao: number
+  documentos: ('cte' | 'nfse' | 'minuta')[]
+  observacao: string
+  status: 'ativo' | 'inativo'
+  taxas: TaxaApolice[]
+}
+
+export const novaApolice = (): ApoliceSeguro => ({
+  id: crypto.randomUUID(),
+  tipo: 'RCTR-C',
+  numero: '',
+  empresaIds: [],
+  vigenciaInicio: '',
+  vigenciaFim: '',
+  limitePorEmbarque: 0,
+  custoEmissao: 0,
+  iof: 0,
+  taxaUrbana: 0,
+  taxaPadrao: 0,
+  documentos: ['cte'],
+  observacao: '',
+  status: 'ativo',
+  taxas: [],
+})
 
 /**
  * Compatibilidade: registros antigos têm só o contato principal. Quando a lista

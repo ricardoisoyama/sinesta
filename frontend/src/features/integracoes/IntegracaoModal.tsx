@@ -12,6 +12,7 @@ import {
   REGRAS_PADRAO,
   ROTULO_RECURSO,
   configurarIntegracao,
+  registrarAviso,
   testarIntegracao,
   type BancoDisponivel,
   type ConfigurarIntegracao,
@@ -68,6 +69,8 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
   const [salvando, setSalvando] = useState(false)
   const [teste, setTeste] = useState<{ texto: string; ok: boolean } | null>(null)
   const [testando, setTestando] = useState(false)
+  const [aviso, setAviso] = useState(integracao?.avisoRegistradoEm ?? '')
+  const [cadastrandoAviso, setCadastrandoAviso] = useState(false)
 
   const modulo = bancos.find((b) => b.codigo === banco)
   const oferece = modulo?.recursos ?? ['cobranca']
@@ -136,6 +139,20 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
       setErro(getErrorMessage(err))
     } finally {
       setSalvando(false)
+    }
+  }
+
+  const cadastrarAviso = async () => {
+    if (!integracao) return
+    setTeste(null)
+    setCadastrandoAviso(true)
+    try {
+      setAviso((await registrarAviso(integracao.id)).avisoRegistradoEm)
+      setTeste({ texto: 'Aviso de pagamento cadastrado no banco.', ok: true })
+    } catch (err) {
+      setTeste({ texto: getErrorMessage(err), ok: false })
+    } finally {
+      setCadastrandoAviso(false)
     }
   }
 
@@ -403,11 +420,23 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
         </div>
       </section>
 
-      <section className={`${ui.fsection} ${s.secaoFutura}`}>
+      <section className={ui.fsection}>
         <div className={ui.fsectionTitle}><BellRing /> Aviso de pagamento</div>
+        <div className={s.linhaLigar}>
+          {aviso ? (
+            <span className={`${s.aviso} ${s.avisoOk}`} style={{ margin: 0 }}><ShieldCheck /> <span>Cadastrado no banco em {new Date(aviso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}, apontando para {window.location.host}.</span></span>
+          ) : (
+            <span className={s.nota} style={{ margin: 0 }}>Ainda não cadastrado: o pagamento só aparece pela conferência de hora em hora ou quando alguém consulta.</span>
+          )}
+          {integracao?.configurada && integracao.ativa && (
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void cadastrarAviso()} disabled={cadastrandoAviso}>
+              <BellRing /> {cadastrandoAviso ? 'Cadastrando...' : aviso ? 'Cadastrar de novo' : 'Cadastrar aviso no banco'}
+            </button>
+          )}
+        </div>
         <span className={s.nota}>
-          Próxima etapa: o banco avisa o ELROND na hora em que o boleto é pago, e uma conferência de hora em hora cobre
-          qualquer aviso perdido. O cadastro do aviso no banco vai ficar aqui.
+          O banco chama o ELROND na hora em que o boleto é pago, cancelado ou expira; o ELROND confere no banco antes de dar baixa. Uma
+          conferência automática de hora em hora cobre qualquer aviso perdido. A tela de boletos mostra quanto o banco demorou para avisar.
         </span>
       </section>
     </Modal>

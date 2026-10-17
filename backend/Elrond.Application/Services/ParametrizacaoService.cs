@@ -17,7 +17,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public class ParametrizacaoService : IParametrizacaoService
 {
-    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual", "uf", "cidade" };
+    private static readonly string[] TiposCampo = { "texto", "lista", "cadastro", "data", "numero", "valor", "percentual", "uf", "cidade", "advalorem" };
     private static readonly string[] Cadastros = { "cliente", "fornecedor", "vendedor", "servico", "veiculo" };
     private static readonly string[] TiposColuna = { "valor", "percentual", "calculo", "numero", "texto", "lista" };
     private const int MaxItens = 300;
@@ -174,6 +174,13 @@ public class ParametrizacaoService : IParametrizacaoService
                 Ajuda = Limitar((bruto.Ajuda ?? string.Empty).Trim(), 400),
                 Status = status,
             };
+            if (tipo == "advalorem")
+            {
+                c.Seguro = ApolicesSeguro.Tipos.Contains(bruto.Seguro) ? bruto.Seguro : "RCTR-C";
+                c.CampoBase = Formula.ChaveDe(bruto.CampoBase ?? string.Empty);
+                c.CampoOrigem = Formula.ChaveDe(bruto.CampoOrigem ?? string.Empty);
+                c.CampoDestino = Formula.ChaveDe(bruto.CampoDestino ?? string.Empty);
+            }
             var chaves = status == "ativo"
                 ? chavesPorTipo.TryGetValue(tipoOperacaoId, out var k) ? k : chavesPorTipo[tipoOperacaoId] = new HashSet<string>()
                 : new HashSet<string>();
@@ -201,7 +208,8 @@ public class ParametrizacaoService : IParametrizacaoService
     private static bool MudouCampo(CampoOperacao a, CampoOperacao b) =>
         a.Nome != b.Nome || a.Chave != b.Chave || a.Tipo != b.Tipo || a.Efeito != b.Efeito || a.Obrigatorio != b.Obrigatorio
         || a.Largura != b.Largura || a.Ordem != b.Ordem || a.Cadastro != b.Cadastro || a.Ajuda != b.Ajuda || a.Status != b.Status
-        || a.TipoOperacaoId != b.TipoOperacaoId || !a.Opcoes.SequenceEqual(b.Opcoes);
+        || a.TipoOperacaoId != b.TipoOperacaoId || !a.Opcoes.SequenceEqual(b.Opcoes)
+        || a.Seguro != b.Seguro || a.CampoBase != b.CampoBase || a.CampoOrigem != b.CampoOrigem || a.CampoDestino != b.CampoDestino;
 
     // ══════════════════════════ Ficha Técnica ══════════════════════════
 

@@ -17,9 +17,14 @@ public interface ICobrancaService
 {
     Task<Result<CobrancaBancaria>> EmitirAsync(string empresaId, OrigemCobranca origem, NovaCobranca pedido, CancellationToken ct = default);
     Task<List<CobrancaBancaria>> ListarAsync(string empresaId, string? origemTipo = null, string? origemId = null);
-    Task<Result<CobrancaBancaria>> AtualizarAsync(string id, CancellationToken ct = default);
+    /// <param name="origem">Quem pediu a consulta: tela | rotina | aviso (vira o "confirmada por" quando acha paga).</param>
+    Task<Result<CobrancaBancaria>> AtualizarAsync(string id, CancellationToken ct = default, string origem = "tela");
     Task<Result<byte[]>> PdfAsync(string id, CancellationToken ct = default);
     Task<Result<CobrancaBancaria>> CancelarAsync(string id, string motivo, CancellationToken ct = default);
+    /// <summary>Aviso (webhook) do banco: marca a hora em que chegou e confere cada cobrança no banco. Devolve quantas eram nossas.</summary>
+    Task<Result<int>> ReceberAvisoAsync(string token, string corpo, CancellationToken ct = default);
+    /// <summary>Rotina: confere no banco as cobranças ainda em aberto (rede de segurança do aviso). Devolve quantas mudaram.</summary>
+    Task<int> ConferirAbertasAsync(CancellationToken ct = default);
 }
 
 /// <summary>
@@ -118,11 +123,53 @@ public sealed class CobrancaService(
                 && (origemId == null || c.OrigemId == origemId)))
             .OrderByDescending(c => c.CriadoEm).ToList();
 
-    public async Task<Result<CobrancaBancaria>> AtualizarAsync(string id, CancellationToken ct = default)
+    public async Task<Result<CobrancaBancaria>> AtualizarAsync(string id, CancellationToken ct = default, string origem = "tela")
     {
         var (cobranca, banco, credencial, erro) = await AbrirAsync(id);
         if (erro is not null) return Result.Failure<CobrancaBancaria>(erro);
-        return Result.Success(await AplicarConsultaAsync(cobranca!, banco!, credencial!, ct));
+        return Result.Success(await AplicarConsultaAsync(cobranca!, banco!, credencial!, ct, origem));
+    }
+
+    public async Task<Result<int>> ReceberAvisoAsync(string token, string corpo, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(token) || token.Length < 24) return Result.Failure<int>("Aviso sem identificação.");
+        var integracao = (await integracoes.ListarAsync(i => i.AvisoToken == token)).FirstOrDefault();
+        if (integracao is null || bancos.Modulo(integracao.Banco) is not { } modulo) return Result.Failure<int>("Aviso desconhecido.");
+        var agora = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
+        var avisos = modulo.LerAviso(corpo);
+        var nossas = 0;
+        foreach (var a in avisos)
+        {
+            // O aviso só diz "olhe esta cobrança": quem decide a situação é a consulta ao banco.
+            var c = (await cobrancas.ListarAsync(x => x.IntegracaoId == integracao.Id && (x.IdBanco == a.IdBanco || (a.IdBanco == "" && x.SeuNumero == a.SeuNumero)))).FirstOrDefault();
+            if (c is null) continue;
+            nossas++;
+            if (c.AvisoEm.Length == 0) c.AvisoEm = agora;
+            if (a.Situacao.Contains("RECEBIDO", StringComparison.OrdinalIgnoreCase) && c.PagaEm.Length == 0) c.PagaEm = a.DataHora;
+            await cobrancas.UpdateAsync(c.Id, c);
+            var r = await AtualizarAsync(c.Id, ct, origem: "aviso");
+            if (!r.IsSuccess) log.LogWarning("Aviso do banco para o boleto {SeuNumero}: consulta falhou ({Erro})", c.SeuNumero, r.Error);
+        }
+        log.LogInformation("Aviso do {Banco}: {Total} cobrança(s), {Nossas} desta integração", integracao.Banco, avisos.Count, nossas);
+        return Result.Success(nossas);
+    }
+
+    public async Task<int> ConferirAbertasAsync(CancellationToken ct = default)
+    {
+        // Só as que ainda podem mudar sozinhas no banco (pagar, cancelar, expirar), de integração ligada.
+        var ligadas = (await integracoes.ListarAsync(i => i.Ativa && i.Status == "ativo")).Select(i => i.Id).ToList();
+        var abertas = await cobrancas.ListarAsync(c => ligadas.Contains(c.IntegracaoId)
+            && (c.Situacao == CobrancaBancaria.AReceber || c.Situacao == CobrancaBancaria.Processando || c.Situacao == CobrancaBancaria.Incerta));
+        var mudaram = 0;
+        foreach (var c in abertas)
+        {
+            if (ct.IsCancellationRequested) break;
+            var antes = c.Situacao;
+            var r = await AtualizarAsync(c.Id, ct, origem: "rotina");
+            if (r.IsSuccess && r.Value!.Situacao != antes) mudaram++;
+            await Task.Delay(TimeSpan.FromSeconds(1), relogio, ct); // longe do limite de chamadas do banco
+        }
+        return mudaram;
     }
 
     public async Task<Result<byte[]>> PdfAsync(string id, CancellationToken ct = default)
@@ -160,7 +207,7 @@ public sealed class CobrancaService(
     }
 
     /// <summary>Consulta o banco e aplica a situação. Sem id do banco (envio incerto), procura pelo seu número.</summary>
-    private async Task<CobrancaBancaria> AplicarConsultaAsync(CobrancaBancaria c, ICobrancaBancaria banco, CredencialBanco credencial, CancellationToken ct)
+    private async Task<CobrancaBancaria> AplicarConsultaAsync(CobrancaBancaria c, ICobrancaBancaria banco, CredencialBanco credencial, CancellationToken ct, string origem = "tela")
     {
         var consulta = c.IdBanco.Length > 0
             ? await banco.ConsultarAsync(credencial, c.IdBanco, ct)
@@ -179,8 +226,13 @@ public sealed class CobrancaService(
             c.RecebidaEm = s.RecebidaEm;
             c.RecebidaPor = s.RecebidaPor;
             c.Mensagem = s.Mensagem;
+            if (antes != c.Situacao && c.Situacao == CobrancaBancaria.Recebida && c.ConfirmadaEm.Length == 0)
+            {
+                c.ConfirmadaEm = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
+                c.ConfirmadaPor = origem;
+            }
             if (antes != c.Situacao)
-                await auditoria.RegistrarAsync("situacao", "CobrancaBancaria", c.Id, $"Boleto {c.SeuNumero}: {Rotulo(antes)} → {Rotulo(c.Situacao)}");
+                await auditoria.RegistrarAsync("situacao", "CobrancaBancaria", c.Id, $"Boleto {c.SeuNumero}: {Rotulo(antes)} → {Rotulo(c.Situacao)} ({(origem == "aviso" ? "pelo aviso do banco" : origem == "rotina" ? "pela conferência automática" : "pela consulta na tela")})");
         }
         else if (consulta.NaoExiste && c.Situacao == CobrancaBancaria.Incerta)
         {

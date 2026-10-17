@@ -152,6 +152,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Volta do Google Agenda (lê alterações a cada 5 minutos; desligado sem configuração).
 builder.Services.AddHostedService<Elrond.API.Background.GoogleAgendaWorker>();
 builder.Services.AddHostedService<Elrond.API.Background.NfseAcompanhamentoWorker>();
+builder.Services.AddHostedService<Elrond.API.Background.CobrancasConferenciaWorker>();
 
 // ── Build ────────────────────────────────────────────────────────────────
 var app = builder.Build();

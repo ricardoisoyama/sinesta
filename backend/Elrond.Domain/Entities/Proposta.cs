@@ -92,6 +92,8 @@ public class ItemProposta
     public List<CustoItemProposta> Custos { get; set; } = new();
     /// <summary>true quando a margem ficou abaixo do markup mínimo da empresa.</summary>
     public bool AbaixoMinimo { get; set; }
+    /// <summary>Ad valorem (R$) somado ao frete peso: fora do markup. Frete total = PrecoFinal + AdValorem.</summary>
+    public decimal AdValorem { get; set; }
 }
 
 /// <summary>Contador de propostas da empresa que tem prefixo próprio (último número emitido).</summary>

@@ -28,6 +28,7 @@ import { useEmpresaAtiva } from '@/features/camposOperacao/useEmpresaAtiva'
 import { useDadosOperacaoDaEmpresa } from '@/features/camposOperacao/api'
 import { BlocoDadosOperacao } from '@/features/camposOperacao/BlocoDadosOperacao'
 import { efeitoDe, efeitosDosCampos, numeroDe, type ValoresOperacao } from '@/features/camposOperacao/types'
+import { adValoremDosCampos } from '@/features/camposOperacao/advalorem'
 import { useFichasDaEmpresa } from '@/features/fichaTecnica/api'
 import { calcularFicha } from '@/features/fichaTecnica/calculo'
 import { TIPOS_NUMERICOS } from '@/features/fichaTecnica/types'
@@ -247,6 +248,10 @@ export function PricingPage() {
   // preço negociado) vai para alerta (gestor) ou aprovação (vendedor).
   const abaixoDoMinimo = lucroEmpresa > 0 && temCusto && margemVigente.ml < lucroEmpresa - 0.00005
   const diferencaPct = precoNegociado && precoCalculado > 0 ? (precoFinal - precoCalculado) / precoCalculado : 0
+  // Ad valorem: fora do markup, soma ao frete peso (o preço acima) e compõe o frete total.
+  const temAdValorem = campos.some((c) => c.tipo === 'advalorem')
+  const adValorem = adValoremDosCampos(campos, valores)
+  const freteTotal = round2(precoFinal + adValorem.total)
 
   // ── retrato do item ──
   const nomeCadastro = (origem: string, id: string): string => {
@@ -267,13 +272,13 @@ export function PricingPage() {
   const retratoDados = (): DadoOperacaoItem[] =>
     campos.map((c) => {
       const v = valores[c.chave]
-      const numerico = c.tipo === 'numero' || c.tipo === 'valor' || c.tipo === 'percentual'
+      const numerico = c.tipo === 'numero' || c.tipo === 'valor' || c.tipo === 'percentual' || c.tipo === 'advalorem'
       const texto =
         c.tipo === 'cadastro'
           ? nomeCadastro(c.cadastro, String(v ?? ''))
           : c.tipo === 'valor'
             ? (v ? formatBRL(Number(v)) : '')
-            : c.tipo === 'percentual'
+            : c.tipo === 'percentual' || c.tipo === 'advalorem'
               ? (v ? formatPct(Number(v)) : '')
               : String(v ?? '')
       return { campoId: c.id, chave: c.chave, nome: c.nome, tipo: c.tipo, efeito: efeitoDe(c), texto, numero: numerico ? numeroDe(v) : 0 }
@@ -313,6 +318,7 @@ export function PricingPage() {
   const faltasItem = [
     semFator && (fr?.aviso ?? 'o fator da empresa não pôde ser calculado'),
     obrigatoriosFaltando.length > 0 && `preencha ${obrigatoriosFaltando.map((c) => c.nome).join(', ')}`,
+    adValorem.linhas.some((l) => l.base <= 0) && 'informe o valor da mercadoria (o ad valorem incide sobre ele)',
     linhas.some((l) => !l.fichaId) && 'escolha o item de cada custo (ou remova a linha)',
     !temCusto && 'lance ao menos um custo pela ficha técnica',
     !descricao.trim() && 'descreva o item',
@@ -364,6 +370,7 @@ export function PricingPage() {
         custos,
         abaixoMinimo: abaixoDoMinimo,
         dadosOperacao: retratoDados(),
+        adValorem: adValorem.total,
         tipoOperacaoId: tipoOperacao?.id ?? null,
         tipoOperacao: tipoOperacao?.nome ?? null,
         fichas: fichasItem,
@@ -403,7 +410,7 @@ export function PricingPage() {
           origem === 'veiculo' ? (veiculosData ?? []).map((x) => ({ id: x.id, nome: nomeVeiculo(x) })) :
           (fornecedoresData ?? []).map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome }))
         v[campo.chave] = lista.find((x) => x.nome === d.texto)?.id ?? atual ?? ''
-      } else if (campo.tipo === 'numero' || campo.tipo === 'valor' || campo.tipo === 'percentual') v[campo.chave] = d.numero
+      } else if (campo.tipo === 'numero' || campo.tipo === 'valor' || campo.tipo === 'percentual' || campo.tipo === 'advalorem') v[campo.chave] = d.numero
       else v[campo.chave] = d.texto
     }
     setValores(v)
@@ -419,8 +426,9 @@ export function PricingPage() {
   }
 
   // ── proposta: totais e regras ──
-  const totalItens = itens.reduce((a, i) => a + i.precoFinal, 0)
-  const totalCalculado = itens.reduce((a, i) => a + (i.precoCalculado || i.precoFinal), 0)
+  // Total da proposta = frete total de cada item (frete peso + ad valorem).
+  const totalItens = itens.reduce((a, i) => a + i.precoFinal + (i.adValorem ?? 0), 0)
+  const totalCalculado = itens.reduce((a, i) => a + (i.precoCalculado || i.precoFinal) + (i.adValorem ?? 0), 0)
   const temPrecoEditado = itens.some((i) => (i.precoCalculado ?? 0) > 0)
   const temAbaixoMinimo = itens.some((i) => i.abaixoMinimo)
   const precisaAprovacao = temPrecoEditado || (temAbaixoMinimo && !ehGestor)
@@ -570,7 +578,7 @@ export function PricingPage() {
           <Receipt /> Dados da operação
           <Link to="/cadastros/campos-operacao" className={s.linkConfig} title="Configurar os campos desta empresa"><Settings2 size={12} /> configurar campos</Link>
         </div>
-        <BlocoDadosOperacao campos={campos} valores={valores} onChange={(k, v) => setValores((p) => ({ ...p, [k]: v }))} mostrarFaltas={tentou} />
+        <BlocoDadosOperacao empresaId={empresaId} campos={campos} valores={valores} onChange={(k, v) => setValores((p) => ({ ...p, [k]: v }))} mostrarFaltas={tentou} />
       </section>
 
       {/* ── 2. Custos pela ficha técnica (quantidade por custo) ── */}
@@ -672,7 +680,7 @@ export function PricingPage() {
             <div className={base.finalBox}>
               <div>
                 <div className={base.finalLabel}>
-                  Preço final{aplicaIcmsEfetivo ? ' (com ICMS)' : ''}
+                  {temAdValorem ? 'Frete peso' : 'Preço final'}{aplicaIcmsEfetivo ? ' (com ICMS)' : ''}
                   {precoNegociado && <span className={base.negociadoTag}>negociado</span>}
                 </div>
                 {precoNegociado && editandoPreco ? (
@@ -708,6 +716,19 @@ export function PricingPage() {
               </div>
             </div>
 
+            {temAdValorem && (
+              <div className={base.reverso}>
+                <div className={base.reversoLinha}><span>Frete peso</span><b>{formatBRL(precoFinal)}</b></div>
+                {adValorem.linhas.map((l) => (
+                  <div key={l.nome} className={base.reversoLinha}>
+                    <span>+ {l.nome} ({formatPct(l.pct)} de {l.base > 0 ? formatBRL(l.base) : 'valor da mercadoria não informado'})</span>
+                    <b>{formatBRL(l.valor)}</b>
+                  </div>
+                ))}
+                {adValorem.linhas.length === 0 && <div className={base.reversoLinha}><span>+ Ad valorem</span><b>—</b></div>}
+                <div className={base.reversoLinha}><span><b>= Frete total</b> (fora do markup)</span><b>{formatBRL(freteTotal)}</b></div>
+              </div>
+            )}
             {abaixoDoMinimo && (
               <div className={`${base.alertaPiso} ${ehGestor ? base.alertaPisoGestor : ''}`} role="alert">
                 <AlertTriangle size={16} />
@@ -841,6 +862,7 @@ export function PricingPage() {
                   <td className={`${ui.right} ${ui.cellStrong}`}>
                     {formatBRL(it.precoFinal)}
                     {(it.precoCalculado ?? 0) > 0 && <div className={base.precoOriginal}>calculado {formatBRL(it.precoCalculado ?? 0)}</div>}
+                    {(it.adValorem ?? 0) > 0 && <div className={base.precoOriginal}>+ ad valorem {formatBRL(it.adValorem ?? 0)} = {formatBRL(it.precoFinal + (it.adValorem ?? 0))}</div>}
                   </td>
                   {podeVerCalculo && <td className={ui.right}>{formatPct(it.ml)}</td>}
                   <td className={ui.colActions}>

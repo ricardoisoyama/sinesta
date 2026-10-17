@@ -109,7 +109,7 @@ function Formulario({ existente, modelos }: { existente?: Contrato; modelos: Mod
     const fixo = fixosDoModelo[0]
     setItens(p.itens.map((i) => ({
       id: crypto.randomUUID(), apelido: fixo?.apelido ?? '', tabela: porDocumento, servico: servicos?.find((x) => x.id === i.servicoId)?.nome ?? fixo?.nome ?? 'Serviço',
-      descricao: i.descricao, quantidade: 1, unidade: fixo?.unidade || 'un.', valorUnitario: r2(i.precoFinal), custoUnitario: r2(i.custoTotal),
+      descricao: i.descricao, quantidade: 1, unidade: fixo?.unidade || 'un.', valorUnitario: r2(i.precoFinal + (i.adValorem ?? 0)), custoUnitario: r2(i.custoTotal),
     })))
   }
   // "Gerar contrato" na lista de propostas abre aqui com ?proposta=: aplica uma vez, quando a lista chega.

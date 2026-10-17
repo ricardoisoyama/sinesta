@@ -61,6 +61,10 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/modelos-proposta', label: 'Modelos de Proposta', grupo: 'Parametrizações' },
   { key: '/cadastros/funis', label: 'Funis do CRM', grupo: 'Parametrizações' },
   { key: '/cadastros/auditoria', label: 'Auditoria (histórico de alterações)', grupo: 'Administrativo' },
+  { key: '/contratos', label: 'Contratos', grupo: 'Comercial' },
+  { key: '/cadastros/modelos-contrato', label: 'Modelos de Contrato', grupo: 'Parametrizações' },
+  { key: '/financeiro/faturamento', label: 'Central de Faturamento', grupo: 'Financeiro' },
+  { key: '/analises/projecao', label: 'Projeção', grupo: 'Relatórios' },
 
   // ── Especiais: desligadas por padrão para todo mundo ─────────────────────
   { key: '/simulador/calculo', label: 'Ver o cálculo do preço no Pricing (custos, fator, margem)', grupo: GRUPO_ESPECIAIS, extra: true },
@@ -72,11 +76,6 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   // ── Administrativas: só o perfil Admin (a nossa equipe), sempre ─────────
   { key: '/administrativo/integracoes', label: 'Integrações (bancos das empresas: credenciais, certificado, boleto)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
-  // Em validação com o Suporte. Para liberar ao cliente: tirar o admin e mudar o grupo (e no servidor, Administrativas → Base).
-  { key: '/contratos', label: 'Contratos (em validação)', grupo: GRUPO_EQUIPE, admin: true },
-  { key: '/cadastros/modelos-contrato', label: 'Modelos de Contrato (em validação)', grupo: GRUPO_EQUIPE, admin: true },
-  { key: '/financeiro/faturamento', label: 'Central de Faturamento (em validação)', grupo: GRUPO_EQUIPE, admin: true },
-  { key: '/analises/projecao', label: 'Projeção (em validação)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)

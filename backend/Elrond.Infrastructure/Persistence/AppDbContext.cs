@@ -479,6 +479,11 @@ public class AppDbContext : DbContext
             e.OwnsMany(f => f.Contatos, b => b.ToJson());
             e.OwnsOne(f => f.Banco, b => b.ToJson());
             e.OwnsOne(f => f.Endereco, b => b.ToJson());
+            e.OwnsMany(f => f.Apolices, b =>
+            {
+                b.ToJson();
+                b.OwnsMany(a => a.Taxas);
+            });
             // Lista de ids → text[] nativo do Postgres.
             e.Property(f => f.Aprovadores).HasColumnType("text[]");
         });
@@ -548,6 +553,10 @@ public class AppDbContext : DbContext
             e.Property(c => c.Ajuda).HasMaxLength(400);
             e.Property(c => c.Opcoes).HasColumnType("text[]");
             e.Property(c => c.TipoOperacaoId).HasMaxLength(80).HasDefaultValue(string.Empty);
+            e.Property(c => c.Seguro).HasMaxLength(20).HasDefaultValue(string.Empty);
+            e.Property(c => c.CampoBase).HasMaxLength(80).HasDefaultValue(string.Empty);
+            e.Property(c => c.CampoOrigem).HasMaxLength(80).HasDefaultValue(string.Empty);
+            e.Property(c => c.CampoDestino).HasMaxLength(80).HasDefaultValue(string.Empty);
             e.HasIndex(c => new { c.EmpresaId, c.Ordem });
         });
 

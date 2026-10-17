@@ -94,6 +94,7 @@ public class PropostaService : IPropostaService
         foreach (var item in dto.Itens)
         {
             var emp = empresas.FirstOrDefault(e => e.Id == item.EmpresaId);
+            item.AdValorem = Math.Max(0, Math.Round(item.AdValorem, 2));
             item.AbaixoMinimo = emp is not null && emp.Dv.Lucro > 0 && item.Ml < emp.Dv.Lucro - 0.00005m;
             abaixoDoMinimo |= item.AbaixoMinimo;
         }

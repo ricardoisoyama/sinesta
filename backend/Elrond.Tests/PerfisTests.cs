@@ -22,10 +22,10 @@ public class PerfisTests
     [Fact]
     public void Gestor_nao_recebe_administrativa_nem_quando_gravada()
     {
-        var efetivas = Funcionalidades.Efetivas(Perfis.Gestor, new[] { Integracoes, "/contratos", "/fiscal/nfse" });
+        var efetivas = Funcionalidades.Efetivas(Perfis.Gestor, new[] { Integracoes, "/administrativo/integracoes", "/fiscal/nfse" });
 
         Assert.DoesNotContain(Integracoes, efetivas);
-        Assert.DoesNotContain("/contratos", efetivas);
+        Assert.Contains("/contratos", efetivas);
         Assert.Contains("/fiscal/nfse", efetivas);
         Assert.Contains("/cadastros/auditoria", efetivas);
     }

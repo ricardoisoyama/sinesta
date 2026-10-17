@@ -33,12 +33,42 @@ public class IntegracoesBancariasController(IIntegracaoBancariaService integraco
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 
+    public sealed record AvisoDto(string UrlBase);
+
+    /// <summary>Cadastra no banco o aviso de pagamento apontando para este ambiente.</summary>
+    [HttpPost("{integracaoId}/aviso")]
+    public async Task<IActionResult> RegistrarAviso(string integracaoId, [FromBody] AvisoDto dto, CancellationToken ct)
+    {
+        var r = await integracoes.RegistrarAvisoAsync(integracaoId, dto.UrlBase, ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
     /// <summary>Confere certificado e credenciais gravados com uma chamada de leitura ao banco.</summary>
     [HttpPost("{integracaoId}/testar")]
     public async Task<IActionResult> Testar(string integracaoId, CancellationToken ct)
     {
         var r = await integracoes.TestarAsync(integracaoId, ct);
         return r.IsSuccess ? Ok(new { mensagem = r.Value }) : BadRequest(r.Error);
+    }
+}
+
+/// <summary>
+/// Aviso do banco (webhook): o banco chama quando a cobrança é paga, cancelada ou expira. Sem login
+/// (quem chama é o banco); o segredo no endereço identifica a integração. O conteúdo do aviso não é
+/// aceito como verdade: cada cobrança é consultada no banco antes de mudar de situação.
+/// </summary>
+[ApiController]
+[AllowAnonymous]
+[Route("api/bancos/aviso")]
+public class AvisosBancoController(ICobrancaService cobrancas) : ControllerBase
+{
+    [HttpPost("{token}")]
+    public async Task<IActionResult> Receber(string token, CancellationToken ct)
+    {
+        using var leitor = new StreamReader(Request.Body);
+        var corpo = await leitor.ReadToEndAsync(ct);
+        var r = await cobrancas.ReceberAvisoAsync(token, corpo, ct);
+        return r.IsSuccess ? Ok() : NotFound();
     }
 }
 

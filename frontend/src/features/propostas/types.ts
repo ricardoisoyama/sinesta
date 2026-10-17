@@ -55,6 +55,8 @@ export interface ItemProposta {
   tipoOperacao?: string | null
   /** Retrato das fichas técnicas usadas como custo. Ausente nos itens antigos. */
   fichas?: FichaItemProposta[] | null
+  /** Ad valorem (R$) somado ao frete peso, fora do markup: frete total = precoFinal + adValorem. */
+  adValorem?: number
 }
 
 export interface DadoOperacaoItem {

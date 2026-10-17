@@ -29,6 +29,8 @@ import {
   type TipoOperacao,
   type ValoresOperacao,
 } from './types'
+import { ligacoesSugeridas } from './advalorem'
+import { TIPOS_APOLICE } from '@/features/parceiros/types'
 import s from './camposOperacao.module.css'
 
 const notaOpcoes = { padding: '0 10px', fontSize: 12 } as const
@@ -101,7 +103,9 @@ export function CamposOperacaoPage() {
   const trocarTipo = (c: CampoOperacao, tipo: TipoCampoOperacao) => {
     const permitidos = EFEITOS_POR_TIPO[tipo]
     const efeito = permitidos.includes(c.efeito) ? c.efeito : permitidos[permitidos.length - 1]
-    upd(c.id, { tipo, efeito, cadastro: tipo === 'cadastro' ? c.cadastro || 'cliente' : '', opcoes: tipo === 'lista' ? c.opcoes : [] })
+    // Ad valorem já nasce ligado ao valor da mercadoria e à origem/destino, quando os nomes ajudam.
+    const ligacoes = tipo === 'advalorem' ? { seguro: c.seguro || 'RCTR-C', ...ligacoesSugeridas(ativos) } : {}
+    upd(c.id, { tipo, efeito, cadastro: tipo === 'cadastro' ? c.cadastro || 'cliente' : '', opcoes: tipo === 'lista' ? c.opcoes : [], ...ligacoes })
   }
   /** Mover dentro da ordem dos ativos (os removidos ficam no fim). */
   const mover = (i: number, delta: -1 | 1) => {
@@ -180,7 +184,32 @@ export function CamposOperacaoPage() {
               })()}
             </span>
           )}
-          {!['lista', 'cadastro', 'uf', 'cidade'].includes(c.tipo) && <span className={sheet.mut} style={notaOpcoes}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
+          {c.tipo === 'advalorem' && (
+            <div className={s.ligacoes}>
+              <select value={c.seguro || 'RCTR-C'} disabled={removido} title="Apólice que dá o percentual" onChange={(e) => upd(c.id, { seguro: e.target.value })}>
+                {TIPOS_APOLICE.map((t) => (
+                  <option key={t} value={t}>Apólice {t}</option>
+                ))}
+              </select>
+              {(
+                [
+                  ['campoBase', 'Sobre', ['valor']],
+                  ['campoOrigem', 'Origem', ['uf', 'cidade']],
+                  ['campoDestino', 'Destino', ['uf', 'cidade']],
+                ] as const
+              ).map(([prop, rotulo, tipos]) => (
+                <select key={prop} value={c[prop] ?? ''} disabled={removido} title={rotulo} onChange={(e) => upd(c.id, { [prop]: e.target.value })}>
+                  <option value="">{rotulo}: escolha</option>
+                  {ativos
+                    .filter((x) => x.id !== c.id && (tipos as readonly string[]).includes(x.tipo) && x.nome.trim())
+                    .map((x) => (
+                      <option key={x.id} value={x.chave}>{rotulo}: {x.nome}</option>
+                    ))}
+                </select>
+              ))}
+            </div>
+          )}
+          {!['lista', 'cadastro', 'uf', 'cidade', 'advalorem'].includes(c.tipo) && <span className={sheet.mut} style={notaOpcoes}>— não se aplica a {TIPOS_CAMPO.find((t) => t.valor === c.tipo)?.label.toLowerCase()}</span>}
         </td>
         <td className={sheet[EFEITOS[ef].cor]} title={EFEITOS[ef].ajuda}>
           {efeitosPermitidos.length > 1 && !removido ? (
@@ -264,10 +293,11 @@ export function CamposOperacaoPage() {
           <Eye size={14} /> Prévia · como fica no Pricing{tiposAtivos.length > 1 && ` (${tiposAtivos.find((t) => t.id === tipoId)?.nome})`}
           <small>Preencha para testar. Os campos com etiqueta mexem no preço; os demais só informam.</small>
         </div>
-        <BlocoDadosOperacao campos={ativos} valores={valoresPrevia} onChange={(k, v) => setValoresPrevia((p) => ({ ...p, [k]: v }))} mostrarEfeito />
+        <BlocoDadosOperacao empresaId={empresaId} campos={ativos} valores={valoresPrevia} onChange={(k, v) => setValoresPrevia((p) => ({ ...p, [k]: v }))} mostrarEfeito />
         <div className={s.legenda}>
           <span><i className={s.laranja} /> Multiplica o preço (número usado como quantidade)</span>
           <span><i className={s.verde} /> Soma ao custo (valor em R$, % sobre o custo)</span>
+          {ativos.some((c) => c.tipo === 'advalorem') && <span>Ad valorem: fora do markup, soma ao frete (frete peso + ad valorem = frete total)</span>}
           <span><i className={s.cinza} /> Só informa</span>
         </div>
       </div>

@@ -90,6 +90,22 @@ public static class InterMapeador
             nossa == CobrancaBancaria.Cancelada && !string.IsNullOrWhiteSpace(c?.MotivoCancelamento) ? $"Cancelado: {c!.MotivoCancelamento}" : string.Empty);
     }
 
+    /// <summary>Aviso (callback) do Inter: uma lista de cobranças que mudaram. Corpo estranho = lista vazia.</summary>
+    public static IReadOnlyList<AvisoCobranca> Aviso(string corpo)
+    {
+        try
+        {
+            var itens = JsonSerializer.Deserialize<List<InterAviso>>(corpo, InterJson.Opcoes) ?? [];
+            return itens.Where(i => !string.IsNullOrEmpty(i.CodigoSolicitacao) || !string.IsNullOrEmpty(i.SeuNumero))
+                .Select(i => new AvisoCobranca(i.CodigoSolicitacao ?? string.Empty, i.SeuNumero ?? string.Empty, i.Situacao ?? string.Empty, i.DataHoraSituacao ?? string.Empty))
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
+    }
+
     /// <summary>Mensagem de erro do Inter em uma linha: violações (campo: razão) ou o detail/title.</summary>
     public static string Erro(string corpo, int status)
     {
