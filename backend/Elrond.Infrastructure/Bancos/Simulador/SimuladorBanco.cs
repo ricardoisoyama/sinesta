@@ -11,7 +11,7 @@ namespace Elrond.Infrastructure.Bancos.Simulador;
 /// </summary>
 public sealed class SimuladorCobranca : ICobrancaBancaria
 {
-    private sealed record Registro(string Id, PedidoCobranca Pedido, string Situacao);
+    private sealed record Registro(string Id, PedidoCobranca Pedido, string Situacao, string PagaEm = "");
     private readonly ConcurrentDictionary<string, Registro> _cobrancas = new();
 
     public Task<EnvioBanco> EmitirAsync(CredencialBanco c, PedidoCobranca p, CancellationToken ct = default)
@@ -43,8 +43,15 @@ public sealed class SimuladorCobranca : ICobrancaBancaria
     /// <summary>Simula o pagamento (usado pelo aviso de RECEBIDO).</summary>
     public void Pagar(string idBanco)
     {
-        if (_cobrancas.TryGetValue(idBanco, out var r)) _cobrancas[idBanco] = r with { Situacao = CobrancaBancaria.Recebida };
+        if (_cobrancas.TryGetValue(idBanco, out var r)) _cobrancas[idBanco] = r with { Situacao = CobrancaBancaria.Recebida, PagaEm = DateTime.Today.ToString("yyyy-MM-dd") };
     }
+
+    /// <summary>Cobranças pagas viram crédito no extrato simulado (com o nome do pagador, como no banco).</summary>
+    public IReadOnlyList<TransacaoExtrato> Pagas(string de, string ate) =>
+        _cobrancas.Values
+            .Where(r => r.Situacao == CobrancaBancaria.Recebida && string.CompareOrdinal(r.PagaEm, de) >= 0 && string.CompareOrdinal(r.PagaEm, ate) <= 0)
+            .Select(r => new TransacaoExtrato($"sim-{r.Id}", r.PagaEm, r.Pedido.Valor, $"PIX RECEBIDO · {r.Pedido.Pagador.Nome} · {r.Pedido.Pagador.CpfCnpj} · seu nº {r.Pedido.SeuNumero}"))
+            .ToList();
 
     private static SituacaoNoBanco Situacao(Registro r)
     {
@@ -63,12 +70,20 @@ public sealed class SimuladorCobranca : ICobrancaBancaria
         "5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF";
 }
 
-public sealed class SimuladorModulo(SimuladorCobranca cobranca) : IBancoModulo
+/// <summary>Extrato simulado: os créditos das cobranças pagas no simulador.</summary>
+public sealed class SimuladorExtrato(SimuladorCobranca cobranca) : IExtratoBancario
+{
+    public Task<ExtratoBanco> LerAsync(CredencialBanco c, string de, string ate, CancellationToken ct = default) =>
+        Task.FromResult(ExtratoBanco.Lido(cobranca.Pagas(de, ate)));
+}
+
+public sealed class SimuladorModulo(SimuladorCobranca cobranca, SimuladorExtrato extrato) : IBancoModulo
 {
     public string Codigo => "simulador";
     public string Nome => "Simulador";
-    public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca];
+    public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca, IntegracaoBancaria.RecursoExtrato];
     public ICobrancaBancaria? Cobranca => cobranca;
+    public IExtratoBancario? Extrato => extrato;
     public Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default) => Task.FromResult<string?>(null);
     /// <summary>Mesmo formato do Inter. Aviso de RECEBIDO "paga" a cobrança no simulador (para a conferência achar paga).</summary>
     public IReadOnlyList<AvisoCobranca> LerAviso(string corpo)

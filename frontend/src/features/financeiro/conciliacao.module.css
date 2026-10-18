@@ -1,5 +1,6 @@
 .acoes { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .carteiraSel { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: #6b7b72; font-weight: 600; }
+.carteiraSel .data { font: inherit; font-size: 13px; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 7px 10px; }
 .carteiraSel select { font: inherit; font-size: 13px; font-weight: 600; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 8px 12px; min-width: 200px; }
 
 .aviso { display: flex; align-items: center; gap: 8px; padding: 10px 14px; margin-bottom: 12px; font-size: 13px; color: #1a4d1e; background: #e8f5ec; border: 1px solid #cfe0d4; border-radius: 10px; }

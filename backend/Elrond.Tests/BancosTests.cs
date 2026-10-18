@@ -35,7 +35,7 @@ public class BancosTests
         (i.SegredoCifrado, i.CertificadoCifrado, i.ChaveCifrada) = cofre.Fechar(i.Id, "segredo", Encoding.UTF8.GetBytes("cert"), Encoding.UTF8.GetBytes("chave"));
         integracoes.Itens.Add(i);
         var cobrancas = new MemRepo<CobrancaBancaria>();
-        var bancos = new BancosRegistro(new IBancoModulo[] { new SimuladorModulo(new SimuladorCobranca()) });
+        var bancos = new BancosRegistro(new IBancoModulo[] { NovoSimulador() });
         var svc = new CobrancaService(cobrancas, integracoes, bancos, cofre, new FakeAuditoria(), TimeProvider.System, NullLogger<CobrancaService>.Instance);
         return (svc, cobrancas, integracoes, cofre);
     }
@@ -171,7 +171,7 @@ public class BancosTests
         var (_, _, integracoes, cofre) = Montar();
         var empresas = new MemRepo<Empresa>();
         empresas.Itens.Add(new Empresa { Id = "emp2", Nome = "Mirai" });
-        var bancos = new BancosRegistro(new IBancoModulo[] { new SimuladorModulo(new SimuladorCobranca()) });
+        var bancos = new BancosRegistro(new IBancoModulo[] { NovoSimulador() });
         var svc = new IntegracaoBancariaService(integracoes, empresas, new MemRepo<Carteira>(), bancos, cofre, new FakeAuditoria());
 
         var semSegredo = await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("simulador", "sandbox", "client", null, null, null, null, null, true));
@@ -201,7 +201,7 @@ public class BancosTests
         carteiras.Itens.Add(new Carteira { Id = "cx-inter", EmpresaId = "emp", Tipo = "banco", Nome = "Inter" });
         carteiras.Itens.Add(new Carteira { Id = "cx-outra", EmpresaId = "emp-b", Tipo = "banco", Nome = "Itaú da filial" });
         carteiras.Itens.Add(new Carteira { Id = "cx-caixinha", EmpresaId = "emp", Tipo = "caixa", Nome = "Caixinha" });
-        var bancos = new BancosRegistro(new IBancoModulo[] { new SimuladorModulo(new SimuladorCobranca()) });
+        var bancos = new BancosRegistro(new IBancoModulo[] { NovoSimulador() });
         var svc = new IntegracaoBancariaService(integracoes, empresas, carteiras, bancos, cofre, new FakeAuditoria());
         ConfigurarIntegracaoDto Dto(string? carteira = null, RegrasBoleto? regras = null) =>
             new("simulador", "sandbox", "id", null, null, null, null, new() { "cobranca" }, true, carteira, regras);
@@ -289,6 +289,46 @@ public class BancosTests
         Assert.Equal(0, await svc.ConferirAbertasAsync()); // nada mais em aberto
     }
 
+    // ── extrato ──
+
+    [Fact]
+    public void Extrato_do_Inter_vira_linha_de_conciliacao()
+    {
+        var corpo = """
+        {"ultimaPagina":true,"transacoes":[
+          {"idTransacao":"abc-1","dataTransacao":"2026-10-18","tipoTransacao":"PIX","tipoOperacao":"C","valor":"2.50","titulo":"Pix recebido","descricao":"PIX RECEBIDO","detalhes":{"tipoDetalhe":"PIX","nomePagador":"Fulano de Tal","cpfCnpjPagador":"529.982.247-25"}},
+          {"idTransacao":"abc-2","dataTransacao":"2026-10-18","tipoTransacao":"TARIFA","tipoOperacao":"D","valor":"1.99","titulo":"Tarifa","descricao":"Tarifa boleto"},
+          {"dataInclusao":"2026-10-17 10:00:00","tipoOperacao":"C","valor":"100","titulo":"Boleto","detalhes":{"tipoDetalhe":"BOLETO_COBRANCA","nome":"Cliente X","cpfCnpj":"11222333000181","seuNumero":"000123"}}
+        ]}
+        """;
+        var (t, ultima) = InterExtrato.Pagina(corpo);
+        Assert.True(ultima);
+        Assert.Equal(3, t.Count);
+        Assert.Equal(("abc-1", "2026-10-18", 2.50m), (t[0].Id, t[0].Data, t[0].Valor));
+        Assert.Contains("Fulano de Tal", t[0].Descricao); // o nome ajuda a sugestão de par
+        Assert.Equal(-1.99m, t[1].Valor);                // débito negativo
+        Assert.Equal("2026-10-17", t[2].Data);
+        Assert.StartsWith("inter-", t[2].Id);              // sem idTransacao: id estável pelos dados
+        Assert.Equal(t[2].Id, InterExtrato.Pagina(corpo).Transacoes[2].Id);
+        Assert.Contains("seu nº 000123", t[2].Descricao);
+    }
+
+    [Fact]
+    public async Task Simulador_entrega_no_extrato_as_cobrancas_pagas()
+    {
+        var cobranca = new SimuladorCobranca();
+        var extrato = new SimuladorExtrato(cobranca);
+        var c = new CredencialBanco("i", "sandbox", "", "", Array.Empty<byte>(), Array.Empty<byte>(), "");
+        var env = await cobranca.EmitirAsync(c, new PedidoCobranca("000009", 10m, Venc, 30,
+            new PagadorCobranca("52998224725", "Pagador Teste", "Rua", "1", "", "Centro", "São Paulo", "SP", "01001000", "", ""), new[] { "x" }));
+        var hoje = DateTime.Today.ToString("yyyy-MM-dd");
+        Assert.Empty((await extrato.LerAsync(c, hoje, hoje)).Transacoes);
+        cobranca.Pagar(env.IdBanco);
+        var lido = (await extrato.LerAsync(c, hoje, hoje)).Transacoes.Single();
+        Assert.Equal(10m, lido.Valor);
+        Assert.Contains("Pagador Teste", lido.Descricao);
+    }
+
     // ── tradução do Inter ──
 
     [Theory]
@@ -343,6 +383,12 @@ public class BancosTests
         public Task RegistrarAsync(string acao, string entidade, string entidadeId, string descricao, object? antes = null, object? depois = null, UsuarioAtual? quem = null) => Task.CompletedTask;
         public Task<List<RegistroAuditoria>> ListarAsync(int limite, string? entidade = null, string? usuario = null, string? acao = null, string? entidadeId = null) =>
             Task.FromResult(new List<RegistroAuditoria>());
+    }
+
+    private static SimuladorModulo NovoSimulador()
+    {
+        var c = new SimuladorCobranca();
+        return new SimuladorModulo(c, new SimuladorExtrato(c));
     }
 
     private sealed class MemRepo<T> : ICrudRepository<T> where T : class, IEntity

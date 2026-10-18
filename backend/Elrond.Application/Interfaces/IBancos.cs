@@ -62,6 +62,25 @@ public interface ICobrancaBancaria
     Task<string?> RegistrarAvisoAsync(CredencialBanco credencial, string url, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Um lançamento do extrato do banco. Id = identificador do banco (vira o FITID da conciliação, sem
+/// duplicar); Valor com sinal (+ crédito, − débito); Descricao com o que ajuda a casar (nome, documento).
+/// </summary>
+public sealed record TransacaoExtrato(string Id, string Data, decimal Valor, string Descricao);
+
+/// <summary>Resultado da leitura do extrato: as transações, ou o motivo de não ter conseguido.</summary>
+public sealed record ExtratoBanco(IReadOnlyList<TransacaoExtrato> Transacoes, string Falha)
+{
+    public static ExtratoBanco Lido(IReadOnlyList<TransacaoExtrato> t) => new(t, string.Empty);
+    public static ExtratoBanco Falhou(string motivo) => new(Array.Empty<TransacaoExtrato>(), motivo);
+}
+
+/// <summary>Capacidade de extrato: lê as transações da conta num período (datas yyyy-MM-dd).</summary>
+public interface IExtratoBancario
+{
+    Task<ExtratoBanco> LerAsync(CredencialBanco credencial, string de, string ate, CancellationToken ct = default);
+}
+
 /// <summary>O que o banco mandou no aviso de uma cobrança (o ELROND confere no banco antes de dar baixa).</summary>
 public sealed record AvisoCobranca(string IdBanco, string SeuNumero, string Situacao, string DataHora);
 
@@ -74,6 +93,7 @@ public interface IBancoModulo
     /// <summary>Recursos que o módulo oferece (cobranca, extrato, saldo), para a tela de Integrações.</summary>
     IReadOnlyList<string> Recursos { get; }
     ICobrancaBancaria? Cobranca { get; }
+    IExtratoBancario? Extrato { get; }
     /// <summary>Confere certificado e credenciais com uma chamada de leitura. Null = ok; senão, o motivo.</summary>
     Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default);
     /// <summary>Lê o corpo do aviso (webhook) no formato deste banco. Corpo estranho = lista vazia.</summary>

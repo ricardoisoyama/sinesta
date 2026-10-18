@@ -36,6 +36,11 @@ export interface ExtratoLinhaApi {
 export const listExtrato = (carteiraId: string) => apiFetch<ExtratoLinhaApi[]>(`/financeiro/conciliacao?carteiraId=${encodeURIComponent(carteiraId)}`)
 export const importarExtrato = (carteiraId: string, linhas: { fitid: string; data: string; valor: number; memo: string }[]) =>
   apiFetch<{ novas: number; jaImportadas: number }>('/financeiro/conciliacao/importar', { method: 'POST', body: J({ carteiraId, linhas }) })
+/** Contas do Caixa ligadas a uma integração bancária com extrato pela API. */
+export const listContasComExtrato = () => apiFetch<{ carteiraId: string; banco: string; ambiente: string }[]>('/financeiro/conciliacao/contas-com-extrato')
+/** Lê o extrato pela API do banco no período e grava como o OFX (o que já veio não duplica). */
+export const buscarDoBanco = (carteiraId: string, de: string, ate: string) =>
+  apiFetch<{ lidas: number; novas: number; jaImportadas: number; de: string; ate: string }>('/financeiro/conciliacao/buscar-banco', { method: 'POST', body: J({ carteiraId, de, ate }) })
 export const vincularExtrato = (linhaId: string, movimentoId: string) =>
   apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/vincular', { method: 'POST', body: J({ linhaId, movimentoId }) })
 export const criarDoExtrato = (d: { linhaId: string; parceiroNome: string; descricao: string; planoContaId: string; centroCustoId: string; formaPagamento: string; empresaId: string }) =>

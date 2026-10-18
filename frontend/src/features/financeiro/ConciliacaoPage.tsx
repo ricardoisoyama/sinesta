@@ -1,7 +1,7 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Ban, Check, CheckCheck, CheckCircle2, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, Wand2, X } from 'lucide-react'
+import { Ban, Check, CheckCheck, CheckCircle2, CloudDownload, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, Wand2, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
@@ -13,7 +13,7 @@ import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import { usePlanoContas } from '@/features/planoContas/store'
 import { useFinanceiro } from './store'
-import { criarDoExtrato, criarRegraConciliacao, desfazerExtrato, ignorarExtrato, importarExtrato, inativarRegraConciliacao, listExtrato, listRegrasConciliacao, vincularExtrato } from './api'
+import { buscarDoBanco, criarDoExtrato, criarRegraConciliacao, desfazerExtrato, ignorarExtrato, importarExtrato, inativarRegraConciliacao, listContasComExtrato, listExtrato, listRegrasConciliacao, vincularExtrato } from './api'
 import { lerOfx, type LinhaExtrato } from './ofx'
 import { conciliar, padraoDoMemo, resumoConciliacao, type Candidato, type LinhaConciliada, type RegraConciliacao } from './conciliar'
 import { liquidoDe } from './calculos'
@@ -34,6 +34,12 @@ const SITUACAO: Record<LinhaConciliada['situacao'], { label: string; cls: string
 
 const formaDoMemo = (memo: string) => (/PIX/i.test(memo) ? 'Pix' : /BOLETO/i.test(memo) ? 'Boleto' : /TED|DOC/i.test(memo) ? 'Transferência' : '')
 const plural = (n: number, um: string, varios: string) => (n === 1 ? um : varios)
+const hoje = () => new Date().toLocaleDateString('sv-SE')
+const diasAtras = (n: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toLocaleDateString('sv-SE')
+}
 
 /**
  * Conciliação bancária num grid só: cada linha do extrato mostra o par que o sistema achou
@@ -61,6 +67,10 @@ export function ConciliacaoPage() {
 
   const { data: linhasApi, isLoading } = useQuery({ queryKey: ['financeiro', 'extrato', carteiraId], queryFn: () => listExtrato(carteiraId), enabled: !!carteiraId })
   const { data: regrasApi } = useQuery({ queryKey: ['financeiro', 'regras-conciliacao'], queryFn: listRegrasConciliacao })
+  // Conta ligada a uma integração com extrato: o extrato vem pela API ("Buscar do banco"); o OFX fica de reserva.
+  const { data: contasComExtrato } = useQuery({ queryKey: ['financeiro', 'contas-com-extrato'], queryFn: listContasComExtrato })
+  const contaBanco = (contasComExtrato ?? []).find((c) => c.carteiraId === carteiraId)
+  const [periodo, setPeriodo] = useState<{ de: string; ate: string } | null>(null)
   const regras: RegraConciliacao[] = (regrasApi ?? []).filter((r) => (r.status ?? 'ativo') === 'ativo')
 
   const gravadas = linhasApi ?? []
@@ -79,6 +89,9 @@ export function ConciliacaoPage() {
     return true
   })
   const datas = linhas.map((l) => l.data).sort()
+  // Período padrão da busca: desde o último dia já trazido (ou 30 dias) até hoje.
+  const de = periodo?.de ?? (datas.length ? datas[datas.length - 1] : diasAtras(30))
+  const ate = periodo?.ate ?? hoje()
 
   /** Executa no servidor, recarrega e mostra o motivo quando ele recusa. */
   const exec = async (acao: () => Promise<unknown>): Promise<boolean> => {
@@ -107,6 +120,18 @@ export function ConciliacaoPage() {
       const res = await importarExtrato(carteiraId, e.linhas.map((l) => ({ fitid: l.id, data: l.data, valor: l.valor, memo: l.memo })))
       const ja = res.jaImportadas ? ` · ${res.jaImportadas} ${plural(res.jaImportadas, 'já estava', 'já estavam')} no sistema` : ''
       setAviso(`${res.novas} ${plural(res.novas, 'linha nova importada', 'linhas novas importadas')}${ja}.`)
+    })
+  }
+  const buscarBanco = async () => {
+    setAberta(null)
+    await exec(async () => {
+      const res = await buscarDoBanco(carteiraId, de, ate)
+      const ja = res.jaImportadas ? ` · ${res.jaImportadas} ${plural(res.jaImportadas, 'já estava', 'já estavam')} no sistema` : ''
+      setAviso(
+        res.lidas === 0
+          ? `Nenhuma transação no banco de ${dataBR(res.de)} a ${dataBR(res.ate)}.`
+          : `${res.lidas} ${plural(res.lidas, 'transação lida', 'transações lidas')} do banco (${dataBR(res.de)} a ${dataBR(res.ate)}): ${res.novas} ${plural(res.novas, 'nova', 'novas')}${ja}.`,
+      )
     })
   }
   const onArquivo = (ev: ChangeEvent<HTMLInputElement>) => {
@@ -162,7 +187,7 @@ export function ConciliacaoPage() {
       <PageHeader
         breadcrumb="Financeiro"
         title="Conciliação"
-        subtitle="Importe o extrato do banco (.ofx) e feche cada linha aqui mesmo: aceitar o par, trocar, criar o lançamento ou ignorar."
+        subtitle="Traga o extrato do banco (pela API ou .ofx) e feche cada linha aqui mesmo: aceitar o par, trocar, criar o lançamento ou ignorar."
         action={
           <div className={s.acoes}>
             <label className={s.carteiraSel}>
@@ -173,8 +198,35 @@ export function ConciliacaoPage() {
                 ))}
               </select>
             </label>
+            {contaBanco && (
+              <>
+                <label className={s.carteiraSel}>
+                  De
+                  <input type="date" className={s.data} value={de} max={ate} onChange={(e) => setPeriodo({ de: e.target.value, ate })} />
+                </label>
+                <label className={s.carteiraSel}>
+                  Até
+                  <input type="date" className={s.data} value={ate} min={de} max={hoje()} onChange={(e) => setPeriodo({ de, ate: e.target.value })} />
+                </label>
+                <button
+                  type="button"
+                  className={`${ui.btn} ${ui.btnPrimary}`}
+                  disabled={trabalhando || !de || !ate}
+                  onClick={buscarBanco}
+                  title={`Lê o extrato pela API do ${contaBanco.banco}${contaBanco.ambiente === 'sandbox' ? ' (sandbox)' : ''}`}
+                >
+                  <CloudDownload /> Buscar do banco
+                </button>
+              </>
+            )}
             <input ref={fileRef} type="file" accept=".ofx,.OFX,text/plain" hidden onChange={onArquivo} />
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!carteiraId || trabalhando} onClick={() => fileRef.current?.click()}>
+            <button
+              type="button"
+              className={`${ui.btn} ${contaBanco ? ui.btnGhost : ui.btnPrimary}`}
+              disabled={!carteiraId || trabalhando}
+              onClick={() => fileRef.current?.click()}
+              title={contaBanco ? 'Alternativa quando a API do banco está fora' : undefined}
+            >
               <FileUp /> Importar .ofx
             </button>
           </div>
@@ -198,7 +250,11 @@ export function ConciliacaoPage() {
         <div className={`${ui.card} ${s.vazio}`}>
           <FileUp size={28} />
           <b>{isLoading ? 'Carregando o extrato...' : `Nenhum extrato importado em ${carteira?.nome ?? 'esta carteira'}`}</b>
-          <span>Importe o .ofx exportado pelo banco. Reimportar o mesmo arquivo não duplica linhas.</span>
+          <span>
+            {contaBanco
+              ? `Clique em "Buscar do banco" para trazer o extrato pela API do ${contaBanco.banco}, ou importe o .ofx. Buscar ou reimportar não duplica linhas.`
+              : 'Importe o .ofx exportado pelo banco. Reimportar o mesmo arquivo não duplica linhas.'}
+          </span>
           <div className={s.passos}>
             <span><i>1</i> O sistema casa cada linha com um lançamento (valor, nome, documento, data).</span>
             <span><i>2</i> O que bateu vira sugestão: um clique (ou "Aceitar todas") concilia e dá a baixa.</span>

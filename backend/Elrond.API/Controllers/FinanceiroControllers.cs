@@ -1,6 +1,7 @@
 using Elrond.API.Security;
 using Elrond.Application.DTOs;
 using Elrond.Application.Interfaces;
+using Elrond.Application.Services;
 using Elrond.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -84,8 +85,22 @@ public class MovimentosController(IFinanceiroService service, UsuarioContexto us
 [ApiController]
 [Authorize]
 [Route("api/financeiro/conciliacao")]
-public class ConciliacaoController(IFinanceiroService service, UsuarioContexto usuario) : ControllerBase
+public class ConciliacaoController(IFinanceiroService service, ExtratoBancoService extratoBanco, UsuarioContexto usuario) : ControllerBase
 {
+    public record BuscarDoBancoDto(string CarteiraId, string? De, string? Ate);
+
+    /// <summary>Contas do Caixa com extrato pela API (mostram o botão "Buscar do banco").</summary>
+    [HttpGet("contas-com-extrato")]
+    public async Task<IActionResult> ContasComExtrato() => Ok(await extratoBanco.ContasAsync());
+
+    /// <summary>Lê o extrato pela API do banco e grava como o OFX (sem duplicar o que já veio).</summary>
+    [HttpPost("buscar-banco")]
+    public async Task<IActionResult> BuscarDoBanco([FromBody] BuscarDoBancoDto dto, CancellationToken ct)
+    {
+        var r = await extratoBanco.BuscarAsync(dto.CarteiraId, dto.De, dto.Ate, await usuario.QuemAsync(), ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
     [HttpGet]
     public async Task<IActionResult> Extrato([FromQuery] string carteiraId) =>
         string.IsNullOrWhiteSpace(carteiraId) ? BadRequest("Informe a carteira.") : Ok(await service.ExtratoAsync(carteiraId));

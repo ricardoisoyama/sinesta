@@ -118,8 +118,10 @@ public static class DependencyInjection
         });
         services.AddSingleton<InterConexao>();
         services.AddSingleton<InterCobranca>();
+        services.AddSingleton<InterExtrato>();
         services.AddSingleton<IBancoModulo, InterModulo>();
         services.AddSingleton<SimuladorCobranca>();
+        services.AddSingleton<SimuladorExtrato>();
         services.AddSingleton<IBancoModulo, SimuladorModulo>();
         services.AddSingleton<IBancos, BancosRegistro>();
         services.AddScoped<ICobrancaService, CobrancaService>();
@@ -142,6 +144,7 @@ public static class DependencyInjection
         services.AddScoped<IFaturamentoService, FaturamentoService>();
         services.AddScoped<IContratoService, ContratoService>();
         services.AddScoped<TabelaIcmsService>();
+        services.AddScoped<ExtratoBancoService>();
 
         // Validators (FluentValidation)
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

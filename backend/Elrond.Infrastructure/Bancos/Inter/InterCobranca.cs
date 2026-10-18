@@ -129,13 +129,14 @@ public sealed class InterCobranca(InterConexao conexao, ILogger<InterCobranca> l
     }
 }
 
-/// <summary>O módulo Inter: cobrança (extrato e saldo entram na próxima fase).</summary>
-public sealed class InterModulo(InterCobranca cobranca, InterConexao conexao, ILogger<InterModulo> log) : IBancoModulo
+/// <summary>O módulo Inter: cobrança e extrato (o saldo só no teste de conexão).</summary>
+public sealed class InterModulo(InterCobranca cobranca, InterExtrato extrato, InterConexao conexao, ILogger<InterModulo> log) : IBancoModulo
 {
     public string Codigo => "inter";
     public string Nome => "Banco Inter";
     public IReadOnlyList<string> Recursos => [Domain.Entities.IntegracaoBancaria.RecursoCobranca, Domain.Entities.IntegracaoBancaria.RecursoExtrato, Domain.Entities.IntegracaoBancaria.RecursoSaldo];
     public ICobrancaBancaria? Cobranca => cobranca;
+    public IExtratoBancario? Extrato => extrato;
 
     public IReadOnlyList<AvisoCobranca> LerAviso(string corpo) => InterMapeador.Aviso(corpo);
 
