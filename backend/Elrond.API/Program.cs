@@ -153,6 +153,7 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<Elrond.API.Background.GoogleAgendaWorker>();
 builder.Services.AddHostedService<Elrond.API.Background.NfseAcompanhamentoWorker>();
 builder.Services.AddHostedService<Elrond.API.Background.CobrancasConferenciaWorker>();
+builder.Services.AddSingleton<Elrond.API.Background.ConsultaPendentesSiimp>();
 
 // ── Build ────────────────────────────────────────────────────────────────
 var app = builder.Build();

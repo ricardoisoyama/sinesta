@@ -1,3 +1,4 @@
+using Elrond.API.Security;
 using Elrond.Application.Interfaces;
 using Elrond.Application.Services;
 using Elrond.Domain.Entities;
@@ -114,5 +115,31 @@ public class FaturasController(IFaturamentoService servico) : ControllerBase
     {
         var r = await servico.ConferirLoteAsync(dto.Ids);
         return r.IsSuccess ? Ok(new { conferidas = r.Value }) : BadRequest(r.Error);
+    }
+}
+
+/// <summary>
+/// Pendentes de faturamento (piloto com a SIIMP): CT-es e minutas do período que ainda não estão em
+/// nenhuma fatura. A consulta à SIIMP roda em segundo plano (POST começa, GET situacao acompanha).
+/// </summary>
+[ApiController]
+[Authorize]
+[Route("api/faturamento-pendente")]
+public class FaturamentoPendenteController(PendentesFaturamentoService service, Elrond.API.Background.ConsultaPendentesSiimp consulta, UsuarioContexto usuario) : ControllerBase
+{
+    public record ConsultarDto(string De, string Ate);
+
+    [HttpGet]
+    public async Task<IActionResult> Listar([FromQuery] string de, [FromQuery] string ate) =>
+        string.IsNullOrWhiteSpace(de) || string.IsNullOrWhiteSpace(ate) ? BadRequest("Informe o período.") : Ok(await service.ListarAsync(de, ate));
+
+    [HttpGet("situacao")]
+    public IActionResult Situacao() => Ok(consulta.Situacao);
+
+    [HttpPost("consultar")]
+    public async Task<IActionResult> Consultar([FromBody] ConsultarDto dto)
+    {
+        if (service.Validar(dto.De, dto.Ate) is { } erro) return BadRequest(erro);
+        return Ok(consulta.Iniciar(dto.De, dto.Ate, await usuario.QuemAsync()));
     }
 }

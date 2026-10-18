@@ -50,6 +50,7 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
         ("api/modelos-contrato", "/cadastros/modelos-contrato"),
         ("api/contratos", "/contratos"),
         ("api/faturas", "/financeiro/faturamento"),
+        ("api/faturamento-pendente", "/financeiro/faturamento"),
         ("api/cenarios-projecao", "/analises/projecao"),
     };
 

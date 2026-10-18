@@ -1339,6 +1339,115 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("custos_fixos", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.DocumentoFaturavel", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Chave")
+                        .IsRequired()
+                        .HasMaxLength(44)
+                        .HasColumnType("character varying(44)");
+
+                    b.Property<string>("ClienteId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("Emissao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmitenteCnpj")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmitenteNome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FaturaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FaturaSiimp")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LidoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("NfseNumero")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("SiimpId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Situacao")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("SituacaoSiimp")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("TomadorDocumento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("TomadorNome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("TomadorSiimpId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("Valor")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CriadoEm");
+
+                    b.HasIndex("FaturaId");
+
+                    b.ToTable("documentos_faturaveis", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Empresa", b =>
                 {
                     b.Property<string>("Id")
@@ -1654,6 +1763,30 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("faturas", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.FaturaSiimpLida", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("Documentos")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("LidaEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<long>("Numero")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Situacao")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("faturas_siimp_lidas", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.FichaColuna", b =>
@@ -2951,6 +3084,28 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.HasIndex("FunilId");
 
                     b.ToTable("oportunidades", (string)null);
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.PessoaSiimpLida", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Documento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LidaEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("pessoas_siimp_lidas", (string)null);
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.PlanoConta", b =>

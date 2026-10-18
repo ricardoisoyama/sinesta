@@ -103,3 +103,21 @@
 .campoModal input { font: inherit; font-size: 13px; color: #1f2a24; border: 1px solid #d7d3ca; border-radius: 8px; padding: 8px 11px; }
 .campoModal input:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
 .checklist .checkFalta { color: #b5651d; }
+
+/* Faturas do mês × Pendentes da SIIMP */
+.visao { display: inline-flex; border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; background: #f6f5f1; margin-bottom: 12px; }
+.visao button { border: 0; background: transparent; padding: 8px 16px; font: inherit; font-size: 12.5px; font-weight: 600; color: #6b7b72; cursor: pointer; }
+.visao button + button { border-left: 1px solid #e6e3db; }
+.visao button:focus-visible { outline: 2px solid #1a4d1e; outline-offset: -2px; }
+.visao .visaoOn { background: #fff; color: #1a4d1e; }
+
+/* Pendentes da SIIMP */
+.pendTopo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.pendTopo > div:first-child { display: flex; flex-direction: column; gap: 2px; }
+.pendAcao { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 420px; text-align: right; }
+.alertaCelula { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #b5651d; text-decoration: none; }
+a.alertaCelula:hover { text-decoration: underline; }
+.girando { animation: girar 1s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
+@media (max-width: 720px) { .pendAcao { align-items: flex-start; text-align: left; } }

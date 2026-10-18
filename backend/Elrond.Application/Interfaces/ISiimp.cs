@@ -12,7 +12,17 @@ public sealed record FaturaSiimpResumo(long Id, long Numero, int Situacao, decim
 
 public sealed record ParcelaSiimp(long Id, int Numero, decimal Valor, decimal Desconto, string Vencimento, int Situacao);
 
-public sealed record DocumentoSiimp(string Tipo, string Numero, string Serie, string Chave, decimal Total);
+/// <summary>Documento dentro da fatura. CteId/MinutaId: o id do documento na SIIMP (0 = não é desse tipo).</summary>
+public sealed record DocumentoSiimp(string Tipo, string Numero, string Serie, string Chave, decimal Total, long CteId = 0, long MinutaId = 0);
+
+/// <summary>
+/// CT-e ou minuta como vem na busca. Tipo "cte" | "minuta". Situacao é o código da SIIMP (CT-e: 4 cancelado,
+/// 6 inutilizado, 0 só cadastrado; minuta: 6 cancelada, 7 inutilizada). TomadorId = quem paga
+/// (customer no CT-e, requestor na minuta). NfseNumero: a NFS-e ligada à minuta.
+/// </summary>
+public sealed record DocumentoTransporteSiimp(
+    string Tipo, long Id, string Numero, string Serie, string Chave, int Situacao, string CriadoEm, string Emissao,
+    long EmitenteId, string EmitenteNome, long TomadorId, string TomadorNome, decimal Total, string Descricao, string NfseNumero);
 
 /// <summary>Fatura com o detalhe (pagador, parcelas, documentos e carteira).</summary>
 public sealed record FaturaSiimp(
@@ -37,4 +47,11 @@ public interface ISiimp
     Task<RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>> FaturasAsync(string emitidasDe, string emitidasAte, CancellationToken ct = default);
     Task<RespostaSiimp<FaturaSiimp>> FaturaAsync(long id, CancellationToken ct = default);
     Task<RespostaSiimp<PessoaSiimp>> PessoaAsync(long id, CancellationToken ct = default);
+    /// <summary>CT-es e minutas criados no período (yyyy-MM-dd), todas as páginas.</summary>
+    Task<RespostaSiimp<IReadOnlyList<DocumentoTransporteSiimp>>> DocumentosTransporteAsync(string criadosDe, string criadosAte, CancellationToken ct = default);
+    /// <summary>
+    /// Faturas que podem conter documentos criados a partir de <paramref name="desde"/>: as cadastradas (ainda
+    /// editáveis, de qualquer data) e as emitidas desde então. Todas as páginas, sem repetir.
+    /// </summary>
+    Task<RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>> FaturasParaConferirAsync(string desde, CancellationToken ct = default);
 }

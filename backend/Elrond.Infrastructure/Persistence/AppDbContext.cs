@@ -86,6 +86,33 @@ public class AppDbContext : DbContext
             e.OwnsOne(u => u.Banco, b => b.ToJson());
         });
 
+        modelBuilder.Entity<DocumentoFaturavel>(e =>
+        {
+            e.ToTable("documentos_faturaveis");
+            e.HasKey(d => d.Id);
+            e.Property(d => d.Id).HasMaxLength(40);
+            e.Property(d => d.Tipo).IsRequired().HasMaxLength(10);
+            e.Property(d => d.Situacao).IsRequired().HasMaxLength(20);
+            e.Property(d => d.Chave).HasMaxLength(44);
+            e.Property(d => d.Motivo).HasMaxLength(300);
+            e.Property(d => d.Descricao).HasMaxLength(400);
+            e.HasIndex(d => d.CriadoEm);
+            e.HasIndex(d => d.FaturaId);
+        });
+
+        modelBuilder.Entity<FaturaSiimpLida>(e =>
+        {
+            e.ToTable("faturas_siimp_lidas");
+            e.HasKey(f => f.Id);
+            e.Property(f => f.Documentos).HasColumnType("text[]");
+        });
+
+        modelBuilder.Entity<PessoaSiimpLida>(e =>
+        {
+            e.ToTable("pessoas_siimp_lidas");
+            e.HasKey(p => p.Id);
+        });
+
         modelBuilder.Entity<Apolice>(e =>
         {
             e.ToTable("apolices");

@@ -145,6 +145,7 @@ public static class DependencyInjection
         services.AddScoped<IContratoService, ContratoService>();
         services.AddScoped<TabelaIcmsService>();
         services.AddScoped<ExtratoBancoService>();
+        services.AddScoped<PendentesFaturamentoService>();
 
         // Validators (FluentValidation)
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

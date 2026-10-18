@@ -18,6 +18,8 @@ import type { SituacaoFatura } from '@/features/contratos/types'
 import { ConferenciaModal } from './ConferenciaModal'
 import { NovaCobrancaModal } from './NovaCobrancaModal'
 import { RegistroModal, type Registro } from './RegistroModal'
+import { PendentesSiimp } from './PendentesSiimp'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import s from './faturamento.module.css'
 
 const MESES = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
@@ -62,13 +64,18 @@ export function CentralFaturamentoPage() {
   const [registro, setRegistro] = useState<{ id: string; etapa: Registro } | null>(null)
   const [novaCobranca, setNovaCobranca] = useState(false)
   const contratoFiltro = params.get('contrato')
+  // Visão "Pendentes da SIIMP": CT-es e minutas sem fatura (piloto de convivência com a SIIMP).
+  const visaoSiimp = params.get('visao') === 'siimp'
+  const { data: todasEmpresas } = useEmpresasQuery()
   const { data, isLoading } = useFaturasDoMes(mes)
 
   const doMes = faturasCentrais(data?.contratos ?? [], data?.faturas ?? [], nomes)
   const conferindo = conferindoId ? doMes.find((f) => f.id === conferindoId) ?? null : null
   const registrando = registro ? doMes.find((f) => f.id === registro.id) : undefined
   const daEmpresa = doMes.filter((f) => empresa === 'todas' || f.empresaId === empresa)
-  const empresas = [...new Set(doMes.map((f) => f.empresaId))]
+  const empresas = visaoSiimp
+    ? (todasEmpresas ?? []).filter((e) => e.status === 'ativo').map((e) => e.id)
+    : [...new Set(doMes.map((f) => f.empresaId))]
   const q = semAcento(busca.trim())
   const linhas = daEmpresa
     .filter((f) => !contratoFiltro || f.contratoId === contratoFiltro)
@@ -220,6 +227,19 @@ export function CentralFaturamentoPage() {
         }
       />
 
+      <div className={s.visao} role="tablist" aria-label="O que ver">
+        <button type="button" role="tab" aria-selected={!visaoSiimp} className={!visaoSiimp ? s.visaoOn : ''} onClick={() => setParams({})}>
+          Faturas do mês
+        </button>
+        <button type="button" role="tab" aria-selected={visaoSiimp} className={visaoSiimp ? s.visaoOn : ''} onClick={() => setParams({ visao: 'siimp' })}>
+          Pendentes da SIIMP
+        </button>
+      </div>
+
+      {visaoSiimp ? (
+        <PendentesSiimp mes={mes} empresa={empresa} nomeEmpresa={nomes.empresa} />
+      ) : (
+      <>
       <div className={s.painel}>
         <div className={s.totais}>
           <div>
@@ -262,6 +282,8 @@ export function CentralFaturamentoPage() {
           <button type="button" className={ui.selBtn} onClick={() => void conferirEmLote(itens, limpar)}><ClipboardCheck size={14} /> Conferir</button>
         )}
       />
+      </>
+      )}
 
       <ConferenciaModal
         fatura={conferindo}
