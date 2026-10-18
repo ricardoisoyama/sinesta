@@ -13,8 +13,9 @@ public sealed record ResumoPendentesDto(int Lidos, int Pendentes, int FaturadosS
 /// Documentos pendentes de faturamento (piloto de convivência com a SIIMP): lê CT-es e minutas do
 /// período, descobre quais já estão numa fatura da SIIMP (só as faturas que podem contê-los, com cópia
 /// do que já foi lido) e liga cada documento à empresa (CNPJ do emitente) e ao cliente (CNPJ do tomador).
-/// SÓ LEITURA na SIIMP. Tomador que ainda não é cliente do ELROND é cadastrado sozinho com os dados
-/// da SIIMP (piloto: a integração com a SIIMP um dia sai, o cadastro fica).
+/// SÓ LEITURA na SIIMP. Tomador que ainda não é cliente do ELROND é cadastrado sozinho: razão social,
+/// fantasia e situação pela Receita (consulta pública de CNPJ); endereço e contato de cobrança pela SIIMP,
+/// que é o que a operação usa (piloto: a integração com a SIIMP um dia sai, o cadastro fica).
 /// </summary>
 public sealed class PendentesFaturamentoService(
     ISiimp siimp,
@@ -24,6 +25,7 @@ public sealed class PendentesFaturamentoService(
     ICrudRepository<Empresa> empresas,
     ICrudRepository<Cliente> clientes,
     IAuditoriaService auditoria,
+    IConsultaPublicaService receita,
     TimeProvider relogio)
 {
     /// <summary>Período máximo de uma consulta (dias): o piloto olha só o recente; o antigo fica com a SIIMP.</summary>
@@ -121,7 +123,9 @@ public sealed class PendentesFaturamentoService(
             progresso?.Invoke("Cadastrando os clientes novos", ++feitas, semCliente.Count);
             var p = await siimp.PessoaAsync(long.Parse(lida!.Id), ct);
             if (p.Dados is null) continue;
-            var c = ClienteDaSiimp(p.Dados, lida.Documento, relogio.GetLocalNow());
+            // Receita fora do ar ou CNPJ não achado: fica só com o que a SIIMP sabe.
+            var rf = lida.Documento.Length == 14 ? (await receita.CnpjAsync(lida.Documento, ct)).Dados : null;
+            var c = ClienteDaSiimp(p.Dados, lida.Documento, relogio.GetLocalNow(), rf);
             clientesNovos.Add(c);
             clientePorDoc[lida.Documento] = c.Id;
         }
@@ -172,29 +176,41 @@ public sealed class PendentesFaturamentoService(
         return Result.Success(resumo);
     }
 
-    /// <summary>Cliente novo com o que a SIIMP sabe dele (nome, documento, endereço, e-mail e telefone).</summary>
-    public static Cliente ClienteDaSiimp(PessoaSiimp p, string documento, DateTimeOffset agora)
+    /// <summary>
+    /// Cliente novo. Razão social, fantasia e inscrição de situação vêm da Receita (<paramref name="rf"/>);
+    /// endereço, e-mail e telefone vêm da SIIMP (o contato de cobrança) e, faltando, da Receita.
+    /// </summary>
+    public static Cliente ClienteDaSiimp(PessoaSiimp p, string documento, DateTimeOffset agora, CnpjConsultaDto? rf = null)
     {
         var juridica = documento.Length == 14;
-        var email = p.Email.Split(';', ',', ' ').Select(e => e.Trim()).FirstOrDefault(e => e.Contains('@') && e.Contains('.')) ?? string.Empty;
-        var contatos = email.Length > 0 || p.Telefone.Length > 0
-            ? new List<ContatoParceiro> { new() { Id = Guid.NewGuid().ToString(), Nome = "Financeiro", Email = email, Telefone = p.Telefone, RecebeFatura = email.Length > 0, RecebeBoleto = email.Length > 0, RecebeNotaFiscal = email.Length > 0 } }
+        static string Ou(string a, string? b) => a.Trim().Length > 0 ? a.Trim() : (b ?? string.Empty).Trim();
+        var email = Ou(p.Email, rf?.Email).Split(';', ',', ' ').Select(e => e.Trim()).FirstOrDefault(e => e.Contains('@') && e.Contains('.')) ?? string.Empty;
+        var telefone = Ou(p.Telefone, rf?.Telefone);
+        var siimpTemEndereco = p.Rua.Trim().Length > 0;
+        var cidadeSiimp = p.Cidade.Length > 0 ? (p.Uf.Length > 0 ? $"{p.Cidade} - {p.Uf.ToUpperInvariant()}" : p.Cidade) : string.Empty;
+        var situacao = rf is not null && !rf.Situacao.Equals("Ativa", StringComparison.OrdinalIgnoreCase) && rf.Situacao.Length > 0
+            ? $" ATENÇÃO: situação na Receita \"{rf.Situacao}\"." : string.Empty;
+        var contatos = email.Length > 0 || telefone.Length > 0
+            ? new List<ContatoParceiro> { new() { Id = Guid.NewGuid().ToString(), Nome = "Financeiro", Email = email, Telefone = telefone, RecebeFatura = email.Length > 0, RecebeBoleto = email.Length > 0, RecebeNotaFiscal = email.Length > 0 } }
             : new List<ContatoParceiro>();
         return new Cliente
         {
             Id = Guid.NewGuid().ToString(),
             Tipo = juridica ? "juridica" : "fisica",
-            Nome = p.Nome.Trim().Length > 0 ? p.Nome.Trim() : documento,
+            Nome = Ou(rf?.RazaoSocial ?? string.Empty, p.Nome) is { Length: > 0 } nome ? nome : documento,
+            NomeFantasia = rf?.NomeFantasia ?? string.Empty,
             CpfCnpj = juridica
                 ? $"{documento[..2]}.{documento[2..5]}.{documento[5..8]}/{documento[8..12]}-{documento[12..]}"
                 : $"{documento[..3]}.{documento[3..6]}.{documento[6..9]}-{documento[9..]}",
-            Cidade = p.Cidade.Length > 0 ? (p.Uf.Length > 0 ? $"{p.Cidade} - {p.Uf.ToUpperInvariant()}" : p.Cidade) : string.Empty,
-            Endereco = new Endereco { Cep = p.Cep, Logradouro = p.Rua, Numero = p.Numero, Complemento = p.Complemento, Bairro = p.Bairro },
+            Cidade = siimpTemEndereco || rf is null ? cidadeSiimp : Ou(rf.Cidade, cidadeSiimp),
+            Endereco = siimpTemEndereco || rf is null
+                ? new Endereco { Cep = p.Cep, Logradouro = p.Rua, Numero = p.Numero, Complemento = p.Complemento, Bairro = p.Bairro }
+                : new Endereco { Cep = rf.Cep, Logradouro = rf.Logradouro, Numero = rf.Numero, Complemento = rf.Complemento, Bairro = rf.Bairro },
             Contato = contatos.FirstOrDefault()?.Nome ?? string.Empty,
             Email = email,
-            Telefone = p.Telefone,
+            Telefone = telefone,
             Contatos = contatos,
-            Observacao = $"Cadastrado automaticamente com os dados da SIIMP em {agora:dd/MM/yyyy} (piloto de faturamento). Confira inscrição estadual e contatos.",
+            Observacao = $"Cadastrado automaticamente em {agora:dd/MM/yyyy} com os dados da SIIMP{(rf is null ? string.Empty : " e da Receita")} (piloto de faturamento). Confira inscrição estadual e contatos.{situacao}",
             Status = "ativo",
         };
     }

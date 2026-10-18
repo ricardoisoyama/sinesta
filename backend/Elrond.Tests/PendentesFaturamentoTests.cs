@@ -74,7 +74,7 @@ public class PendentesFaturamentoTests
         // Tomador sem cadastro no ELROND vira cliente com os dados da SIIMP (e não se repete).
         Assert.Equal((2, 0, 1), (r.Value!.Pendentes, r.Value.SemCliente, r.Value.ClientesCriados));
         var novo = clientes.Itens.Single(c => c.Id == d["minuta-2001"].ClienteId);
-        Assert.Equal(("Outro", "99.888.777/0001-66", "juridica"), (novo.Nome, novo.CpfCnpj, novo.Tipo));
+        Assert.Equal(("OUTRO COMERCIO LTDA", "Outro", "99.888.777/0001-66", "juridica"), (novo.Nome, novo.NomeFantasia, novo.CpfCnpj, novo.Tipo)); // razão social pela Receita
         Assert.Single(copias.Itens);
 
         // Segunda consulta: a fatura emitida já lida não é buscada de novo; o que o ELROND faturou não volta a pendente.
@@ -96,7 +96,21 @@ public class PendentesFaturamentoTests
         Assert.NotNull(svc.Validar("2026-10-31", "2026-10-01"));
         Assert.NotNull(svc.Validar("2026-01-01", "2026-12-31"));
         Assert.NotNull(new PendentesFaturamentoService(new SiimpFalsa { Configurado = false }, new MemRepo<DocumentoFaturavel>(), new MemRepo<FaturaSiimpLida>(),
-            new MemRepo<PessoaSiimpLida>(), new MemRepo<Empresa>(), new MemRepo<Cliente>(), new FakeAuditoria(), TimeProvider.System).Validar("2026-10-01", "2026-10-31"));
+            new MemRepo<PessoaSiimpLida>(), new MemRepo<Empresa>(), new MemRepo<Cliente>(), new FakeAuditoria(), new ReceitaFalsa(), TimeProvider.System).Validar("2026-10-01", "2026-10-31"));
+    }
+
+    [Fact]
+    public void Cliente_novo_junta_receita_e_siimp()
+    {
+        var siimp = new PessoaSiimp(1, "IFC", "02.544.042/0001-19", "fin@ifc.com.br; outro@ifc", "(11) 4000-0000", "", "", "", "", "", "", "");
+        var rf = new CnpjConsultaDto("02544042000119", "I.F.C. INDUSTRIA LTDA", "IFC", "Baixada", "", "", "", null, null, "", "13300000", "Rua A", "10", "", "Centro", "Itu - SP", "SP", "", "rf@ifc.com.br", "", "", "");
+        var c = PendentesFaturamentoService.ClienteDaSiimp(siimp, "02544042000119", DateTimeOffset.Now, rf);
+        Assert.Equal(("I.F.C. INDUSTRIA LTDA", "IFC"), (c.Nome, c.NomeFantasia));
+        Assert.Equal(("Itu - SP", "Rua A"), (c.Cidade, c.Endereco!.Logradouro)); // SIIMP sem endereço: vale o da Receita
+        Assert.Equal("fin@ifc.com.br", c.Email);                                    // contato de cobrança da SIIMP vence
+        Assert.Contains("Baixada", c.Observacao);
+        var sem = PendentesFaturamentoService.ClienteDaSiimp(siimp, "02544042000119", DateTimeOffset.Now);
+        Assert.Equal("IFC", sem.Nome); // Receita fora do ar: fica com a SIIMP
     }
 
     private static (PendentesFaturamentoService, MemRepo<DocumentoFaturavel>, MemRepo<FaturaSiimpLida>, MemRepo<Cliente>) Montar(SiimpFalsa siimp)
@@ -108,7 +122,7 @@ public class PendentesFaturamentoTests
         empresas.Itens.Add(new Empresa { Id = "filial", Nome = "Mirai - Filial 02", Cnpj = "63.736.778/0002-64" });
         var clientes = new MemRepo<Cliente>();
         clientes.Itens.Add(new Cliente { Id = "cli-ifc", Nome = "IFC", CpfCnpj = "11222333000181" });
-        return (new PendentesFaturamentoService(siimp, docs, copias, new MemRepo<PessoaSiimpLida>(), empresas, clientes, new FakeAuditoria(), TimeProvider.System), docs, copias, clientes);
+        return (new PendentesFaturamentoService(siimp, docs, copias, new MemRepo<PessoaSiimpLida>(), empresas, clientes, new FakeAuditoria(), new ReceitaFalsa(), TimeProvider.System), docs, copias, clientes);
     }
 
     private sealed class SiimpFalsa : ISiimp
@@ -134,6 +148,16 @@ public class PendentesFaturamentoTests
         }
         public Task<RespostaSiimp<PessoaSiimp>> PessoaAsync(long id, CancellationToken ct = default) =>
             Task.FromResult(Pessoas.TryGetValue(id, out var p) ? RespostaSiimp<PessoaSiimp>.Ok(p) : RespostaSiimp<PessoaSiimp>.Falha("não achou"));
+    }
+
+    private sealed class ReceitaFalsa : IConsultaPublicaService
+    {
+        public Task<ConsultaResposta<CnpjConsultaDto>> CnpjAsync(string cnpj, CancellationToken ct = default) =>
+            Task.FromResult(cnpj == "99888777000166"
+                ? ConsultaResposta<CnpjConsultaDto>.Ok(new CnpjConsultaDto(cnpj, "OUTRO COMERCIO LTDA", "Outro", "Ativa", "", "", "", null, null, "", "", "", "", "", "", "", "", "", "", "", "", ""))
+                : ConsultaResposta<CnpjConsultaDto>.Falha(404, "não achou"));
+        public Task<ConsultaResposta<CepConsultaDto>> CepAsync(string cep, CancellationToken ct = default) =>
+            Task.FromResult(ConsultaResposta<CepConsultaDto>.Falha(404, "não achou"));
     }
 
     private sealed class FakeAuditoria : IAuditoriaService
