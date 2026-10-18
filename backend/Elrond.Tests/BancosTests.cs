@@ -297,7 +297,7 @@ public class BancosTests
         var corpo = """
         {"ultimaPagina":true,"transacoes":[
           {"idTransacao":"abc-1","dataTransacao":"2026-10-18","tipoTransacao":"PIX","tipoOperacao":"C","valor":"2.50","titulo":"Pix recebido","descricao":"PIX RECEBIDO","detalhes":{"tipoDetalhe":"PIX","nomePagador":"Fulano de Tal","cpfCnpjPagador":"529.982.247-25"}},
-          {"idTransacao":"abc-2","dataTransacao":"2026-10-18","tipoTransacao":"TARIFA","tipoOperacao":"D","valor":"1.99","titulo":"Tarifa","descricao":"Tarifa boleto"},
+          {"idTransacao":"abc-2","dataTransacao":"2026-10-18","tipoTransacao":"TRANSFERENCIA","tipoOperacao":"D","valor":"1.99","titulo":"TED enviada","detalhes":{"tipoDetalhe":"TRANSFERENCIA","nomePagador":"Mirai","nomeRecebedor":"Fornecedor Y","cpfCnpjRecebedor":"33444555000166","descricaoTransferencia":"NF 123"}},
           {"dataInclusao":"2026-10-17 10:00:00","tipoOperacao":"C","valor":"100","titulo":"Boleto","detalhes":{"tipoDetalhe":"BOLETO_COBRANCA","nome":"Cliente X","cpfCnpj":"11222333000181","seuNumero":"000123"}}
         ]}
         """;
@@ -307,6 +307,9 @@ public class BancosTests
         Assert.Equal(("abc-1", "2026-10-18", 2.50m), (t[0].Id, t[0].Data, t[0].Valor));
         Assert.Contains("Fulano de Tal", t[0].Descricao); // o nome ajuda a sugestão de par
         Assert.Equal(-1.99m, t[1].Valor);                // débito negativo
+        Assert.Contains("Fornecedor Y", t[1].Descricao);    // no débito, quem recebeu (não a própria empresa)
+        Assert.DoesNotContain("Mirai", t[1].Descricao);
+        Assert.Contains("NF 123", t[1].Descricao);
         Assert.Equal("2026-10-17", t[2].Data);
         Assert.StartsWith("inter-", t[2].Id);              // sem idTransacao: id estável pelos dados
         Assert.Equal(t[2].Id, InterExtrato.Pagina(corpo).Transacoes[2].Id);

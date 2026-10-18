@@ -64,10 +64,11 @@ public sealed class InterExtrato(InterConexao conexao, ILogger<InterExtrato> log
     private static TransacaoExtrato Transacao(InterTransacao t)
     {
         var valor = decimal.TryParse(t.Valor, NumberStyles.Number, CultureInfo.InvariantCulture, out var v) ? Math.Abs(v) : 0m;
-        if (string.Equals(t.TipoOperacao, "D", StringComparison.OrdinalIgnoreCase)) valor = -valor;
+        var debito = string.Equals(t.TipoOperacao, "D", StringComparison.OrdinalIgnoreCase);
+        if (debito) valor = -valor;
         var data = (t.DataTransacao ?? t.DataInclusao ?? string.Empty) is { Length: >= 10 } d ? d[..10] : string.Empty;
-        var detalhes = Detalhes(t.Detalhes);
-        var partes = new[] { t.Titulo, t.Descricao, detalhes.Nome, detalhes.Documento, detalhes.SeuNumero is { Length: > 0 } sn ? $"seu nº {sn}" : null }
+        var detalhes = Detalhes(t.Detalhes, debito);
+        var partes = new[] { t.Titulo, t.Descricao, detalhes.Nome, detalhes.Documento, detalhes.Mensagem, detalhes.SeuNumero is { Length: > 0 } sn ? $"seu nº {sn}" : null }
             .Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => x!.Trim()).Distinct();
         var descricao = string.Join(" · ", partes);
         if (descricao.Length > 400) descricao = descricao[..400];
@@ -76,13 +77,20 @@ public sealed class InterExtrato(InterConexao conexao, ILogger<InterExtrato> log
         return new TransacaoExtrato(id, data, valor, descricao);
     }
 
-    /// <summary>Nome, documento e seu número de quem pagou/recebeu, seja qual for o tipo de detalhe.</summary>
-    private static (string? Nome, string? Documento, string? SeuNumero) Detalhes(JsonElement? detalhes)
+    /// <summary>
+    /// A outra ponta da transação, seja Pix, transferência, boleto ou pagamento: no crédito, quem pagou;
+    /// no débito, quem recebeu. Mais a mensagem do Pix/TED (costuma trazer o nº da fatura) e o seu número.
+    /// </summary>
+    private static (string? Nome, string? Documento, string? Mensagem, string? SeuNumero) Detalhes(JsonElement? detalhes, bool debito)
     {
-        if (detalhes is not { ValueKind: JsonValueKind.Object } d) return (null, null, null);
+        if (detalhes is not { ValueKind: JsonValueKind.Object } d) return (null, null, null, null);
         string? Ler(params string[] nomes) =>
             nomes.Select(n => d.TryGetProperty(n, out var p) && p.ValueKind == JsonValueKind.String ? p.GetString() : null).FirstOrDefault(s => !string.IsNullOrWhiteSpace(s));
-        return (Ler("nomePagador", "nome", "nomeRecebedor", "nomeEmpresa"), Ler("cpfCnpjPagador", "cpfCnpj", "cpfCnpjRecebedor"), Ler("seuNumero"));
+        var nome = debito
+            ? Ler("nomeEmpresaRecebedor", "nomeRecebedor", "nomeDestinatario", "empresaEmissora", "nome")
+            : Ler("nomeEmpresaPagador", "nomePagador", "nomeOrigem", "nome");
+        var documento = debito ? Ler("cpfCnpjRecebedor", "cpfCnpj") : Ler("cpfCnpjPagador", "cpfCnpj");
+        return (nome, documento, Ler("descricaoPix", "descricaoTransferencia"), Ler("seuNumero"));
     }
 }
 

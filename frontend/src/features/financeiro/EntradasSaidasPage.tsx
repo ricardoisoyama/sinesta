@@ -6,6 +6,8 @@ import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useAuth } from '@/features/auth/auth-context'
 import { useUsuarios } from '@/features/usuarios/store'
 import { listRegrasAprovacao } from '@/features/cadastros/api'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
+import { empresaPadrao } from '@/features/unidades/types'
 import { AprovacaoModal } from './AprovacaoModal'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
@@ -40,7 +42,15 @@ const dataBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—
  * (em aberto, atrasado, liquidado), baixa individual ou em lote e lançamento parcelado.
  */
 export function EntradasSaidasPage() {
-  const { carteiras, movimentos, adicionar, atualizar, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
+  const { carteiras, movimentos: todosMovimentos, adicionar, atualizar, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
+  // Empresa: cada CNPJ tem os seus lançamentos. Abre na empresa padrão; "Todas" consolida o grupo.
+  const { data: empresasData } = useEmpresasQuery()
+  const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
+  const [empresaEscolhida, setEmpresaEscolhida] = useState<string | null>(null)
+  const empresaId = empresaEscolhida ?? (empresas.length > 1 ? (empresaPadrao(empresas)?.id ?? '') : '')
+  const empresaDe = (m: Movimento) => m.empresaId || carteiras.find((c) => c.id === m.carteiraId)?.empresaId || ''
+  const nomeEmpresa = (id: string) => empresas.find((e) => e.id === id)?.nome ?? '—'
+  const movimentos = empresaId ? todosMovimentos.filter((m) => empresaDe(m) === empresaId) : todosMovimentos
   const { user } = useAuth()
   const { usuarios } = useUsuarios()
   const meuId = usuarios.find((u) => u.email === user?.email)?.id ?? ''
@@ -187,6 +197,10 @@ export function EntradasSaidasPage() {
       ),
     },
     { header: 'Carteira', largura: LARGURA.media, valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
+    // Com "Todas as empresas", cada linha diz de qual CNPJ é.
+    ...(!empresaId && empresas.length > 1
+      ? [{ header: 'Empresa', largura: LARGURA.media, valor: (m: Movimento) => nomeEmpresa(empresaDe(m)), cell: (m: Movimento) => <span className={ui.cellMut}>{nomeEmpresa(empresaDe(m))}</span> }]
+      : []),
     { header: 'Forma', largura: LARGURA.curta, valor: (m) => m.formaPagamento, cell: (m) => <span className={ui.cellMut}>{m.formaPagamento || '—'}</span> },
     {
       header: 'Ações',
@@ -242,6 +256,14 @@ export function EntradasSaidasPage() {
         subtitle="O que há para receber e pagar, com baixa individual ou em lote. A situação é calculada pelo vencimento."
         action={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {empresas.length > 1 && (
+              <select className={s.empresaSel} value={empresaId} onChange={(e) => setEmpresaEscolhida(e.target.value)} aria-label="Empresa">
+                <option value="">Todas as empresas</option>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
+              </select>
+            )}
             <Hint text={'Todo lançamento nasce pendente de aprovação e só pode ser baixado depois de aprovado. Quem aprova e em que faixa de valor fica em Parametrizações › Aprovadores e Regras (tipo "Lançamentos financeiros").'} />
             <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => { setEditando(null); setFormOpen(true) }}>
               <Plus /> Novo lançamento
