@@ -61,7 +61,7 @@ public class PendentesFaturamentoTests
                 [700] = new(700, "MIRAI MATRIZ", "63.736.778/0001-83", "", "", "", "", "", "", "", "", ""),
             },
         };
-        var (svc, docs, copias) = Montar(siimp);
+        var (svc, docs, copias, clientes) = Montar(siimp);
 
         var r = await svc.ConsultarAsync("2026-10-01", "2026-10-31", Eu);
         Assert.True(r.IsSuccess, r.Error);
@@ -70,8 +70,11 @@ public class PendentesFaturamentoTests
         Assert.Equal(("filial", "cli-ifc"), (d["cte-1001"].EmpresaId, d["cte-1001"].ClienteId)); // emitente pela chave; tomador pelo CNPJ
         Assert.Equal((DocumentoFaturavel.FaturadoSiimp, "61"), (d["cte-1002"].Situacao, d["cte-1002"].FaturaSiimp));
         Assert.Equal(DocumentoFaturavel.Cancelado, d["cte-1003"].Situacao);
-        Assert.Equal(("matriz", ""), (d["minuta-2001"].EmpresaId, d["minuta-2001"].ClienteId)); // minuta: emitente pelo cadastro; cliente não cadastrado
-        Assert.Equal((2, 1), (r.Value!.Pendentes, r.Value.SemCliente));
+        Assert.Equal("matriz", d["minuta-2001"].EmpresaId); // minuta: emitente pelo cadastro de pessoas
+        // Tomador sem cadastro no ELROND vira cliente com os dados da SIIMP (e não se repete).
+        Assert.Equal((2, 0, 1), (r.Value!.Pendentes, r.Value.SemCliente, r.Value.ClientesCriados));
+        var novo = clientes.Itens.Single(c => c.Id == d["minuta-2001"].ClienteId);
+        Assert.Equal(("Outro", "99.888.777/0001-66", "juridica"), (novo.Nome, novo.CpfCnpj, novo.Tipo));
         Assert.Single(copias.Itens);
 
         // Segunda consulta: a fatura emitida já lida não é buscada de novo; o que o ELROND faturou não volta a pendente.
@@ -82,12 +85,13 @@ public class PendentesFaturamentoTests
         await svc.ConsultarAsync("2026-10-01", "2026-10-31", Eu);
         Assert.Equal(0, siimp.DetalhesLidos);
         Assert.Equal(DocumentoFaturavel.FaturadoElrond, docs.Itens.Single(x => x.Id == "cte-1001").Situacao);
+        Assert.Equal(2, clientes.Itens.Count); // nenhum cliente repetido na segunda consulta
     }
 
     [Fact]
     public void Periodo_e_conferido_antes_de_consultar()
     {
-        var (svc, _, _) = Montar(new SiimpFalsa());
+        var (svc, _, _, _) = Montar(new SiimpFalsa());
         Assert.Null(svc.Validar("2026-10-01", "2026-10-31"));
         Assert.NotNull(svc.Validar("2026-10-31", "2026-10-01"));
         Assert.NotNull(svc.Validar("2026-01-01", "2026-12-31"));
@@ -95,7 +99,7 @@ public class PendentesFaturamentoTests
             new MemRepo<PessoaSiimpLida>(), new MemRepo<Empresa>(), new MemRepo<Cliente>(), new FakeAuditoria(), TimeProvider.System).Validar("2026-10-01", "2026-10-31"));
     }
 
-    private static (PendentesFaturamentoService, MemRepo<DocumentoFaturavel>, MemRepo<FaturaSiimpLida>) Montar(SiimpFalsa siimp)
+    private static (PendentesFaturamentoService, MemRepo<DocumentoFaturavel>, MemRepo<FaturaSiimpLida>, MemRepo<Cliente>) Montar(SiimpFalsa siimp)
     {
         var docs = new MemRepo<DocumentoFaturavel>();
         var copias = new MemRepo<FaturaSiimpLida>();
@@ -104,7 +108,7 @@ public class PendentesFaturamentoTests
         empresas.Itens.Add(new Empresa { Id = "filial", Nome = "Mirai - Filial 02", Cnpj = "63.736.778/0002-64" });
         var clientes = new MemRepo<Cliente>();
         clientes.Itens.Add(new Cliente { Id = "cli-ifc", Nome = "IFC", CpfCnpj = "11222333000181" });
-        return (new PendentesFaturamentoService(siimp, docs, copias, new MemRepo<PessoaSiimpLida>(), empresas, clientes, new FakeAuditoria(), TimeProvider.System), docs, copias);
+        return (new PendentesFaturamentoService(siimp, docs, copias, new MemRepo<PessoaSiimpLida>(), empresas, clientes, new FakeAuditoria(), TimeProvider.System), docs, copias, clientes);
     }
 
     private sealed class SiimpFalsa : ISiimp

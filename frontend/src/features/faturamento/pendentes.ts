@@ -39,6 +39,8 @@ export interface ResumoPendentes {
   semEmpresa: number
   semCliente: number
   faturasLidas: number
+  /** Tomadores cadastrados como cliente com os dados da SIIMP nesta consulta. */
+  clientesCriados: number
 }
 
 export interface SituacaoConsulta {

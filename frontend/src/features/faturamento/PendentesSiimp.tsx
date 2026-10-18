@@ -15,7 +15,7 @@ import { consultarSiimp, ROTULO_PENDENTE, usePendentes, useSituacaoConsulta, typ
 import s from './faturamento.module.css'
 
 interface Props {
-  /** Mês da Central (yyyy-MM): o período da consulta. */
+  /** Mês da Central (yyyy-MM): o período padrão da consulta. */
   mes: string
   /** Empresa escolhida na Central ("todas" = todas). */
   empresa: string
@@ -34,6 +34,9 @@ const ultimoDia = (mes: string) => {
   const [a, m] = mes.split('-').map(Number)
   return `${mes}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`
 }
+/** O piloto olha só o recente: no máximo 31 dias por consulta (o antigo fica com a SIIMP). */
+const MAX_DIAS = 31
+const dias = (de: string, ate: string) => Math.round((Date.parse(ate) - Date.parse(de)) / 86_400_000) + 1
 const horaBR = (iso: string) => (iso ? new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '')
 
 /**
@@ -43,8 +46,9 @@ const horaBR = (iso: string) => (iso ? new Date(iso).toLocaleString('pt-BR', { d
  */
 export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
   const qc = useQueryClient()
-  const de = `${mes}-01`
-  const ate = ultimoDia(mes)
+  const [periodo, setPeriodo] = useState({ de: `${mes}-01`, ate: ultimoDia(mes) })
+  const { de, ate } = periodo
+  const periodoErro = !de || !ate ? 'Informe o período.' : ate < de ? 'O fim vem antes do início.' : dias(de, ate) > MAX_DIAS ? `No máximo ${MAX_DIAS} dias por consulta.` : ''
   const { data, isLoading } = usePendentes(de, ate)
   const { data: consulta } = useSituacaoConsulta()
   const [filtro, setFiltro] = useState<Filtro>('pendente')
@@ -61,6 +65,7 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
   const ultima = consulta && !consulta.rodando && consulta.terminadaEm && consulta.de === de ? consulta : null
 
   const consultar = async () => {
+    if (periodoErro) return
     try {
       await consultarSiimp(de, ate)
       await qc.invalidateQueries({ queryKey: ['faturamento-pendente', 'situacao'] })
@@ -73,7 +78,7 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
     {
       header: 'Documento',
       fixa: true,
-      largura: LARGURA.media,
+      largura: LARGURA.longa,
       valor: (d) => `${d.tipo} ${d.numero}`,
       cell: (d) => (
         <div className={ui.rowName}>
@@ -110,8 +115,8 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
           {d.clienteId ? (
             <div className={ui.cellMut}>{formatCpfCnpj(d.tomadorDocumento)}</div>
           ) : (
-            <Link className={s.alertaCelula} to={`/cadastros/clientes?novo=${encodeURIComponent(d.tomadorNome)}`} title="Cadastre o cliente com este CNPJ para faturar">
-              <UserPlus size={13} /> {d.tomadorDocumento ? `${formatCpfCnpj(d.tomadorDocumento)} não cadastrado` : 'não cadastrado'}
+            <Link className={s.alertaCelula} to={`/cadastros/clientes?novo=${encodeURIComponent(d.tomadorNome)}`} title="A SIIMP não devolveu o CNPJ deste tomador: cadastre o cliente para faturar">
+              <UserPlus size={13} /> {d.tomadorDocumento ? `${formatCpfCnpj(d.tomadorDocumento)} não cadastrado no ELROND` : 'não cadastrado no ELROND'}
             </Link>
           )}
         </div>
@@ -137,30 +142,47 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
       <div className={s.painel}>
         <div className={s.pendTopo}>
           <div>
-            <span className={s.totRotulo}>A faturar · criados em {dataBR(de)} a {dataBR(ate)}</span>
-            <span className={s.totValor}>{formatBRL(aFaturar.reduce((a, d) => a + d.valor, 0))}</span>
+            <span className={s.totRotulo}>Fretes sem fatura · criados de {dataBR(de)} a {dataBR(ate)}</span>
             <span className={s.totSub}>
               {aFaturar.length} documento(s) sem fatura · {conta('faturado-siimp').length} já na SIIMP · {conta('faturado-elrond').length} no ELROND
               {conta('incompleto').length > 0 && ` · ${conta('incompleto').length} incompleto(s)`}
             </span>
           </div>
           <div className={s.pendAcao}>
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={consultar} disabled={rodando}>
+            <div className={s.topoAcoes}>
+              <label className={s.periodo}>
+                De
+                <input type="date" value={de} onChange={(e) => setPeriodo({ de: e.target.value, ate })} disabled={rodando} />
+              </label>
+              <label className={s.periodo}>
+                Até
+                <input type="date" value={ate} min={de} onChange={(e) => setPeriodo({ de, ate: e.target.value })} disabled={rodando} />
+              </label>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={consultar} disabled={rodando || !!periodoErro} title={periodoErro || 'Lê na SIIMP os CT-es e as minutas do período'}>
               {rodando ? <Loader2 className={s.girando} /> : <CloudDownload />} {rodando ? 'Consultando...' : 'Consultar SIIMP'}
             </button>
-            <span className={ui.cellMut}>
-              {rodando
+            </div>
+            <span className={periodoErro ? s.alertaCelula : ui.cellMut}>
+              {periodoErro
+                ? periodoErro
+                : rodando
                 ? `${consulta?.etapa}${consulta && consulta.total > 0 ? ` (${consulta.feito} de ${consulta.total})` : ''} · a SIIMP aceita 60 consultas por minuto`
                 : consulta?.erro
                   ? `Última consulta falhou: ${consulta.erro}`
                   : ultima
-                    ? `Consultado em ${horaBR(ultima.terminadaEm)} por ${ultima.por}`
+                    ? `Consultado em ${horaBR(ultima.terminadaEm)} por ${ultima.por}${ultima.resumo?.clientesCriados ? ` · ${ultima.resumo.clientesCriados} cliente(s) cadastrado(s) com os dados da SIIMP` : ''}`
                     : (data ?? []).length === 0
                       ? 'Ainda não consultado neste mês.'
                       : `Lido da SIIMP em ${horaBR((data ?? [])[0]?.lidoEm ?? '')}`}
             </span>
           </div>
         </div>
+        {rodando && (
+          <div className={`${s.progresso} ${consulta && consulta.total > 0 ? '' : s.progressoIndef}`} role="progressbar" aria-label={consulta?.etapa}
+            aria-valuenow={consulta && consulta.total > 0 ? Math.round((consulta.feito / consulta.total) * 100) : undefined}>
+            <i style={{ width: `${consulta && consulta.total > 0 ? (consulta.feito / consulta.total) * 100 : 35}%` }} />
+          </div>
+        )}
       </div>
 
       <CrudList
@@ -173,7 +195,7 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
         getKey={(d) => d.id}
         rotulo={['documento', 'documentos']}
         pageSize={15}
-        empty={isLoading ? 'Carregando...' : (data ?? []).length === 0 ? 'Clique em "Consultar SIIMP" para trazer os CT-es e as minutas do mês.' : 'Nenhum documento neste filtro.'}
+        empty={isLoading ? 'Carregando...' : (data ?? []).length === 0 ? 'Clique em "Consultar SIIMP" para trazer os CT-es e as minutas do período.' : 'Nenhum documento neste filtro.'}
         filters={
           <select className={ui.filterSelect} value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Situação">
             <option value="pendente">A faturar ({aFaturar.length})</option>

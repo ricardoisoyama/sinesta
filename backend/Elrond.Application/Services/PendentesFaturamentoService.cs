@@ -7,13 +7,14 @@ using Elrond.Domain.Regras;
 namespace Elrond.Application.Services;
 
 /// <summary>Resultado de uma consulta à SIIMP.</summary>
-public sealed record ResumoPendentesDto(int Lidos, int Pendentes, int FaturadosSiimp, int FaturadosElrond, int Incompletos, int Cancelados, int SemEmpresa, int SemCliente, int FaturasLidas);
+public sealed record ResumoPendentesDto(int Lidos, int Pendentes, int FaturadosSiimp, int FaturadosElrond, int Incompletos, int Cancelados, int SemEmpresa, int SemCliente, int FaturasLidas, int ClientesCriados = 0);
 
 /// <summary>
 /// Documentos pendentes de faturamento (piloto de convivência com a SIIMP): lê CT-es e minutas do
 /// período, descobre quais já estão numa fatura da SIIMP (só as faturas que podem contê-los, com cópia
 /// do que já foi lido) e liga cada documento à empresa (CNPJ do emitente) e ao cliente (CNPJ do tomador).
-/// SÓ LEITURA na SIIMP.
+/// SÓ LEITURA na SIIMP. Tomador que ainda não é cliente do ELROND é cadastrado sozinho com os dados
+/// da SIIMP (piloto: a integração com a SIIMP um dia sai, o cadastro fica).
 /// </summary>
 public sealed class PendentesFaturamentoService(
     ISiimp siimp,
@@ -25,8 +26,8 @@ public sealed class PendentesFaturamentoService(
     IAuditoriaService auditoria,
     TimeProvider relogio)
 {
-    /// <summary>Período máximo de uma consulta (dias).</summary>
-    public const int MaxDias = 93;
+    /// <summary>Período máximo de uma consulta (dias): o piloto olha só o recente; o antigo fica com a SIIMP.</summary>
+    public const int MaxDias = 31;
 
     public async Task<List<DocumentoFaturavel>> ListarAsync(string de, string ate) =>
         (await documentos.ListarAsync(d => string.Compare(d.CriadoEm, de) >= 0 && string.Compare(d.CriadoEm, ate) <= 0))
@@ -107,6 +108,30 @@ public sealed class PendentesFaturamentoService(
         var clientePorDoc = (await clientes.GetAllAsync()).Where(c => c.CpfCnpj.Length > 0)
             .GroupBy(c => FaturamentoPendente.Digitos(c.CpfCnpj)).ToDictionary(g => g.Key, g => g.OrderBy(c => c.Status == "ativo" ? 0 : 1).First().Id);
 
+        // ── Tomador que ainda não é cliente: cadastra com os dados da SIIMP ──
+        var semCliente = lidos.Dados
+            .Where(l => !FaturamentoPendente.Cancelado(l.Tipo, l.Situacao) && l.TomadorId > 0)
+            .Select(l => pessoas.GetValueOrDefault(l.TomadorId.ToString()))
+            .Where(p => p is not null && p.Documento.Length is 11 or 14 && !clientePorDoc.ContainsKey(p.Documento))
+            .DistinctBy(p => p!.Documento).ToList();
+        var clientesNovos = new List<Cliente>();
+        feitas = 0;
+        foreach (var lida in semCliente)
+        {
+            progresso?.Invoke("Cadastrando os clientes novos", ++feitas, semCliente.Count);
+            var p = await siimp.PessoaAsync(long.Parse(lida!.Id), ct);
+            if (p.Dados is null) continue;
+            var c = ClienteDaSiimp(p.Dados, lida.Documento, relogio.GetLocalNow());
+            clientesNovos.Add(c);
+            clientePorDoc[lida.Documento] = c.Id;
+        }
+        if (clientesNovos.Count > 0)
+        {
+            await clientes.SalvarLoteAsync(clientesNovos, Array.Empty<Cliente>());
+            foreach (var c in clientesNovos)
+                await auditoria.RegistrarAsync("criar", "Cliente", c.Id, $"Cliente \"{c.Nome}\" ({c.CpfCnpj}) cadastrado automaticamente com os dados da SIIMP");
+        }
+
         // ── Grava a situação de cada documento ──
         progresso?.Invoke("Gravando", 0, 0);
         var existentes = (await documentos.ListarAsync(d => string.Compare(d.CriadoEm, de) >= 0 && string.Compare(d.CriadoEm, ate) <= 0)).ToDictionary(d => d.Id);
@@ -141,9 +166,36 @@ public sealed class PendentesFaturamentoService(
         int Conta(string s) => todos.Count(x => x.Situacao == s);
         var resumo = new ResumoPendentesDto(todos.Count, Conta(DocumentoFaturavel.Pendente), Conta(DocumentoFaturavel.FaturadoSiimp), Conta(DocumentoFaturavel.FaturadoElrond),
             Conta(DocumentoFaturavel.Incompleto), Conta(DocumentoFaturavel.Cancelado), todos.Count(x => x.EmpresaId.Length == 0), todos.Count(x => x.Situacao == DocumentoFaturavel.Pendente && x.ClienteId.Length == 0),
-            novasCopias.Count + copiasAlteradas.Count);
+            novasCopias.Count + copiasAlteradas.Count, clientesNovos.Count);
         await auditoria.RegistrarAsync("consultar", "DocumentoFaturavel", $"{de}..{ate}",
             $"{quem.Nome} consultou a SIIMP ({de} a {ate}): {resumo.Lidos} documento(s), {resumo.Pendentes} pendente(s) de faturamento");
         return Result.Success(resumo);
+    }
+
+    /// <summary>Cliente novo com o que a SIIMP sabe dele (nome, documento, endereço, e-mail e telefone).</summary>
+    public static Cliente ClienteDaSiimp(PessoaSiimp p, string documento, DateTimeOffset agora)
+    {
+        var juridica = documento.Length == 14;
+        var email = p.Email.Split(';', ',', ' ').Select(e => e.Trim()).FirstOrDefault(e => e.Contains('@') && e.Contains('.')) ?? string.Empty;
+        var contatos = email.Length > 0 || p.Telefone.Length > 0
+            ? new List<ContatoParceiro> { new() { Id = Guid.NewGuid().ToString(), Nome = "Financeiro", Email = email, Telefone = p.Telefone, RecebeFatura = email.Length > 0, RecebeBoleto = email.Length > 0, RecebeNotaFiscal = email.Length > 0 } }
+            : new List<ContatoParceiro>();
+        return new Cliente
+        {
+            Id = Guid.NewGuid().ToString(),
+            Tipo = juridica ? "juridica" : "fisica",
+            Nome = p.Nome.Trim().Length > 0 ? p.Nome.Trim() : documento,
+            CpfCnpj = juridica
+                ? $"{documento[..2]}.{documento[2..5]}.{documento[5..8]}/{documento[8..12]}-{documento[12..]}"
+                : $"{documento[..3]}.{documento[3..6]}.{documento[6..9]}-{documento[9..]}",
+            Cidade = p.Cidade.Length > 0 ? (p.Uf.Length > 0 ? $"{p.Cidade} - {p.Uf.ToUpperInvariant()}" : p.Cidade) : string.Empty,
+            Endereco = new Endereco { Cep = p.Cep, Logradouro = p.Rua, Numero = p.Numero, Complemento = p.Complemento, Bairro = p.Bairro },
+            Contato = contatos.FirstOrDefault()?.Nome ?? string.Empty,
+            Email = email,
+            Telefone = p.Telefone,
+            Contatos = contatos,
+            Observacao = $"Cadastrado automaticamente com os dados da SIIMP em {agora:dd/MM/yyyy} (piloto de faturamento). Confira inscrição estadual e contatos.",
+            Status = "ativo",
+        };
     }
 }

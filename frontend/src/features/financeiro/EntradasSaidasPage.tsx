@@ -25,12 +25,13 @@ import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento
 import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento
-type Janela = 'vencidos' | 'mes' | '30dias' | 'tudo'
+type Janela = 'vencidos' | 'mes' | '30dias' | 'periodo' | 'tudo'
 type FiltroAprov = 'todas' | 'pendente' | 'minha' | 'aprovado' | 'reprovado'
 const JANELAS: { valor: Janela; label: string }[] = [
   { valor: 'vencidos', label: 'Vencidos' },
   { valor: 'mes', label: 'Este mês' },
   { valor: '30dias', label: 'Próximos 30 dias' },
+  { valor: 'periodo', label: 'Período...' },
   { valor: 'tudo', label: 'Tudo' },
 ]
 const ICONE_STATUS: Record<StatusMovimento, typeof Clock> = { aberto: Clock, atrasado: AlertTriangle, liquidado: CheckCircle2, cancelado: Ban }
@@ -78,6 +79,8 @@ export function EntradasSaidasPage() {
   const [aba, setAba] = useState<Aba>('todos')
   const [janela, setJanela] = useState<Janela>('mes')
   const [mostrarLiquidados, setMostrarLiquidados] = useState(false)
+  // Período livre (vencimento de/até): começa no mês corrente.
+  const [periodo, setPeriodo] = useState(() => ({ de: primeiroDiaDoMes(hojeISO()), ate: ultimoDiaDoMes(hojeISO()) }))
   const [busca, setBusca] = useState('')
   const [editando, setEditando] = useState<Movimento | null>(null)
   const [formOpen, setFormOpen] = useState(false)
@@ -103,6 +106,7 @@ export function EntradasSaidasPage() {
         if (janela === 'vencidos') return st === 'atrasado'
         if (janela === 'mes') return m.vencimento >= ini && m.vencimento <= fim
         if (janela === '30dias') return m.vencimento >= hoje && m.vencimento <= lim30
+        if (janela === 'periodo') return (!periodo.de || m.vencimento >= periodo.de) && (!periodo.ate || m.vencimento <= periodo.ate)
         return true
       })
       .filter((m) => filtroAprov === 'todas' || (filtroAprov === 'minha' ? aguardandoMim(m) : (m.aprovacao ?? 'pendente') === filtroAprov))
@@ -301,11 +305,18 @@ export function EntradasSaidasPage() {
                 Vencidos
               </button>
             </div>
-            <select className={ui.filterSelect} value={janela} onChange={(e) => setJanela(e.target.value as Janela)}>
+            <select className={ui.filterSelect} value={janela} onChange={(e) => setJanela(e.target.value as Janela)} aria-label="Período (vencimento)">
               {JANELAS.map((j) => (
                 <option key={j.valor} value={j.valor}>{j.label}</option>
               ))}
             </select>
+            {janela === 'periodo' && (
+              <span className={s.periodo}>
+                <input type="date" value={periodo.de} max={periodo.ate || undefined} onChange={(e) => setPeriodo({ ...periodo, de: e.target.value })} aria-label="Vencimento de" />
+                a
+                <input type="date" value={periodo.ate} min={periodo.de || undefined} onChange={(e) => setPeriodo({ ...periodo, ate: e.target.value })} aria-label="Vencimento até" />
+              </span>
+            )}
             <label className={`${ui.chip} ${mostrarLiquidados ? ui.chipOn : ''}`} title="Liquidados e cancelados ficam escondidos por padrão">
               <input type="checkbox" className={ui.chipCheck} checked={mostrarLiquidados} onChange={(e) => setMostrarLiquidados(e.target.checked)} />
               <CheckCircle2 /> Mostrar liquidados

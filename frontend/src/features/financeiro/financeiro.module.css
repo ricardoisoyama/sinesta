@@ -135,3 +135,7 @@
   text-decoration: underline;
   font: inherit;
 }
+
+/* Período livre (de/até) nos filtros */
+.periodo { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7b72; }
+.periodo input { font: inherit; font-size: 13px; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 6px 9px; }

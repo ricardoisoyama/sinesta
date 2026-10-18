@@ -35,11 +35,6 @@ const SITUACAO: Record<LinhaConciliada['situacao'], { label: string; cls: string
 const formaDoMemo = (memo: string) => (/PIX/i.test(memo) ? 'Pix' : /BOLETO/i.test(memo) ? 'Boleto' : /TED|DOC/i.test(memo) ? 'Transferência' : '')
 const plural = (n: number, um: string, varios: string) => (n === 1 ? um : varios)
 const hoje = () => new Date().toLocaleDateString('sv-SE')
-const diasAtras = (n: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - n)
-  return d.toLocaleDateString('sv-SE')
-}
 
 /**
  * Conciliação bancária num grid só: cada linha do extrato mostra o par que o sistema achou
@@ -70,10 +65,12 @@ export function ConciliacaoPage() {
   // Conta ligada a uma integração com extrato: o extrato vem pela API ("Buscar do banco"); o OFX fica de reserva.
   const { data: contasComExtrato } = useQuery({ queryKey: ['financeiro', 'contas-com-extrato'], queryFn: listContasComExtrato })
   const contaBanco = (contasComExtrato ?? []).find((c) => c.carteiraId === carteiraId)
-  const [periodo, setPeriodo] = useState<{ de: string; ate: string } | null>(null)
   const regras: RegraConciliacao[] = (regrasApi ?? []).filter((r) => (r.status ?? 'ativo') === 'ativo')
 
-  const gravadas = linhasApi ?? []
+  // Período da tela: começa no mês corrente; filtra as linhas e é o período do "Buscar do banco".
+  const [periodo, setPeriodo] = useState(() => ({ de: `${hoje().slice(0, 7)}-01`, ate: hoje() }))
+  const { de, ate } = periodo
+  const gravadas = (linhasApi ?? []).filter((l) => (!de || l.data >= de) && (!ate || l.data <= ate))
   const fitidDe = new Map(gravadas.map((l) => [l.id, l.fitid]))
   const linhas: LinhaExtrato[] = gravadas.map((l) => ({ id: l.id, data: l.data, valor: l.valor, memo: l.memo, tipo: l.valor >= 0 ? 'credito' : 'debito' }))
   const vinculos: Record<string, string> = Object.fromEntries(gravadas.filter((l) => l.situacao === 'conciliado' && l.movimentoId).map((l) => [l.id, l.movimentoId]))
@@ -89,9 +86,6 @@ export function ConciliacaoPage() {
     return true
   })
   const datas = linhas.map((l) => l.data).sort()
-  // Período padrão da busca: desde o último dia já trazido (ou 30 dias) até hoje.
-  const de = periodo?.de ?? (datas.length ? datas[datas.length - 1] : diasAtras(30))
-  const ate = periodo?.ate ?? hoje()
 
   /** Executa no servidor, recarrega e mostra o motivo quando ele recusa. */
   const exec = async (acao: () => Promise<unknown>): Promise<boolean> => {
@@ -198,16 +192,16 @@ export function ConciliacaoPage() {
                 ))}
               </select>
             </label>
+            <label className={s.carteiraSel}>
+              De
+              <input type="date" className={s.data} value={de} max={ate || undefined} onChange={(e) => setPeriodo({ de: e.target.value, ate })} />
+            </label>
+            <label className={s.carteiraSel}>
+              Até
+              <input type="date" className={s.data} value={ate} min={de || undefined} onChange={(e) => setPeriodo({ de, ate: e.target.value })} />
+            </label>
             {contaBanco && (
               <>
-                <label className={s.carteiraSel}>
-                  De
-                  <input type="date" className={s.data} value={de} max={ate} onChange={(e) => setPeriodo({ de: e.target.value, ate })} />
-                </label>
-                <label className={s.carteiraSel}>
-                  Até
-                  <input type="date" className={s.data} value={ate} min={de} max={hoje()} onChange={(e) => setPeriodo({ de, ate: e.target.value })} />
-                </label>
                 <button
                   type="button"
                   className={`${ui.btn} ${ui.btnPrimary}`}
@@ -249,7 +243,7 @@ export function ConciliacaoPage() {
       ) : linhas.length === 0 ? (
         <div className={`${ui.card} ${s.vazio}`}>
           <FileUp size={28} />
-          <b>{isLoading ? 'Carregando o extrato...' : `Nenhum extrato importado em ${carteira?.nome ?? 'esta carteira'}`}</b>
+          <b>{isLoading ? 'Carregando o extrato...' : (linhasApi ?? []).length > 0 ? `Nenhuma linha do extrato entre ${dataBR(de)} e ${dataBR(ate)}` : `Nenhum extrato importado em ${carteira?.nome ?? 'esta carteira'}`}</b>
           <span>
             {contaBanco
               ? `Clique em "Buscar do banco" para trazer o extrato pela API do ${contaBanco.banco}, ou importe o .ofx. Buscar ou reimportar não duplica linhas.`

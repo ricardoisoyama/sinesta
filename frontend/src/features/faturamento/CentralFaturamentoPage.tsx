@@ -19,6 +19,7 @@ import { ConferenciaModal } from './ConferenciaModal'
 import { NovaCobrancaModal } from './NovaCobrancaModal'
 import { RegistroModal, type Registro } from './RegistroModal'
 import { PendentesSiimp } from './PendentesSiimp'
+import { usePendentes } from './pendentes'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import s from './faturamento.module.css'
 
@@ -33,6 +34,13 @@ const nomeMes = (comp: string) => {
   return `${m[0].toUpperCase()}${m.slice(1)} de ${comp.slice(0, 4)}`
 }
 const ATENCAO: SituacaoFatura[] = ['atrasada', 'devolvida']
+/** Grupos dos cards: o que ainda vai ser faturado e o que já foi (NF/boleto emitidos). */
+const A_FATURAR: SituacaoFatura[] = ['prevista', 'a-conferir', 'conferida']
+const FATURADO: SituacaoFatura[] = ['nf-emitida', 'boleto-emitido']
+const ultimoDiaDoMes = (comp: string) => {
+  const [a, m] = comp.split('-').map(Number)
+  return `${comp}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`
+}
 
 /** O passo seguinte da fatura (o botão de "avançar" da linha). Devolvida volta pela pasta do contrato. */
 const proximoPasso = (f: FaturaCentral): Registro | 'conferir' | null =>
@@ -43,7 +51,8 @@ const proximoPasso = (f: FaturaCentral): Registro | 'conferir' | null =>
 const ROTULO_PASSO: Record<Registro, string> = { nf: 'Registrar a NF', boleto: 'Registrar o boleto', recebimento: 'Registrar o recebimento' }
 const ICONE_PASSO: Record<Registro, typeof Landmark> = { nf: FileCheck2, boleto: Landmark, recebimento: HandCoins }
 
-type FiltroEtapa = SituacaoFatura | 'todas' | 'atencao'
+type FiltroEtapa = SituacaoFatura | 'todas' | 'atencao' | 'a-faturar' | 'faturado'
+const GRUPO: Partial<Record<FiltroEtapa, SituacaoFatura[]>> = { atencao: ATENCAO, 'a-faturar': A_FATURAR, faturado: FATURADO }
 
 /**
  * Central de Faturamento: o que precisa ser faturado no mês, de todos os contratos e spots. O
@@ -64,22 +73,22 @@ export function CentralFaturamentoPage() {
   const [registro, setRegistro] = useState<{ id: string; etapa: Registro } | null>(null)
   const [novaCobranca, setNovaCobranca] = useState(false)
   const contratoFiltro = params.get('contrato')
-  // Visão "Pendentes da SIIMP": CT-es e minutas sem fatura (piloto de convivência com a SIIMP).
+  // Visão "Fretes sem fatura": CT-es e minutas da SIIMP ainda sem fatura (piloto de convivência com a SIIMP).
   const visaoSiimp = params.get('visao') === 'siimp'
   const { data: todasEmpresas } = useEmpresasQuery()
+  const { data: fretes } = usePendentes(`${mes}-01`, ultimoDiaDoMes(mes))
   const { data, isLoading } = useFaturasDoMes(mes)
 
   const doMes = faturasCentrais(data?.contratos ?? [], data?.faturas ?? [], nomes)
   const conferindo = conferindoId ? doMes.find((f) => f.id === conferindoId) ?? null : null
   const registrando = registro ? doMes.find((f) => f.id === registro.id) : undefined
   const daEmpresa = doMes.filter((f) => empresa === 'todas' || f.empresaId === empresa)
-  const empresas = visaoSiimp
-    ? (todasEmpresas ?? []).filter((e) => e.status === 'ativo').map((e) => e.id)
-    : [...new Set(doMes.map((f) => f.empresaId))]
+  // Todas as empresas ativas (não só as que já têm fatura no mês: no começo do piloto não há nenhuma).
+  const empresas = [...new Set([...(todasEmpresas ?? []).filter((e) => e.status === 'ativo').map((e) => e.id), ...doMes.map((f) => f.empresaId)])]
   const q = semAcento(busca.trim())
   const linhas = daEmpresa
     .filter((f) => !contratoFiltro || f.contratoId === contratoFiltro)
-    .filter((f) => etapa === 'todas' || (etapa === 'atencao' ? ATENCAO.includes(f.situacao) : f.situacao === etapa))
+    .filter((f) => etapa === 'todas' || (GRUPO[etapa] ? GRUPO[etapa]!.includes(f.situacao) : f.situacao === etapa))
     .filter((f) => !q || semAcento(`${f.numero} ${f.clienteNome} ${f.descricao} ${f.nf} ${f.boleto}`).includes(q))
     .sort((a, b) => Number(!ATENCAO.includes(a.situacao)) - Number(!ATENCAO.includes(b.situacao)) || ETAPAS_FATURA.indexOf(a.situacao) - ETAPAS_FATURA.indexOf(b.situacao) || a.vencimento.localeCompare(b.vencimento))
 
@@ -202,6 +211,20 @@ export function CentralFaturamentoPage() {
     )
   }
 
+  const fretesSemFatura = (fretes ?? []).filter((d) => d.situacao === 'pendente' && (empresa === 'todas' || d.empresaId === empresa))
+  /** Card do topo: número, valor e, ao clicar, a visão/filtro correspondente. */
+  const card = (rotulo: string, n: number, total: number, sub: string, ativo: boolean, onClick: () => void, tom = '') => (
+    <button type="button" className={`${s.card} ${tom} ${ativo ? s.cardOn : ''}`} onClick={onClick} aria-pressed={ativo}>
+      <span className={s.cardRotulo}>{rotulo}</span>
+      <span className={s.cardValor}>{formatBRL(total)}</span>
+      <span className={s.cardSub}>{n} · {sub}</span>
+    </button>
+  )
+  const verFaturas = (e: FiltroEtapa) => {
+    if (visaoSiimp) setParams({})
+    setEtapa(etapa === e && !visaoSiimp ? 'todas' : e)
+  }
+
   const totalMes = daEmpresa.reduce((a, f) => a + f.total, 0)
   const recebido = contagem(['recebida']).total
 
@@ -227,17 +250,16 @@ export function CentralFaturamentoPage() {
         }
       />
 
-      <div className={s.visao} role="tablist" aria-label="O que ver">
-        <button type="button" role="tab" aria-selected={!visaoSiimp} className={!visaoSiimp ? s.visaoOn : ''} onClick={() => setParams({})}>
-          Faturas do mês
-        </button>
-        <button type="button" role="tab" aria-selected={visaoSiimp} className={visaoSiimp ? s.visaoOn : ''} onClick={() => setParams({ visao: 'siimp' })}>
-          Pendentes da SIIMP
-        </button>
+      <div className={s.cards}>
+        {card('Fretes sem fatura', fretesSemFatura.length, fretesSemFatura.reduce((a, d) => a + d.valor, 0), 'CT-es e minutas da SIIMP', visaoSiimp, () => setParams({ visao: 'siimp' }), s.cardFretes)}
+        {card('A faturar', contagem(A_FATURAR).n, contagem(A_FATURAR).total, 'previstas e em conferência', !visaoSiimp && etapa === 'a-faturar', () => verFaturas('a-faturar'))}
+        {card('Faturado', contagem(FATURADO).n, contagem(FATURADO).total, 'NF e boleto emitidos', !visaoSiimp && etapa === 'faturado', () => verFaturas('faturado'))}
+        {card('Recebido', contagem(['recebida']).n, contagem(['recebida']).total, 'pago pelo cliente', !visaoSiimp && etapa === 'recebida', () => verFaturas('recebida'), s.cardOk)}
+        {card('Em atraso', atencao.n, atencao.total, 'vencidas ou devolvidas', !visaoSiimp && etapa === 'atencao', () => verFaturas('atencao'), atencao.n > 0 ? s.cardAlerta : '')}
       </div>
 
       {visaoSiimp ? (
-        <PendentesSiimp mes={mes} empresa={empresa} nomeEmpresa={nomes.empresa} />
+        <PendentesSiimp key={mes} mes={mes} empresa={empresa} nomeEmpresa={nomes.empresa} />
       ) : (
       <>
       <div className={s.painel}>
@@ -277,7 +299,7 @@ export function CentralFaturamentoPage() {
         rotulo={['fatura', 'faturas']}
         pageSize={12}
         onRowClick={(f) => setConferindoId(f.id)}
-        empty={isLoading ? 'Carregando...' : etapa === 'todas' ? 'Nenhuma fatura neste mês. Elas nascem dos contratos (a partir do mês em que cada um começa a faturar pelo ELROND).' : `Nenhuma fatura em "${etapa === 'atencao' ? 'atenção' : ROTULO_SITUACAO_FATURA[etapa]}".`}
+        empty={isLoading ? 'Carregando...' : etapa === 'todas' ? 'Nenhuma fatura neste mês. Elas nascem dos contratos (a partir do mês em que cada um começa a faturar pelo ELROND).' : `Nenhuma fatura em "${etapa === 'atencao' ? 'em atraso' : etapa === 'a-faturar' ? 'a faturar' : etapa === 'faturado' ? 'faturado' : ROTULO_SITUACAO_FATURA[etapa]}".`}
         acoesLote={({ itens, limpar }) => (
           <button type="button" className={ui.selBtn} onClick={() => void conferirEmLote(itens, limpar)}><ClipboardCheck size={14} /> Conferir</button>
         )}

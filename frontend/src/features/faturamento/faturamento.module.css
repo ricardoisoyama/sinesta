@@ -104,14 +104,29 @@
 .campoModal input:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.15); }
 .checklist .checkFalta { color: #b5651d; }
 
-/* Faturas do mês × Pendentes da SIIMP */
-.visao { display: inline-flex; border: 1px solid #e6e3db; border-radius: 10px; overflow: hidden; background: #f6f5f1; margin-bottom: 12px; }
-.visao button { border: 0; background: transparent; padding: 8px 16px; font: inherit; font-size: 12.5px; font-weight: 600; color: #6b7b72; cursor: pointer; }
-.visao button + button { border-left: 1px solid #e6e3db; }
-.visao button:focus-visible { outline: 2px solid #1a4d1e; outline-offset: -2px; }
-.visao .visaoOn { background: #fff; color: #1a4d1e; }
+/* Cards do topo: resumo do mês e atalho para cada visão */
+.cards { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.card { display: flex; flex-direction: column; gap: 2px; text-align: left; background: #fff; border: 1px solid #e6e3db; border-radius: 12px; padding: 12px 14px; font: inherit; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+.card:hover { border-color: #d0ccc1; }
+.card:focus-visible { outline: 2px solid #1a4d1e; outline-offset: 2px; }
+.cardOn { border-color: #1a4d1e; box-shadow: 0 0 0 2px rgba(26, 77, 30, 0.12); }
+.cardRotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; }
+.cardValor { font-size: 19px; font-weight: 700; color: #143d18; font-variant-numeric: tabular-nums; }
+.cardSub { font-size: 12px; color: #6b7b72; }
+.cardFretes .cardRotulo { color: #e8702f; }
+.cardOk .cardValor { color: #2e7d44; }
+.cardAlerta .cardRotulo, .cardAlerta .cardValor { color: #b5651d; }
+@media (max-width: 1100px) { .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Pendentes da SIIMP */
+/* Fretes sem fatura (SIIMP) */
+.periodo { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #6b7b72; }
+.periodo input { font: inherit; font-size: 13px; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 7px 10px; }
+.progresso { height: 6px; border-radius: 99px; background: #eef1ec; overflow: hidden; margin-top: 12px; }
+.progresso i { display: block; height: 100%; background: #e8702f; border-radius: 99px; transition: width 0.4s; }
+.progressoIndef i { width: 35% !important; animation: indef 1.2s ease-in-out infinite; }
+@keyframes indef { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@media (prefers-reduced-motion: reduce) { .progressoIndef i { animation: none; width: 100% !important; opacity: 0.5; } }
 .pendTopo { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
 .pendTopo > div:first-child { display: flex; flex-direction: column; gap: 2px; }
 .pendAcao { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 420px; text-align: right; }
