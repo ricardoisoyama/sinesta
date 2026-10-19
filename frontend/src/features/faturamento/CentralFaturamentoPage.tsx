@@ -245,7 +245,7 @@ export function CentralFaturamentoPage() {
               <option value="todas">Todas as empresas</option>
               {empresas.map((id) => <option key={id} value={id}>{nomes.empresa(id)}</option>)}
             </select>
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setNovaCobranca(true)}><FilePlus2 /> Novo spot ou cobrança</button>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setNovaCobranca(true)}><FilePlus2 /> Nova cobrança avulsa</button>
           </div>
         }
       />
