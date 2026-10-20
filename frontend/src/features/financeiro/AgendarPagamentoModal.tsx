@@ -100,9 +100,16 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
               </li>
             )
           })}
-          <li className={s.pagNota}>
-            Pix aguardando aprovação: aprove no app do banco. Quando o banco efetivar, o ELROND dá a baixa no lançamento e manda o e-mail ao favorecido sozinho.
-          </li>
+          {/* A nota segue o que o banco respondeu: só fala em aprovar no app quando há Pix esperando aprovação. */}
+          {resultados.some((r) => r.pagamento?.situacao === 'aguardando-aprovacao') ? (
+            <li className={s.pagNota}>
+              Pix aguardando aprovação: aprove no app do banco. Quando o banco efetivar, o ELROND dá a baixa no lançamento e manda o e-mail ao favorecido sozinho.
+            </li>
+          ) : resultados.some((r) => r.ok) ? (
+            <li className={s.pagNota}>
+              Quando o banco efetivar (costuma levar segundos), o ELROND dá a baixa no lançamento e manda o e-mail ao favorecido sozinho.
+            </li>
+          ) : null}
         </ul>
       ) : (
         <>
