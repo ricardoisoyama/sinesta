@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, ShieldCheck, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
@@ -45,7 +45,7 @@ const dataBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—
  * (em aberto, atrasado, liquidado), baixa individual ou em lote e lançamento parcelado.
  */
 export function EntradasSaidasPage() {
-  const { carteiras, movimentos: todosMovimentos, adicionar, atualizar, transferir, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
+  const { carteiras, movimentos: todosMovimentos, adicionar, atualizar, transferir, liquidar, estornar, cancelar, aprovar, reprovar, recarregar } = useFinanceiro()
   // Empresa: cada CNPJ tem os seus lançamentos. Abre na empresa padrão; "Todas" consolida o grupo.
   const { data: empresasData } = useEmpresasQuery()
   const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
@@ -63,6 +63,11 @@ export function EntradasSaidasPage() {
   // Piloto de pagamentos pelo banco: só a equipe ELROND (permissão administrativa).
   const podePagarBanco = !!user?.permissoes?.includes('/financeiro/pagamento-banco')
   const { data: pagamentosData, refetch: recarregarPagamentos } = usePagamentos(podePagarBanco)
+  // Pix que o banco efetivou baixa o lançamento no servidor: relê a lista para a situação acompanhar.
+  const pagoSemBaixa = (pagamentosData ?? []).some((p) => p.situacao === 'pago' && todosMovimentos.some((m) => m.id === p.movimentoId && !m.pagoEm))
+  useEffect(() => {
+    if (pagoSemBaixa) void recarregar()
+  }, [pagoSemBaixa]) // eslint-disable-line react-hooks/exhaustive-deps
   // O último envio ao banco deste lançamento (mostra a situação; recusado/cancelado deixa mandar de novo).
   const pagamentoDe = (m: Movimento): PagamentoBancario | undefined =>
     (pagamentosData ?? []).filter((p) => p.movimentoId === m.id).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0]
@@ -335,6 +340,7 @@ export function EntradasSaidasPage() {
         getKey={(m) => m.id}
         rotulo={['lançamento', 'lançamentos']}
         pageSize={12}
+        onAtualizar={() => Promise.all([recarregar(), podePagarBanco ? recarregarPagamentos() : null])}
         // Clicar na linha abre o lançamento (com os documentos anexados).
         onRowClick={(m) => {
           if (m.cancelado) return

@@ -59,7 +59,7 @@ export const ROTULO_PAGAMENTO: Record<SituacaoPagamento, string> = {
   'aguardando-aprovacao': 'Pix aguardando aprovação no app',
   agendado: 'Pix agendado no banco',
   processando: 'Pix em processamento',
-  pago: 'Pago pelo banco',
+  pago: 'Pix pago pelo ELROND',
   recusado: 'Recusado pelo banco',
   cancelado: 'Cancelado no banco',
   falha: 'Falhou no banco',

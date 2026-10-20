@@ -288,3 +288,5 @@
   accent-color: #1a4d1e;
   flex: none;
 }
+.girando { animation: giraCampo 0.9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .girando { animation-duration: 2.4s; } }

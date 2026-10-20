@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Search, ChevronLeft, ChevronRight, Filter, Columns3, EyeOff, Download, Ban, CheckCircle2, X } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Filter, Columns3, EyeOff, Download, Ban, CheckCircle2, RefreshCw, X } from 'lucide-react'
 import ui from './ui.module.css'
 import { DataTable, type Column } from './DataTable'
 import { colunaId, filtrarPorColunas, gravarOcultas, LARGURA, lerOcultas, listaTemStatus, semInativos } from './grid'
@@ -90,6 +90,8 @@ interface CrudListProps<T> {
    * com o que está na lista.
    */
   resumo?: (visiveis: T[]) => ReactNode
+  /** Botão "Atualizar" ao lado do Exportar: relê os dados do servidor. */
+  onAtualizar?: () => Promise<unknown>
 }
 
 /**
@@ -113,7 +115,9 @@ export function CrudList<T>({
   onStatusLote,
   acoesLote,
   resumo,
+  onAtualizar,
 }: CrudListProps<T>) {
+  const [atualizando, setAtualizando] = useState(false)
   const [page, setPage] = useState(1)
   const [mostrarFiltros, setMostrarFiltros] = useState(false)
   const [filtros, setFiltros] = useState<Record<string, string>>({})
@@ -371,6 +375,24 @@ export function CrudList<T>({
           <button type="button" className={ui.chip} onClick={() => exportar(lista)} title="Exportar a lista filtrada para planilha (.xlsx)" disabled={count === 0}>
             <Download /> Exportar
           </button>
+          {onAtualizar && (
+            <button
+              type="button"
+              className={ui.chip}
+              disabled={atualizando}
+              title="Buscar de novo os dados do servidor"
+              onClick={async () => {
+                setAtualizando(true)
+                try {
+                  await onAtualizar()
+                } finally {
+                  setAtualizando(false)
+                }
+              }}
+            >
+              <RefreshCw className={atualizando ? ui.girando : undefined} /> {atualizando ? 'Atualizando...' : 'Atualizar'}
+            </button>
+          )}
 
           <div style={{ flex: 1 }} />
           <span className={ui.count}>
