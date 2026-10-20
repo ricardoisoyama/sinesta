@@ -14,4 +14,6 @@
 .envios li > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .envios b { font-size: 12.5px; color: #143d18; word-break: break-word; }
 .envios span { font-size: 11.5px; color: #6b7b72; word-break: break-word; }
+/* A etiqueta da situação (filha direta da linha) não encolhe nem quebra: "falhou" inteiro. */
+.envios li > span { flex-shrink: 0; white-space: nowrap; word-break: normal; }
 @media (max-width: 960px) { .grade { grid-template-columns: 1fr; } }
