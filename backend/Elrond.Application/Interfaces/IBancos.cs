@@ -81,6 +81,50 @@ public interface IExtratoBancario
     Task<ExtratoBanco> LerAsync(CredencialBanco credencial, string de, string ate, CancellationToken ct = default);
 }
 
+// ── Pagamentos (pagar pelo banco) ──────────────────────────────────────────────────────────
+
+/// <summary>Pix a pagar. Id = nosso id do pagamento, usado como chave de idempotência (o banco não paga duas vezes).</summary>
+public sealed record PedidoPix(string Id, decimal Valor, string Data, string Descricao, string Chave);
+
+public enum DesfechoPagamento
+{
+    /// <summary>Efetivado na hora.</summary>
+    Processado,
+    /// <summary>Aguardando alguém aprovar no app/internet banking.</summary>
+    AguardandoAprovacao,
+    /// <summary>Agendado para a data pedida.</summary>
+    Agendado,
+    /// <summary>Recusado (dado inválido, sem permissão). Nada foi pago.</summary>
+    Recusado,
+    /// <summary>Não dá para saber se chegou: confere (ou reenvia com a mesma chave de idempotência).</summary>
+    Incerto,
+}
+
+public sealed record EnvioPagamento(DesfechoPagamento Desfecho, string IdBanco, string Mensagem);
+
+/// <summary>Situação do pagamento no banco, traduzida para as nossas (PagamentoBancario.*).</summary>
+public sealed record SituacaoPagamento(string Situacao, string SituacaoBanco, string EndToEnd, string PagoEm, string Mensagem);
+
+public sealed record ConsultaPagamento(SituacaoPagamento? Situacao, bool NaoExiste, string Falha)
+{
+    public static ConsultaPagamento Encontrado(SituacaoPagamento s) => new(s, false, string.Empty);
+    public static ConsultaPagamento Inexistente() => new(null, true, string.Empty);
+    public static ConsultaPagamento Falhou(string motivo) => new(null, false, motivo);
+}
+
+/// <summary>O que o banco mandou no aviso de um pagamento (o ELROND confere no banco antes de dar baixa).</summary>
+public sealed record AvisoPagamento(string IdBanco, string Situacao, string DataHora);
+
+/// <summary>Capacidade de pagamento: Pix (enviar, consultar) e o aviso de quando ele é efetivado.</summary>
+public interface IPagamentoBancario
+{
+    Task<EnvioPagamento> PagarPixAsync(CredencialBanco credencial, PedidoPix pedido, CancellationToken ct = default);
+    Task<ConsultaPagamento> ConsultarPixAsync(CredencialBanco credencial, string idBanco, CancellationToken ct = default);
+    /// <summary>Cadastra no banco o endereço que ele chama quando um pagamento muda de situação. Null = ok.</summary>
+    Task<string?> RegistrarAvisoAsync(CredencialBanco credencial, string url, CancellationToken ct = default);
+    IReadOnlyList<AvisoPagamento> LerAviso(string corpo);
+}
+
 /// <summary>O que o banco mandou no aviso de uma cobrança (o ELROND confere no banco antes de dar baixa).</summary>
 public sealed record AvisoCobranca(string IdBanco, string SeuNumero, string Situacao, string DataHora);
 
@@ -94,6 +138,7 @@ public interface IBancoModulo
     IReadOnlyList<string> Recursos { get; }
     ICobrancaBancaria? Cobranca { get; }
     IExtratoBancario? Extrato { get; }
+    IPagamentoBancario? Pagamento { get; }
     /// <summary>Confere certificado e credenciais com uma chamada de leitura. Null = ok; senão, o motivo.</summary>
     Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default);
     /// <summary>Lê o corpo do aviso (webhook) no formato deste banco. Corpo estranho = lista vazia.</summary>

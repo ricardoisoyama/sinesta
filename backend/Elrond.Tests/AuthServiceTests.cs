@@ -13,6 +13,7 @@ public class AuthServiceTests
         private readonly User? _user;
         public FakeRepo(User? user) => _user = user;
         public Task<User?> FindByEmailAsync(string email) => Task.FromResult(_user);
+        public Task<User?> FindByIdAsync(Guid id) => Task.FromResult(_user);
     }
 
     private sealed class FakeToken : ITokenService

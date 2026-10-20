@@ -332,6 +332,44 @@ public class BancosTests
         Assert.Contains("Pagador Teste", lido.Descricao);
     }
 
+    // ── pagamentos (Pix) ──
+
+    [Theory]
+    [InlineData("PAGO", PagamentoBancario.Pago)]
+    [InlineData("AGUARDANDO_APROVACAO", PagamentoBancario.AguardandoAprovacao)]
+    [InlineData("AGENDADO", PagamentoBancario.Agendado)]
+    [InlineData("APROVADO", PagamentoBancario.Processando)]
+    [InlineData("DEBITADO", PagamentoBancario.Processando)]
+    [InlineData("REPROVADO", PagamentoBancario.Recusado)]
+    [InlineData("CANCELADO_SEM_SALDO", PagamentoBancario.Cancelado)]
+    [InlineData("FALHA", PagamentoBancario.Falha)]
+    public void Status_do_pix_vira_o_nosso(string inter, string nossa) => Assert.Equal(nossa, InterPagamento.Nossa(inter));
+
+    [Fact]
+    public void Consulta_e_aviso_do_pix_sao_lidos()
+    {
+        var s = InterPagamento.Situacao("""{"transacaoPix":{"status":"PAGO","endToEnd":"E0041","dataHoraMovimento":"2026-10-20T15:04:00","valor":4000},"historico":[]}""");
+        Assert.Equal((PagamentoBancario.Pago, "E0041", "2026-10-20T15:04:00"), (s.Situacao, s.EndToEnd, s.PagoEm));
+        var avisos = InterPagamento.Aviso("""[{"codigoSolicitacao":"c42f","status":"PROCESSADO","dataHoraMovimento":"2026-10-20T15:04:00"},{"status":"x"}]""");
+        Assert.Equal(("c42f", "PROCESSADO"), (avisos.Single().IdBanco, avisos.Single().Situacao));
+        Assert.Single(InterPagamento.Aviso("""{"codigoSolicitacao":"um-so","status":"PAGO"}"""));
+        Assert.Empty(InterPagamento.Aviso("lixo"));
+    }
+
+    [Fact]
+    public async Task Simulador_de_pix_espera_aprovacao_e_e_idempotente()
+    {
+        var pag = new SimuladorPagamento();
+        var c = new CredencialBanco("i", "sandbox", "", "", Array.Empty<byte>(), Array.Empty<byte>(), "");
+        var pedido = new PedidoPix(Guid.NewGuid().ToString(), 4000m, "2026-10-20", "Lanç. 12 · reembolso", "52998224725");
+        var e1 = await pag.PagarPixAsync(c, pedido);
+        Assert.Equal(DesfechoPagamento.AguardandoAprovacao, e1.Desfecho);
+        Assert.Equal(e1.IdBanco, (await pag.PagarPixAsync(c, pedido)).IdBanco); // reenviar o mesmo pedido não cria outro Pix
+        Assert.Equal(PagamentoBancario.AguardandoAprovacao, (await pag.ConsultarPixAsync(c, e1.IdBanco)).Situacao!.Situacao);
+        pag.LerAviso($$"""[{"codigoSolicitacao":"{{e1.IdBanco}}","status":"PROCESSADO"}]""");
+        Assert.Equal(PagamentoBancario.Pago, (await pag.ConsultarPixAsync(c, e1.IdBanco)).Situacao!.Situacao);
+    }
+
     // ── tradução do Inter ──
 
     [Theory]
@@ -391,7 +429,7 @@ public class BancosTests
     private static SimuladorModulo NovoSimulador()
     {
         var c = new SimuladorCobranca();
-        return new SimuladorModulo(c, new SimuladorExtrato(c));
+        return new SimuladorModulo(c, new SimuladorExtrato(c), new SimuladorPagamento());
     }
 
     private sealed class MemRepo<T> : ICrudRepository<T> where T : class, IEntity

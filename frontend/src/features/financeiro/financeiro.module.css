@@ -139,3 +139,20 @@
 /* Período livre (de/até) nos filtros */
 .periodo { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7b72; }
 .periodo input { font: inherit; font-size: 13px; color: #143d18; background: #fff; border: 1px solid #e6e3db; border-radius: 9px; padding: 6px 9px; }
+
+/* Pagamentos pelo banco (piloto) */
+.pagTag { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; font-weight: 600; color: #b5651d; }
+.pagTagOk { color: #2e7d44; }
+.pagTagErro { color: #a33a2a; }
+.pagTopo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+.pagTopo .periodo { font-weight: 600; color: #3d4b43; }
+.pagChave { width: 100%; min-width: 220px; height: 34px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; }
+.pagProblema { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #b5651d; margin-top: 2px; }
+.pagLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.pagLista li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; }
+.pagLista li > div { display: flex; flex-direction: column; gap: 2px; }
+.pagLista b { font-size: 13px; }
+.pagLista span { font-size: 12px; }
+.pagOk { background: #e8f5ec; color: #2e7d44; }
+.pagErro { background: #fdecea; color: #a33a2a; }
+.pagNota { font-size: 12px; color: #6b7b72; background: #f6f5f1; }

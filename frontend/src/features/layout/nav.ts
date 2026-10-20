@@ -25,6 +25,7 @@ import {
   Tags,
   ShieldCheck,
   ShieldPlus,
+  Mail,
   Percent,
   History,
   ArrowLeftRight,
@@ -142,6 +143,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Auditoria', path: '/cadastros/auditoria', icon: History },
       // Só o perfil Suporte (a equipe ELROND): bancos das empresas.
       { label: 'Integrações Bancárias', path: '/administrativo/integracoes', icon: Plug },
+      // Só o perfil Suporte: servidor de e-mail do ambiente.
+      { label: 'Integração SMTP', path: '/administrativo/smtp', icon: Mail },
     ],
   },
 ]

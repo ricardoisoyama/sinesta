@@ -89,6 +89,10 @@ public static class Funcionalidades
         "/administrativo/integracoes",
         // Página provisória de testes de boleto (/boleto).
         "/financeiro/boleto-teste",
+        // Servidor de e-mail do ambiente (Administrativo › Integração SMTP).
+        "/administrativo/smtp",
+        // Piloto: mandar pagamentos (Pix) ao banco pelas Entradas e Saídas.
+        "/financeiro/pagamento-banco",
     };
 
     /// <summary>O que pode ficar gravado no cadastro (as administrativas não se gravam: vêm do perfil).</summary>

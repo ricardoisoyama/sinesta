@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using Elrond.API.Security;
 using Elrond.Application.Interfaces;
 using Elrond.Application.Services;
 using Elrond.Domain.Entities;
@@ -69,6 +70,51 @@ public class AvisosBancoController(ICobrancaService cobrancas) : ControllerBase
         var corpo = await leitor.ReadToEndAsync(ct);
         var r = await cobrancas.ReceberAvisoAsync(token, corpo, ct);
         return r.IsSuccess ? Ok() : NotFound();
+    }
+}
+
+/// <summary>Aviso do banco sobre pagamentos (pix-pagamento do Inter). Anônimo como o de cobrança; o token identifica a integração.</summary>
+[ApiController]
+[AllowAnonymous]
+[Route("api/bancos/aviso-pagamento")]
+public class AvisosPagamentoController(PagamentoService pagamentos) : ControllerBase
+{
+    [HttpPost("{token}")]
+    public async Task<IActionResult> Receber(string token, CancellationToken ct)
+    {
+        using var leitor = new StreamReader(Request.Body);
+        var corpo = await leitor.ReadToEndAsync(ct);
+        var r = await pagamentos.ReceberAvisoAsync(token, corpo, ct);
+        return r.IsSuccess ? Ok() : NotFound();
+    }
+}
+
+/// <summary>
+/// Piloto de pagamentos pelo banco (Entradas e Saídas › Agendar pagamento): só a equipe ELROND
+/// (permissão administrativa), só lançamento a pagar aprovado. Pix pela integração da empresa.
+/// </summary>
+[ApiController]
+[Route("api/pagamentos")]
+[Authorize(Policy = "func:/financeiro/pagamento-banco")]
+public class PagamentosController(PagamentoService pagamentos, UsuarioContexto usuario) : ControllerBase
+{
+    public record PrepararDto(List<string> MovimentoIds);
+
+    [HttpGet]
+    public async Task<IActionResult> Listar() => Ok(await pagamentos.ListarAsync());
+
+    [HttpPost("preparar")]
+    public async Task<IActionResult> Preparar([FromBody] PrepararDto dto) => Ok(await pagamentos.PrepararAsync(dto.MovimentoIds ?? new()));
+
+    [HttpPost("agendar")]
+    public async Task<IActionResult> Agendar([FromBody] AgendarPagamentosDto dto, CancellationToken ct) =>
+        Ok(await pagamentos.AgendarAsync(dto, await usuario.QuemAsync(), ct));
+
+    [HttpPost("{id}/atualizar")]
+    public async Task<IActionResult> Atualizar(string id, CancellationToken ct)
+    {
+        var r = await pagamentos.AtualizarAsync(id, ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 }
 
@@ -241,4 +287,34 @@ public class BoletoTesteController(ISiimp siimp, ICobrancaService cobrancas, IIn
         if (emitente.Erro.Length > 0) return emitente.Erro;
         return emitente.Dados == cnpj ? string.Empty : $"A fatura {fatura.Numero} foi emitida por outra empresa (CNPJ {emitente.Dados}); escolha essa empresa para gerar o boleto.";
     }
+}
+
+/// <summary>Administrativo › Integração SMTP (só o perfil Suporte): servidor de e-mail do ambiente.</summary>
+[ApiController]
+[Route("api/integracao-smtp")]
+[Authorize(Policy = "func:/administrativo/smtp")]
+public class IntegracaoSmtpController(EmailService email, UsuarioContexto usuario) : ControllerBase
+{
+    public record TestarDto(string? Para);
+
+    [HttpGet]
+    public async Task<IActionResult> Obter() => Ok(await email.ConfiguracaoAsync());
+
+    [HttpPut]
+    public async Task<IActionResult> Salvar([FromBody] SalvarSmtpDto dto)
+    {
+        var r = await email.SalvarAsync(dto, await usuario.QuemAsync());
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    [HttpPost("testar")]
+    public async Task<IActionResult> Testar([FromBody] TestarDto dto, CancellationToken ct)
+    {
+        var r = await email.TestarAsync(dto.Para, ct);
+        return r.IsSuccess ? Ok(new { mensagem = r.Value }) : BadRequest(r.Error);
+    }
+
+    /// <summary>Últimos e-mails que o sistema tentou mandar (para conferir o piloto).</summary>
+    [HttpGet("enviados")]
+    public async Task<IActionResult> Enviados() => Ok(await email.UltimosAsync());
 }

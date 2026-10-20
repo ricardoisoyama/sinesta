@@ -35,8 +35,8 @@ export const REGRAS_PADRAO: RegrasBoleto = {
 export const MAX_INSTRUCOES = 3
 export const MAX_CARACTERES_LINHA = 78
 
-export type Recurso = 'cobranca' | 'extrato' | 'saldo'
-export const ROTULO_RECURSO: Record<Recurso, string> = { cobranca: 'Cobrança (boleto e Pix)', extrato: 'Extrato', saldo: 'Saldo' }
+export type Recurso = 'cobranca' | 'extrato' | 'saldo' | 'pagamento'
+export const ROTULO_RECURSO: Record<Recurso, string> = { cobranca: 'Cobrança (boleto e Pix)', extrato: 'Extrato', saldo: 'Saldo', pagamento: 'Pagamentos (Pix)' }
 
 export interface Integracao {
   id: string

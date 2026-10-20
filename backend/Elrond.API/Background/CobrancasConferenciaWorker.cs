@@ -30,6 +30,9 @@ public sealed class CobrancasConferenciaWorker(IServiceScopeFactory escopos, ILo
                 using var escopo = escopos.CreateScope();
                 var mudaram = await escopo.ServiceProvider.GetRequiredService<ICobrancaService>().ConferirAbertasAsync(stoppingToken);
                 if (mudaram > 0) log.LogInformation("Cobranças: {Quantidade} mudaram de situação na conferência.", mudaram);
+                // Pagamentos que esperam aprovação no app ou o processamento do banco.
+                var pagos = await escopo.ServiceProvider.GetRequiredService<PagamentoService>().ConferirAbertosAsync(stoppingToken);
+                if (pagos > 0) log.LogInformation("Pagamentos: {Quantidade} mudaram de situação na conferência.", pagos);
             }
             catch (Exception e) when (e is not OperationCanceledException)
             {

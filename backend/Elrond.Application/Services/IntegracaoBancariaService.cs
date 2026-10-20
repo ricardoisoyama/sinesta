@@ -68,17 +68,24 @@ public sealed class IntegracaoBancariaService(
     public async Task<Result<IntegracaoResumoDto>> RegistrarAvisoAsync(string integracaoId, string urlBase, CancellationToken ct = default)
     {
         if (await integracoes.GetByIdAsync(integracaoId) is not { } i) return Result.Failure<IntegracaoResumoDto>("Integração não encontrada.");
-        if (bancos.Modulo(i.Banco)?.Cobranca is not { } cobranca) return Result.Failure<IntegracaoResumoDto>($"O banco \"{i.Banco}\" não emite cobrança.");
+        var modulo = bancos.Modulo(i.Banco);
+        var cobranca = modulo?.Cobranca;
+        var pagamento = i.Recursos.Contains(IntegracaoBancaria.RecursoPagamento) ? modulo?.Pagamento : null;
+        if (cobranca is null && pagamento is null) return Result.Failure<IntegracaoResumoDto>($"O banco \"{i.Banco}\" não tem aviso de cobrança nem de pagamento.");
         if (!Uri.TryCreate(urlBase, UriKind.Absolute, out var u) || (u.Scheme != "https" && i.Banco != "simulador"))
             return Result.Failure<IntegracaoResumoDto>("O banco só avisa em endereço https (o deste ambiente publicado).");
         if (!cofre.Configurado) return Result.Failure<IntegracaoResumoDto>("A chave de cifra das credenciais não está configurada neste ambiente.");
         // O segredo no endereço é o que identifica a integração no aviso (e impede aviso falso de outra origem).
         if (i.AvisoToken.Length == 0) i.AvisoToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
-        var url = $"{u.GetLeftPart(UriPartial.Authority)}/api/bancos/aviso/{i.AvisoToken}";
-        if (await cobranca.RegistrarAvisoAsync(cofre.Abrir(i), url, ct) is { } erro) return Result.Failure<IntegracaoResumoDto>($"O banco recusou o cadastro do aviso: {erro}");
+        var credencial = cofre.Abrir(i);
+        if (cobranca is not null && await cobranca.RegistrarAvisoAsync(credencial, $"{u.GetLeftPart(UriPartial.Authority)}/api/bancos/aviso/{i.AvisoToken}", ct) is { } erro)
+            return Result.Failure<IntegracaoResumoDto>($"O banco recusou o cadastro do aviso de cobrança: {erro}");
+        if (pagamento is not null && await pagamento.RegistrarAvisoAsync(credencial, $"{u.GetLeftPart(UriPartial.Authority)}/api/bancos/aviso-pagamento/{i.AvisoToken}", ct) is { } erroPag)
+            return Result.Failure<IntegracaoResumoDto>($"O aviso de cobrança foi cadastrado, mas o banco recusou o de pagamentos: {erroPag}");
         i.AvisoRegistradoEm = DateTime.UtcNow.ToString("o");
         await integracoes.UpdateAsync(i.Id, i);
-        await auditoria.RegistrarAsync("editar", "IntegracaoBancaria", i.Id, $"Aviso de pagamento cadastrado no {i.Banco}/{i.Ambiente} ({u.Host})");
+        await auditoria.RegistrarAsync("editar", "IntegracaoBancaria", i.Id,
+            $"Aviso cadastrado no {i.Banco}/{i.Ambiente} ({u.Host}): {string.Join(" e ", new[] { cobranca is null ? null : "cobrança", pagamento is null ? null : "pagamentos" }.Where(x => x is not null))}");
         return Result.Success(Resumo(i));
     }
 

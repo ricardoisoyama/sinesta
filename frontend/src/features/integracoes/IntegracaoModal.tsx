@@ -435,8 +435,9 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
           )}
         </div>
         <span className={s.nota}>
-          O banco chama o ELROND na hora em que o boleto é pago, cancelado ou expira; o ELROND confere no banco antes de dar baixa. Uma
-          conferência automática de hora em hora cobre qualquer aviso perdido. A tela de boletos mostra quanto o banco demorou para avisar.
+          O banco chama o ELROND na hora em que o boleto é pago, cancelado ou expira e, com Pagamentos ligado, quando um Pix enviado é
+          efetivado (depois da aprovação no app); o ELROND confere no banco antes de dar baixa. Uma conferência automática de hora em hora
+          cobre qualquer aviso perdido. Ligou Pagamentos depois de cadastrar o aviso? Clique em "Cadastrar de novo".
         </span>
       </section>
     </Modal>

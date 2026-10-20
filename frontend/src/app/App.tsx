@@ -30,6 +30,7 @@ import { TiposCustoPage } from '@/features/tiposCusto/TiposCustoPage'
 import { VeiculosPage } from '@/features/veiculos/VeiculosPage'
 import { BoletoTestePage } from '@/features/boletoTeste/BoletoTestePage'
 import { IntegracoesPage } from '@/features/integracoes/IntegracoesPage'
+import { SmtpPage } from '@/features/smtp/SmtpPage'
 import { ClientesPage } from '@/features/parceiros/ClientesPage'
 import { FornecedoresPage } from '@/features/parceiros/FornecedoresPage'
 import { VendedoresPage } from '@/features/parceiros/VendedoresPage'
@@ -95,6 +96,7 @@ export function App() {
           <Route path="/cadastros/auditoria" element={<AuditoriaPage />} />
           {/* Administrativo: só o perfil Suporte (a chave protege a rota no RotaPermitida). */}
           <Route path="/administrativo/integracoes" element={<IntegracoesPage />} />
+          <Route path="/administrativo/smtp" element={<SmtpPage />} />
           {/* Cadastros parametrizáveis (fase de layout) */}
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/icms" element={<TabelaIcmsPage />} />

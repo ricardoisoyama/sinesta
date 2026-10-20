@@ -70,6 +70,51 @@ public sealed class SimuladorCobranca : ICobrancaBancaria
         "5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF";
 }
 
+/// <summary>
+/// Pagamento simulado: como a conta da Mirai, todo Pix espera aprovação no app. "[direto]" na descrição
+/// efetiva na hora; "[recusar]" recusa. O aviso PROCESSADO (pela tela de testes) "aprova".
+/// </summary>
+public sealed class SimuladorPagamento : IPagamentoBancario
+{
+    private sealed record Registro(string Id, PedidoPix Pedido, string Status, string PagoEm);
+    private readonly ConcurrentDictionary<string, Registro> _pix = new();
+
+    public Task<EnvioPagamento> PagarPixAsync(CredencialBanco c, PedidoPix p, CancellationToken ct = default)
+    {
+        if (p.Descricao.Contains("[recusar]", StringComparison.OrdinalIgnoreCase)) return Task.FromResult(new EnvioPagamento(DesfechoPagamento.Recusado, string.Empty, "chave Pix não encontrada (simulador)"));
+        // Idempotência: o mesmo pedido devolve o mesmo pagamento.
+        var existente = _pix.Values.FirstOrDefault(r => r.Pedido.Id == p.Id);
+        if (existente is not null) return Task.FromResult(new EnvioPagamento(Desfecho(existente.Status), existente.Id, string.Empty));
+        var direto = p.Descricao.Contains("[direto]", StringComparison.OrdinalIgnoreCase);
+        var id = Guid.NewGuid().ToString();
+        _pix[id] = new Registro(id, p, direto ? "PAGO" : "AGUARDANDO_APROVACAO", direto ? DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss") : string.Empty);
+        return Task.FromResult(new EnvioPagamento(direto ? DesfechoPagamento.Processado : DesfechoPagamento.AguardandoAprovacao, id, string.Empty));
+    }
+
+    public Task<ConsultaPagamento> ConsultarPixAsync(CredencialBanco c, string idBanco, CancellationToken ct = default) =>
+        Task.FromResult(_pix.TryGetValue(idBanco, out var r)
+            ? ConsultaPagamento.Encontrado(new SituacaoPagamento(Inter.InterPagamento.Nossa(r.Status), r.Status, r.Status == "PAGO" ? $"E{r.Id[..8]}SIMULADO" : string.Empty, r.PagoEm, string.Empty))
+            : ConsultaPagamento.Inexistente());
+
+    public Task<string?> RegistrarAvisoAsync(CredencialBanco c, string url, CancellationToken ct = default) => Task.FromResult<string?>(null);
+
+    /// <summary>Mesmo formato do Inter. PROCESSADO/PAGO "aprova" o Pix no simulador (para a conferência achar pago).</summary>
+    public IReadOnlyList<AvisoPagamento> LerAviso(string corpo)
+    {
+        var avisos = Inter.InterPagamento.Aviso(corpo);
+        foreach (var a in avisos.Where(a => a.Situacao is "PROCESSADO" or "PAGO"))
+            if (_pix.TryGetValue(a.IdBanco, out var r)) _pix[a.IdBanco] = r with { Status = "PAGO", PagoEm = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss") };
+        return avisos;
+    }
+
+    private static DesfechoPagamento Desfecho(string status) => status switch
+    {
+        "PAGO" => DesfechoPagamento.Processado,
+        "AGENDADO" => DesfechoPagamento.Agendado,
+        _ => DesfechoPagamento.AguardandoAprovacao,
+    };
+}
+
 /// <summary>Extrato simulado: os créditos das cobranças pagas no simulador.</summary>
 public sealed class SimuladorExtrato(SimuladorCobranca cobranca) : IExtratoBancario
 {
@@ -77,13 +122,14 @@ public sealed class SimuladorExtrato(SimuladorCobranca cobranca) : IExtratoBanca
         Task.FromResult(ExtratoBanco.Lido(cobranca.Pagas(de, ate)));
 }
 
-public sealed class SimuladorModulo(SimuladorCobranca cobranca, SimuladorExtrato extrato) : IBancoModulo
+public sealed class SimuladorModulo(SimuladorCobranca cobranca, SimuladorExtrato extrato, SimuladorPagamento pagamento) : IBancoModulo
 {
     public string Codigo => "simulador";
     public string Nome => "Simulador";
-    public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca, IntegracaoBancaria.RecursoExtrato];
+    public IReadOnlyList<string> Recursos => [IntegracaoBancaria.RecursoCobranca, IntegracaoBancaria.RecursoExtrato, IntegracaoBancaria.RecursoPagamento];
     public ICobrancaBancaria? Cobranca => cobranca;
     public IExtratoBancario? Extrato => extrato;
+    public IPagamentoBancario? Pagamento => pagamento;
     public Task<string?> TestarConexaoAsync(CredencialBanco credencial, CancellationToken ct = default) => Task.FromResult<string?>(null);
     /// <summary>Mesmo formato do Inter. Aviso de RECEBIDO "paga" a cobrança no simulador (para a conferência achar paga).</summary>
     public IReadOnlyList<AvisoCobranca> LerAviso(string corpo)

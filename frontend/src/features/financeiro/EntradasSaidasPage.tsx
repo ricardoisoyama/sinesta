@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Ban, CheckCircle2, Clock, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useAuth } from '@/features/auth/auth-context'
@@ -9,6 +9,8 @@ import { listRegrasAprovacao } from '@/features/cadastros/api'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import { AprovacaoModal } from './AprovacaoModal'
+import { AgendarPagamentoModal } from './AgendarPagamentoModal'
+import { ROTULO_PAGAMENTO, usePagamentos, vigente, type PagamentoBancario } from './pagamentos'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
@@ -58,6 +60,13 @@ export function EntradasSaidasPage() {
   const nomeDe = (id: string) => usuarios.find((u) => u.id === id)?.nome ?? ''
   // Aprovar exige a permissão no perfil e estar entre os aprovadores da regra.
   const podeAprovar = !!user?.permissoes?.includes('/financeiro/aprovar')
+  // Piloto de pagamentos pelo banco: só a equipe ELROND (permissão administrativa).
+  const podePagarBanco = !!user?.permissoes?.includes('/financeiro/pagamento-banco')
+  const { data: pagamentosData, refetch: recarregarPagamentos } = usePagamentos(podePagarBanco)
+  // O último envio ao banco deste lançamento (mostra a situação; recusado/cancelado deixa mandar de novo).
+  const pagamentoDe = (m: Movimento): PagamentoBancario | undefined =>
+    (pagamentosData ?? []).filter((p) => p.movimentoId === m.id).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0]
+  const [agendando, setAgendando] = useState<{ ids: string[]; limpar?: () => void } | null>(null)
   const { data: regrasData } = useQuery({ queryKey: ['regras-aprovacao'], queryFn: listRegrasAprovacao })
   const regraDe = (m: Movimento) => (regrasData ?? []).find((r) => r.id === m.regraId && r.status !== 'inativo')
   const [filtroAprov, setFiltroAprov] = useState<FiltroAprov>('todas')
@@ -154,6 +163,14 @@ export function EntradasSaidasPage() {
             {m.totalParcelas > 1 && <span className={s.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
           </span>
           <small>{m.descricao}{m.documento ? ` · ${m.documento}` : ''}</small>
+          {(() => {
+            const p = pagamentoDe(m)
+            return p ? (
+              <small className={`${s.pagTag} ${p.situacao === 'pago' ? s.pagTagOk : ['recusado', 'cancelado', 'falha'].includes(p.situacao) ? s.pagTagErro : ''}`} title={p.mensagem || undefined}>
+                <Landmark size={11} /> {ROTULO_PAGAMENTO[p.situacao]}{p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
+              </small>
+            ) : null
+          })()}
         </div>
       ),
     },
@@ -336,8 +353,20 @@ export function EntradasSaidasPage() {
         acoesLote={({ itens, limpar }) => {
           const abertos = itens.filter((m) => !m.pagoEm && !m.cancelado)
           const baixaveis = abertos.filter((m) => m.aprovacao === 'aprovado')
+          const pagaveis = baixaveis.filter((m) => m.tipo === 'pagar' && !(pagamentoDe(m) && vigente(pagamentoDe(m)!)))
           return (
             <>
+              {podePagarBanco && (
+                <button
+                  type="button"
+                  className={ui.selBtn}
+                  disabled={pagaveis.length === 0}
+                  onClick={() => setAgendando({ ids: pagaveis.map((m) => m.id), limpar })}
+                  title={pagaveis.length < itens.length ? 'Vão ao banco só os lançamentos a pagar, aprovados e sem Pix em andamento' : 'Mandar ao banco como Pix'}
+                >
+                  <Landmark /> Agendar pagamento ({pagaveis.length})
+                </button>
+              )}
               <button type="button" className={ui.selBtn} disabled={baixaveis.length === 0} onClick={() => setBaixando({ itens: baixaveis, limpar })} title={baixaveis.length < abertos.length ? 'Só os aprovados entram na baixa' : 'Liquidar todos os selecionados em aberto'}>
                 <CheckCircle2 /> Baixar em lote ({baixaveis.length})
               </button>
@@ -383,6 +412,16 @@ export function EntradasSaidasPage() {
           setBaixando(null)
         }}
       />
+      {agendando && (
+        <AgendarPagamentoModal
+          movimentoIds={agendando.ids}
+          onClose={() => {
+            agendando.limpar?.()
+            setAgendando(null)
+          }}
+          onFeito={() => void recarregarPagamentos()}
+        />
+      )}
       <AprovacaoModal
         movimento={aprovando ? (movimentos.find((m) => m.id === aprovando.id) ?? aprovando) : null}
         regra={aprovando ? regraDe(movimentos.find((m) => m.id === aprovando.id) ?? aprovando) : undefined}

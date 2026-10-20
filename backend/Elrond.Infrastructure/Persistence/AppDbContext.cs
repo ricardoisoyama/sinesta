@@ -86,6 +86,39 @@ public class AppDbContext : DbContext
             e.OwnsOne(u => u.Banco, b => b.ToJson());
         });
 
+        modelBuilder.Entity<PagamentoBancario>(e =>
+        {
+            e.ToTable("pagamentos_bancarios");
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Situacao).IsRequired().HasMaxLength(30);
+            e.Property(p => p.Chave).HasMaxLength(80);
+            e.Property(p => p.Descricao).HasMaxLength(140);
+            e.Property(p => p.Mensagem).HasMaxLength(500);
+            e.Ignore(p => p.Vigente);
+            e.Ignore(p => p.EmAberto);
+            e.HasIndex(p => p.MovimentoId);
+            e.HasIndex(p => new { p.IntegracaoId, p.IdBanco });
+        });
+
+        modelBuilder.Entity<ConfiguracaoSmtp>(e =>
+        {
+            e.ToTable("configuracao_smtp");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.Host).HasMaxLength(200);
+            e.Property(c => c.Seguranca).HasMaxLength(10);
+            e.Property(c => c.RemetenteEmail).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<EmailEnviado>(e =>
+        {
+            e.ToTable("emails_enviados");
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Assunto).HasMaxLength(300);
+            e.Property(x => x.Erro).HasMaxLength(500);
+            e.HasIndex(x => x.Em);
+            e.HasIndex(x => new { x.Origem, x.OrigemId });
+        });
+
         modelBuilder.Entity<DocumentoFaturavel>(e =>
         {
             e.ToTable("documentos_faturaveis");

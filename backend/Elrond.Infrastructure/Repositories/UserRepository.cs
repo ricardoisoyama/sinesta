@@ -16,4 +16,6 @@ public class UserRepository : IUserRepository
         var normalized = email.ToLowerInvariant().Trim();
         return await _db.Users.FirstOrDefaultAsync(u => u.Email == normalized);
     }
+
+    public async Task<User?> FindByIdAsync(Guid id) => await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id);
 }

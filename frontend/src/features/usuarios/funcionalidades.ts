@@ -78,6 +78,8 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   // ── Administrativas: só o perfil Admin (a nossa equipe), sempre ─────────
   { key: '/administrativo/integracoes', label: 'Integrações Bancárias (bancos das empresas: credenciais, certificado, boleto, pagamentos)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/administrativo/smtp', label: 'Integração SMTP (servidor de e-mail do sistema)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/financeiro/pagamento-banco', label: 'Mandar pagamentos (Pix) ao banco pelas Entradas e Saídas (piloto)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)

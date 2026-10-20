@@ -12,6 +12,8 @@ public class IntegracaoBancaria : Rastreavel, IEntity, IInativavel
     public const string RecursoCobranca = "cobranca";
     public const string RecursoExtrato = "extrato";
     public const string RecursoSaldo = "saldo";
+    /// <summary>Pagar pelo banco (Pix). Ligado só pela equipe ELROND, como os demais.</summary>
+    public const string RecursoPagamento = "pagamento";
 
     public string Id { get; set; } = string.Empty;
     public string EmpresaId { get; set; } = string.Empty;
@@ -146,4 +148,60 @@ public class CobrancaBancaria : Rastreavel, IEntity
 
     /// <summary>Ocupa a parcela: enquanto existir uma assim, a mesma parcela não gera outro boleto.</summary>
     public bool Vigente => Situacao is not (Cancelada or Expirada or Falha);
+}
+
+/// <summary>
+/// Pagamento feito pelo banco (Pix) para um lançamento a pagar. Grava ANTES de mandar ao banco; o
+/// próprio Id vai como chave de idempotência, então reenviar nunca paga duas vezes. Fica
+/// "aguardando aprovação" quando a conta exige aprovação no app do banco; o aviso do banco (ou a
+/// conferência de hora em hora) dá a baixa quando ele é efetivado.
+/// </summary>
+public class PagamentoBancario : Rastreavel, IEntity
+{
+    public const string Pendente = "pendente";
+    public const string AguardandoAprovacao = "aguardando-aprovacao";
+    public const string Agendado = "agendado";
+    public const string Processando = "processando";
+    public const string Pago = "pago";
+    public const string Recusado = "recusado";
+    public const string Cancelado = "cancelado";
+    public const string Falha = "falha";
+    public const string Incerto = "incerto";
+
+    public string Id { get; set; } = string.Empty;
+    public string EmpresaId { get; set; } = string.Empty;
+    public string IntegracaoId { get; set; } = string.Empty;
+    public string Banco { get; set; } = string.Empty;
+    public string Ambiente { get; set; } = string.Empty;
+    public string MovimentoId { get; set; } = string.Empty;
+    public long MovimentoNumero { get; set; }
+    public string FavorecidoNome { get; set; } = string.Empty;
+    public string FavorecidoEmail { get; set; } = string.Empty;
+    /// <summary>Chave Pix do favorecido (CPF/CNPJ, e-mail, celular ou aleatória).</summary>
+    public string Chave { get; set; } = string.Empty;
+    public decimal Valor { get; set; }
+    /// <summary>yyyy-MM-dd pedido ao banco.</summary>
+    public string Data { get; set; } = string.Empty;
+    public string Descricao { get; set; } = string.Empty;
+    public string Situacao { get; set; } = Pendente;
+    public string SituacaoBanco { get; set; } = string.Empty;
+    /// <summary>Código do pagamento no banco (codigoSolicitacao no Inter).</summary>
+    public string IdBanco { get; set; } = string.Empty;
+    public string EndToEnd { get; set; } = string.Empty;
+    public string Mensagem { get; set; } = string.Empty;
+    /// <summary>Quando o banco efetivou (data e hora do banco).</summary>
+    public string PagoEm { get; set; } = string.Empty;
+    /// <summary>Quando o primeiro aviso do banco chegou (UTC, ISO).</summary>
+    public string AvisoEm { get; set; } = string.Empty;
+    /// <summary>Quando o ELROND confirmou e deu baixa, e por qual caminho (envio, aviso, rotina, tela).</summary>
+    public string ConfirmadaEm { get; set; } = string.Empty;
+    public string ConfirmadaPor { get; set; } = string.Empty;
+    /// <summary>E-mail ao favorecido: quando e o resultado (enviado, falhou, desligado).</summary>
+    public string EmailEm { get; set; } = string.Empty;
+    public string EmailSituacao { get; set; } = string.Empty;
+
+    /// <summary>Ainda vale (não terminou recusado/cancelado/falha): o lançamento não pode ganhar outro.</summary>
+    public bool Vigente => Situacao is not (Recusado or Cancelado or Falha);
+    /// <summary>Ainda espera o banco (a conferência acompanha).</summary>
+    public bool EmAberto => Situacao is Pendente or AguardandoAprovacao or Agendado or Processando or Incerto;
 }

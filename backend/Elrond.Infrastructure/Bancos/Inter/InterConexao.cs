@@ -24,8 +24,10 @@ public sealed class InterOpcoes
 /// </summary>
 public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDisposable
 {
-    /// <summary>Escopos pedidos no token (a integração no Inter precisa ter todos marcados).</summary>
+    /// <summary>Escopos pedidos no token de cobrança e extrato (a integração no Inter precisa tê-los marcados).</summary>
     public const string Escopos = "boleto-cobranca.read boleto-cobranca.write extrato.read";
+    /// <summary>Escopos dos pagamentos (token à parte: integração sem pagamento continua cobrando).</summary>
+    public const string EscoposPagamento = "pagamento-pix.write pagamento-pix.read webhook-banking.write webhook-banking.read";
 
     private sealed record Cliente(HttpClient Http, string Impressao);
     private sealed record Token(string Valor, DateTimeOffset VenceEm);
@@ -39,19 +41,22 @@ public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDi
     /// na própria requisição, nunca no cliente compartilhado). Token recusado (401): gera outro e
     /// tenta uma vez mais.
     /// </summary>
-    public async Task<HttpResponseMessage> EnviarAsync(CredencialBanco c, HttpMethod metodo, string caminho, object? corpo, CancellationToken ct)
+    public async Task<HttpResponseMessage> EnviarAsync(CredencialBanco c, HttpMethod metodo, string caminho, object? corpo, CancellationToken ct,
+        string escopos = Escopos, IReadOnlyDictionary<string, string>? cabecalhos = null)
     {
         var http = Http(c);
+        var chave = $"{c.IntegracaoId}|{escopos}";
         for (var tentativa = 1; ; tentativa++)
         {
             using var req = new HttpRequestMessage(metodo, caminho);
-            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(c, http, ct));
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await TokenAsync(c, http, escopos, ct));
             if (c.ContaCorrente.Length > 0) req.Headers.Add("x-conta-corrente", c.ContaCorrente);
+            foreach (var (nome, valor) in cabecalhos ?? new Dictionary<string, string>()) req.Headers.Add(nome, valor);
             if (corpo is not null) req.Content = JsonContent.Create(corpo, options: InterJson.Opcoes);
             var resp = await http.SendAsync(req, ct);
             if (resp.StatusCode != System.Net.HttpStatusCode.Unauthorized || tentativa > 1) return resp;
             resp.Dispose();
-            _tokens.TryRemove(c.IntegracaoId, out _);
+            _tokens.TryRemove(chave, out _);
         }
     }
 
@@ -70,25 +75,26 @@ public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDi
         http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 
         _clientes[c.IntegracaoId] = new Cliente(http, impressao);
-        _tokens.TryRemove(c.IntegracaoId, out _);
+        foreach (var k in _tokens.Keys.Where(k => k.StartsWith($"{c.IntegracaoId}|", StringComparison.Ordinal))) _tokens.TryRemove(k, out _);
         if (atual is not null) atual.Http.Dispose();
         return http;
     }
 
-    private async Task<string> TokenAsync(CredencialBanco c, HttpClient http, CancellationToken ct)
+    private async Task<string> TokenAsync(CredencialBanco c, HttpClient http, string escopos, CancellationToken ct)
     {
-        if (Valido(c.IntegracaoId) is { } pronto) return pronto;
+        var chave = $"{c.IntegracaoId}|{escopos}";
+        if (Valido(chave) is { } pronto) return pronto;
         var trava = _travas.GetOrAdd(c.IntegracaoId, _ => new SemaphoreSlim(1, 1));
         await trava.WaitAsync(ct);
         try
         {
-            if (Valido(c.IntegracaoId) is { } outro) return outro; // outra chamada gerou enquanto esperava
+            if (Valido(chave) is { } outro) return outro; // outra chamada gerou enquanto esperava
             using var form = new FormUrlEncodedContent(new Dictionary<string, string>
             {
                 ["client_id"] = c.ClientId,
                 ["client_secret"] = c.ClientSecret,
                 ["grant_type"] = "client_credentials",
-                ["scope"] = Escopos,
+                ["scope"] = escopos,
             });
             using var resp = await http.PostAsync("/oauth/v2/token", form, ct);
             if (!resp.IsSuccessStatusCode)
@@ -98,7 +104,7 @@ public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDi
             var t = await resp.Content.ReadFromJsonAsync<RespostaToken>(ct) ?? throw new InterIndisponivel("resposta do token vazia.");
             // Renova 2 minutos antes de vencer.
             var token = new Token(t.AccessToken, relogio.GetUtcNow().AddSeconds(Math.Max(60, t.ExpiresIn - 120)));
-            _tokens[c.IntegracaoId] = token;
+            _tokens[chave] = token;
             return token.Valor;
         }
         finally
@@ -107,8 +113,8 @@ public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDi
         }
     }
 
-    private string? Valido(string integracaoId) =>
-        _tokens.TryGetValue(integracaoId, out var t) && t.VenceEm > relogio.GetUtcNow() ? t.Valor : null;
+    private string? Valido(string chave) =>
+        _tokens.TryGetValue(chave, out var t) && t.VenceEm > relogio.GetUtcNow() ? t.Valor : null;
 
     private sealed record RespostaToken(
         [property: JsonPropertyName("access_token")] string AccessToken,

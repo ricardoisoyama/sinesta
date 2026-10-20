@@ -119,9 +119,11 @@ public static class DependencyInjection
         services.AddSingleton<InterConexao>();
         services.AddSingleton<InterCobranca>();
         services.AddSingleton<InterExtrato>();
+        services.AddSingleton<InterPagamento>();
         services.AddSingleton<IBancoModulo, InterModulo>();
         services.AddSingleton<SimuladorCobranca>();
         services.AddSingleton<SimuladorExtrato>();
+        services.AddSingleton<SimuladorPagamento>();
         services.AddSingleton<IBancoModulo, SimuladorModulo>();
         services.AddSingleton<IBancos, BancosRegistro>();
         services.AddScoped<ICobrancaService, CobrancaService>();
@@ -146,6 +148,12 @@ public static class DependencyInjection
         services.AddScoped<TabelaIcmsService>();
         services.AddScoped<ExtratoBancoService>();
         services.AddScoped<PendentesFaturamentoService>();
+
+        // E-mail (Administrativo › Integração SMTP)
+        services.AddSingleton<IEnvioSmtp, Elrond.Infrastructure.Email.SmtpMailKit>();
+        services.AddSingleton<ICofreSegredos, Elrond.Infrastructure.Email.CofreSegredos>();
+        services.AddScoped<EmailService>();
+        services.AddScoped<PagamentoService>();
 
         // Validators (FluentValidation)
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();
