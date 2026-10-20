@@ -55,17 +55,16 @@ export interface ResumoFinanceiro {
 }
 
 export function resumo(movs: Movimento[], hoje = hojeISO()): ResumoFinanceiro {
-  const emAberto = movs.filter((m) => !m.cancelado && !m.pagoEm)
-  // A receber / a pagar / vencidos são contas com terceiros: a transferência entre contas fica fora.
-  const abertos = emAberto.filter((m) => m.origem !== 'transferencia')
+  // Transferência entre contas em aberto conta como qualquer lançamento (saída a pagar, entrada a receber);
+  // depois de baixada sai dos cards, como todos.
+  const abertos = movs.filter((m) => !m.cancelado && !m.pagoEm)
   const limite = somarDias(hoje, 30)
   return {
     aReceber: abertos.filter((m) => m.tipo === 'receber').reduce((a, m) => a + liquidoDe(m), 0),
     aPagar: abertos.filter((m) => m.tipo === 'pagar').reduce((a, m) => a + liquidoDe(m), 0),
     vencidos: abertos.filter((m) => m.vencimento < hoje).reduce((a, m) => a + liquidoDe(m), 0),
     qtdVencidos: abertos.filter((m) => m.vencimento < hoje).length,
-    // Próximos 30 dias é caixa: a transferência entra (muda o caixa de cada empresa; no total das empresas, se anula).
-    previsto30: emAberto.filter((m) => m.vencimento <= limite).reduce((a, m) => a + sinal(m) * liquidoDe(m), 0),
+    previsto30: abertos.filter((m) => m.vencimento <= limite).reduce((a, m) => a + sinal(m) * liquidoDe(m), 0),
   }
 }
 

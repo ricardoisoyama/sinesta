@@ -40,12 +40,15 @@ describe('resumo', () => {
     expect(r.previsto30).toBe(300)
   })
 
-  it('transferência entre contas fica fora de a pagar/a receber, mas entra no caixa dos próximos 30 dias', () => {
+  it('transferência entre contas em aberto conta nos cards; baixada, sai', () => {
     const saida = mov({ id: 's', tipo: 'pagar', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
     const entrada = mov({ id: 'e', tipo: 'receber', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
     const filial = resumo([saida], hoje)
-    expect([filial.aPagar, filial.aReceber, filial.previsto30]).toEqual([0, 0, -9000])
-    expect(resumo([saida, entrada], hoje).previsto30).toBe(0)
+    expect([filial.aPagar, filial.aReceber, filial.previsto30]).toEqual([9000, 0, -9000])
+    const todas = resumo([saida, entrada], hoje)
+    expect([todas.aPagar, todas.aReceber, todas.previsto30]).toEqual([9000, 9000, 0])
+    const feita = resumo([{ ...saida, pagoEm: '2026-09-20' }, { ...entrada, pagoEm: '2026-09-20' }], hoje)
+    expect([feita.aPagar, feita.aReceber, feita.previsto30]).toEqual([0, 0, 0])
   })
 })
 

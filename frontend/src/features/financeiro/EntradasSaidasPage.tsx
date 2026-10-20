@@ -108,8 +108,8 @@ export function EntradasSaidasPage() {
     const peloNumero = movimentos.filter((m) => buscaPeloNumero(busca, m.numero))
     if (peloNumero.length > 0) return peloNumero
     return movimentos
-      // A pagar / a receber são contas; a transferência entre contas tem a aba dela (e aparece em Todos).
-      .filter((m) => aba === 'todos' || (aba === 'transferencia' ? m.origem === 'transferencia' : m.tipo === aba && m.origem !== 'transferencia'))
+      // A transferência entre contas aparece também em A pagar (saída) e A receber (entrada), como nos cards.
+      .filter((m) => aba === 'todos' || (aba === 'transferencia' ? m.origem === 'transferencia' : m.tipo === aba))
       .filter((m) => {
         const st = statusDe(m, hoje)
         if (!mostrarLiquidados && (st === 'liquidado' || st === 'cancelado')) return false
