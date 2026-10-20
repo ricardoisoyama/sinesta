@@ -81,10 +81,8 @@ export function EntradasSaidasPage() {
   const { data: pagamentosData, refetch: recarregarPagamentos } = usePagamentos(podePagarBanco)
   /** Pix ainda no banco (aguardando aprovação, agendado...): o banco não avisa toda mudança, então dá para perguntar. */
   const emAndamentoNoBanco = (p: PagamentoBancario) => ['pendente', 'aguardando-aprovacao', 'agendado', 'processando', 'incerto'].includes(p.situacao)
-  const [consultando, setConsultando] = useState<string | null>(null)
   const consultarNoBanco = async (ids: string[]) => {
     for (const id of ids) {
-      setConsultando(id)
       try {
         await atualizarPagamento(id)
       } catch (err) {
@@ -92,7 +90,6 @@ export function EntradasSaidasPage() {
         break
       }
     }
-    setConsultando(null)
     await Promise.all([recarregarPagamentos(), recarregar()])
   }
   // Pix que o banco efetivou baixa o lançamento no servidor: relê a lista para a situação acompanhar.
@@ -232,17 +229,6 @@ export function EntradasSaidasPage() {
                 {p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
                 {/* O motivo que o banco deu ("limite diário...") sem o código entre colchetes. */}
                 {['recusado', 'falha'].includes(p.situacao) && p.mensagem ? `: ${motivoCurto(p.mensagem)}` : ''}
-                {podePagarBanco && emAndamentoNoBanco(p) && (
-                  <button
-                    type="button"
-                    className={s.consultarBanco}
-                    disabled={consultando !== null}
-                    title="Perguntar agora ao banco a situação deste Pix"
-                    onClick={(e) => { e.stopPropagation(); void consultarNoBanco([p.id]) }}
-                  >
-                    {consultando === p.id ? 'consultando...' : 'consultar no banco'}
-                  </button>
-                )}
               </small>
             ) : null
           })()}
