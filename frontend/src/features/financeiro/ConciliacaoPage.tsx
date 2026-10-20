@@ -403,6 +403,8 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDes
                 {m.numero ? `nº ${m.numero} · ` : ''}
                 {m.pagoEm ? `pago em ${dataBR(m.pagoEm)}` : `vence ${dataBR(m.vencimento)}`} · {formatBRL(liquidoDe(m))}
                 {l.motivo && l.situacao === 'sugestao' && <> · <em className={s[`conf_${l.confianca}`]}>{l.motivo}</em></>}
+                {/* O extrato prova que já saiu/entrou: confirmar aprova o pendente junto com a baixa. */}
+                {l.situacao === 'sugestao' && !m.pagoEm && (m.aprovacao ?? 'pendente') !== 'aprovado' && <> · aprovação pendente: confirmar também aprova</>}
               </small>
             </div>
           )}

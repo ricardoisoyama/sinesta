@@ -53,6 +53,15 @@ public class FinanceiroService : IFinanceiroService
             .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CriadoEm).First());
     }
 
+    /// <summary>Prefixo do UsuarioId da assinatura dada pela conciliação (o extrato prova que já saiu/entrou no banco).</summary>
+    private const string PelaConciliacao = "conciliacao:";
+
+    private static AprovacaoMovimento AssinaturaDaConciliacao(UsuarioAtual quem) =>
+        new() { UsuarioId = PelaConciliacao + quem.Id, Nome = $"{quem.Nome} · pela conciliação", Em = Agora() };
+
+    private static bool AprovadoSoPelaConciliacao(Movimento m) =>
+        m.Aprovacao == "aprovado" && m.Aprovacoes.Count > 0 && m.Aprovacoes.All(a => a.UsuarioId.StartsWith(PelaConciliacao, StringComparison.Ordinal));
+
     private const string PagoPeloBancoMsg = "Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então a baixa não é estornada nem o lançamento alterado. Se precisar devolver, lance um a receber.";
 
     private static string Agora() => DateTime.UtcNow.ToString("o");
@@ -242,7 +251,8 @@ public class FinanceiroService : IFinanceiroService
                 // Só a conciliação cria lançamento já pago (é um fato do extrato).
                 PagoEm = b.Origem == "conciliacao" ? b.PagoEm : string.Empty,
                 ValorPago = b.Origem == "conciliacao" ? b.ValorPago : 0m,
-                Aprovacao = "pendente",
+                Aprovacao = b.Origem == "conciliacao" ? "aprovado" : "pendente",
+                Aprovacoes = b.Origem == "conciliacao" ? new() { AssinaturaDaConciliacao(quem) } : new(),
                 RegraId = regra?.Id ?? string.Empty,
             };
         }).ToList();
@@ -472,6 +482,21 @@ public class FinanceiroService : IFinanceiroService
         if ((l.Valor >= 0) != (m.Tipo == "receber")) return Result.Failure<ExtratoLinha>("Entrada no extrato só casa com lançamento a receber, e saída com a pagar.");
         if (m.PagoEm.Length == 0)
         {
+            var pernas = await ComPernasAsync(new List<Movimento> { m });
+            if ((await PixEmAndamentoAsync(pernas.Select(x => x.Id))).Count > 0) return Result.Failure<ExtratoLinha>(PixEmAndamentoMsg);
+            // O extrato prova que o dinheiro já saiu (ou entrou): o que estava pendente é aprovado pela conciliação.
+            var pendentes = pernas.Where(x => x.Aprovacao != "aprovado").ToList();
+            if (pendentes.Count > 0)
+            {
+                foreach (var x in pendentes)
+                {
+                    x.Aprovacao = "aprovado";
+                    x.Aprovacoes = x.Aprovacoes.Append(AssinaturaDaConciliacao(quem)).ToList();
+                }
+                await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), pendentes));
+                await _auditoria.RegistrarAsync("aprovar", "Movimento", m.Id,
+                    $"{quem.Nome} aprovou pela conciliação \"{m.Descricao}\" ({m.ParceiroNome}, {R2(m.Valor):N2}): o extrato mostra que já saiu/entrou no banco");
+            }
             // Lançamento em aberto: a conciliação é a baixa dele, na data do extrato.
             var baixa = await LiquidarAsync(new BaixaDto(new() { m.Id }, l.Data, l.CarteiraId), quem);
             if (!baixa.IsSuccess) return Result.Failure<ExtratoLinha>(baixa.Error!);
@@ -527,11 +552,17 @@ public class FinanceiroService : IFinanceiroService
                 m.Cancelado = true;
                 await _movimentos.UpdateAsync(m.Id, m);
             }
-            else if (m.PagoEm == l.Data)
+            else if (m.PagoEm == l.Data && !m.PagoPeloBanco)
             {
-                // A baixa foi feita pela conciliação: estorna.
+                // A baixa foi feita pela conciliação: estorna (Pix do ELROND fica baixado: só desvincula a linha).
                 m.PagoEm = string.Empty;
                 m.ValorPago = 0;
+                // A aprovação também veio da conciliação: volta para pendente.
+                if (AprovadoSoPelaConciliacao(m))
+                {
+                    m.Aprovacao = "pendente";
+                    m.Aprovacoes = new();
+                }
                 await _movimentos.UpdateAsync(m.Id, m);
             }
         }

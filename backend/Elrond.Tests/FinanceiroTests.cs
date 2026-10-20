@@ -56,6 +56,27 @@ public class FinanceiroTests
     }
 
     [Fact]
+    public async Task Conciliar_aprova_o_pendente_e_desfazer_volta_a_pendente()
+    {
+        var (svc, movs, _) = Montar();  // sem regra: no fluxo normal ninguém aprovaria
+        var m = Base(150m);
+        m.Id = "m-conc"; m.Vencimento = "2026-10-20";
+        movs.Itens.Add(m);
+        var extrato = (MemRepo<ExtratoLinha>)typeof(FinanceiroService).GetField("_extrato", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(svc)!;
+        extrato.Itens.Add(new ExtratoLinha { Id = "l1", CarteiraId = "cart", Fitid = "F1", Data = "2026-10-20", Valor = -150m, Memo = "PIX ENVIADO FORNECEDOR X" });
+
+        var r = await svc.VincularAsync(new VincularExtratoDto("l1", "m-conc"), Ana);
+        Assert.True(r.IsSuccess, r.Error);
+        var depois = movs.Itens.Single(x => x.Id == "m-conc");
+        Assert.Equal(("aprovado", "2026-10-20"), (depois.Aprovacao, depois.PagoEm));
+        Assert.Contains("pela conciliação", depois.Aprovacoes.Single().Nome);
+
+        Assert.True((await svc.DesfazerAsync("l1", Ana)).IsSuccess);
+        var desfeito = movs.Itens.Single(x => x.Id == "m-conc");
+        Assert.Equal(("pendente", ""), (desfeito.Aprovacao, desfeito.PagoEm));
+    }
+
+    [Fact]
     public async Task Pago_por_pix_do_elrond_nao_estorna_nem_altera()
     {
         var (svc, movs, _) = Montar(Regra(0, 0, "u-ana"));
