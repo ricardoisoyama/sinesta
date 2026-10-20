@@ -27,6 +27,12 @@ import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento
 import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento | 'transferencia'
+/** Motivo da recusa do banco, curto: sem o código ("[PIXP30]") e sem "Você atingiu o". */
+const motivoCurto = (msg: string) => {
+  const t = msg.replace(/\s*\[[A-Z0-9_]+\]\s*$/, '').replace(/^Você atingiu o /i, '').replace(/\.$/, '')
+  return t.length > 70 ? `${t.slice(0, 67)}...` : t
+}
+
 /** Situação curta do Pix em andamento, na coluna Situação. */
 const PIX_SITUACAO: Record<string, string> = {
   'aguardando-aprovacao': 'Aprovação no app',
@@ -202,8 +208,14 @@ export function EntradasSaidasPage() {
           {(() => {
             const p = pagamentoDe(m)
             return p ? (
-              <small className={`${s.pagTag} ${p.situacao === 'pago' ? s.pagTagOk : ['recusado', 'cancelado', 'falha'].includes(p.situacao) ? s.pagTagErro : ''}`} title={p.mensagem || undefined}>
-                <Landmark size={11} /> {ROTULO_PAGAMENTO[p.situacao]}{p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
+              <small
+                className={`${s.pagTag} ${p.situacao === 'pago' ? s.pagTagOk : ['recusado', 'cancelado', 'falha'].includes(p.situacao) ? s.pagTagErro : ''}`}
+                title={p.mensagem || (p.situacao === 'cancelado' ? 'Reprovado no app do banco, expirado ou cancelado lá' : undefined)}
+              >
+                <Landmark size={11} /> {ROTULO_PAGAMENTO[p.situacao]}
+                {p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
+                {/* O motivo que o banco deu ("limite diário...") sem o código entre colchetes. */}
+                {['recusado', 'falha'].includes(p.situacao) && p.mensagem ? `: ${motivoCurto(p.mensagem)}` : ''}
               </small>
             ) : null
           })()}
@@ -212,7 +224,8 @@ export function EntradasSaidasPage() {
     },
     {
       header: 'Situação',
-      largura: LARGURA.situacao,
+      // Um pouco mais larga que o padrão: cabe "Aprovação no app" do Pix em andamento.
+      largura: LARGURA.situacao + 24,
       valor: (m) => (m.pixSituacao ? PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco' : STATUS_MOVIMENTO[statusDe(m, hoje)]),
       cell: (m) => {
         const st = statusDe(m, hoje)
