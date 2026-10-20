@@ -13,7 +13,7 @@ namespace Elrond.Application.Services;
 /// </summary>
 public partial class AnexoService : IAnexoService
 {
-    private static readonly string[] Entidades = { "cliente", "fornecedor", "veiculo", "contrato" };
+    private static readonly string[] Entidades = { "cliente", "fornecedor", "veiculo", "contrato", "movimento" };
     private static readonly Dictionary<string, string> TiposPorExtensao = new(StringComparer.OrdinalIgnoreCase)
     {
         [".pdf"] = "application/pdf",
@@ -23,6 +23,7 @@ public partial class AnexoService : IAnexoService
         [".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         [".jpg"] = "image/jpeg",
         [".jpeg"] = "image/jpeg",
+        [".png"] = "image/png",
     };
 
     /// <summary>Assinaturas (magic bytes) aceitas por extensão.</summary>
@@ -31,6 +32,7 @@ public partial class AnexoService : IAnexoService
         [".pdf"] = new[] { "%PDF"u8.ToArray() },
         [".jpg"] = new[] { new byte[] { 0xFF, 0xD8, 0xFF } },
         [".jpeg"] = new[] { new byte[] { 0xFF, 0xD8, 0xFF } },
+        [".png"] = new[] { new byte[] { 0x89, 0x50, 0x4E, 0x47 } },
         // Office 2007+ é um ZIP; Office 97-2003 é um contêiner OLE.
         [".docx"] = new[] { new byte[] { 0x50, 0x4B, 0x03, 0x04 } },
         [".xlsx"] = new[] { new byte[] { 0x50, 0x4B, 0x03, 0x04 } },
@@ -47,6 +49,7 @@ public partial class AnexoService : IAnexoService
     private readonly ICrudRepository<Fornecedor> _fornecedores;
     private readonly ICrudRepository<Veiculo> _veiculos;
     private readonly ICrudRepository<Contrato> _contratos;
+    private readonly ICrudRepository<Movimento> _movimentos;
     private readonly IUsuarioAtualProvider _usuario;
 
     public AnexoService(
@@ -56,6 +59,7 @@ public partial class AnexoService : IAnexoService
         ICrudRepository<Fornecedor> fornecedores,
         ICrudRepository<Veiculo> veiculos,
         ICrudRepository<Contrato> contratos,
+        ICrudRepository<Movimento> movimentos,
         IUsuarioAtualProvider usuario)
     {
         _anexos = anexos;
@@ -64,6 +68,7 @@ public partial class AnexoService : IAnexoService
         _fornecedores = fornecedores;
         _veiculos = veiculos;
         _contratos = contratos;
+        _movimentos = movimentos;
         _usuario = usuario;
     }
 
@@ -156,6 +161,8 @@ public partial class AnexoService : IAnexoService
         "fornecedor" => await _fornecedores.GetByIdAsync(entidadeId) is not null,
         "veiculo" => await _veiculos.GetByIdAsync(entidadeId) is not null,
         "contrato" => await _contratos.GetByIdAsync(entidadeId) is not null,
+        // Lançamento das Entradas e Saídas: boleto, nota ou título que originou a conta.
+        "movimento" => await _movimentos.GetByIdAsync(entidadeId) is not null,
         _ => false,
     };
 

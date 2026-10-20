@@ -197,7 +197,7 @@ export function EntradasSaidasPage() {
         const regra = regraDe(m)
         const faltam = regra ? regra.aprovadores.filter((id) => !(m.aprovacoes ?? []).some((a) => a.usuarioId === id)).map(nomeDe) : []
         return (
-          <button type="button" className={s.aprovBtn} onClick={() => setAprovando(m)} title="Ver aprovadores">
+          <button type="button" className={s.aprovBtn} onClick={(e) => { e.stopPropagation(); setAprovando(m) }} title="Ver aprovadores">
             <span className={`${s.aprov} ${s[`aprov_${ap}`]}`}>{APROVACAO_LABEL[ap]}</span>
             {ap === 'pendente' && (
               <span className={s.aprovSub}>{!regra ? 'sem regra para este valor' : aguardandoMim(m) ? 'aguardando você' : `aguardando ${faltam.join(', ')}`}</span>
@@ -234,7 +234,7 @@ export function EntradasSaidasPage() {
         return (
           <>
             {(st === 'aberto' || st === 'atrasado') && (
-              <button className={ui.iconBtn} title={aprovado ? 'Liquidar' : 'Só lançamento aprovado pode ser baixado'} disabled={!aprovado} onClick={() => setBaixando({ itens: [m] })}>
+              <button className={ui.iconBtn} title={aprovado ? 'Liquidar' : 'Só lançamento aprovado pode ser baixado'} disabled={!aprovado} onClick={(e) => { e.stopPropagation(); setBaixando({ itens: [m] }) }}>
                 <CheckCircle2 />
               </button>
             )}
@@ -242,7 +242,8 @@ export function EntradasSaidasPage() {
               <button
                 className={ui.iconBtn}
                 title="Estornar (volta para em aberto)"
-                onClick={async () => {
+                onClick={async (e) => {
+                  e.stopPropagation()
                   const ok = await confirmar({ titulo: 'Estornar baixa', mensagem: 'Estornar a baixa deste lançamento?', confirmar: 'Estornar', perigo: true })
                   if (ok) exec(() => estornar(m.id))
                 }}
@@ -251,7 +252,7 @@ export function EntradasSaidasPage() {
               </button>
             )}
             {st !== 'cancelado' && (
-              <button className={ui.iconBtn} title="Editar" onClick={() => { setEditando(m); setFormOpen(true) }}>
+              <button className={ui.iconBtn} title="Editar" onClick={(e) => { e.stopPropagation(); setEditando(m); setFormOpen(true) }}>
                 <Pencil />
               </button>
             )}
@@ -310,6 +311,12 @@ export function EntradasSaidasPage() {
         getKey={(m) => m.id}
         rotulo={['lançamento', 'lançamentos']}
         pageSize={12}
+        // Clicar na linha abre o lançamento (com os documentos anexados).
+        onRowClick={(m) => {
+          if (m.cancelado) return
+          setEditando(m)
+          setFormOpen(true)
+        }}
         empty="Nenhum lançamento neste recorte."
         filters={
           <>
@@ -398,7 +405,13 @@ export function EntradasSaidasPage() {
         carteiras={carteiras}
         onClose={() => setFormOpen(false)}
         onSave={async (mov, parcelas, periodicidade) => {
-          if (await exec(() => (editando ? atualizar(mov) : adicionar(mov, parcelas, periodicidade)))) setFormOpen(false)
+          let gravados: Movimento[] = []
+          const ok = await exec(async () => {
+            if (editando) gravados = [await atualizar(mov)]
+            else gravados = await adicionar(mov, parcelas, periodicidade)
+          })
+          if (ok) setFormOpen(false)
+          return ok ? gravados : null
         }}
       />
       <BaixaModal

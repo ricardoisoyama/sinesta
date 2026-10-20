@@ -63,7 +63,7 @@ export function AnexosTab({ entidade, entidadeId }: Props) {
     try {
       for (const f of arquivos) {
         const ext = `.${f.name.split('.').pop()?.toLowerCase() ?? ''}`
-        if (!EXTENSOES_ANEXO.includes(ext)) throw new Error(`"${f.name}": tipo não aceito. Envie PDF, Word, Excel ou JPG.`)
+        if (!EXTENSOES_ANEXO.includes(ext)) throw new Error(`"${f.name}": tipo não aceito. Envie PDF, Word, Excel, JPG ou PNG.`)
         if (f.size > TAMANHO_MAXIMO_ANEXO) throw new Error(`"${f.name}" passa de 12 MB.`)
         await enviarAnexo(entidade, entidadeId, f)
       }
@@ -116,7 +116,7 @@ export function AnexosTab({ entidade, entidadeId }: Props) {
   return (
     <div>
       <div className={s.topo}>
-        <span className={s.dica}>PDF, Word, Excel ou JPG, até 12 MB por arquivo.</span>
+        <span className={s.dica}>PDF, Word, Excel, JPG ou PNG, até 12 MB por arquivo.</span>
         <input ref={inputRef} type="file" accept={EXTENSOES_ANEXO.join(',')} multiple onChange={escolher} hidden />
         <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => inputRef.current?.click()} disabled={enviando}>
           <Upload /> {enviando ? 'Enviando...' : 'Anexar documento'}

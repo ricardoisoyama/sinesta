@@ -1,6 +1,6 @@
 import { apiBlob, apiFetch, apiUpload } from '@/lib/api'
 
-export type EntidadeAnexo = 'cliente' | 'fornecedor' | 'veiculo' | 'contrato'
+export type EntidadeAnexo = 'cliente' | 'fornecedor' | 'veiculo' | 'contrato' | 'movimento'
 
 export interface Anexo {
   id: string
@@ -15,7 +15,7 @@ export interface Anexo {
 }
 
 /** Extensões aceitas e limite por arquivo (12 MB), iguais aos do servidor. */
-export const EXTENSOES_ANEXO = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg']
+export const EXTENSOES_ANEXO = ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.jpg', '.jpeg', '.png']
 export const TAMANHO_MAXIMO_ANEXO = 12 * 1024 * 1024
 
 export const listAnexos = (entidade: EntidadeAnexo, entidadeId: string) =>

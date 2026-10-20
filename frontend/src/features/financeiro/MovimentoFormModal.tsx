@@ -1,12 +1,17 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, Receipt } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Paperclip, Receipt, X } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import ui from '@/features/common/ui.module.css'
-import { useEmpresasQuery } from '@/features/cadastros/hooks'
+import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hooks'
+import { CadastroBusca, type OpcaoCadastro } from '@/features/camposOperacao/CadastroBusca'
+import { AnexosTab } from '@/features/anexos/AnexosTab'
+import { EXTENSOES_ANEXO, TAMANHO_MAXIMO_ANEXO, enviarAnexo } from '@/features/anexos/api'
+import { avisar } from '@/features/common/dialogo/dialogo'
+import { getErrorMessage } from '@/lib/api'
 import { listCategoriasCusto, listClientes, listFornecedores } from '@/features/cadastros/api'
 import { usePlanoContas } from '@/features/planoContas/store'
 import { useUsuarios } from '@/features/usuarios/store'
@@ -23,7 +28,8 @@ interface Props {
   initial: Movimento | null
   carteiras: Carteira[]
   onClose: () => void
-  onSave: (mov: Movimento, parcelas: number, periodicidade: Periodicidade) => Promise<void> | void
+  /** Devolve os lançamentos criados (para anexar os documentos escolhidos antes de salvar), ou null se não gravou. */
+  onSave: (mov: Movimento, parcelas: number, periodicidade: Periodicidade) => Promise<Movimento[] | null>
 }
 
 /** Lançamento a pagar ou a receber, com gerador de parcelas. */
@@ -32,6 +38,10 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
   const [parcelas, setParcelas] = useState(1)
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>('mensal')
   const [erros, setErros] = useState<Record<string, string>>({})
+  // Documentos escolhidos num lançamento novo: sobem depois de gravar (o lançamento ainda não tem id).
+  const [arquivos, setArquivos] = useState<File[]>([])
+  // Plano de contas e centro de custo que vieram do fornecedor: trocar o fornecedor troca só esses.
+  const [auto, setAuto] = useState({ planoContaId: '', centroCustoId: '' })
   const { data: empresas } = useEmpresasQuery()
   const ativas = carteiras.filter((c) => c.status === 'ativo')
   const [abriuEm, setAbriuEm] = useState(open)
@@ -45,6 +55,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
       setParcelas(1)
       setPeriodicidade('mensal')
       setErros({})
+      setArquivos([])
+      setAuto({ planoContaId: '', centroCustoId: '' })
     }
   }
   const set = (p: Partial<Movimento>) => setD((x) => ({ ...x, ...p }))
@@ -63,22 +75,51 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
   const { data: clientes } = useQuery({ queryKey: ['clientes'], queryFn: listClientes })
   const { data: fornecedores } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores })
   const { data: categorias } = useQuery({ queryKey: ['categorias-custo'], queryFn: listCategoriasCusto })
+  const { data: custosFixos } = useCustosFixosQuery()
   const { usuarios } = useUsuarios()
   const { analiticas } = usePlanoContas()
 
   const receber = d.tipo === 'receber'
   // Receita para receber, despesa para pagar (regra do plano de contas do cliente).
   const contas = analiticas().filter((c) => (receber ? c.grupoDre === 'Receita' : c.grupoDre === 'Despesa') && c.status === 'ativo')
-  const parceiros: { id: string; nome: string; grupo: string }[] = receber
-    ? (clientes ?? []).filter((c) => c.status === 'ativo').map((c) => ({ id: c.id, nome: c.nomeFantasia || c.nome, grupo: 'Clientes' }))
+  // Busca por nome ou CPF/CNPJ (com milhares de fornecedores, um combo não serve).
+  const parceiros: (OpcaoCadastro & { nomeLimpo: string })[] = receber
+    ? (clientes ?? []).filter((c) => c.status === 'ativo').map((c) => ({ id: c.id, nome: c.nomeFantasia || c.nome, nomeLimpo: c.nomeFantasia || c.nome, doc: c.cpfCnpj, busca: c.nome }))
     : [
-        ...(fornecedores ?? []).filter((f) => f.status === 'ativo').map((f) => ({ id: f.id, nome: f.nomeFantasia || f.nome, grupo: 'Fornecedores' })),
-        ...usuarios.filter((u) => u.status === 'ativo').map((u) => ({ id: `func-${u.id}`, nome: u.nome, grupo: 'Funcionários' })),
+        ...(fornecedores ?? []).filter((f) => f.status === 'ativo').map((f) => ({ id: f.id, nome: f.nomeFantasia || f.nome, nomeLimpo: f.nomeFantasia || f.nome, doc: f.cpfCnpj, busca: f.nome })),
+        ...usuarios.filter((u) => u.status === 'ativo').map((u) => ({ id: `func-${u.id}`, nome: `${u.nome} · funcionário`, nomeLimpo: u.nome, busca: u.email })),
       ]
-  const grupos = [...new Set(parceiros.map((p) => p.grupo))]
+  // Lançamento antigo de alguém que saiu do cadastro: continua aparecendo com o nome gravado.
+  if (d.parceiroId && !parceiros.some((p) => p.id === d.parceiroId)) parceiros.push({ id: d.parceiroId, nome: d.parceiroNome, nomeLimpo: d.parceiroNome })
 
-  const trocarTipo = (tipo: TipoMovimento) => set({ tipo, parceiroId: '', parceiroNome: '', planoContaId: '' })
-  const escolherParceiro = (id: string) => set({ parceiroId: id, parceiroNome: parceiros.find((p) => p.id === id)?.nome ?? '' })
+  const trocarTipo = (tipo: TipoMovimento) => {
+    set({ tipo, parceiroId: '', parceiroNome: '', planoContaId: '', centroCustoId: '' })
+    setAuto({ planoContaId: '', centroCustoId: '' })
+  }
+  /**
+   * Escolher o fornecedor traz o plano de contas e o centro de custo: da despesa fixa (DF) dele, se
+   * houver, senão do cadastro do fornecedor. Só troca o que estava vazio ou tinha vindo do fornecedor anterior.
+   */
+  const escolherParceiro = (id: string) => {
+    const nome = parceiros.find((p) => p.id === id)?.nomeLimpo ?? ''
+    const f = (fornecedores ?? []).find((x) => x.id === id)
+    const df = (custosFixos ?? []).filter((c) => c.fornecedorId === id && c.status === 'ativo' && (!d.empresaId || c.unidadeId === d.empresaId || (c.rateio ?? []).some((r) => r.empresaId === d.empresaId)))[0]
+      ?? (custosFixos ?? []).find((c) => c.fornecedorId === id && c.status === 'ativo')
+    const sugestao = { planoContaId: df?.planoContaId || f?.planoContaId || '', centroCustoId: df?.categoriaId || f?.centroCustoId || '' }
+    const planoServe = sugestao.planoContaId && contas.some((c) => c.id === sugestao.planoContaId)
+    const novo: Partial<Movimento> = { parceiroId: id, parceiroNome: nome }
+    if (!receber && planoServe && (!d.planoContaId || d.planoContaId === auto.planoContaId)) novo.planoContaId = sugestao.planoContaId
+    if (!receber && sugestao.centroCustoId && (!d.centroCustoId || d.centroCustoId === auto.centroCustoId)) novo.centroCustoId = sugestao.centroCustoId
+    setAuto({ planoContaId: novo.planoContaId ?? auto.planoContaId, centroCustoId: novo.centroCustoId ?? auto.centroCustoId })
+    set(novo)
+  }
+
+  const escolherArquivos = (lista: FileList | null) => {
+    const novos = Array.from(lista ?? [])
+    const ruim = novos.find((f) => !EXTENSOES_ANEXO.includes(`.${f.name.split('.').pop()?.toLowerCase() ?? ''}`) || f.size > TAMANHO_MAXIMO_ANEXO)
+    if (ruim) return void avisar({ titulo: 'Arquivo não aceito', mensagem: `"${ruim.name}": envie PDF, Word, Excel, JPG ou PNG de até 12 MB.` })
+    setArquivos((a) => [...a, ...novos])
+  }
 
   const preview = d.valor > 0 && d.vencimento && parcelas > 1 ? gerarParcelas(d, parcelas, periodicidade) : []
 
@@ -94,7 +135,15 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
     if (Object.keys(e).length) return
     setSalvando(true)
     try {
-      await onSave({ ...d, descricao: d.descricao.trim() }, initial ? 1 : parcelas, periodicidade)
+      const criados = await onSave({ ...d, descricao: d.descricao.trim() }, initial ? 1 : parcelas, periodicidade)
+      // Documentos escolhidos antes de gravar: vão para cada parcela criada.
+      if (criados && arquivos.length > 0) {
+        try {
+          for (const m of criados) for (const f of arquivos) await enviarAnexo('movimento', m.id, f)
+        } catch (err) {
+          void avisar({ titulo: 'Lançamento gravado, documento não', mensagem: `O lançamento foi gravado, mas o documento não subiu: ${getErrorMessage(err)}. Abra o lançamento e anexe de novo.` })
+        }
+      }
     } finally {
       setSalvando(false)
     }
@@ -143,16 +192,12 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
       <section className={ui.fsection}>
         <div className={ui.grid}>
           <Field className={ui.col2} label={receber ? 'Cliente' : 'Fornecedor / funcionário'} req error={erros.parceiroId}>
-            <select value={d.parceiroId} onChange={(e) => escolherParceiro(e.target.value)}>
-              <option value="">Selecione</option>
-              {grupos.map((g) => (
-                <optgroup key={g} label={g}>
-                  {parceiros.filter((p) => p.grupo === g).map((p) => (
-                    <option key={p.id} value={p.id}>{p.nome}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <CadastroBusca
+              opcoes={parceiros}
+              value={d.parceiroId}
+              onChange={escolherParceiro}
+              placeholder={receber ? 'Digite o nome ou o CNPJ do cliente' : 'Digite o nome, o CNPJ ou o funcionário'}
+            />
           </Field>
           <Field className={ui.col2} label="Empresa">
             <select value={d.empresaId} onChange={(e) => trocarEmpresa(e.target.value)}>
@@ -165,7 +210,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
           <Field className={ui.col4} label="Descrição" req error={erros.descricao}>
             <input value={d.descricao} onChange={(e) => set({ descricao: e.target.value })} placeholder={receber ? 'Ex.: PROP-0007 · Consultoria mensal' : 'Ex.: Aluguel · sala 402'} />
           </Field>
-          <Field className={ui.col2} label="Plano de contas" hint={receber ? 'Só contas de Receita.' : 'Só contas de Despesa.'}>
+          <Field className={ui.col2} label="Plano de contas" hint={receber ? 'Só contas de Receita.' : 'Só contas de Despesa. Ao escolher o fornecedor, vem da despesa fixa (DF) ou do cadastro dele.'}>
             <select value={d.planoContaId} onChange={(e) => set({ planoContaId: e.target.value })}>
               <option value="">Nenhuma</option>
               {contas.map((c) => (
@@ -242,6 +287,34 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
                 {p.parcela}/{p.totalParcelas} · {p.vencimento.split('-').reverse().join('/')} · {formatBRL(p.valor)}
               </span>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className={ui.fsection}>
+        <div className={ui.fsectionTitle}>
+          <Paperclip size={13} /> Documentos <span className={ui.fsectionHint}>boleto, nota fiscal ou título</span>
+        </div>
+        {editando && initial ? (
+          <AnexosTab entidade="movimento" entidadeId={initial.id} />
+        ) : (
+          <div className={s.anexosNovos}>
+            <label className={`${ui.btn} ${ui.btnGhost}`}>
+              <Paperclip /> Anexar documento
+              <input type="file" multiple hidden accept={EXTENSOES_ANEXO.join(',')} onChange={(e) => { escolherArquivos(e.target.files); e.target.value = '' }} />
+            </label>
+            {arquivos.length === 0 ? (
+              <span className={ui.cellMut}>PDF, Word, Excel, JPG ou PNG, até 12 MB. Sobe ao lançar{parcelas > 1 ? ' (vai para cada parcela)' : ''}.</span>
+            ) : (
+              <ul>
+                {arquivos.map((f, i) => (
+                  <li key={`${f.name}-${i}`}>
+                    {f.name}
+                    <button type="button" className={ui.iconBtn} title="Tirar" onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}><X /></button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </section>
