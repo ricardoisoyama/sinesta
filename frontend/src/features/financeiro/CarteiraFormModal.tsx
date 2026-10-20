@@ -16,6 +16,8 @@ interface Props {
   initial: Carteira | null
   onClose: () => void
   onSave: (c: Carteira) => Promise<unknown>
+  /** Aberto pelo cadastro da empresa: a conta é dela (sem escolher). */
+  empresaFixa?: string
 }
 
 const CORES = ['#2563eb', '#16a34a', '#d97706', '#9333ea', '#dc2626', '#0891b2', '#475569']
@@ -34,7 +36,7 @@ const vazia = (): Carteira => ({
 })
 
 /** Conta bancária, caixa ou cartão por onde o dinheiro entra e sai. */
-export function CarteiraFormModal({ open, initial, onClose, onSave }: Props) {
+export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa }: Props) {
   const [d, setD] = useState<Carteira>(vazia())
   const [erro, setErro] = useState('')
   const [salvando, setSalvando] = useState(false)
@@ -50,10 +52,10 @@ export function CarteiraFormModal({ open, initial, onClose, onSave }: Props) {
   const { data: empresasData } = useEmpresasQuery()
   const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo' || e.id === d.empresaId)
   // Carteira nova já vem na empresa padrão (cada CNPJ tem as suas contas).
-  const empresaId = d.empresaId ?? (d.id ? '' : (empresaPadrao(empresas)?.id ?? ''))
+  const empresaId = empresaFixa || (d.empresaId ?? (d.id ? '' : (empresaPadrao(empresas)?.id ?? '')))
 
   const submit = async () => {
-    if (!d.nome.trim()) return setErro('Dê um nome à carteira.')
+    if (!d.nome.trim()) return setErro('Dê um nome à conta.')
     // Carteira nova precisa de empresa; a antiga (compartilhada) pode continuar assim até alguém escolher.
     if (!empresaId && !d.id && empresas.length > 1) return setErro('Escolha a empresa dona da conta.')
     setSalvando(true)
@@ -71,7 +73,7 @@ export function CarteiraFormModal({ open, initial, onClose, onSave }: Props) {
     <Modal
       open={open}
       onClose={onClose}
-      title={initial ? 'Editar carteira' : 'Nova carteira'}
+      title={initial?.id ? 'Editar conta' : 'Nova conta'}
       subtitle="Conta bancária, caixa ou cartão"
       icon={<Landmark />}
       maxWidth={620}
@@ -89,6 +91,7 @@ export function CarteiraFormModal({ open, initial, onClose, onSave }: Props) {
           <Field className={ui.col2} label="Nome" req error={erro}>
             <input value={d.nome} onChange={(e) => set({ nome: e.target.value })} placeholder="Ex.: Itaú PJ" autoFocus />
           </Field>
+          {!empresaFixa && (
           <Field className={ui.col2} label="Empresa" req hint="CNPJ dono da conta. Lançamentos de outra empresa não entram nesta carteira.">
             <select value={empresaId} onChange={(e) => set({ empresaId: e.target.value })}>
               <option value="">{d.id && !d.empresaId ? 'Todas (carteira antiga)' : 'Selecione'}</option>
@@ -99,6 +102,7 @@ export function CarteiraFormModal({ open, initial, onClose, onSave }: Props) {
               ))}
             </select>
           </Field>
+          )}
           <Field label="Tipo">
             <select value={d.tipo} onChange={(e) => set({ tipo: e.target.value as Carteira['tipo'] })}>
               <option value="banco">Banco</option>

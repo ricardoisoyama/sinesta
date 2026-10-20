@@ -1,14 +1,14 @@
 import { useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { AlertTriangle, ChevronDown, ChevronRight, Landmark, Pencil, PiggyBank, Plus, TrendingUp, Wallet } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { AlertTriangle, ChevronDown, ChevronRight, Landmark, PiggyBank, TrendingUp, Wallet } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
 import { formatBRL } from '@/lib/format'
 import { fluxoDeCaixa, hojeISO, liquidoDe, primeiroDiaDoMes, saldoCarteira, saldoPrevisto, somarDias, somarMeses, ultimoDiaDoMes, type Granularidade } from './calculos'
 import { useFinanceiro } from './store'
-import { CarteiraFormModal } from './CarteiraFormModal'
-import { carteiraDaEmpresa, type Carteira } from './types'
+import { carteiraDaEmpresa } from './types'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import s from './financeiro.module.css'
@@ -23,8 +23,7 @@ const dataBR = (iso: string) => iso.split('-').reverse().join('/')
  * o detalhe abre por período.
  */
 export function CaixaPage() {
-  const { carteiras: todasCarteiras, movimentos: todosMovimentos, salvarCarteira } = useFinanceiro()
-  const [editandoCarteira, setEditandoCarteira] = useState<Carteira | null | undefined>(undefined)
+  const { carteiras: todasCarteiras, movimentos: todosMovimentos } = useFinanceiro()
   const hoje = hojeISO()
   const [janela, setJanela] = useState<Janela>('30')
   const [custom, setCustom] = useState({ ini: primeiroDiaDoMes(hoje), fim: ultimoDiaDoMes(hoje) })
@@ -94,9 +93,9 @@ export function CaixaPage() {
                 ))}
               </select>
             )}
-            <button className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => setEditandoCarteira(null)}>
-              <Plus /> Nova carteira
-            </button>
+            <Link className={`${ui.btn} ${ui.btnGhost}`} to="/cadastros/unidades" title="As contas ficam no cadastro da empresa, aba Dados bancários">
+              <Landmark /> Contas das empresas
+            </Link>
           </div>
         }
       />
@@ -120,21 +119,18 @@ export function CaixaPage() {
               <div className={`${s.carteiraSaldo} ${saldo < 0 ? s.neg : ''}`}>{formatBRL(saldo)}</div>
               <div className={s.carteiraPrev}><span>previsto</span><b>{formatBRL(prev)}</b></div>
             </button>
-            <button type="button" className={`${ui.iconBtn} ${s.carteiraEditar}`} title="Editar carteira" onClick={() => setEditandoCarteira(c)}>
-              <Pencil />
-            </button>
             </div>
           )
         })}
       </div>
       {ativas.length === 0 && (
-        <div className={s.aprovAviso}>Nenhuma carteira ativa. Cadastre a conta bancária ou o caixa em "Nova carteira" para lançar e conciliar.</div>
+        <div className={s.aprovAviso}>Nenhuma conta ativa. Cadastre as contas (banco, caixa ou cartão) em <Link to="/cadastros/unidades">Cadastros › Empresas</Link>, aba Dados bancários.</div>
       )}
       {carteiras.some((c) => c.status !== 'ativo') && (
         <div className={s.aprovNota}>
           Inativas:{' '}
           {carteiras.filter((c) => c.status !== 'ativo').map((c, i) => (
-            <span key={c.id}>{i > 0 && ', '}<button type="button" className={s.linkBtn} onClick={() => setEditandoCarteira(c)}>{c.nome}</button></span>
+            <span key={c.id}>{i > 0 && ', '}{c.nome}</span>
           ))}
         </div>
       )}
@@ -232,7 +228,6 @@ export function CaixaPage() {
           </tfoot>
         </table>
       </div>
-      <CarteiraFormModal open={editandoCarteira !== undefined} initial={editandoCarteira ?? null} onClose={() => setEditandoCarteira(undefined)} onSave={salvarCarteira} />
     </div>
   )
 }

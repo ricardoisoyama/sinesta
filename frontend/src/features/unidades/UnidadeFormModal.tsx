@@ -12,7 +12,7 @@ import { Hint } from '@/features/common/Hint'
 import { mesclar } from '@/lib/mesclar'
 import { REGIMES, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
 import { emptyUnidade, type UnidadeForm } from './unidade-schema'
-import { DadosBancariosFields } from '@/features/parceiros/DadosBancariosFields'
+import { ContasEmpresa } from './ContasEmpresa'
 import { bancoVazio, enderecoVazio } from '@/features/parceiros/types'
 import { useAuth } from '@/features/auth/auth-context'
 import { useFator } from '@/features/pricing/usePreco'
@@ -253,7 +253,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
 
       {tab === 'banco' && (
         <section className={ui.fsection}>
-          <DadosBancariosFields value={d.banco} onChange={(v) => set({ banco: v })} />
+          <ContasEmpresa empresaId={initial?.id ?? ''} bancoAntigo={d.banco} />
         </section>
       )}
 

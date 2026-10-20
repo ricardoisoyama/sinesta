@@ -124,7 +124,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
     >
       {carteiras.filter((c) => c.status === 'ativo').length === 0 && (
         <div className={s.aprovAviso}>
-          Nenhuma carteira cadastrada. Crie a conta bancária ou o caixa em <Link to="/financeiro/caixa">Financeiro › Caixa</Link> antes de lançar.
+          Nenhuma conta cadastrada. Crie a conta bancária ou o caixa em <Link to="/cadastros/unidades">Cadastros › Empresas</Link>, aba Dados bancários, antes de lançar.
         </div>
       )}
       {!editando && (

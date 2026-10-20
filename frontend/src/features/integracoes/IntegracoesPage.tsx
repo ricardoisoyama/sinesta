@@ -151,7 +151,7 @@ export function IntegracoesPage() {
     <div>
       <PageHeader
         breadcrumb="Administrativo"
-        title="Integrações"
+        title="Integrações Bancárias"
         subtitle="O banco de cada empresa (CNPJ): ambiente, credenciais, certificado e os padrões dos boletos. Só a equipe ELROND vê esta tela."
       />
 

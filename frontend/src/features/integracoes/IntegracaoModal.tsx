@@ -325,7 +325,7 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
             </select>
           </Field>
           {carteiras.length === 0 && (
-            <span className={`${ui.col2} ${s.nota}`}>Esta empresa ainda não tem conta bancária em Financeiro › Caixa.</span>
+            <span className={`${ui.col2} ${s.nota}`}>Esta empresa ainda não tem conta bancária: cadastre em Cadastros › Empresas, aba Dados bancários.</span>
           )}
         </div>
       </section>

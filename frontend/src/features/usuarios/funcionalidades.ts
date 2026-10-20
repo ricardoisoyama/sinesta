@@ -76,7 +76,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/fiscal/nfse', label: 'Emitir, consultar e cancelar NFS-e (motor fiscal, em teste)', grupo: GRUPO_ESPECIAIS, extra: true },
 
   // ── Administrativas: só o perfil Admin (a nossa equipe), sempre ─────────
-  { key: '/administrativo/integracoes', label: 'Integrações (bancos das empresas: credenciais, certificado, boleto)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/administrativo/integracoes', label: 'Integrações Bancárias (bancos das empresas: credenciais, certificado, boleto, pagamentos)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 

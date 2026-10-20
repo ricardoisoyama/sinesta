@@ -218,3 +218,14 @@
 .logoCert > :last-child { flex: 1 1 420px; min-width: 0; }
 .checkLinha { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; font-size: 13px; cursor: pointer; }
 .checkLinha input { accent-color: #e8702f; width: 16px; height: 16px; }
+
+/* Contas da empresa (aba Dados bancários) */
+.contas { display: flex; flex-direction: column; gap: 12px; }
+.contasVazio { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px 16px; border: 1px dashed #d8d4c9; border-radius: 10px; font-size: 13px; color: #4f5f56; }
+.contasLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.contasLista li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid #e6e3db; border-left-width: 4px; border-radius: 10px; background: #fff; }
+.contasLista li > svg { color: #1a4d1e; flex-shrink: 0; }
+.contasLista li > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.contasLista b { font-size: 13.5px; color: #143d18; }
+.contasLista span { font-size: 12px; color: #6b7b72; }
+.contaInativa { opacity: 0.6; }

@@ -141,7 +141,7 @@ export const navGroups: NavGroup[] = [
       { label: 'Suporte (prévia)', path: '#suporte', icon: LifeBuoy, acao: 'suporte', livre: true },
       { label: 'Auditoria', path: '/cadastros/auditoria', icon: History },
       // Só o perfil Suporte (a equipe ELROND): bancos das empresas.
-      { label: 'Integrações', path: '/administrativo/integracoes', icon: Plug },
+      { label: 'Integrações Bancárias', path: '/administrativo/integracoes', icon: Plug },
     ],
   },
 ]

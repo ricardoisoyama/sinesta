@@ -237,8 +237,11 @@ export function ConciliacaoPage() {
       {!carteiraId ? (
         <div className={`${ui.card} ${s.vazio}`}>
           <FileUp size={28} />
-          <b>Nenhuma carteira cadastrada</b>
-          <span>Cadastre a conta bancária em <Link to="/financeiro/caixa">Financeiro › Caixa</Link> para importar o extrato dela.</span>
+          <b>Nenhuma conta cadastrada</b>
+          <span>
+            Cadastre a conta bancária em <Link to="/cadastros/unidades">Cadastros › Empresas</Link>, aba Dados bancários. Para trazer o extrato pela API, ligue a conta ao banco em
+            Administrativo › Integrações Bancárias (campo "Conta do Caixa").
+          </span>
         </div>
       ) : linhas.length === 0 ? (
         <div className={`${ui.card} ${s.vazio}`}>
