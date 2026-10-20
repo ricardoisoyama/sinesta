@@ -30,6 +30,7 @@
 .status.atrasado { background: #fdecea; color: #c0392b; }
 .status.liquidado { background: #e8f5ec; color: #2e7d44; }
 .status.cancelado { background: #f0eee7; color: #6b7b72; }
+.status.pix { background: #e7eef8; color: #2f5f9e; }
 
 .venc { display: flex; flex-direction: column; line-height: 1.2; }
 .venc small { color: #6b7b72; font-size: 11px; }

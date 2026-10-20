@@ -20,6 +20,8 @@ public class FinanceiroTests
         Tipo = tipo, ParceiroNome = "Fornecedor X", Descricao = "Aluguel", Vencimento = "2026-10-10", Valor = valor, CarteiraId = "cart",
     };
 
+    private static readonly MemRepo<PagamentoBancario> Pagamentos = new();
+
     private static (FinanceiroService Svc, MemRepo<Movimento> Movs, MemRepo<RegraAprovacao> Regras) Montar(params RegraAprovacao[] regras)
     {
         var movs = new MemRepo<Movimento>();
@@ -30,7 +32,27 @@ public class FinanceiroTests
         rs.Itens.AddRange(regras);
         var empresas = new MemRepo<Empresa>();
         empresas.Itens.Add(new Empresa { Id = "matriz", Nome = "Mirai - Matriz" });
-        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia(), empresas), movs, rs);
+        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia(), empresas, Pagamentos), movs, rs);
+    }
+
+    [Fact]
+    public async Task Pix_em_andamento_trava_baixa_alteracao_e_cancelamento_mas_nao_a_baixa_do_banco()
+    {
+        var (svc, movs, _) = Montar(Regra(0, 0, "u-ana"));
+        var m = Base(80m);
+        m.Id = "m-andamento"; m.Aprovacao = "aprovado";
+        movs.Itens.Add(m);
+        Pagamentos.Itens.Add(new PagamentoBancario { Id = "pg-and", MovimentoId = "m-andamento", Situacao = PagamentoBancario.AguardandoAprovacao, CriadoEm = "2026-10-20T22:00:00Z" });
+        try
+        {
+            Assert.Equal(PagamentoBancario.AguardandoAprovacao, (await svc.ListarAsync()).Single(x => x.Id == "m-andamento").PixSituacao);
+            Assert.Contains("Pix em andamento", (await svc.LiquidarAsync(new BaixaDto(new() { "m-andamento" }, "2026-10-20", null), Ana)).Error);
+            Assert.Contains("Pix em andamento", (await svc.AtualizarAsync("m-andamento", Base(81m))).Error);
+            Assert.Contains("Pix em andamento", (await svc.CancelarAsync(new IdsDto(new() { "m-andamento" }), Ana)).Error);
+            // A baixa feita pelo próprio sistema (aviso do banco) passa.
+            Assert.True((await svc.LiquidarAsync(new BaixaDto(new() { "m-andamento" }, "2026-10-20", null), new UsuarioAtual("sistema", "Aviso do banco", "Admin"))).IsSuccess);
+        }
+        finally { Pagamentos.Itens.Clear(); }
     }
 
     [Fact]

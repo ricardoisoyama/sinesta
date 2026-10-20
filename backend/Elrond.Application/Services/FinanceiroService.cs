@@ -23,19 +23,34 @@ public class FinanceiroService : IFinanceiroService
     private readonly IAuditoriaService _auditoria;
     private readonly INumerador _numerador;
     private readonly ICrudRepository<Empresa>? _empresas;
+    private readonly ICrudRepository<PagamentoBancario>? _pagamentos;
 
     public FinanceiroService(ICrudRepository<Movimento> movimentos, ICrudRepository<Carteira> carteiras, ICrudRepository<RegraAprovacao> regras,
         ICrudRepository<ExtratoLinha> extrato, IUnidadeTrabalho uow, IAuditoriaService auditoria, INumerador numerador,
-        ICrudRepository<Empresa>? empresas = null)
+        ICrudRepository<Empresa>? empresas = null, ICrudRepository<PagamentoBancario>? pagamentos = null)
     {
         _numerador = numerador;
         _empresas = empresas;
+        _pagamentos = pagamentos;
         _movimentos = movimentos;
         _carteiras = carteiras;
         _regras = regras;
         _extrato = extrato;
         _uow = uow;
         _auditoria = auditoria;
+    }
+
+    private const string PixEmAndamentoMsg = "Tem Pix em andamento no banco para este lançamento (aguardando aprovação, agendado ou em processamento): espere o banco efetivar, ou cancele no app do banco, antes de baixar, alterar ou cancelar aqui.";
+
+    /// <summary>Lançamentos com Pix em andamento no banco (id → situação do pagamento).</summary>
+    private async Task<Dictionary<string, string>> PixEmAndamentoAsync(IEnumerable<string> ids)
+    {
+        if (_pagamentos is null) return new();
+        var set = ids.ToHashSet();
+        if (set.Count == 0) return new();
+        return (await _pagamentos.ListarAsync(p => set.Contains(p.MovimentoId)))
+            .Where(p => p.EmAberto).GroupBy(p => p.MovimentoId)
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CriadoEm).First().Situacao);
     }
 
     private const string PagoPeloBancoMsg = "Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então a baixa não é estornada nem o lançamento alterado. Se precisar devolver, lance um a receber.";
@@ -71,6 +86,8 @@ public class FinanceiroService : IFinanceiroService
             var regra = RegraQueCobre(regras, tipo, total, empresa);
             if (regra is not null) foreach (var m in g) m.RegraId = regra.Id;
         }
+        var pix = await PixEmAndamentoAsync(lista.Where(m => !m.Cancelado && m.PagoEm.Length == 0).Select(m => m.Id));
+        foreach (var m in lista) m.PixSituacao = pix.GetValueOrDefault(m.Id, string.Empty);
         return lista.OrderBy(m => m.Vencimento).ToList();
     }
 
@@ -293,6 +310,7 @@ public class FinanceiroService : IFinanceiroService
         if (atual is null) return Result.Failure<Movimento>("Lançamento não encontrado.");
         if (atual.Cancelado) return Result.Failure<Movimento>("Lançamento cancelado não pode ser alterado.");
         if (atual.PagoPeloBanco) return Result.Failure<Movimento>(PagoPeloBancoMsg);
+        if ((await PixEmAndamentoAsync(new[] { atual.Id, atual.OrigemId })).Count > 0) return Result.Failure<Movimento>(PixEmAndamentoMsg);
         if (atual.PagoEm.Length > 0) return Result.Failure<Movimento>("Lançamento liquidado: estorne a baixa antes de alterar.");
         dados.Tipo = atual.Tipo;
         if (atual.Transferencia)
@@ -351,6 +369,7 @@ public class FinanceiroService : IFinanceiroService
         var ids = dto.Ids.ToHashSet();
         var alvo = (await ComPernasAsync(await _movimentos.ListarAsync(m => ids.Contains(m.Id)))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
         if (alvo.Count == 0) return Result.Failure<int>("Nenhum lançamento em aberto entre os escolhidos.");
+        if (quem.Id != "sistema" && (await PixEmAndamentoAsync(alvo.Select(m => m.Id))).Count > 0) return Result.Failure<int>(PixEmAndamentoMsg);
         var naoAprovados = alvo.Where(m => m.Aprovacao != "aprovado").ToList();
         if (naoAprovados.Count > 0)
             return Result.Failure<int>($"{naoAprovados.Count} lançamento(s) ainda não aprovado(s): só lançamento aprovado pode ser baixado.");
@@ -405,6 +424,7 @@ public class FinanceiroService : IFinanceiroService
         var ids = (dto.Ids ?? new()).ToHashSet();
         var alvo = (await ComPernasAsync(await _movimentos.ListarAsync(m => ids.Contains(m.Id)))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
         if (alvo.Count == 0) return Result.Failure<int>("Nenhum lançamento em aberto entre os escolhidos (liquidado precisa ser estornado antes).");
+        if ((await PixEmAndamentoAsync(alvo.Select(m => m.Id))).Count > 0) return Result.Failure<int>(PixEmAndamentoMsg);
         foreach (var m in alvo) m.Cancelado = true;
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));
         await _auditoria.RegistrarAsync("cancelar", "Movimento", string.Join(",", alvo.Take(5).Select(m => m.Id)), $"{quem.Nome} cancelou {alvo.Count} lançamento(s) (ficam no histórico)");

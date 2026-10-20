@@ -194,6 +194,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
   const editando = !!initial
   // Liquidado: abre para consulta e anexos; o servidor não aceita alterar (pago por Pix do ELROND, nem estornando).
   const liquidado = !!initial?.pagoEm
+  // Pix em andamento no banco: também só consulta, até o banco responder.
+  const pixAndamento = !initial?.pagoEm && !!initial?.pixSituacao
   const transferenciaEditada = !!initial?.transferencia
 
   return (
@@ -210,7 +212,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onClose}>
             Cancelar
           </button>
-          {!liquidado && (
+          {!liquidado && !pixAndamento && (
             <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={submit} disabled={salvando || carteiras.length === 0}>
               {editando ? 'Salvar' : modoTransferencia ? 'Lançar transferência' : parcelas > 1 ? `Lançar ${parcelas} parcelas` : 'Lançar'}
             </button>
@@ -218,6 +220,11 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
         </>
       }
     >
+      {pixAndamento && (
+        <div className={s.transfInfo}>
+          Pix em andamento no banco ({initial?.pixSituacao === 'aguardando-aprovacao' ? 'aguardando aprovação no app' : initial?.pixSituacao}): o lançamento fica só para consulta até o banco responder. Se precisar desistir, reprove o Pix no app do banco.
+        </div>
+      )}
       {liquidado && (
         <div className={s.transfInfo}>
           {initial?.pagoPeloBanco

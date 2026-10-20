@@ -27,6 +27,15 @@ import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento
 import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento | 'transferencia'
+/** Situação curta do Pix em andamento, na coluna Situação. */
+const PIX_SITUACAO: Record<string, string> = {
+  'aguardando-aprovacao': 'Aprovação no app',
+  agendado: 'Pix agendado',
+  processando: 'Pix processando',
+  pendente: 'Enviando Pix',
+  incerto: 'Conferindo Pix',
+}
+
 type Janela = 'vencidos' | 'mes' | '30dias' | 'periodo' | 'tudo'
 type FiltroSituacao = 'abertos' | 'liquidados' | 'cancelados' | 'todos'
 type FiltroAprov = 'todas' | 'pendente' | 'minha' | 'aprovado' | 'reprovado'
@@ -204,10 +213,17 @@ export function EntradasSaidasPage() {
     {
       header: 'Situação',
       largura: LARGURA.situacao,
-      valor: (m) => STATUS_MOVIMENTO[statusDe(m, hoje)],
+      valor: (m) => (m.pixSituacao ? PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco' : STATUS_MOVIMENTO[statusDe(m, hoje)]),
       cell: (m) => {
         const st = statusDe(m, hoje)
         const Ic = ICONE_STATUS[st]
+        // Pix em andamento no banco: a situação é a dele (o lançamento fica travado até o banco responder).
+        if (m.pixSituacao)
+          return (
+            <span className={`${s.status} ${s.pix}`} title={`${ROTULO_PAGAMENTO[m.pixSituacao as keyof typeof ROTULO_PAGAMENTO] ?? 'Pix no banco'}: baixa, edição e cancelamento ficam travados até o banco responder`}>
+              <Landmark /> {PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco'}
+            </span>
+          )
         return (
           <span className={`${s.status} ${s[st]}`}>
             <Ic /> {STATUS_MOVIMENTO[st]}
@@ -265,7 +281,7 @@ export function EntradasSaidasPage() {
                 <ShieldCheck />
               </button>
             )}
-            {(st === 'aberto' || st === 'atrasado') && (
+            {(st === 'aberto' || st === 'atrasado') && !m.pixSituacao && (
               <button className={ui.iconBtn} title={aprovado ? 'Liquidar' : 'Só lançamento aprovado pode ser baixado'} disabled={!aprovado} onClick={(e) => { e.stopPropagation(); setBaixando({ itens: [m] }) }}>
                 <CheckCircle2 />
               </button>
@@ -284,7 +300,7 @@ export function EntradasSaidasPage() {
               </button>
             )}
             {/* Liquidado não se altera (estorne antes); clicar na linha abre para consulta e anexos. */}
-            {st !== 'cancelado' && st !== 'liquidado' && (
+            {st !== 'cancelado' && st !== 'liquidado' && !m.pixSituacao && (
               <button className={ui.iconBtn} title="Editar" onClick={(e) => { e.stopPropagation(); setEditando(m); setFormOpen(true) }}>
                 <Pencil />
               </button>
@@ -395,7 +411,8 @@ export function EntradasSaidasPage() {
           </>
         }
         acoesLote={({ itens, limpar }) => {
-          const abertos = itens.filter((m) => !m.pagoEm && !m.cancelado)
+          // Com Pix em andamento no banco, o lançamento fica fora da baixa, do cancelamento e de novo envio.
+          const abertos = itens.filter((m) => !m.pagoEm && !m.cancelado && !m.pixSituacao)
           const baixaveis = abertos.filter((m) => m.aprovacao === 'aprovado')
           const pagaveis = baixaveis.filter((m) => m.tipo === 'pagar' && !(pagamentoDe(m) && vigente(pagamentoDe(m)!)))
           const aprovaveis = abertos.filter(aguardandoMim)

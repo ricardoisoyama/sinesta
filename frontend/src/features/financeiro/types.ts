@@ -120,6 +120,8 @@ export interface Movimento {
   baixarAoAprovar?: boolean
   /** Pago por Pix pelo ELROND (vem do servidor): sem estorno nem alteração. */
   pagoPeloBanco?: boolean
+  /** Pix em andamento no banco (vem do servidor): aguardando-aprovacao, agendado, processando... */
+  pixSituacao?: string
   observacao: string
   cancelado: boolean
   /** Aprovação (regra do tipo movimento em Aprovadores e Regras). Ausente = pendente. */

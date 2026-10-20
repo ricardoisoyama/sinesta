@@ -79,6 +79,8 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public string PagamentoBancarioId { get; set; } = string.Empty;
     /// <summary>Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então não há estorno nem alteração.</summary>
     public bool PagoPeloBanco => PagamentoBancarioId.Length > 0 && PagoEm.Length > 0;
+    /// <summary>Situação do Pix em andamento no banco (aguardando-aprovacao, agendado...); vazio = nenhum. Não é gravado: a lista preenche.</summary>
+    public string PixSituacao { get; set; } = string.Empty;
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }
