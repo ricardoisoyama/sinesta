@@ -3,6 +3,7 @@ using Elrond.Application.Common;
 using Elrond.Application.DTOs;
 using Elrond.Application.Interfaces;
 using Elrond.Domain.Entities;
+using Elrond.Domain.Regras;
 using Microsoft.Extensions.Logging;
 
 namespace Elrond.Application.Services;
@@ -56,6 +57,8 @@ public sealed class PagamentoService(
         foreach (var m in movs)
         {
             var (nome, mail, chave) = await FavorecidoAsync(m);
+            // Já no formato do Pix (celular com +55); se a do cadastro não serve, vai como está para a pessoa corrigir.
+            if (ChavePix.Normalizar(chave) is { Ok: true } formatada) chave = formatada.Chave;
             var integ = IntegracaoDe(todasInteg, m.EmpresaId);
             var atual = atuais.FirstOrDefault(p => p.MovimentoId == m.Id);
             lista.Add(new PreparoPagamentoDto(m.Id, m.Numero, m.EmpresaId, nome, mail, chave, m.Liquido, m.Vencimento, m.Descricao,
@@ -89,8 +92,9 @@ public sealed class PagamentoService(
         var integ = IntegracaoDe(todasInteg, m.EmpresaId);
         var atual = (await pagamentos.ListarAsync(p => p.MovimentoId == m.Id)).FirstOrDefault(p => p.Vigente);
         if (Problema(m, integ, atual) is { Length: > 0 } problema) return new(m.Id, false, problema, atual);
-        var chave = (item.Chave ?? string.Empty).Trim();
-        if (chave.Length is 0 or > 77) return new(m.Id, false, "Informe a chave Pix do favorecido.", null);
+        var chavePix = ChavePix.Normalizar(item.Chave);
+        if (!chavePix.Ok) return new(m.Id, false, chavePix.Erro, null);
+        var chave = chavePix.Chave;
         var modulo = bancos.Modulo(integ!.Banco)!.Pagamento!;
         var (nome, mail, _) = await FavorecidoAsync(m);
 

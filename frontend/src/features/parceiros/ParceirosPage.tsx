@@ -14,6 +14,7 @@ import { useCrud } from '@/features/common/useCrud'
 import type { Column } from '@/features/common/DataTable'
 import { LARGURA } from '@/features/common/grid'
 import { formatCpfCnpj } from '@/lib/format'
+import { semAcento } from '@/lib/texto'
 import {
   listClientes, createCliente, updateCliente,
   listFornecedores, createFornecedor, updateFornecedor,
@@ -47,10 +48,15 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
   const { data } = useQuery({ queryKey: [recurso], queryFn: api.list })
   const crud = useCrud<Parceiro>(
     [],
-    (p, q) =>
-      p.nome.toLowerCase().includes(q) ||
-      p.nomeFantasia.toLowerCase().includes(q) ||
-      p.cpfCnpj.replace(/\D/g, '').includes(q.replace(/\D/g, '')),
+    (p, q) => {
+      // Busca sem dígitos ("minis") não compara o CNPJ: senão "contém vazio" deixava passar todos.
+      const digitos = q.replace(/\D/g, '')
+      return (
+        semAcento(p.nome).includes(semAcento(q)) ||
+        semAcento(p.nomeFantasia).includes(semAcento(q)) ||
+        (digitos.length >= 3 && p.cpfCnpj.replace(/\D/g, '').includes(digitos))
+      )
+    },
   )
 
   useEffect(() => {
