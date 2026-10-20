@@ -293,7 +293,7 @@ export function ConciliacaoPage() {
                   <th style={{ width: 130 }} className={s.r}>Valor</th>
                   <th style={{ width: 120 }}>Situação</th>
                   <th>
-                    Lançamento no sistema <Hint text="O par que o sistema encontrou. Verde: conciliado. Amarelo: sugestão para você confirmar. Cinza: não achou nada parecido. Lançamento em aberto só concilia depois de aprovado." />
+                    Lançamento no sistema <Hint text="O par que o sistema encontrou. Verde: conciliado. Amarelo: sugestão para você confirmar. Cinza: não achou nada parecido. Lançamento ainda pendente de aprovação é aprovado ao conciliar: o extrato prova que já saiu (ou entrou)." />
                   </th>
                   <th style={{ width: 250 }} />
                 </tr>
