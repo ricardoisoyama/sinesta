@@ -142,6 +142,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
   const contasTransferencia = analiticas().filter((c) => c.status === 'ativo')
   const escolherTransferencia = () => {
     setModoTransferencia(true)
+    setArquivos([])
     // Sugere a conta do plano com cara de transferência, se o plano do cliente tiver uma.
     const sugerida = contasTransferencia.find((c) => pareceTransferencia(c.nome))
     setT((x) => ({ ...x, planoContaId: x.planoContaId || sugerida?.id || '' }))
@@ -164,9 +165,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
     if (Object.keys(e).length) return
     setSalvando(true)
     try {
-      const criadas = await onTransferir({ ...t, descricao: t.descricao.trim() })
-      // O comprovante vai na saída (a perna que mostra de onde saiu o dinheiro).
-      if (criadas) await enviarArquivos(criadas.filter((m) => m.tipo === 'pagar'))
+      await onTransferir({ ...t, descricao: t.descricao.trim() })
     } finally {
       setSalvando(false)
     }
@@ -359,6 +358,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
       </>
       )}
 
+      {/* Transferência entre contas não tem boleto, nota nem título: sem documentos. */}
+      {!modoTransferencia && !transferenciaEditada && (
       <section className={ui.fsection}>
         <div className={ui.fsectionTitle}>
           <Paperclip size={13} /> Documentos <span className={ui.fsectionHint}>boleto, nota fiscal ou título</span>
@@ -372,7 +373,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
               <input type="file" multiple hidden accept={EXTENSOES_ANEXO.join(',')} onChange={(e) => { escolherArquivos(e.target.files); e.target.value = '' }} />
             </label>
             {arquivos.length === 0 ? (
-              <span className={ui.cellMut}>PDF, Word, Excel, JPG ou PNG, até 12 MB. Sobe ao lançar{modoTransferencia ? ' (fica na saída)' : parcelas > 1 ? ' (vai para cada parcela)' : ''}.</span>
+              <span className={ui.cellMut}>PDF, Word, Excel, JPG ou PNG, até 12 MB. Sobe ao lançar{parcelas > 1 ? ' (vai para cada parcela)' : ''}.</span>
             ) : (
               <ul>
                 {arquivos.map((f, i) => (
@@ -386,6 +387,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
           </div>
         )}
       </section>
+      )}
     </Modal>
   )
 }
