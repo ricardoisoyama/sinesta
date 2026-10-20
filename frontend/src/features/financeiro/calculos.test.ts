@@ -39,6 +39,14 @@ describe('resumo', () => {
     expect(r.qtdVencidos).toBe(1)
     expect(r.previsto30).toBe(300)
   })
+
+  it('transferência entre contas fica fora de a pagar/a receber, mas entra no caixa dos próximos 30 dias', () => {
+    const saida = mov({ id: 's', tipo: 'pagar', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
+    const entrada = mov({ id: 'e', tipo: 'receber', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
+    const filial = resumo([saida], hoje)
+    expect([filial.aPagar, filial.aReceber, filial.previsto30]).toEqual([0, 0, -9000])
+    expect(resumo([saida, entrada], hoje).previsto30).toBe(0)
+  })
 })
 
 describe('saldoCarteira e fluxoDeCaixa', () => {

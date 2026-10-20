@@ -22,11 +22,14 @@ public class FinanceiroService : IFinanceiroService
     private readonly IUnidadeTrabalho _uow;
     private readonly IAuditoriaService _auditoria;
     private readonly INumerador _numerador;
+    private readonly ICrudRepository<Empresa>? _empresas;
 
     public FinanceiroService(ICrudRepository<Movimento> movimentos, ICrudRepository<Carteira> carteiras, ICrudRepository<RegraAprovacao> regras,
-        ICrudRepository<ExtratoLinha> extrato, IUnidadeTrabalho uow, IAuditoriaService auditoria, INumerador numerador)
+        ICrudRepository<ExtratoLinha> extrato, IUnidadeTrabalho uow, IAuditoriaService auditoria, INumerador numerador,
+        ICrudRepository<Empresa>? empresas = null)
     {
         _numerador = numerador;
+        _empresas = empresas;
         _movimentos = movimentos;
         _carteiras = carteiras;
         _regras = regras;
@@ -249,10 +252,20 @@ public class FinanceiroService : IFinanceiroService
         var grupoId = Guid.NewGuid().ToString();
         var idSaida = Guid.NewGuid().ToString();
         var idEntrada = Guid.NewGuid().ToString();
+        // Contas de empresas diferentes costumam ter o mesmo nome ("077 - Banco Inter"): a empresa entra no nome.
+        var nomeOrigem = origem.Nome;
+        var nomeDestino = destino.Nome;
+        if (origem.EmpresaId != destino.EmpresaId && _empresas is not null)
+        {
+            var eo = origem.EmpresaId.Length > 0 ? await _empresas.GetByIdAsync(origem.EmpresaId) : null;
+            var ed = destino.EmpresaId.Length > 0 ? await _empresas.GetByIdAsync(destino.EmpresaId) : null;
+            if (eo is not null) nomeOrigem = $"{eo.Nome} · {origem.Nome}";
+            if (ed is not null) nomeDestino = $"{ed.Nome} · {destino.Nome}";
+        }
         Movimento Perna(string id, long numero, string tipo, Carteira conta, Carteira outra, string outraId) => new()
         {
             Id = id, Numero = numero, Tipo = tipo, EmpresaId = conta.EmpresaId, ParceiroId = string.Empty,
-            ParceiroNome = tipo == "pagar" ? $"Para {outra.Nome}" : $"De {outra.Nome}",
+            ParceiroNome = tipo == "pagar" ? $"Para {(outra == destino ? nomeDestino : nomeOrigem)}" : $"De {(outra == origem ? nomeOrigem : nomeDestino)}",
             Descricao = descricao, PlanoContaId = dto.PlanoContaId ?? string.Empty, CentroCustoId = dto.CentroCustoId ?? string.Empty,
             Documento = dto.Documento ?? string.Empty, Competencia = dto.Data[..7], Vencimento = dto.Data, Valor = Math.Round(dto.Valor, 2),
             CarteiraId = conta.Id, FormaPagamento = string.IsNullOrWhiteSpace(dto.FormaPagamento) ? "Pix" : dto.FormaPagamento, Parcela = 1, TotalParcelas = 1,

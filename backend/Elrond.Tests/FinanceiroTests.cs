@@ -28,7 +28,9 @@ public class FinanceiroTests
         carteiras.Itens.Add(new Carteira { Id = "cart-matriz", Nome = "Bradesco Matriz", EmpresaId = "matriz" });
         var rs = new MemRepo<RegraAprovacao>();
         rs.Itens.AddRange(regras);
-        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia()), movs, rs);
+        var empresas = new MemRepo<Empresa>();
+        empresas.Itens.Add(new Empresa { Id = "matriz", Nome = "Mirai - Matriz" });
+        return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia(), empresas), movs, rs);
     }
 
     private static RegraAprovacao Regra(decimal de, decimal ate, params string[] aprovadores) => new()
@@ -48,6 +50,8 @@ public class FinanceiroTests
         Assert.Equal(("cart-matriz", "matriz", "cart"), (saida.CarteiraId, saida.EmpresaId, entrada.CarteiraId));
         Assert.Equal((entrada.Id, saida.Id), (saida.OrigemId, entrada.OrigemId));
         Assert.Equal("Transferência entre contas", saida.Descricao);
+        // Contas de empresas diferentes: o nome leva a empresa (as contas costumam ter o mesmo nome do banco).
+        Assert.Equal(("Para Banco", "De Mirai - Matriz · Bradesco Matriz"), (saida.ParceiroNome, entrada.ParceiroNome));
         Assert.Equal("r-0-5000", saida.RegraId);
 
         // Aprovar uma perna aprova as duas e, como já foi feita no banco, baixa as duas na data.
