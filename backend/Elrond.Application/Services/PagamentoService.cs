@@ -28,6 +28,8 @@ public sealed class PagamentoService(
     ICrudRepository<Movimento> movimentos,
     ICrudRepository<IntegracaoBancaria> integracoes,
     ICrudRepository<Fornecedor> fornecedores,
+    ICrudRepository<Carteira> carteiras,
+    ICrudRepository<Empresa> empresas,
     IUserRepository usuarios,
     IBancos bancos,
     ICofreBancario cofre,
@@ -255,6 +257,10 @@ public sealed class PagamentoService(
     /// <summary>Favorecido do lançamento: funcionário (func-{id}) ou fornecedor, com e-mail e a chave Pix do cadastro.</summary>
     private async Task<(string Nome, string Email, string Chave)> FavorecidoAsync(Movimento m)
     {
+        // Transferência entre contas: o Pix vai para a empresa da conta de destino (chave sugerida: o CNPJ dela).
+        if (m.Transferencia && await movimentos.GetByIdAsync(m.OrigemId) is { } entrada
+            && await carteiras.GetByIdAsync(entrada.CarteiraId) is { } destino && await empresas.GetByIdAsync(destino.EmpresaId) is { } dona)
+            return ($"{dona.Nome} · {destino.Nome}", string.Empty, new string(dona.Cnpj.Where(char.IsDigit).ToArray()));
         if (m.ParceiroId.StartsWith("func-", StringComparison.Ordinal) && Guid.TryParse(m.ParceiroId[5..], out var uid) && await usuarios.FindByIdAsync(uid) is { } u)
             return (u.Name, u.Email, u.Banco?.Pix ?? string.Empty);
         if (m.ParceiroId.Length > 0 && await fornecedores.GetByIdAsync(m.ParceiroId) is { } f)

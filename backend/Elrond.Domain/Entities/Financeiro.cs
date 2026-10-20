@@ -66,8 +66,15 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public int Parcela { get; set; } = 1;
     public int TotalParcelas { get; set; } = 1;
     public string GrupoId { get; set; } = string.Empty;
-    /// <summary>manual | proposta | despesa | conciliacao.</summary>
+    /// <summary>
+    /// manual | proposta | despesa | conciliacao | transferencia. Transferência entre contas = duas linhas do
+    /// mesmo grupo (saída na conta de origem, entrada na de destino), uma apontando para a outra em OrigemId.
+    /// </summary>
     public string Origem { get; set; } = "manual";
+    public const string OrigemTransferencia = "transferencia";
+    public bool Transferencia => Origem == OrigemTransferencia;
+    /// <summary>Transferência já feita no banco: ao ser aprovada, as duas pernas entram baixadas na data dela.</summary>
+    public bool BaixarAoAprovar { get; set; }
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }

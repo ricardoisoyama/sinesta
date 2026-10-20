@@ -9,6 +9,8 @@ public interface IFinanceiroService
 {
     Task<List<Movimento>> ListarAsync();
     Task<Result<List<Movimento>>> CriarAsync(NovoMovimentoDto dto, UsuarioAtual quem);
+    /// <summary>Transferência entre contas: saída na origem + entrada no destino, ligadas (aprovadas, baixadas e canceladas juntas).</summary>
+    Task<Result<List<Movimento>>> TransferirAsync(TransferenciaDto dto, UsuarioAtual quem);
     Task<Result<Movimento>> AtualizarAsync(string id, Movimento dados);
     Task<Result<int>> LiquidarAsync(BaixaDto dto, UsuarioAtual quem);
     Task<Result<Movimento>> EstornarAsync(string id, UsuarioAtual quem);

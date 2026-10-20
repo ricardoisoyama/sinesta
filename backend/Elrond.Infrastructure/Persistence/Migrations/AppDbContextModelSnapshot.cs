@@ -2739,6 +2739,9 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasMaxLength(12)
                         .HasColumnType("character varying(12)");
 
+                    b.Property<bool>("BaixarAoAprovar")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("Cancelado")
                         .HasColumnType("boolean");
 

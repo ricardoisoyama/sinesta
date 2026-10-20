@@ -60,8 +60,8 @@ public class FinanceiroService : IFinanceiroService
         var regras = await _regras.ListarAsync(r => r.Tipo == "movimento");
         foreach (var g in lista.Where(m => m.Aprovacao == "pendente" && m.RegraId.Length == 0).GroupBy(m => m.GrupoId))
         {
-            var total = g.Sum(m => m.Valor);
-            var regra = RegraQueCobre(regras, g.First().Tipo, total);
+            var (tipo, total) = ValorParaRegra(g.ToList());
+            var regra = RegraQueCobre(regras, tipo, total);
             if (regra is not null) foreach (var m in g) m.RegraId = regra.Id;
         }
         return lista.OrderBy(m => m.Vencimento).ToList();
@@ -88,6 +88,10 @@ public class FinanceiroService : IFinanceiroService
             x.Aprovacoes = x.Aprovacoes.Where(a => a.UsuarioId != quem.Id).Append(assinatura).ToList();
             if (completo) x.Aprovacao = "aprovado";
         }
+        // Transferência que já foi feita no banco: aprovada, as duas pernas entram baixadas na data dela.
+        // A que ainda vai ser feita (pelo app ou pelo "Agendar pagamento") fica em aberto até a baixa.
+        if (completo && grupo.All(x => x.Transferencia && x.BaixarAoAprovar))
+            foreach (var x in grupo.Where(x => x.PagoEm.Length == 0)) { x.PagoEm = x.Vencimento; x.ValorPago = x.Valor; }
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), grupo));
         await _auditoria.RegistrarAsync(completo ? "aprovar" : "assinar", "Movimento", m.Id,
             $"{quem.Nome} {(completo ? "aprovou" : "assinou")} \"{m.Descricao}\" ({m.ParceiroNome}, {R2(grupo.Sum(x => x.Valor)):N2}){(completo ? "" : $" · faltam {regra.Aprovadores.Count - assinaram.Count} assinatura(s)")}");
@@ -122,11 +126,28 @@ public class FinanceiroService : IFinanceiroService
     {
         var regras = await _regras.ListarAsync(r => r.Tipo == "movimento");
         var atual = grupo.First();
+        var (tipo, total) = ValorParaRegra(grupo);
         var regra = regras.FirstOrDefault(r => r.Id == atual.RegraId && r.Status == "ativo")
-                    ?? RegraQueCobre(regras, atual.Tipo, grupo.Sum(x => x.Valor));
+                    ?? RegraQueCobre(regras, tipo, total);
         return regra is null
-            ? (null, $"Não existem regras ou aprovadores cadastrados para lançamentos {(atual.Tipo == "receber" ? "a receber" : "a pagar")} de {R2(grupo.Sum(x => x.Valor)):N2}. O gestor precisa criar a regra em Parametrizações › Aprovadores e Regras.")
+            ? (null, $"Não existem regras ou aprovadores cadastrados para lançamentos {(tipo == "receber" ? "a receber" : "a pagar")} de {R2(total):N2}. O gestor precisa criar a regra em Parametrizações › Aprovadores e Regras.")
             : (regra, null);
+    }
+
+    /// <summary>Tipo e valor que a regra de aprovação avalia: na transferência, a saída (dinheiro que sai da conta).</summary>
+    private static (string Tipo, decimal Total) ValorParaRegra(List<Movimento> grupo) =>
+        grupo.Any(m => m.Transferencia)
+            ? ("pagar", grupo.Where(m => m.Tipo == "pagar").Sum(m => m.Valor))
+            : (grupo.First().Tipo, grupo.Sum(m => m.Valor));
+
+    /// <summary>A outra perna das transferências entre os lançamentos (para aprovar, baixar, estornar e cancelar juntas).</summary>
+    private async Task<List<Movimento>> ComPernasAsync(List<Movimento> lista)
+    {
+        var grupos = lista.Where(m => m.Transferencia && m.GrupoId.Length > 0).Select(m => m.GrupoId).Distinct().ToList();
+        if (grupos.Count == 0) return lista;
+        var ids = lista.Select(m => m.Id).ToHashSet();
+        var pernas = (await _movimentos.ListarAsync(x => grupos.Contains(x.GrupoId))).Where(x => !x.Cancelado && !ids.Contains(x.Id));
+        return lista.Concat(pernas).ToList();
     }
 
     // ══════════════════════════ lançamentos ══════════════════════════
@@ -211,6 +232,44 @@ public class FinanceiroService : IFinanceiroService
     private static string NumerosDe(IReadOnlyList<Movimento> lote) =>
         lote.Count == 1 ? $"{lote[0].Numero}" : $"{lote[0].Numero} a {lote[^1].Numero}";
 
+    public async Task<Result<List<Movimento>>> TransferirAsync(TransferenciaDto dto, UsuarioAtual quem)
+    {
+        if (string.IsNullOrWhiteSpace(dto.OrigemId) || string.IsNullOrWhiteSpace(dto.DestinoId)) return Result.Failure<List<Movimento>>("Escolha a conta de origem e a de destino.");
+        if (dto.OrigemId == dto.DestinoId) return Result.Failure<List<Movimento>>("A conta de origem e a de destino precisam ser diferentes.");
+        if (dto.Valor <= 0) return Result.Failure<List<Movimento>>("Informe o valor.");
+        if (!DateOnly.TryParseExact(dto.Data ?? string.Empty, "yyyy-MM-dd", out _)) return Result.Failure<List<Movimento>>("Informe a data da transferência.");
+        var origem = await _carteiras.GetByIdAsync(dto.OrigemId);
+        var destino = await _carteiras.GetByIdAsync(dto.DestinoId);
+        if (origem is null || destino is null) return Result.Failure<List<Movimento>>("Conta não encontrada.");
+        if (origem.Status == "inativo" || destino.Status == "inativo") return Result.Failure<List<Movimento>>("Não dá para transferir de ou para uma conta inativa.");
+
+        var descricao = string.IsNullOrWhiteSpace(dto.Descricao) ? "Transferência entre contas" : dto.Descricao.Trim();
+        var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), "pagar", dto.Valor);
+        var numeros = await _numerador.ProximosMovimentosAsync(2);
+        var grupoId = Guid.NewGuid().ToString();
+        var idSaida = Guid.NewGuid().ToString();
+        var idEntrada = Guid.NewGuid().ToString();
+        Movimento Perna(string id, long numero, string tipo, Carteira conta, Carteira outra, string outraId) => new()
+        {
+            Id = id, Numero = numero, Tipo = tipo, EmpresaId = conta.EmpresaId, ParceiroId = string.Empty,
+            ParceiroNome = tipo == "pagar" ? $"Para {outra.Nome}" : $"De {outra.Nome}",
+            Descricao = descricao, PlanoContaId = dto.PlanoContaId ?? string.Empty, CentroCustoId = dto.CentroCustoId ?? string.Empty,
+            Documento = dto.Documento ?? string.Empty, Competencia = dto.Data[..7], Vencimento = dto.Data, Valor = Math.Round(dto.Valor, 2),
+            CarteiraId = conta.Id, FormaPagamento = string.IsNullOrWhiteSpace(dto.FormaPagamento) ? "Pix" : dto.FormaPagamento, Parcela = 1, TotalParcelas = 1,
+            GrupoId = grupoId, Origem = Movimento.OrigemTransferencia, OrigemId = outraId, Observacao = dto.Observacao ?? string.Empty,
+            Aprovacao = "pendente", RegraId = regra?.Id ?? string.Empty, BaixarAoAprovar = dto.JaFeita,
+        };
+        var novos = new List<Movimento>
+        {
+            Perna(idSaida, numeros[0], "pagar", origem, destino, idEntrada),
+            Perna(idEntrada, numeros[1], "receber", destino, origem, idSaida),
+        };
+        await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(novos, Array.Empty<Movimento>()));
+        await _auditoria.RegistrarAsync("criar", "Movimento", idSaida,
+            $"{quem.Nome} lançou a transferência {NumerosDe(novos)} de {dto.Valor:N2} de \"{origem.Nome}\" para \"{destino.Nome}\" em {dto.Data} · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
+        return Result.Success(novos);
+    }
+
     public async Task<Result<Movimento>> AtualizarAsync(string id, Movimento dados)
     {
         var atual = await _movimentos.GetByIdAsync(id);
@@ -218,6 +277,13 @@ public class FinanceiroService : IFinanceiroService
         if (atual.Cancelado) return Result.Failure<Movimento>("Lançamento cancelado não pode ser alterado.");
         if (atual.PagoEm.Length > 0) return Result.Failure<Movimento>("Lançamento liquidado: estorne a baixa antes de alterar.");
         dados.Tipo = atual.Tipo;
+        if (atual.Transferencia)
+        {
+            dados.CarteiraId = atual.CarteiraId;
+            dados.EmpresaId = atual.EmpresaId;
+            dados.ParceiroId = atual.ParceiroId;
+            dados.ParceiroNome = atual.ParceiroNome;
+        }
         if (Validar(dados) is { } erro) return Result.Failure<Movimento>(erro);
         var carteira = await _carteiras.GetByIdAsync(dados.CarteiraId);
         if (carteira is null) return Result.Failure<Movimento>("Carteira não encontrada.");
@@ -231,7 +297,7 @@ public class FinanceiroService : IFinanceiroService
             Descricao = dados.Descricao.Trim(), PlanoContaId = dados.PlanoContaId, CentroCustoId = dados.CentroCustoId, Documento = dados.Documento,
             Competencia = dados.Competencia, Vencimento = dados.Vencimento, Valor = dados.Valor, Desconto = dados.Desconto, Juros = dados.Juros, Multa = dados.Multa,
             CarteiraId = dados.CarteiraId, FormaPagamento = dados.FormaPagamento, Parcela = atual.Parcela, TotalParcelas = atual.TotalParcelas,
-            GrupoId = atual.GrupoId, Origem = atual.Origem, OrigemId = atual.OrigemId, Observacao = dados.Observacao,
+            GrupoId = atual.GrupoId, Origem = atual.Origem, OrigemId = atual.OrigemId, Observacao = dados.Observacao, BaixarAoAprovar = atual.BaixarAoAprovar,
             Aprovacao = mudouAprovado ? "pendente" : atual.Aprovacao,
             RegraId = mudouAprovado ? string.Empty : atual.RegraId,
             Aprovacoes = mudouAprovado ? new() : atual.Aprovacoes,
@@ -240,8 +306,16 @@ public class FinanceiroService : IFinanceiroService
             MotivoReprovacao = mudouAprovado ? string.Empty : atual.MotivoReprovacao,
         };
         if (mudouAprovado)
-            novo.RegraId = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), novo.Tipo, novo.Valor)?.Id ?? string.Empty;
+            novo.RegraId = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), novo.Transferencia ? "pagar" : novo.Tipo, novo.Valor)?.Id ?? string.Empty;
         await _movimentos.UpdateAsync(id, novo);
+        if (atual.Transferencia && await _movimentos.GetByIdAsync(atual.OrigemId) is { Cancelado: false } perna)
+        {
+            perna.Valor = novo.Valor; perna.Vencimento = novo.Vencimento; perna.Competencia = novo.Competencia; perna.Descricao = novo.Descricao;
+            perna.Documento = novo.Documento; perna.Observacao = novo.Observacao; perna.FormaPagamento = novo.FormaPagamento;
+            perna.Aprovacao = novo.Aprovacao; perna.RegraId = novo.RegraId; perna.Aprovacoes = novo.Aprovacoes;
+            perna.ReprovadoPor = novo.ReprovadoPor; perna.ReprovadoEm = novo.ReprovadoEm; perna.MotivoReprovacao = novo.MotivoReprovacao;
+            await _movimentos.UpdateAsync(perna.Id, perna);
+        }
         await _auditoria.RegistrarAsync("editar", "Movimento", id, $"Lançamento \"{novo.Descricao}\" alterado{(mudouAprovado && atual.Aprovacao != "pendente" ? " · voltou para aprovação" : "")}", atual, novo);
         return Result.Success(novo);
     }
@@ -251,7 +325,7 @@ public class FinanceiroService : IFinanceiroService
         if (dto.Ids is not { Count: > 0 }) return Result.Failure<int>("Escolha ao menos um lançamento.");
         if (!DateOnly.TryParse(dto.PagoEm, CultureInfo.InvariantCulture, out _)) return Result.Failure<int>("Informe a data do pagamento.");
         var ids = dto.Ids.ToHashSet();
-        var alvo = (await _movimentos.ListarAsync(m => ids.Contains(m.Id))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
+        var alvo = (await ComPernasAsync(await _movimentos.ListarAsync(m => ids.Contains(m.Id)))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
         if (alvo.Count == 0) return Result.Failure<int>("Nenhum lançamento em aberto entre os escolhidos.");
         var naoAprovados = alvo.Where(m => m.Aprovacao != "aprovado").ToList();
         if (naoAprovados.Count > 0)
@@ -260,7 +334,7 @@ public class FinanceiroService : IFinanceiroService
         {
             var carteira = await _carteiras.GetByIdAsync(dto.CarteiraId);
             if (carteira is null) return Result.Failure<int>("Carteira não encontrada.");
-            if (alvo.Select(m => CarteiraDeOutraEmpresa(carteira, m.EmpresaId)).FirstOrDefault(e => e is not null) is { } outra)
+            if (alvo.Where(m => !m.Transferencia).Select(m => CarteiraDeOutraEmpresa(carteira, m.EmpresaId)).FirstOrDefault(e => e is not null) is { } outra)
                 return Result.Failure<int>(outra);
         }
         var um = alvo.Count == 1;
@@ -273,7 +347,8 @@ public class FinanceiroService : IFinanceiroService
                 m.Multa = dto.Multa ?? m.Multa;
             }
             m.PagoEm = dto.PagoEm;
-            if (!string.IsNullOrEmpty(dto.CarteiraId)) m.CarteiraId = dto.CarteiraId;
+            // Cada perna da transferência fica na sua conta (a baixa não troca a carteira delas).
+            if (!string.IsNullOrEmpty(dto.CarteiraId) && !m.Transferencia) m.CarteiraId = dto.CarteiraId;
             m.ValorPago = Math.Max(0, m.Valor - m.Desconto + m.Juros + m.Multa);
         }
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));
@@ -288,11 +363,12 @@ public class FinanceiroService : IFinanceiroService
         if (m is null || m.Cancelado) return Result.Failure<Movimento>("Lançamento não encontrado.");
         if (m.PagoEm.Length == 0) return Result.Failure<Movimento>("Este lançamento não está liquidado.");
         var antes = m.PagoEm;
-        m.PagoEm = string.Empty;
-        m.ValorPago = 0;
-        await _movimentos.UpdateAsync(id, m);
-        // A linha do extrato que apontava para ele volta a ficar pendente.
-        var linhas = await _extrato.ListarAsync(l => l.MovimentoId == id);
+        var alvo = (await ComPernasAsync(new List<Movimento> { m })).Where(x => x.PagoEm.Length > 0).ToList();
+        foreach (var x in alvo) { x.PagoEm = string.Empty; x.ValorPago = 0; }
+        await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));
+        // A linha do extrato que apontava para ele (ou para a outra perna) volta a ficar pendente.
+        var idsAlvo = alvo.Select(x => x.Id).ToHashSet();
+        var linhas = await _extrato.ListarAsync(l => idsAlvo.Contains(l.MovimentoId));
         foreach (var l in linhas) { l.Situacao = "pendente"; l.MovimentoId = string.Empty; }
         if (linhas.Count > 0) await _extrato.SalvarLoteAsync(Array.Empty<ExtratoLinha>(), linhas);
         await _auditoria.RegistrarAsync("estornar", "Movimento", id, $"{quem.Nome} estornou a baixa de \"{m.Descricao}\" (pago em {antes})");
@@ -302,7 +378,7 @@ public class FinanceiroService : IFinanceiroService
     public async Task<Result<int>> CancelarAsync(IdsDto dto, UsuarioAtual quem)
     {
         var ids = (dto.Ids ?? new()).ToHashSet();
-        var alvo = (await _movimentos.ListarAsync(m => ids.Contains(m.Id))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
+        var alvo = (await ComPernasAsync(await _movimentos.ListarAsync(m => ids.Contains(m.Id)))).Where(m => !m.Cancelado && m.PagoEm.Length == 0).ToList();
         if (alvo.Count == 0) return Result.Failure<int>("Nenhum lançamento em aberto entre os escolhidos (liquidado precisa ser estornado antes).");
         foreach (var m in alvo) m.Cancelado = true;
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));

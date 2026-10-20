@@ -9,7 +9,7 @@ export type TipoMovimento = 'receber' | 'pagar'
 export type StatusMovimento = 'aberto' | 'atrasado' | 'liquidado' | 'cancelado'
 
 /** De onde o movimento nasceu (para o rastro e para a automação futura). */
-export type OrigemMovimento = 'manual' | 'proposta' | 'despesa' | 'conciliacao'
+export type OrigemMovimento = 'manual' | 'proposta' | 'despesa' | 'conciliacao' | 'transferencia'
 
 /** Situação da aprovação: todo lançamento nasce pendente. */
 export type AprovacaoMovimento = 'pendente' | 'aprovado' | 'reprovado'
@@ -43,6 +43,7 @@ export const ORIGENS_MOVIMENTO: Record<OrigemMovimento, string> = {
   proposta: 'Proposta aprovada',
   despesa: 'Despesa recorrente',
   conciliacao: 'Criado na conciliação',
+  transferencia: 'Transferência entre contas',
 }
 
 export const PERIODICIDADES = [
@@ -111,8 +112,12 @@ export interface Movimento {
   /** Liga as parcelas do mesmo lançamento. */
   grupoId: string
   origem: OrigemMovimento
-  /** Id da proposta ou da despesa que gerou o movimento. */
+  /** Id da proposta ou da despesa que gerou o movimento (na transferência, a outra perna). */
   origemId: string
+  /** Transferência entre contas: saída na origem + entrada no destino, ligadas (vem do servidor). */
+  transferencia?: boolean
+  /** Transferência já feita no banco: ao ser aprovada, entra baixada. */
+  baixarAoAprovar?: boolean
   observacao: string
   cancelado: boolean
   /** Aprovação (regra do tipo movimento em Aprovadores e Regras). Ausente = pendente. */

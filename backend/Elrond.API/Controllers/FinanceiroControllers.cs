@@ -42,6 +42,14 @@ public class MovimentosController(IFinanceiroService service, UsuarioContexto us
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 
+    /// <summary>Transferência entre contas (as duas pernas nascem juntas e pendentes de aprovação).</summary>
+    [HttpPost("transferencia")]
+    public async Task<IActionResult> Transferir([FromBody] TransferenciaDto dto)
+    {
+        var r = await service.TransferirAsync(dto, await usuario.QuemAsync());
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
     [HttpPost("liquidar")]
     public async Task<IActionResult> Liquidar([FromBody] BaixaDto dto)
     {

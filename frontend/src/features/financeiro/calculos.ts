@@ -55,7 +55,7 @@ export interface ResumoFinanceiro {
 }
 
 export function resumo(movs: Movimento[], hoje = hojeISO()): ResumoFinanceiro {
-  const abertos = movs.filter((m) => !m.cancelado && !m.pagoEm)
+  const abertos = movs.filter((m) => !m.cancelado && !m.pagoEm && m.origem !== 'transferencia')
   const limite = somarDias(hoje, 30)
   return {
     aReceber: abertos.filter((m) => m.tipo === 'receber').reduce((a, m) => a + liquidoDe(m), 0),

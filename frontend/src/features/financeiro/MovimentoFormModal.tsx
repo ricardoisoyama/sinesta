@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowUpRight, Paperclip, Receipt, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip, Receipt, X } from 'lucide-react'
+import { TransferenciaCampos, type DadosTransferencia } from './TransferenciaCampos'
 import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import { MoneyInput } from '@/features/common/MoneyInput'
@@ -30,10 +31,18 @@ interface Props {
   onClose: () => void
   /** Devolve os lançamentos criados (para anexar os documentos escolhidos antes de salvar), ou null se não gravou. */
   onSave: (mov: Movimento, parcelas: number, periodicidade: Periodicidade) => Promise<Movimento[] | null>
+  /** Transferência entre contas: devolve as duas pernas criadas, ou null se não gravou. */
+  onTransferir: (d: DadosTransferencia) => Promise<Movimento[] | null>
 }
 
+const transferenciaVazia = (): DadosTransferencia => ({
+  origemId: '', destinoId: '', valor: 0, data: hojeISO(), descricao: '', documento: '', observacao: '', planoContaId: '', centroCustoId: '', formaPagamento: 'Pix', jaFeita: true,
+})
+/** Conta do plano que parece de transferência (o plano de cada cliente é dele: só sugere quando acha). */
+const pareceTransferencia = (nome: string) => /transfer|m[uú]tuo|entre (empresas|contas)/i.test(nome)
+
 /** Lançamento a pagar ou a receber, com gerador de parcelas. */
-export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }: Props) {
+export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, onTransferir }: Props) {
   const [d, setD] = useState<Movimento>(movimentoVazio())
   const [parcelas, setParcelas] = useState(1)
   const [periodicidade, setPeriodicidade] = useState<Periodicidade>('mensal')
@@ -42,6 +51,9 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
   const [arquivos, setArquivos] = useState<File[]>([])
   // Plano de contas e centro de custo que vieram do fornecedor: trocar o fornecedor troca só esses.
   const [auto, setAuto] = useState({ planoContaId: '', centroCustoId: '' })
+  // Terceiro tipo do "Novo lançamento": transferência entre contas.
+  const [modoTransferencia, setModoTransferencia] = useState(false)
+  const [t, setT] = useState<DadosTransferencia>(transferenciaVazia())
   const { data: empresas } = useEmpresasQuery()
   const ativas = carteiras.filter((c) => c.status === 'ativo')
   const [abriuEm, setAbriuEm] = useState(open)
@@ -57,6 +69,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
       setErros({})
       setArquivos([])
       setAuto({ planoContaId: '', centroCustoId: '' })
+      setModoTransferencia(false)
+      setT(transferenciaVazia())
     }
   }
   const set = (p: Partial<Movimento>) => setD((x) => ({ ...x, ...p }))
@@ -124,7 +138,41 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
   const preview = d.valor > 0 && d.vencimento && parcelas > 1 ? gerarParcelas(d, parcelas, periodicidade) : []
 
   const [salvando, setSalvando] = useState(false)
+  const nomeEmpresa = (id: string) => (empresas ?? []).find((e) => e.id === id)?.nome ?? ''
+  const contasTransferencia = analiticas().filter((c) => c.status === 'ativo')
+  const escolherTransferencia = () => {
+    setModoTransferencia(true)
+    // Sugere a conta do plano com cara de transferência, se o plano do cliente tiver uma.
+    const sugerida = contasTransferencia.find((c) => pareceTransferencia(c.nome))
+    setT((x) => ({ ...x, planoContaId: x.planoContaId || sugerida?.id || '' }))
+  }
+  const enviarArquivos = async (gravados: Movimento[]) => {
+    if (arquivos.length === 0) return
+    try {
+      for (const m of gravados) for (const f of arquivos) await enviarAnexo('movimento', m.id, f)
+    } catch (err) {
+      void avisar({ titulo: 'Lançamento gravado, documento não', mensagem: `O lançamento foi gravado, mas o documento não subiu: ${getErrorMessage(err)}. Abra o lançamento e anexe de novo.` })
+    }
+  }
+  const submitTransferencia = async () => {
+    const e: Record<string, string> = {}
+    if (!t.origemId) e.origemId = 'Escolha a conta de origem.'
+    if (!t.destinoId) e.destinoId = 'Escolha a conta de destino.'
+    if (!(t.valor > 0)) e.valor = 'Informe o valor.'
+    if (!t.data) e.data = 'Informe a data.'
+    setErros(e)
+    if (Object.keys(e).length) return
+    setSalvando(true)
+    try {
+      const criadas = await onTransferir({ ...t, descricao: t.descricao.trim() })
+      // O comprovante vai na saída (a perna que mostra de onde saiu o dinheiro).
+      if (criadas) await enviarArquivos(criadas.filter((m) => m.tipo === 'pagar'))
+    } finally {
+      setSalvando(false)
+    }
+  }
   const submit = async () => {
+    if (modoTransferencia) return submitTransferencia()
     const e: Record<string, string> = {}
     if (!d.descricao.trim()) e.descricao = 'Descreva o lançamento.'
     if (!d.vencimento) e.vencimento = 'Informe o vencimento.'
@@ -137,26 +185,21 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
     try {
       const criados = await onSave({ ...d, descricao: d.descricao.trim() }, initial ? 1 : parcelas, periodicidade)
       // Documentos escolhidos antes de gravar: vão para cada parcela criada.
-      if (criados && arquivos.length > 0) {
-        try {
-          for (const m of criados) for (const f of arquivos) await enviarAnexo('movimento', m.id, f)
-        } catch (err) {
-          void avisar({ titulo: 'Lançamento gravado, documento não', mensagem: `O lançamento foi gravado, mas o documento não subiu: ${getErrorMessage(err)}. Abra o lançamento e anexe de novo.` })
-        }
-      }
+      if (criados) await enviarArquivos(criados)
     } finally {
       setSalvando(false)
     }
   }
 
   const editando = !!initial
+  const transferenciaEditada = !!initial?.transferencia
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title={editando ? `Lançamento ${initial?.parcela}/${initial?.totalParcelas}` : 'Novo lançamento'}
-      subtitle={editando ? initial?.descricao : 'Conta a pagar ou a receber'}
+      title={transferenciaEditada ? 'Transferência entre contas' : editando ? `Lançamento ${initial?.parcela}/${initial?.totalParcelas}` : 'Novo lançamento'}
+      subtitle={editando ? initial?.descricao : 'Conta a pagar, a receber ou transferência entre contas'}
       icon={<Receipt />}
       maxWidth={760}
       busy={salvando}
@@ -166,7 +209,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
             Cancelar
           </button>
           <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={submit} disabled={salvando || carteiras.length === 0}>
-            {editando ? 'Salvar' : parcelas > 1 ? `Lançar ${parcelas} parcelas` : 'Lançar'}
+            {editando ? 'Salvar' : modoTransferencia ? 'Lançar transferência' : parcelas > 1 ? `Lançar ${parcelas} parcelas` : 'Lançar'}
           </button>
         </>
       }
@@ -178,19 +221,41 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
       )}
       {!editando && (
         <div className={s.tipoSeg}>
-          <label className={receber ? s.onReceber : ''}>
-            <input type="radio" name="tipo" checked={receber} onChange={() => trocarTipo('receber')} />
+          <label className={receber && !modoTransferencia ? s.onReceber : ''}>
+            <input type="radio" name="tipo" checked={receber && !modoTransferencia} onChange={() => { setModoTransferencia(false); trocarTipo('receber') }} />
             <ArrowDownLeft /> A receber
           </label>
-          <label className={!receber ? s.onPagar : ''}>
-            <input type="radio" name="tipo" checked={!receber} onChange={() => trocarTipo('pagar')} />
+          <label className={!receber && !modoTransferencia ? s.onPagar : ''}>
+            <input type="radio" name="tipo" checked={!receber && !modoTransferencia} onChange={() => { setModoTransferencia(false); trocarTipo('pagar') }} />
             <ArrowUpRight /> A pagar
+          </label>
+          <label className={modoTransferencia ? s.onTransferencia : ''}>
+            <input type="radio" name="tipo" checked={modoTransferencia} onChange={escolherTransferencia} />
+            <ArrowLeftRight /> Transferência entre contas
           </label>
         </div>
       )}
 
+      {modoTransferencia ? (
+        <TransferenciaCampos
+          d={t}
+          set={(p) => setT((x) => ({ ...x, ...p }))}
+          carteiras={carteiras}
+          nomeEmpresa={nomeEmpresa}
+          contas={contasTransferencia}
+          centros={(categorias ?? []).filter((c) => c.status === 'ativo')}
+          erros={erros}
+        />
+      ) : (
+      <>
+      {transferenciaEditada && (
+        <div className={s.transfInfo}>
+          <ArrowLeftRight size={15} /> Transferência entre contas · {initial?.tipo === 'pagar' ? 'saída' : 'entrada'} {initial?.parceiroNome.toLowerCase()}. Valor, data e textos valem para as duas pernas; as contas não mudam.
+        </div>
+      )}
       <section className={ui.fsection}>
         <div className={ui.grid}>
+          {!transferenciaEditada && (
           <Field className={ui.col2} label={receber ? 'Cliente' : 'Fornecedor / funcionário'} req error={erros.parceiroId}>
             <CadastroBusca
               opcoes={parceiros}
@@ -199,6 +264,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
               placeholder={receber ? 'Digite o nome ou o CNPJ do cliente' : 'Digite o nome, o CNPJ ou o funcionário'}
             />
           </Field>
+          )}
           <Field className={ui.col2} label="Empresa">
             <select value={d.empresaId} onChange={(e) => trocarEmpresa(e.target.value)}>
               <option value="">Selecione</option>
@@ -261,7 +327,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
             </>
           )}
           <Field label="Carteira" req error={erros.carteiraId} hint="Conta por onde o dinheiro entra ou sai. Aparecem só as contas da empresa do lançamento.">
-            <select value={d.carteiraId} onChange={(e) => trocarCarteira(e.target.value)}>
+            <select value={d.carteiraId} onChange={(e) => trocarCarteira(e.target.value)} disabled={transferenciaEditada}>
               <option value="">{carteirasDaEmpresa.length ? 'Selecione' : 'Nenhuma carteira desta empresa'}</option>
               {carteirasDaEmpresa.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
@@ -290,6 +356,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
           </div>
         )}
       </section>
+      </>
+      )}
 
       <section className={ui.fsection}>
         <div className={ui.fsectionTitle}>
@@ -304,7 +372,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave }
               <input type="file" multiple hidden accept={EXTENSOES_ANEXO.join(',')} onChange={(e) => { escolherArquivos(e.target.files); e.target.value = '' }} />
             </label>
             {arquivos.length === 0 ? (
-              <span className={ui.cellMut}>PDF, Word, Excel, JPG ou PNG, até 12 MB. Sobe ao lançar{parcelas > 1 ? ' (vai para cada parcela)' : ''}.</span>
+              <span className={ui.cellMut}>PDF, Word, Excel, JPG ou PNG, até 12 MB. Sobe ao lançar{modoTransferencia ? ' (fica na saída)' : parcelas > 1 ? ' (vai para cada parcela)' : ''}.</span>
             ) : (
               <ul>
                 {arquivos.map((f, i) => (

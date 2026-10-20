@@ -7,6 +7,7 @@ import {
   cancelarMovimentos,
   criarCarteira,
   criarMovimento,
+  criarTransferencia,
   estornarMovimento,
   liquidarMovimentos,
   listCarteiras,
@@ -48,6 +49,7 @@ export function useFinanceiro() {
     carregando: mov.isLoading || cart.isLoading,
     adicionar: (base: Movimento, parcelas = 1, periodicidade: Periodicidade = 'mensal') => depois(criarMovimento(base, parcelas, periodicidade)),
     atualizar: (m: Movimento) => depois(atualizarMovimento(m)),
+    transferir: (d: Parameters<typeof criarTransferencia>[0]) => depois(criarTransferencia(d)),
     /** Baixa um ou vários lançamentos (só aprovados). */
     liquidar: (ids: string[], b: Baixa) => depois(liquidarMovimentos({ ids, ...b })),
     estornar: (id: string) => depois(estornarMovimento(id)),

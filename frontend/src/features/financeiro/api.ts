@@ -13,6 +13,9 @@ export const atualizarCarteira = (c: Carteira) => apiFetch<Carteira>(`/financeir
 export const listMovimentos = () => apiFetch<Movimento[]>('/financeiro/movimentos')
 export const criarMovimento = (movimento: Movimento, parcelas: number, periodicidade: Periodicidade) =>
   apiFetch<Movimento[]>('/financeiro/movimentos', { method: 'POST', body: J({ movimento, parcelas, periodicidade }) })
+/** Transferência entre contas: devolve as duas pernas (saída e entrada). */
+export const criarTransferencia = (d: { origemId: string; destinoId: string; valor: number; data: string; descricao: string; documento: string; observacao: string; planoContaId: string; centroCustoId: string; formaPagamento: string; jaFeita: boolean }) =>
+  apiFetch<Movimento[]>('/financeiro/movimentos/transferencia', { method: 'POST', body: J(d) })
 export const atualizarMovimento = (m: Movimento) => apiFetch<Movimento>(`/financeiro/movimentos/${m.id}`, { method: 'PUT', body: J(m) })
 export const liquidarMovimentos = (b: { ids: string[]; pagoEm: string; carteiraId: string; desconto?: number; juros?: number; multa?: number }) =>
   apiFetch<number>('/financeiro/movimentos/liquidar', { method: 'POST', body: J(b) })

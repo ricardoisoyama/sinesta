@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, ArrowDownLeft, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useAuth } from '@/features/auth/auth-context'
@@ -26,7 +26,7 @@ import { BaixaModal } from './BaixaModal'
 import { APROVACAO_LABEL, STATUS_MOVIMENTO, type Movimento, type StatusMovimento, type TipoMovimento } from './types'
 import s from './financeiro.module.css'
 
-type Aba = 'todos' | TipoMovimento
+type Aba = 'todos' | TipoMovimento | 'transferencia'
 type Janela = 'vencidos' | 'mes' | '30dias' | 'periodo' | 'tudo'
 type FiltroAprov = 'todas' | 'pendente' | 'minha' | 'aprovado' | 'reprovado'
 const JANELAS: { valor: Janela; label: string }[] = [
@@ -45,7 +45,7 @@ const dataBR = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '—
  * (em aberto, atrasado, liquidado), baixa individual ou em lote e lançamento parcelado.
  */
 export function EntradasSaidasPage() {
-  const { carteiras, movimentos: todosMovimentos, adicionar, atualizar, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
+  const { carteiras, movimentos: todosMovimentos, adicionar, atualizar, transferir, liquidar, estornar, cancelar, aprovar, reprovar } = useFinanceiro()
   // Empresa: cada CNPJ tem os seus lançamentos. Abre na empresa padrão; "Todas" consolida o grupo.
   const { data: empresasData } = useEmpresasQuery()
   const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
@@ -108,7 +108,8 @@ export function EntradasSaidasPage() {
     const peloNumero = movimentos.filter((m) => buscaPeloNumero(busca, m.numero))
     if (peloNumero.length > 0) return peloNumero
     return movimentos
-      .filter((m) => aba === 'todos' || m.tipo === aba)
+      // A pagar / a receber são contas; a transferência entre contas tem a aba dela (e aparece em Todos).
+      .filter((m) => aba === 'todos' || (aba === 'transferencia' ? m.origem === 'transferencia' : m.tipo === aba && m.origem !== 'transferencia'))
       .filter((m) => {
         const st = statusDe(m, hoje)
         if (!mostrarLiquidados && (st === 'liquidado' || st === 'cancelado')) return false
@@ -163,6 +164,9 @@ export function EntradasSaidasPage() {
             {m.totalParcelas > 1 && <span className={s.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
           </span>
           <small>{m.descricao}{m.documento ? ` · ${m.documento}` : ''}</small>
+          {m.origem === 'transferencia' && (
+            <small className={s.transfTag}><ArrowLeftRight size={11} /> Transferência entre contas · {m.tipo === 'pagar' ? 'saída' : 'entrada'}</small>
+          )}
           {(() => {
             const p = pagamentoDe(m)
             return p ? (
@@ -324,6 +328,7 @@ export function EntradasSaidasPage() {
               <button className={aba === 'todos' ? s.on : ''} onClick={() => setAba('todos')}>Todos</button>
               <button className={aba === 'receber' ? `${s.on} ${s.onReceber}` : ''} onClick={() => setAba('receber')}>A receber</button>
               <button className={aba === 'pagar' ? `${s.on} ${s.onPagar}` : ''} onClick={() => setAba('pagar')}>A pagar</button>
+              <button className={aba === 'transferencia' ? `${s.on} ${s.onTransferencia}` : ''} onClick={() => setAba('transferencia')}>Transferências</button>
               {/* Vencidos liga e desliga sobre a aba escolhida (ex.: só os a pagar vencidos). */}
               <button className={janela === 'vencidos' ? `${s.on} ${s.onVencido}` : ''} onClick={() => setJanela(janela === 'vencidos' ? 'mes' : 'vencidos')}>
                 Vencidos
@@ -412,6 +417,12 @@ export function EntradasSaidasPage() {
           })
           if (ok) setFormOpen(false)
           return ok ? gravados : null
+        }}
+        onTransferir={async (dados) => {
+          let pernas: Movimento[] = []
+          const ok = await exec(async () => { pernas = await transferir(dados) })
+          if (ok) setFormOpen(false)
+          return ok ? pernas : null
         }}
       />
       <BaixaModal

@@ -37,6 +37,42 @@ public class FinanceiroTests
     };
 
     [Fact]
+    public async Task Transferencia_entre_contas_nasce_em_par_e_anda_junta()
+    {
+        // Regra de R$ 0 a R$ 5.000: a transferência de 4.000 é avaliada pela saída, não pela soma das pernas (8.000).
+        var (svc, movs, _) = Montar(Regra(0, 5000, "u-ana"));
+        Assert.False((await svc.TransferirAsync(new("cart", "cart", 10m, "2026-10-20", "", null, null, null, null, null), Ana)).IsSuccess);
+        var r = await svc.TransferirAsync(new("cart-matriz", "cart", 4000m, "2026-10-20", "", "TED 1", null, null, null, "Pix", JaFeita: true), Ana);
+        Assert.True(r.IsSuccess, r.Error);
+        var (saida, entrada) = (r.Value!.Single(m => m.Tipo == "pagar"), r.Value!.Single(m => m.Tipo == "receber"));
+        Assert.Equal(("cart-matriz", "matriz", "cart"), (saida.CarteiraId, saida.EmpresaId, entrada.CarteiraId));
+        Assert.Equal((entrada.Id, saida.Id), (saida.OrigemId, entrada.OrigemId));
+        Assert.Equal("Transferência entre contas", saida.Descricao);
+        Assert.Equal("r-0-5000", saida.RegraId);
+
+        // Aprovar uma perna aprova as duas e, como já foi feita no banco, baixa as duas na data.
+        Assert.True((await svc.AprovarAsync(entrada.Id, Ana, true)).IsSuccess);
+        Assert.All(movs.Itens, m => Assert.Equal(("aprovado", "2026-10-20"), (m.Aprovacao, m.PagoEm)));
+
+        // Estornar uma estorna as duas; cancelar uma cancela as duas.
+        Assert.True((await svc.EstornarAsync(saida.Id, Ana)).IsSuccess);
+        Assert.All(movs.Itens, m => Assert.Equal(string.Empty, m.PagoEm));
+        Assert.Equal(2, (await svc.CancelarAsync(new IdsDto(new() { saida.Id }), Ana)).Value);
+        Assert.All(movs.Itens, m => Assert.True(m.Cancelado));
+    }
+
+    [Fact]
+    public async Task Transferencia_a_fazer_fica_em_aberto_depois_de_aprovada_e_a_baixa_leva_as_duas()
+    {
+        var (svc, movs, _) = Montar(Regra(0, 0, "u-ana"));
+        var r = (await svc.TransferirAsync(new("cart", "cart-matriz", 50m, "2026-10-20", "Reforço de caixa", null, null, null, null, null), Ana)).Value!;
+        await svc.AprovarAsync(r[0].Id, Ana, true);
+        Assert.All(movs.Itens, m => Assert.Equal(string.Empty, m.PagoEm)); // vai ser feita pelo app ou pelo Pix do ELROND
+        Assert.Equal(2, (await svc.LiquidarAsync(new BaixaDto(new() { r[0].Id }, "2026-10-21", "cart"), Ana)).Value);
+        Assert.Equal(new[] { "cart", "cart-matriz" }, movs.Itens.Select(m => m.CarteiraId).OrderBy(x => x)); // cada perna na sua conta
+    }
+
+    [Fact]
     public async Task Carteira_de_um_cnpj_nao_recebe_lancamento_de_outro_e_sem_empresa_assume_a_da_carteira()
     {
         var (svc, _, _) = Montar(Regra(0, 0, "u-ana"));

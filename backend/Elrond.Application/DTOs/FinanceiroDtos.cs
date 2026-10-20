@@ -6,6 +6,10 @@ namespace Elrond.Application.DTOs;
 public record NovoMovimentoDto(Movimento Movimento, int Parcelas = 1, string Periodicidade = "mensal");
 
 /// <summary>Baixa de um ou vários lançamentos. Ajustes (desconto/juros/multa) só valem para um.</summary>
+/// <summary>Transferência entre contas (as duas carteiras podem ser de empresas diferentes).</summary>
+public record TransferenciaDto(string OrigemId, string DestinoId, decimal Valor, string Data, string Descricao, string? Documento,
+    string? Observacao, string? PlanoContaId, string? CentroCustoId, string? FormaPagamento, bool JaFeita = false);
+
 public record BaixaDto(List<string> Ids, string PagoEm, string CarteiraId, decimal? Desconto = null, decimal? Juros = null, decimal? Multa = null);
 
 public record IdsDto(List<string> Ids);
