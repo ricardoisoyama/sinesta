@@ -252,7 +252,7 @@ export function EntradasSaidasPage() {
     {
       header: 'Situação',
       // Um pouco mais larga que o padrão: cabe "Aprovação no app" do Pix em andamento.
-      largura: LARGURA.situacao + 24,
+      largura: LARGURA.situacao + 48,
       valor: (m) => (m.pixSituacao ? PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco' : STATUS_MOVIMENTO[statusDe(m, hoje)]),
       cell: (m) => {
         const st = statusDe(m, hoje)
