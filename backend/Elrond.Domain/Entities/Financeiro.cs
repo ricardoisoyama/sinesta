@@ -81,6 +81,8 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public bool PagoPeloBanco => PagamentoBancarioId.Length > 0 && PagoEm.Length > 0;
     /// <summary>Situação do Pix em andamento no banco (aguardando-aprovacao, agendado...); vazio = nenhum. Não é gravado: a lista preenche.</summary>
     public string PixSituacao { get; set; } = string.Empty;
+    /// <summary>Data marcada no banco para o Pix em andamento (yyyy-MM-dd). Não é gravado: a lista preenche.</summary>
+    public string PixData { get; set; } = string.Empty;
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }

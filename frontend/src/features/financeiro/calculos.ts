@@ -62,8 +62,9 @@ export function resumo(movs: Movimento[], hoje = hojeISO()): ResumoFinanceiro {
   return {
     aReceber: abertos.filter((m) => m.tipo === 'receber').reduce((a, m) => a + liquidoDe(m), 0),
     aPagar: abertos.filter((m) => m.tipo === 'pagar').reduce((a, m) => a + liquidoDe(m), 0),
-    vencidos: abertos.filter((m) => m.vencimento < hoje).reduce((a, m) => a + liquidoDe(m), 0),
-    qtdVencidos: abertos.filter((m) => m.vencimento < hoje).length,
+    // Com Pix já programado no banco (agendado ou esperando aprovação) não é conta esquecida: fora de vencidos.
+    vencidos: abertos.filter((m) => m.vencimento < hoje && !m.pixSituacao).reduce((a, m) => a + liquidoDe(m), 0),
+    qtdVencidos: abertos.filter((m) => m.vencimento < hoje && !m.pixSituacao).length,
     previsto30: abertos.filter((m) => m.vencimento <= limite).reduce((a, m) => a + sinal(m) * liquidoDe(m), 0),
   }
 }

@@ -42,15 +42,15 @@ public class FinanceiroService : IFinanceiroService
 
     private const string PixEmAndamentoMsg = "Tem Pix em andamento no banco para este lançamento (aguardando aprovação, agendado ou em processamento): espere o banco efetivar, ou cancele no app do banco, antes de baixar, alterar ou cancelar aqui.";
 
-    /// <summary>Lançamentos com Pix em andamento no banco (id → situação do pagamento).</summary>
-    private async Task<Dictionary<string, string>> PixEmAndamentoAsync(IEnumerable<string> ids)
+    /// <summary>Lançamentos com Pix em andamento no banco (id → o pagamento mais recente).</summary>
+    private async Task<Dictionary<string, PagamentoBancario>> PixEmAndamentoAsync(IEnumerable<string> ids)
     {
         if (_pagamentos is null) return new();
         var set = ids.ToHashSet();
         if (set.Count == 0) return new();
         return (await _pagamentos.ListarAsync(p => set.Contains(p.MovimentoId)))
             .Where(p => p.EmAberto).GroupBy(p => p.MovimentoId)
-            .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CriadoEm).First().Situacao);
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CriadoEm).First());
     }
 
     private const string PagoPeloBancoMsg = "Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então a baixa não é estornada nem o lançamento alterado. Se precisar devolver, lance um a receber.";
@@ -87,7 +87,8 @@ public class FinanceiroService : IFinanceiroService
             if (regra is not null) foreach (var m in g) m.RegraId = regra.Id;
         }
         var pix = await PixEmAndamentoAsync(lista.Where(m => !m.Cancelado && m.PagoEm.Length == 0).Select(m => m.Id));
-        foreach (var m in lista) m.PixSituacao = pix.GetValueOrDefault(m.Id, string.Empty);
+        foreach (var m in lista)
+            if (pix.TryGetValue(m.Id, out var p)) { m.PixSituacao = p.Situacao; m.PixData = p.Data; }
         return lista.OrderBy(m => m.Vencimento).ToList();
     }
 

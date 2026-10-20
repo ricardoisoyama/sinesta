@@ -122,6 +122,8 @@ export interface Movimento {
   pagoPeloBanco?: boolean
   /** Pix em andamento no banco (vem do servidor): aguardando-aprovacao, agendado, processando... */
   pixSituacao?: string
+  /** Data marcada no banco para esse Pix (yyyy-MM-dd). */
+  pixData?: string
   observacao: string
   cancelado: boolean
   /** Aprovação (regra do tipo movimento em Aprovadores e Regras). Ausente = pendente. */

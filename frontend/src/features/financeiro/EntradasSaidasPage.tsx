@@ -33,6 +33,12 @@ const motivoCurto = (msg: string) => {
   return t.length > 70 ? `${t.slice(0, 67)}...` : t
 }
 
+/** Situação do Pix em andamento; o agendado leva a data marcada no banco: "Pix agendado (21/10/2026)". */
+const rotuloPix = (m: Movimento) => {
+  const base = PIX_SITUACAO[m.pixSituacao ?? ''] ?? 'Pix no banco'
+  return m.pixSituacao === 'agendado' && m.pixData ? `${base} (${m.pixData.split('-').reverse().join('/')})` : base
+}
+
 /** Situação curta do Pix em andamento, na coluna Situação. */
 const PIX_SITUACAO: Record<string, string> = {
   'aguardando-aprovacao': 'Aprovação no app',
@@ -164,7 +170,7 @@ export function EntradasSaidasPage() {
         if (situacao === 'abertos' && (st === 'liquidado' || st === 'cancelado')) return false
         if (situacao === 'liquidados' && st !== 'liquidado') return false
         if (situacao === 'cancelados' && st !== 'cancelado') return false
-        if (janela === 'vencidos') return st === 'atrasado'
+        if (janela === 'vencidos') return st === 'atrasado' && !m.pixSituacao
         if (janela === 'mes') return m.vencimento >= ini && m.vencimento <= fim
         if (janela === '30dias') return m.vencimento >= hoje && m.vencimento <= lim30
         if (janela === 'periodo') return (!periodo.de || m.vencimento >= periodo.de) && (!periodo.ate || m.vencimento <= periodo.ate)
@@ -198,7 +204,6 @@ export function EntradasSaidasPage() {
             <span className={ui.cellStrong}>{dataBR(m.vencimento)}</span>
             {st === 'atrasado' && <small className={s.atraso}>{-dias} dia{dias === -1 ? '' : 's'} de atraso</small>}
             {st === 'aberto' && <small>{dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
-            {st === 'liquidado' && <small>pago em {dataBR(m.pagoEm)}</small>}
           </div>
         )
       },
@@ -237,9 +242,9 @@ export function EntradasSaidasPage() {
     },
     {
       header: 'Situação',
-      // Um pouco mais larga que o padrão: cabe "Aprovação no app" do Pix em andamento.
-      largura: LARGURA.situacao + 48,
-      valor: (m) => (m.pixSituacao ? PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco' : STATUS_MOVIMENTO[statusDe(m, hoje)]),
+      // Mais larga que o padrão: cabe "Pix agendado (21/10/2026)" do Pix em andamento.
+      largura: LARGURA.situacao + 84,
+      valor: (m) => (m.pixSituacao ? rotuloPix(m) : STATUS_MOVIMENTO[statusDe(m, hoje)]),
       cell: (m) => {
         const st = statusDe(m, hoje)
         const Ic = ICONE_STATUS[st]
@@ -247,7 +252,7 @@ export function EntradasSaidasPage() {
         if (m.pixSituacao)
           return (
             <span className={`${s.status} ${s.pix}`} title={`${ROTULO_PAGAMENTO[m.pixSituacao as keyof typeof ROTULO_PAGAMENTO] ?? 'Pix no banco'}: baixa, edição e cancelamento ficam travados até o banco responder`}>
-              <Landmark /> {PIX_SITUACAO[m.pixSituacao] ?? 'Pix no banco'}
+              <Landmark /> {rotuloPix(m)}
             </span>
           )
         return (
@@ -259,7 +264,7 @@ export function EntradasSaidasPage() {
     },
     {
       header: 'Aprovação',
-      largura: LARGURA.etiqueta,
+      largura: LARGURA.curta + 10,
       valor: (m) => APROVACAO_LABEL[m.aprovacao ?? 'pendente'],
       cell: (m) => {
         const ap = m.aprovacao ?? 'pendente'
@@ -285,6 +290,12 @@ export function EntradasSaidasPage() {
           {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
         </span>
       ),
+    },
+    {
+      header: 'Pago em',
+      largura: LARGURA.data,
+      valor: (m) => (m.pagoEm ? dataBR(m.pagoEm) : ''),
+      cell: (m) => (m.pagoEm ? <span className={ui.cellStrong}>{dataBR(m.pagoEm)}</span> : <span className={ui.cellMut}>—</span>),
     },
     { header: 'Carteira', largura: LARGURA.media, valor: (m) => carteira(m.carteiraId), cell: (m) => <span className={ui.cellMut}>{carteira(m.carteiraId)}</span> },
     // Com "Todas as empresas", cada linha diz de qual CNPJ é.

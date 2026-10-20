@@ -714,6 +714,7 @@ public class AppDbContext : DbContext
             e.ToTable("movimentos");
             e.HasKey(m => m.Id);
             e.Ignore(m => m.PixSituacao);
+            e.Ignore(m => m.PixData);
             // Número do lançamento (cada parcela tem o seu): o banco gera (sequência); o repositório
             // preserva na alteração.
             e.Property(m => m.Numero).HasDefaultValueSql("nextval('movimentos_numero_seq')");

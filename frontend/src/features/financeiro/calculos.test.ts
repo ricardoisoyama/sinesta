@@ -40,6 +40,11 @@ describe('resumo', () => {
     expect(r.previsto30).toBe(300)
   })
 
+  it('Pix já programado no banco conta em a pagar, mas não em vencidos', () => {
+    const r = resumo([mov({ id: 'p', tipo: 'pagar', valor: 2000, vencimento: '2026-09-01', pixSituacao: 'agendado', pixData: '2026-09-15' })], hoje)
+    expect([r.aPagar, r.vencidos, r.qtdVencidos]).toEqual([2000, 0, 0])
+  })
+
   it('transferência entre contas em aberto conta nos cards; baixada, sai', () => {
     const saida = mov({ id: 's', tipo: 'pagar', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
     const entrada = mov({ id: 'e', tipo: 'receber', valor: 9000, vencimento: '2026-09-20', origem: 'transferencia' })
