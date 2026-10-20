@@ -78,6 +78,18 @@ export function IntegracoesPage() {
       valor: (l) => (l.integracao ? nomeBanco(l.integracao.banco) : ''),
       cell: (l) => (l.integracao ? <span>{nomeBanco(l.integracao.banco)}</span> : <span className={ui.cellMut}>Sem integração</span>),
     },
+    // Logo depois do banco: é o que diz se a integração funciona (não fica escondida na rolagem).
+    {
+      header: 'Situação',
+      largura: LARGURA.status,
+      valor: (l) => (l.integracao?.ativa ? 'Ligada' : l.integracao ? 'Desligada' : ''),
+      cell: (l) =>
+        l.integracao ? (
+          <span className={`${ui.badge} ${l.integracao.ativa ? ui.badgeOk : ui.badgeOff}`}>{l.integracao.ativa ? 'Ligada' : 'Desligada'}</span>
+        ) : (
+          <span className={ui.cellMut}>—</span>
+        ),
+    },
     {
       header: 'Ambiente',
       largura: LARGURA.curta,
@@ -118,19 +130,8 @@ export function IntegracoesPage() {
       valor: (l) => carteiras.find((c) => c.id === l.integracao?.carteiraId)?.nome ?? '',
       cell: (l) => {
         const c = carteiras.find((x) => x.id === l.integracao?.carteiraId)
-        return c ? <span>{c.nome}</span> : <span className={ui.cellMut}>{l.integracao ? 'Não ligada' : '—'}</span>
+        return c ? <span>{c.nome}</span> : <span className={ui.cellMut}>{l.integracao ? 'Nenhuma conta' : '—'}</span>
       },
-    },
-    {
-      header: 'Situação',
-      largura: LARGURA.status,
-      valor: (l) => (l.integracao?.ativa ? 'Ligada' : l.integracao ? 'Desligada' : ''),
-      cell: (l) =>
-        l.integracao ? (
-          <span className={`${ui.badge} ${l.integracao.ativa ? ui.badgeOk : ui.badgeOff}`}>{l.integracao.ativa ? 'Ligada' : 'Desligada'}</span>
-        ) : (
-          <span className={ui.cellMut}>—</span>
-        ),
     },
     {
       header: 'Ações',
