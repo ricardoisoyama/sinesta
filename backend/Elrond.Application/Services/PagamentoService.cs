@@ -17,6 +17,15 @@ public sealed record ItemAgendamentoDto(string MovimentoId, string Chave);
 public sealed record AgendarPagamentosDto(List<ItemAgendamentoDto> Itens, string Data);
 public sealed record ResultadoAgendamentoDto(string MovimentoId, bool Ok, string Mensagem, PagamentoBancario? Pagamento);
 
+/// <summary>Comprovante do Pix pago pelo ELROND (o banco devolve dados, não PDF): o que mostrar e imprimir no lançamento.</summary>
+public sealed record ComprovantePixDto(
+    string MovimentoId, long Numero, string Descricao, decimal Valor, string EfetivadoEm,
+    string Favorecido, string Chave, string TipoChave,
+    string Banco, string Empresa, string Conta, string Ambiente,
+    string IdPix, string CodigoBanco,
+    string AgendadoPor, string AgendadoEm, string ConfirmadoComo, string ConfirmadoEm,
+    string EmailSituacao, string EmailPara, string EmailEm);
+
 /// <summary>
 /// Pagamentos pelo banco (piloto: Pix). Para cada lançamento a pagar APROVADO, grava o pagamento
 /// antes de mandar ao banco (o id dele é a chave de idempotência), envia e traduz a resposta. Pix
@@ -42,6 +51,30 @@ public sealed class PagamentoService(
 {
     private static readonly UsuarioAtual Banco = new("sistema", "Aviso do banco", "Admin");
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
+
+    /// <summary>Comprovante do Pix que liquidou o lançamento; null se ele não foi pago pelo ELROND.</summary>
+    public async Task<ComprovantePixDto?> ComprovanteAsync(string movimentoId)
+    {
+        var m = await movimentos.GetByIdAsync(movimentoId);
+        if (m is null) return null;
+        var p = (m.PagamentoBancarioId.Length > 0 ? await pagamentos.GetByIdAsync(m.PagamentoBancarioId) : null)
+                ?? (await pagamentos.ListarAsync(x => x.MovimentoId == m.Id && x.Situacao == PagamentoBancario.Pago)).FirstOrDefault();
+        if (p is null || p.Situacao != PagamentoBancario.Pago) return null;
+        var integ = await integracoes.GetByIdAsync(p.IntegracaoId);
+        var empresa = await empresas.GetByIdAsync(p.EmpresaId);
+        var conta = integ is not null && integ.CarteiraId.Length > 0 ? await carteiras.GetByIdAsync(integ.CarteiraId) : null;
+        var tipo = ChavePix.Normalizar(p.Chave).Tipo;
+        var mail = p.FavorecidoEmail;
+        var mailMascarado = mail.Contains('@') ? $"{mail[..Math.Min(2, mail.IndexOf('@'))]}***{mail[mail.IndexOf('@')..]}" : string.Empty;
+        return new ComprovantePixDto(
+            m.Id, m.Numero, p.Descricao, p.Valor, p.PagoEm,
+            p.FavorecidoNome, ChavePix.Mascarar(p.Chave), tipo,
+            bancos.Modulo(p.Banco)?.Nome ?? p.Banco, empresa?.Nome ?? string.Empty,
+            conta?.Nome ?? string.Empty, p.Ambiente,
+            p.EndToEnd, p.IdBanco,
+            p.CriadoPor, p.CriadoEm, QuemConfirmou(p.ConfirmadaPor), p.ConfirmadaEm,
+            p.EmailSituacao, mailMascarado, p.EmailEm);
+    }
 
     public async Task<List<PagamentoBancario>> ListarAsync() =>
         (await pagamentos.GetAllAsync()).OrderByDescending(p => p.CriadoEm).Take(300).ToList();

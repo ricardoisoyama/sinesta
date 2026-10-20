@@ -90,6 +90,19 @@ public class AvisosPagamentoController(PagamentoService pagamentos) : Controller
 }
 
 /// <summary>
+/// Comprovante do Pix pago pelo ELROND: quem consulta o lançamento vê (leitura, sem a permissão do piloto).
+/// </summary>
+[ApiController]
+[Route("api/financeiro/movimentos/{id}/comprovante-pix")]
+[Authorize]
+public class ComprovantePixController(PagamentoService pagamentos) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Obter(string id) =>
+        await pagamentos.ComprovanteAsync(id) is { } c ? Ok(c) : NotFound("Este lançamento não foi pago por Pix pelo ELROND.");
+}
+
+/// <summary>
 /// Piloto de pagamentos pelo banco (Entradas e Saídas › Agendar pagamento): só a equipe ELROND
 /// (permissão administrativa), só lançamento a pagar aprovado. Pix pela integração da empresa.
 /// </summary>

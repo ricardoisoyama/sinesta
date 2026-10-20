@@ -27,6 +27,14 @@ public class ChavePixTests
     }
 
     [Theory]
+    [InlineData("111.444.777-35", "***.444.777-**")]
+    [InlineData("11987654321", "+55 (11) 9****-4321")]
+    [InlineData("financeiro@empresa.com.br", "fi***@empresa.com.br")]
+    [InlineData("11222333000181", "11.222.333/0001-81")]
+    [InlineData("lixo", "")]
+    public void Mascara_a_chave_para_exibir(string chave, string esperado) => Assert.Equal(esperado, ChavePix.Mascarar(chave));
+
+    [Theory]
     [InlineData("", "Informe")]
     [InlineData("52998224725", "pode ser CPF ou celular")]
     [InlineData("12345678900", "inválido")]

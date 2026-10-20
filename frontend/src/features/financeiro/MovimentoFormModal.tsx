@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip, Receipt, X } from 'lucide-react'
 import { TransferenciaCampos, type DadosTransferencia } from './TransferenciaCampos'
+import { ComprovantePix } from './ComprovantePix'
 import { Modal } from '@/features/common/Modal'
 import { Field } from '@/features/common/Field'
 import { MoneyInput } from '@/features/common/MoneyInput'
@@ -368,6 +369,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
       </section>
       </>
       )}
+
+      {initial?.pagoPeloBanco && <ComprovantePix movimentoId={initial.id} />}
 
       {/* Transferência entre contas não tem boleto, nota nem título: sem documentos. */}
       {!modoTransferencia && !transferenciaEditada && (

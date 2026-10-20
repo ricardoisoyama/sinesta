@@ -61,6 +61,25 @@ public static partial class ChavePix
         return Falha("Chave Pix inválida: use CPF, CNPJ, celular, e-mail ou a chave aleatória.");
     }
 
+    /// <summary>
+    /// Chave para exibir (comprovante, tela): CPF como o banco mostra (***.456.789-**), celular com o meio
+    /// escondido, e-mail com o começo; CNPJ e chave aleatória aparecem inteiros (não são dado pessoal).
+    /// </summary>
+    public static string Mascarar(string? chave)
+    {
+        var r = Normalizar(chave);
+        if (!r.Ok) return string.Empty;
+        var c = r.Chave;
+        return r.Tipo switch
+        {
+            Cpf => $"***.{c[3..6]}.{c[6..9]}-**",
+            Celular => $"+55 ({c[3..5]}) {c[5]}****-{c[^4..]}",
+            Email => $"{c[..Math.Min(2, c.IndexOf('@'))]}***{c[c.IndexOf('@')..]}",
+            Cnpj => $"{c[..2]}.{c[2..5]}.{c[5..8]}/{c[8..12]}-{c[12..]}",
+            _ => c,
+        };
+    }
+
     /// <summary>DDD válido (11 a 99, sem zero) e número de celular (9 dígitos, começa com 9).</summary>
     private static bool CelularValido(string d) =>
         d.Length == 11 && d[0] != '0' && d[1] != '0' && d[2] == '9';
