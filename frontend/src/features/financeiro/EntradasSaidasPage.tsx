@@ -10,7 +10,7 @@ import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import { AprovacaoModal } from './AprovacaoModal'
 import { AgendarPagamentoModal } from './AgendarPagamentoModal'
-import { ROTULO_PAGAMENTO, usePagamentos, vigente, type PagamentoBancario } from './pagamentos'
+import { atualizarPagamento, ROTULO_PAGAMENTO, usePagamentos, vigente, type PagamentoBancario } from './pagamentos'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
@@ -79,6 +79,22 @@ export function EntradasSaidasPage() {
   // Piloto de pagamentos pelo banco: só a equipe ELROND (permissão administrativa).
   const podePagarBanco = !!user?.permissoes?.includes('/financeiro/pagamento-banco')
   const { data: pagamentosData, refetch: recarregarPagamentos } = usePagamentos(podePagarBanco)
+  /** Pix ainda no banco (aguardando aprovação, agendado...): o banco não avisa toda mudança, então dá para perguntar. */
+  const emAndamentoNoBanco = (p: PagamentoBancario) => ['pendente', 'aguardando-aprovacao', 'agendado', 'processando', 'incerto'].includes(p.situacao)
+  const [consultando, setConsultando] = useState<string | null>(null)
+  const consultarNoBanco = async (ids: string[]) => {
+    for (const id of ids) {
+      setConsultando(id)
+      try {
+        await atualizarPagamento(id)
+      } catch (err) {
+        void avisar({ titulo: 'Não foi possível consultar o banco', mensagem: getErrorMessage(err) })
+        break
+      }
+    }
+    setConsultando(null)
+    await Promise.all([recarregarPagamentos(), recarregar()])
+  }
   // Pix que o banco efetivou baixa o lançamento no servidor: relê a lista para a situação acompanhar.
   const pagoSemBaixa = (pagamentosData ?? []).some((p) => p.situacao === 'pago' && todosMovimentos.some((m) => m.id === p.movimentoId && !m.pagoEm))
   useEffect(() => {
@@ -216,6 +232,17 @@ export function EntradasSaidasPage() {
                 {p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
                 {/* O motivo que o banco deu ("limite diário...") sem o código entre colchetes. */}
                 {['recusado', 'falha'].includes(p.situacao) && p.mensagem ? `: ${motivoCurto(p.mensagem)}` : ''}
+                {podePagarBanco && emAndamentoNoBanco(p) && (
+                  <button
+                    type="button"
+                    className={s.consultarBanco}
+                    disabled={consultando !== null}
+                    title="Perguntar agora ao banco a situação deste Pix"
+                    onClick={(e) => { e.stopPropagation(); void consultarNoBanco([p.id]) }}
+                  >
+                    {consultando === p.id ? 'consultando...' : 'consultar no banco'}
+                  </button>
+                )}
               </small>
             ) : null
           })()}
@@ -373,7 +400,12 @@ export function EntradasSaidasPage() {
         getKey={(m) => m.id}
         rotulo={['lançamento', 'lançamentos']}
         pageSize={12}
-        onAtualizar={() => Promise.all([recarregar(), podePagarBanco ? recarregarPagamentos() : null])}
+        // Atualizar também pergunta ao banco pelos Pix ainda em andamento (o banco não avisa toda mudança).
+        onAtualizar={async () => {
+          const abertos = podePagarBanco ? (pagamentosData ?? []).filter(emAndamentoNoBanco).map((p) => p.id) : []
+          if (abertos.length > 0) await consultarNoBanco(abertos)
+          else await Promise.all([recarregar(), podePagarBanco ? recarregarPagamentos() : null])
+        }}
         // Clicar na linha abre o lançamento (com os documentos anexados).
         onRowClick={(m) => {
           if (m.cancelado) return

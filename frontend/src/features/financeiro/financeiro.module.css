@@ -179,3 +179,5 @@
 .copiado { font-size: 11px; color: #2e7d44; font-weight: 600; }
 .comprovanteAcoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 @media (max-width: 640px) { .comprovante { grid-template-columns: 1fr; } }
+.consultarBanco { font: inherit; font-size: 11px; font-weight: 600; color: #2f5f9e; background: none; border: none; padding: 0 0 0 6px; cursor: pointer; text-decoration: underline; }
+.consultarBanco:disabled { color: #9aa39b; cursor: default; }
