@@ -42,6 +42,13 @@ describe('conciliar', () => {
     expect(r[1].confianca).toBe('valor')
   })
 
+  it('lançamento com Pix em andamento no banco não é par (o dinheiro ainda não saiu)', () => {
+    const das = mov({ id: 'das', tipo: 'pagar', parceiroNome: 'Receita Federal', valor: 12198.21, vencimento: '2026-09-20', pixSituacao: 'agendado' })
+    const r = conciliar({ linhas, movimentos: [das], vinculos: {}, ignorados: [], regras: [] })
+    expect(r[0].situacao).toBe('sem-par')
+    expect(r[0].candidatos).toHaveLength(0)
+  })
+
   it('não cruza sinal (débito nunca casa com a receber) e respeita vínculos e ignorados', () => {
     const errado = mov({ id: 'x', tipo: 'receber', parceiroNome: 'Receita Federal', valor: 12198.21, vencimento: '2026-09-21' })
     const r = conciliar({ linhas, movimentos: [errado], vinculos: { A2: 'qualquer' }, ignorados: ['A1'], regras: [] })

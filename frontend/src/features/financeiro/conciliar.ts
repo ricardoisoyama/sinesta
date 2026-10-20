@@ -102,7 +102,8 @@ export interface EntradaConciliacao {
 
 export function conciliar({ linhas, movimentos, vinculos, ignorados, regras }: EntradaConciliacao): LinhaConciliada[] {
   const usados = new Set(Object.values(vinculos))
-  const livres = movimentos.filter((m) => !m.cancelado && !usados.has(m.id))
+  // Pix em andamento no banco ainda não saiu da conta: não é par de nenhuma linha do extrato.
+  const livres = movimentos.filter((m) => !m.cancelado && !usados.has(m.id) && !m.pixSituacao)
 
   return linhas.map((l) => {
     if (vinculos[l.id]) {
