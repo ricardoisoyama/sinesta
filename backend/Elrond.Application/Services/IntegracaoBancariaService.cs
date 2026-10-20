@@ -45,7 +45,7 @@ public sealed class IntegracaoBancariaService(
     ICofreBancario cofre,
     IAuditoriaService auditoria) : IIntegracaoBancariaService
 {
-    private static readonly string[] RecursosValidos = [IntegracaoBancaria.RecursoCobranca, IntegracaoBancaria.RecursoExtrato, IntegracaoBancaria.RecursoSaldo];
+    private static readonly string[] RecursosValidos = [IntegracaoBancaria.RecursoCobranca, IntegracaoBancaria.RecursoExtrato, IntegracaoBancaria.RecursoSaldo, IntegracaoBancaria.RecursoPagamento];
 
     public async Task<List<IntegracaoResumoDto>> ListarAsync(string? empresaId = null) =>
         (await integracoes.ListarAsync(i => empresaId == null || i.EmpresaId == empresaId)).Select(Resumo).ToList();

@@ -179,9 +179,9 @@ public class BancosTests
         Assert.Contains("não suportado", (await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("banco-x", "sandbox", "client", "s", "c", "k", null, null, true))).Error);
 
         var (cert, chave) = CertificadoTeste();
-        var ok = await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("simulador", "sandbox", "client", "segredo", Encoding.UTF8.GetString(cert), Encoding.UTF8.GetString(chave), "12.345-6", new() { "cobranca", "invalido" }, true));
+        var ok = await svc.ConfigurarAsync("emp2", new ConfigurarIntegracaoDto("simulador", "sandbox", "client", "segredo", Encoding.UTF8.GetString(cert), Encoding.UTF8.GetString(chave), "12.345-6", new() { "cobranca", "pagamento", "invalido" }, true));
         Assert.True(ok.IsSuccess, ok.Error);
-        Assert.Equal(new[] { "cobranca" }, ok.Value!.Recursos);
+        Assert.Equal(new[] { "cobranca", "pagamento" }, ok.Value!.Recursos);
         Assert.Equal("123456", ok.Value.ContaCorrente);
         Assert.DoesNotContain("segredo", JsonSerializer.Serialize(ok.Value));
 
