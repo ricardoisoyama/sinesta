@@ -53,6 +53,8 @@ export interface RegraAprovacao {
   // ── lançamentos financeiros ──────────────────────────────
   /** "" = a pagar e a receber; ou só um dos dois. */
   tipoMovimento: '' | 'pagar' | 'receber'
+  /** Empresa a que a regra de lançamento vale; "" = todas. */
+  empresaId: string
 
   // ── compras ──────────────────────────────────────────────
   compradorId: string
@@ -79,6 +81,7 @@ export const regraVazia = (): RegraAprovacao => ({
   ate: 0,
   aprovadores: [],
   tipoMovimento: '',
+  empresaId: '',
   compradorId: '',
   limite: 0,
   excecoes: [],

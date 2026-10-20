@@ -30,6 +30,8 @@ public class RegraAprovacao : Rastreavel, IEntity, IInativavel
     // ── Movimento (Financeiro) ──────────────────────────────────────────────
     /// <summary>Para quais lançamentos vale: "" (pagar e receber) | "pagar" | "receber". Faixa em R$ (De/Ate).</summary>
     public string TipoMovimento { get; set; } = string.Empty;
+    /// <summary>Empresa a que a regra de lançamento vale; vazio = todas.</summary>
+    public string EmpresaId { get; set; } = string.Empty;
 
     // ── Compras ─────────────────────────────────────────────────────────────
     /// <summary>Funcionário comprador a quem a regra se aplica.</summary>
@@ -50,10 +52,11 @@ public class RegraAprovacao : Rastreavel, IEntity, IInativavel
 
     public bool EhProposta => string.IsNullOrEmpty(Tipo) || Tipo == "proposta";
 
-    /// <summary>A regra de movimento cobre este lançamento (tipo e valor)?</summary>
-    public bool CobreMovimento(string tipoMovimento, decimal valor) =>
+    /// <summary>A regra de movimento cobre este lançamento (tipo, valor e empresa)?</summary>
+    public bool CobreMovimento(string tipoMovimento, decimal valor, string empresaId = "") =>
         Tipo == "movimento" && Status == "ativo" && Aprovadores.Count > 0
         && (string.IsNullOrEmpty(TipoMovimento) || TipoMovimento == tipoMovimento)
+        && (string.IsNullOrEmpty(EmpresaId) || EmpresaId == empresaId)
         && Cobre(valor);
 
     /// <summary>A regra de proposta cobre este valor? (Ate = 0 significa "daqui para cima".)</summary>

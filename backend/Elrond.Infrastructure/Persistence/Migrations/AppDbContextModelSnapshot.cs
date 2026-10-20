@@ -3713,6 +3713,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<string>("EmpresaId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("EtapaCrmId")
                         .IsRequired()
                         .HasColumnType("text");

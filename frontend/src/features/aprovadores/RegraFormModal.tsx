@@ -9,6 +9,7 @@ import { MoneyInput } from '@/features/common/MoneyInput'
 import ui from '@/features/common/ui.module.css'
 import { useUsuarios } from '@/features/usuarios/store'
 import { listFornecedores, listVendedores } from '@/features/cadastros/api'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { BASES_COMISSAO, type ComissaoBase } from '@/features/parceiros/types'
 import { semAcento } from '@/lib/texto'
 import { BASES_REGRA, TIPOS_REGRA, regraVazia, tipoDaRegra, type BaseRegra, type RegraAprovacao, type TipoRegra } from './types'
@@ -81,6 +82,8 @@ export function RegraFormModal({ open, initial, error, busy, onClose, onSave }: 
   const { usuarios } = useUsuarios()
   const { data: fornecedoresData } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores })
   const { data: vendedoresData } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores })
+  const { data: empresasData } = useEmpresasQuery()
+  const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
   const [d, setD] = useState<RegraAprovacao>(regraVazia)
   const [buscaForn, setBuscaForn] = useState('')
   const [erroLocal, setErroLocal] = useState<string | null>(null)
@@ -214,6 +217,16 @@ export function RegraFormModal({ open, initial, error, busy, onClose, onSave }: 
               </Field>
               <Field label="Até (R$)" hint="Deixe zero para dizer “daqui para cima”.">
                 <MoneyInput value={d.ate} onChange={(v) => set({ ate: v })} />
+              </Field>
+              <Field className={ui.col2} label="Empresa" hint="Lançamentos de qual empresa. Se houver uma regra da empresa e outra de todas na mesma faixa, vale a da empresa.">
+                <select value={d.empresaId ?? ''} onChange={(e) => set({ empresaId: e.target.value })}>
+                  <option value="">Todas as empresas</option>
+                  {empresas.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nome}
+                    </option>
+                  ))}
+                </select>
               </Field>
             </>
           )}

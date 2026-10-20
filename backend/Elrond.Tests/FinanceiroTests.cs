@@ -33,6 +33,19 @@ public class FinanceiroTests
         return (new FinanceiroService(movs, carteiras, rs, new MemRepo<ExtratoLinha>(), new SemTransacao(), new FakeAuditoria(), new Sequencia(), empresas), movs, rs);
     }
 
+    [Fact]
+    public void Regra_da_empresa_vence_a_de_todas_e_nao_vale_para_outra_empresa()
+    {
+        var todas = Regra(0, 0, "u-ana");
+        var filial = Regra(0, 0, "u-bia");
+        filial.Id = "r-filial";
+        filial.EmpresaId = "filial";
+        var regras = new[] { todas, filial };
+        Assert.Equal("r-filial", FinanceiroService.RegraQueCobre(regras, "pagar", 100m, "filial")!.Id);
+        Assert.Equal(todas.Id, FinanceiroService.RegraQueCobre(regras, "pagar", 100m, "matriz")!.Id);
+        Assert.Null(FinanceiroService.RegraQueCobre(new[] { filial }, "pagar", 100m, "matriz"));
+    }
+
     private static RegraAprovacao Regra(decimal de, decimal ate, params string[] aprovadores) => new()
     {
         Id = $"r-{de}-{ate}", Nome = $"Até {ate}", Tipo = "movimento", Status = "ativo", Base = "valor", De = de, Ate = ate, Aprovadores = aprovadores.ToList(),

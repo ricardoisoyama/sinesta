@@ -48,8 +48,10 @@ public class FinanceiroService : IFinanceiroService
     // ══════════════════════════ aprovação ══════════════════════════
 
     /// <summary>Regra de movimento que cobre o lançamento (o valor do lançamento inteiro, somando as parcelas).</summary>
-    public static RegraAprovacao? RegraQueCobre(IEnumerable<RegraAprovacao> regras, string tipo, decimal valorTotal) =>
-        regras.Where(r => r.CobreMovimento(tipo, valorTotal)).OrderByDescending(r => r.De).FirstOrDefault();
+    /// <summary>Regra que cobre o lançamento; a da empresa vence a de "todas" na mesma faixa.</summary>
+    public static RegraAprovacao? RegraQueCobre(IEnumerable<RegraAprovacao> regras, string tipo, decimal valorTotal, string empresaId = "") =>
+        regras.Where(r => r.CobreMovimento(tipo, valorTotal, empresaId))
+            .OrderByDescending(r => r.EmpresaId.Length > 0).ThenByDescending(r => r.De).FirstOrDefault();
 
     private async Task<List<Movimento>> GrupoAsync(Movimento m) =>
         string.IsNullOrEmpty(m.GrupoId)
@@ -63,8 +65,8 @@ public class FinanceiroService : IFinanceiroService
         var regras = await _regras.ListarAsync(r => r.Tipo == "movimento");
         foreach (var g in lista.Where(m => m.Aprovacao == "pendente" && m.RegraId.Length == 0).GroupBy(m => m.GrupoId))
         {
-            var (tipo, total) = ValorParaRegra(g.ToList());
-            var regra = RegraQueCobre(regras, tipo, total);
+            var (tipo, total, empresa) = ValorParaRegra(g.ToList());
+            var regra = RegraQueCobre(regras, tipo, total, empresa);
             if (regra is not null) foreach (var m in g) m.RegraId = regra.Id;
         }
         return lista.OrderBy(m => m.Vencimento).ToList();
@@ -129,19 +131,19 @@ public class FinanceiroService : IFinanceiroService
     {
         var regras = await _regras.ListarAsync(r => r.Tipo == "movimento");
         var atual = grupo.First();
-        var (tipo, total) = ValorParaRegra(grupo);
+        var (tipo, total, empresa) = ValorParaRegra(grupo);
         var regra = regras.FirstOrDefault(r => r.Id == atual.RegraId && r.Status == "ativo")
-                    ?? RegraQueCobre(regras, tipo, total);
+                    ?? RegraQueCobre(regras, tipo, total, empresa);
         return regra is null
             ? (null, $"Não existem regras ou aprovadores cadastrados para lançamentos {(tipo == "receber" ? "a receber" : "a pagar")} de {R2(total):N2}. O gestor precisa criar a regra em Parametrizações › Aprovadores e Regras.")
             : (regra, null);
     }
 
-    /// <summary>Tipo e valor que a regra de aprovação avalia: na transferência, a saída (dinheiro que sai da conta).</summary>
-    private static (string Tipo, decimal Total) ValorParaRegra(List<Movimento> grupo) =>
+    /// <summary>Tipo, valor e empresa que a regra de aprovação avalia: na transferência, a saída (dinheiro que sai da conta).</summary>
+    private static (string Tipo, decimal Total, string EmpresaId) ValorParaRegra(List<Movimento> grupo) =>
         grupo.Any(m => m.Transferencia)
-            ? ("pagar", grupo.Where(m => m.Tipo == "pagar").Sum(m => m.Valor))
-            : (grupo.First().Tipo, grupo.Sum(m => m.Valor));
+            ? ("pagar", grupo.Where(m => m.Tipo == "pagar").Sum(m => m.Valor), grupo.FirstOrDefault(m => m.Tipo == "pagar")?.EmpresaId ?? grupo.First().EmpresaId)
+            : (grupo.First().Tipo, grupo.Sum(m => m.Valor), grupo.First().EmpresaId);
 
     /// <summary>A outra perna das transferências entre os lançamentos (para aprovar, baixar, estornar e cancelar juntas).</summary>
     private async Task<List<Movimento>> ComPernasAsync(List<Movimento> lista)
@@ -187,7 +189,7 @@ public class FinanceiroService : IFinanceiroService
         var grupoId = string.IsNullOrWhiteSpace(b.GrupoId) ? Guid.NewGuid().ToString() : b.GrupoId;
         var centavos = (long)Math.Round(b.Valor * 100m);
         var cada = centavos / qtd;
-        var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), b.Tipo, b.Valor);
+        var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), b.Tipo, b.Valor, b.EmpresaId);
         // Cada parcela tem o seu número, em ordem (1532 é a 1/3, 1533 a 2/3...).
         var numeros = await _numerador.ProximosMovimentosAsync(qtd);
 
@@ -247,7 +249,7 @@ public class FinanceiroService : IFinanceiroService
         if (origem.Status == "inativo" || destino.Status == "inativo") return Result.Failure<List<Movimento>>("Não dá para transferir de ou para uma conta inativa.");
 
         var descricao = string.IsNullOrWhiteSpace(dto.Descricao) ? "Transferência entre contas" : dto.Descricao.Trim();
-        var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), "pagar", dto.Valor);
+        var regra = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), "pagar", dto.Valor, origem.EmpresaId);
         var numeros = await _numerador.ProximosMovimentosAsync(2);
         var grupoId = Guid.NewGuid().ToString();
         var idSaida = Guid.NewGuid().ToString();
@@ -319,7 +321,13 @@ public class FinanceiroService : IFinanceiroService
             MotivoReprovacao = mudouAprovado ? string.Empty : atual.MotivoReprovacao,
         };
         if (mudouAprovado)
-            novo.RegraId = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), novo.Transferencia ? "pagar" : novo.Tipo, novo.Valor)?.Id ?? string.Empty;
+        {
+            // Na transferência a regra é da empresa da saída (a entrada é da outra empresa).
+            var empresaDaRegra = novo.Transferencia && novo.Tipo == "receber"
+                ? (await _movimentos.GetByIdAsync(novo.OrigemId))?.EmpresaId ?? novo.EmpresaId
+                : novo.EmpresaId;
+            novo.RegraId = RegraQueCobre(await _regras.ListarAsync(r => r.Tipo == "movimento"), novo.Transferencia ? "pagar" : novo.Tipo, novo.Valor, empresaDaRegra)?.Id ?? string.Empty;
+        }
         await _movimentos.UpdateAsync(id, novo);
         if (atual.Transferencia && await _movimentos.GetByIdAsync(atual.OrigemId) is { Cancelado: false } perna)
         {

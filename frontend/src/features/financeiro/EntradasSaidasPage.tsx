@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, Wallet } from 'lucide-react'
+import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, ShieldCheck, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useAuth } from '@/features/auth/auth-context'
@@ -84,6 +84,21 @@ export function EntradasSaidasPage() {
   const aguardandoMim = (m: Movimento) =>
     (m.aprovacao ?? 'pendente') === 'pendente' && !!regraDe(m)?.aprovadores.includes(meuId) && !(m.aprovacoes ?? []).some((a) => a.usuarioId === meuId)
   const qtdMinhas = movimentos.filter((m) => !m.cancelado && aguardandoMim(m)).length
+  /** Aprova (assina) os lançamentos; parcelas e pernas da transferência andam juntas, então uma por grupo. */
+  const aprovarLista = async (itens: Movimento[]): Promise<boolean> => {
+    const porGrupo = [...new Map(itens.map((m) => [m.grupoId || m.id, m])).values()]
+    const total = porGrupo.reduce((a, m) => a + (m.origem === 'transferencia' && m.tipo === 'receber' ? 0 : m.valor), 0)
+    const ok = await confirmar({
+      titulo: porGrupo.length === 1 ? 'Aprovar lançamento' : `Aprovar ${porGrupo.length} lançamentos`,
+      mensagem: porGrupo.length === 1
+        ? `Aprovar nº ${porGrupo[0].numero} · ${porGrupo[0].parceiroNome} · ${formatBRL(porGrupo[0].valor)}${porGrupo[0].totalParcelas > 1 ? ' (vale para todas as parcelas)' : ''}?`
+        : `Aprovar ${porGrupo.length} lançamentos, ${formatBRL(total)} no total? Parcelas e transferências vão juntas.`,
+      confirmar: 'Aprovar',
+      cancelar: 'Voltar',
+    })
+    if (!ok) return false
+    return exec(async () => { for (const m of porGrupo) await aprovar(m.id) })
+  }
   const hoje = hojeISO()
   const [aba, setAba] = useState<Aba>('todos')
   const [janela, setJanela] = useState<Janela>('mes')
@@ -230,13 +245,18 @@ export function EntradasSaidasPage() {
     {
       header: 'Ações',
       fixa: true,
-      largura: LARGURA.acoes,
+      largura: podeAprovar ? 132 : LARGURA.acoes,
       className: ui.colActions,
       cell: (m) => {
         const st = statusDe(m, hoje)
         const aprovado = (m.aprovacao ?? 'pendente') === 'aprovado'
         return (
           <>
+            {podeAprovar && aguardandoMim(m) && st !== 'cancelado' && (
+              <button className={`${ui.iconBtn} ${s.aprovarBtn}`} title="Aprovar (assina o lançamento e as parcelas dele)" onClick={(e) => { e.stopPropagation(); void aprovarLista([m]) }}>
+                <ShieldCheck />
+              </button>
+            )}
             {(st === 'aberto' || st === 'atrasado') && (
               <button className={ui.iconBtn} title={aprovado ? 'Liquidar' : 'Só lançamento aprovado pode ser baixado'} disabled={!aprovado} onClick={(e) => { e.stopPropagation(); setBaixando({ itens: [m] }) }}>
                 <CheckCircle2 />
@@ -366,8 +386,20 @@ export function EntradasSaidasPage() {
           const abertos = itens.filter((m) => !m.pagoEm && !m.cancelado)
           const baixaveis = abertos.filter((m) => m.aprovacao === 'aprovado')
           const pagaveis = baixaveis.filter((m) => m.tipo === 'pagar' && !(pagamentoDe(m) && vigente(pagamentoDe(m)!)))
+          const aprovaveis = abertos.filter(aguardandoMim)
           return (
             <>
+              {podeAprovar && (
+                <button
+                  type="button"
+                  className={ui.selBtn}
+                  disabled={aprovaveis.length === 0}
+                  onClick={async () => { if (await aprovarLista(aprovaveis)) limpar() }}
+                  title={aprovaveis.length < abertos.length ? 'Entram só os que aguardam a sua assinatura' : 'Aprovar os selecionados'}
+                >
+                  <ShieldCheck /> Aprovar ({aprovaveis.length})
+                </button>
+              )}
               {podePagarBanco && (
                 <button
                   type="button"

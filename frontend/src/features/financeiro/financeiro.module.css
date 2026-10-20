@@ -168,3 +168,4 @@
 .transfInfo { display: flex; align-items: center; gap: 8px; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; background: #e7eef8; color: #2f5f9e; margin-bottom: 12px; }
 .transfTag { display: inline-flex; align-items: center; gap: 4px; margin-top: 2px; font-size: 11px; font-weight: 600; color: #2f5f9e; }
 .segmento button.onTransferencia { background: #e7eef8; color: #2f5f9e; }
+.aprovarBtn { color: #2e7d44; }

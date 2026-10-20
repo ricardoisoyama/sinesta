@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus, ShieldCheck } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
@@ -72,6 +73,7 @@ export function AprovadoresPage() {
 
   const { data: vendedoresData } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores })
   const nomeDe = (id: string) => usuarios.find((u) => u.id === id)?.nome ?? 'funcionário removido'
+  const { data: empresasData } = useEmpresasQuery()
   const nomeVendedor = (id: string) => vendedoresData?.find((v) => v.id === id)?.nome ?? 'vendedor removido'
   const rotuloTipo = (r: RegraAprovacao) =>
     TIPOS_REGRA.find((t) => t.valor === tipoDaRegra(r))?.label.replace(/ \(.*\)$/, '') ?? 'Regra'
@@ -85,7 +87,8 @@ export function AprovadoresPage() {
     if (tipo === 'movimento') {
       const faixa = r.ate > 0 ? `de ${formatBRL(r.de)} até ${formatBRL(r.ate)}` : `a partir de ${formatBRL(r.de)}`
       const vale = r.tipoMovimento === 'pagar' ? 'A pagar' : r.tipoMovimento === 'receber' ? 'A receber' : 'A pagar e a receber'
-      return `${vale} ${faixa}`
+      const empresa = r.empresaId ? (empresasData ?? []).find((e) => e.id === r.empresaId)?.nome ?? 'empresa removida' : 'todas as empresas'
+      return `${vale} ${faixa} · ${empresa}`
     }
     const fmt = (v: number) => (r.base === 'margem' ? formatPct(v) : formatBRL(v))
     const faixa = r.ate > 0 ? `${fmt(r.de)} até ${fmt(r.ate)}` : `a partir de ${fmt(r.de)}`
