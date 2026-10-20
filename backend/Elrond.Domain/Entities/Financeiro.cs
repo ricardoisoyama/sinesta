@@ -75,6 +75,10 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public bool Transferencia => Origem == OrigemTransferencia;
     /// <summary>Transferência já feita no banco: ao ser aprovada, as duas pernas entram baixadas na data dela.</summary>
     public bool BaixarAoAprovar { get; set; }
+    /// <summary>Pagamento pelo banco (Pix do ELROND) que liquidou este lançamento; vazio = baixa manual ou conciliação.</summary>
+    public string PagamentoBancarioId { get; set; } = string.Empty;
+    /// <summary>Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então não há estorno nem alteração.</summary>
+    public bool PagoPeloBanco => PagamentoBancarioId.Length > 0 && PagoEm.Length > 0;
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }

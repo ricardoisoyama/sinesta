@@ -38,6 +38,8 @@ public class FinanceiroService : IFinanceiroService
         _auditoria = auditoria;
     }
 
+    private const string PagoPeloBancoMsg = "Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então a baixa não é estornada nem o lançamento alterado. Se precisar devolver, lance um a receber.";
+
     private static string Agora() => DateTime.UtcNow.ToString("o");
     private static decimal R2(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
     private static readonly Dictionary<string, int> MesesPorPeriodo = new()
@@ -290,6 +292,7 @@ public class FinanceiroService : IFinanceiroService
         var atual = await _movimentos.GetByIdAsync(id);
         if (atual is null) return Result.Failure<Movimento>("Lançamento não encontrado.");
         if (atual.Cancelado) return Result.Failure<Movimento>("Lançamento cancelado não pode ser alterado.");
+        if (atual.PagoPeloBanco) return Result.Failure<Movimento>(PagoPeloBancoMsg);
         if (atual.PagoEm.Length > 0) return Result.Failure<Movimento>("Lançamento liquidado: estorne a baixa antes de alterar.");
         dados.Tipo = atual.Tipo;
         if (atual.Transferencia)
@@ -385,6 +388,7 @@ public class FinanceiroService : IFinanceiroService
         if (m.PagoEm.Length == 0) return Result.Failure<Movimento>("Este lançamento não está liquidado.");
         var antes = m.PagoEm;
         var alvo = (await ComPernasAsync(new List<Movimento> { m })).Where(x => x.PagoEm.Length > 0).ToList();
+        if (alvo.Any(x => x.PagoPeloBanco)) return Result.Failure<Movimento>(PagoPeloBancoMsg);
         foreach (var x in alvo) { x.PagoEm = string.Empty; x.ValorPago = 0; }
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));
         // A linha do extrato que apontava para ele (ou para a outra perna) volta a ficar pendente.

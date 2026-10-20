@@ -28,6 +28,7 @@ import s from './financeiro.module.css'
 
 type Aba = 'todos' | TipoMovimento | 'transferencia'
 type Janela = 'vencidos' | 'mes' | '30dias' | 'periodo' | 'tudo'
+type FiltroSituacao = 'abertos' | 'liquidados' | 'cancelados' | 'todos'
 type FiltroAprov = 'todas' | 'pendente' | 'minha' | 'aprovado' | 'reprovado'
 const JANELAS: { valor: Janela; label: string }[] = [
   { valor: 'vencidos', label: 'Vencidos' },
@@ -107,7 +108,7 @@ export function EntradasSaidasPage() {
   const hoje = hojeISO()
   const [aba, setAba] = useState<Aba>('todos')
   const [janela, setJanela] = useState<Janela>('mes')
-  const [mostrarLiquidados, setMostrarLiquidados] = useState(false)
+  const [situacao, setSituacao] = useState<FiltroSituacao>('abertos')
   // Período livre (vencimento de/até): começa no mês corrente.
   const [periodo, setPeriodo] = useState(() => ({ de: primeiroDiaDoMes(hojeISO()), ate: ultimoDiaDoMes(hojeISO()) }))
   const [busca, setBusca] = useState('')
@@ -132,7 +133,9 @@ export function EntradasSaidasPage() {
       .filter((m) => aba === 'todos' || (aba === 'transferencia' ? m.origem === 'transferencia' : m.tipo === aba))
       .filter((m) => {
         const st = statusDe(m, hoje)
-        if (!mostrarLiquidados && (st === 'liquidado' || st === 'cancelado')) return false
+        if (situacao === 'abertos' && (st === 'liquidado' || st === 'cancelado')) return false
+        if (situacao === 'liquidados' && st !== 'liquidado') return false
+        if (situacao === 'cancelados' && st !== 'cancelado') return false
         if (janela === 'vencidos') return st === 'atrasado'
         if (janela === 'mes') return m.vencimento >= ini && m.vencimento <= fim
         if (janela === '30dias') return m.vencimento >= hoje && m.vencimento <= lim30
@@ -267,7 +270,7 @@ export function EntradasSaidasPage() {
                 <CheckCircle2 />
               </button>
             )}
-            {st === 'liquidado' && (
+            {st === 'liquidado' && !m.pagoPeloBanco && (
               <button
                 className={ui.iconBtn}
                 title="Estornar (volta para em aberto)"
@@ -280,7 +283,8 @@ export function EntradasSaidasPage() {
                 <RotateCcw />
               </button>
             )}
-            {st !== 'cancelado' && (
+            {/* Liquidado não se altera (estorne antes); clicar na linha abre para consulta e anexos. */}
+            {st !== 'cancelado' && st !== 'liquidado' && (
               <button className={ui.iconBtn} title="Editar" onClick={(e) => { e.stopPropagation(); setEditando(m); setFormOpen(true) }}>
                 <Pencil />
               </button>
@@ -372,10 +376,12 @@ export function EntradasSaidasPage() {
                 <input type="date" value={periodo.ate} min={periodo.de || undefined} onChange={(e) => setPeriodo({ ...periodo, ate: e.target.value })} aria-label="Vencimento até" />
               </span>
             )}
-            <label className={`${ui.chip} ${mostrarLiquidados ? ui.chipOn : ''}`} title="Liquidados e cancelados ficam escondidos por padrão">
-              <input type="checkbox" className={ui.chipCheck} checked={mostrarLiquidados} onChange={(e) => setMostrarLiquidados(e.target.checked)} />
-              <CheckCircle2 /> Mostrar liquidados
-            </label>
+            <select className={ui.filterSelect} value={situacao} onChange={(e) => setSituacao(e.target.value as FiltroSituacao)} title="Filtrar pela situação">
+              <option value="abertos">Em aberto</option>
+              <option value="liquidados">Só liquidados</option>
+              <option value="cancelados">Só cancelados</option>
+              <option value="todos">Todas as situações</option>
+            </select>
             <select className={ui.filterSelect} value={filtroAprov} onChange={(e) => setFiltroAprov(e.target.value as FiltroAprov)} title="Filtrar pela aprovação">
               <option value="todas">Aprovação: todas</option>
               <option value="minha">Aguardando minha aprovação{qtdMinhas ? ` (${qtdMinhas})` : ''}</option>

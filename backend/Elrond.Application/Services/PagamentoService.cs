@@ -225,6 +225,12 @@ public sealed class PagamentoService(
         var r = await financeiro.LiquidarAsync(new BaixaDto(new() { p.MovimentoId }, dia, integ.CarteiraId), Banco);
         // Já baixado (à mão, ou por outro aviso): está tudo certo.
         if (!r.IsSuccess) log.LogInformation("Baixa do pagamento {Id} não aplicada: {Erro}", p.Id, r.Error);
+        // O Pix saiu pelo ELROND: marca o lançamento (trava estorno e alteração).
+        if (await movimentos.GetByIdAsync(p.MovimentoId) is { } m && m.PagamentoBancarioId != p.Id)
+        {
+            m.PagamentoBancarioId = p.Id;
+            await movimentos.UpdateAsync(m.Id, m);
+        }
     }
 
     private async Task AvisarFavorecidoAsync(PagamentoBancario p, CancellationToken ct)

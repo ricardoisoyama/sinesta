@@ -118,6 +118,8 @@ export interface Movimento {
   transferencia?: boolean
   /** Transferência já feita no banco: ao ser aprovada, entra baixada. */
   baixarAoAprovar?: boolean
+  /** Pago por Pix pelo ELROND (vem do servidor): sem estorno nem alteração. */
+  pagoPeloBanco?: boolean
   observacao: string
   cancelado: boolean
   /** Aprovação (regra do tipo movimento em Aprovadores e Regras). Ausente = pendente. */

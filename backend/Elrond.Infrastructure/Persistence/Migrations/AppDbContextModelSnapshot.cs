@@ -2828,6 +2828,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PagamentoBancarioId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("PagoEm")
                         .IsRequired()
                         .HasColumnType("text");

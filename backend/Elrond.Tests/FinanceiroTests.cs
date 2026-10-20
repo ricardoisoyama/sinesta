@@ -34,6 +34,22 @@ public class FinanceiroTests
     }
 
     [Fact]
+    public async Task Pago_por_pix_do_elrond_nao_estorna_nem_altera()
+    {
+        var (svc, movs, _) = Montar(Regra(0, 0, "u-ana"));
+        var m = Base(150m);
+        m.Id = "m-pix"; m.Aprovacao = "aprovado"; m.PagoEm = "2026-10-20"; m.ValorPago = 150m; m.PagamentoBancarioId = "pag-1";
+        movs.Itens.Add(m);
+        Assert.Contains("Pix pelo ELROND", (await svc.EstornarAsync("m-pix", Ana)).Error);
+        Assert.Contains("Pix pelo ELROND", (await svc.AtualizarAsync("m-pix", Base(999m))).Error);
+        Assert.Equal("2026-10-20", movs.Itens.Single().PagoEm);
+
+        // Baixa manual (sem pagamento pelo banco) continua estornável.
+        m.PagamentoBancarioId = string.Empty;
+        Assert.True((await svc.EstornarAsync("m-pix", Ana)).IsSuccess);
+    }
+
+    [Fact]
     public void Regra_da_empresa_vence_a_de_todas_e_nao_vale_para_outra_empresa()
     {
         var todas = Regra(0, 0, "u-ana");

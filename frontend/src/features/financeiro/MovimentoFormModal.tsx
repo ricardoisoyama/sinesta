@@ -191,6 +191,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
   }
 
   const editando = !!initial
+  // Liquidado: abre para consulta e anexos; o servidor não aceita alterar (pago por Pix do ELROND, nem estornando).
+  const liquidado = !!initial?.pagoEm
   const transferenciaEditada = !!initial?.transferencia
 
   return (
@@ -207,12 +209,21 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onClose}>
             Cancelar
           </button>
-          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={submit} disabled={salvando || carteiras.length === 0}>
-            {editando ? 'Salvar' : modoTransferencia ? 'Lançar transferência' : parcelas > 1 ? `Lançar ${parcelas} parcelas` : 'Lançar'}
-          </button>
+          {!liquidado && (
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={submit} disabled={salvando || carteiras.length === 0}>
+              {editando ? 'Salvar' : modoTransferencia ? 'Lançar transferência' : parcelas > 1 ? `Lançar ${parcelas} parcelas` : 'Lançar'}
+            </button>
+          )}
         </>
       }
     >
+      {liquidado && (
+        <div className={s.transfInfo}>
+          {initial?.pagoPeloBanco
+            ? 'Pago por Pix pelo ELROND: o dinheiro já saiu do banco, então não há estorno nem alteração. Os documentos ainda podem ser anexados.'
+            : 'Lançamento liquidado: só consulta. Para alterar, estorne a baixa na lista. Os documentos ainda podem ser anexados.'}
+        </div>
+      )}
       {carteiras.filter((c) => c.status === 'ativo').length === 0 && (
         <div className={s.aprovAviso}>
           Nenhuma conta cadastrada. Crie a conta bancária ou o caixa em <Link to="/cadastros/unidades">Cadastros › Empresas</Link>, aba Dados bancários, antes de lançar.
