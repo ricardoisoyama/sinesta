@@ -8,7 +8,8 @@ import { Hint } from '@/features/common/Hint'
 import { formatBRL } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
 import { getErrorMessage } from '@/lib/api'
-import { listCategoriasCusto } from '@/features/cadastros/api'
+import { listCategoriasCusto, listClientes, listFornecedores } from '@/features/cadastros/api'
+import { confirmar } from '@/features/common/dialogo/dialogo'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import { usePlanoContas } from '@/features/planoContas/store'
@@ -62,6 +63,9 @@ export function ConciliacaoPage() {
 
   const { data: linhasApi, isLoading } = useQuery({ queryKey: ['financeiro', 'extrato', carteiraId], queryFn: () => listExtrato(carteiraId), enabled: !!carteiraId })
   const { data: regrasApi } = useQuery({ queryKey: ['financeiro', 'regras-conciliacao'], queryFn: listRegrasConciliacao })
+  // CPF/CNPJ do cadastro de cada parceiro: o extrato traz o da outra ponta e é o sinal mais firme do par.
+  const { data: fornecedoresData } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores })
+  const { data: clientesData } = useQuery({ queryKey: ['clientes'], queryFn: listClientes })
   // Conta ligada a uma integração com extrato: o extrato vem pela API ("Buscar do banco"); o OFX fica de reserva.
   const { data: contasComExtrato } = useQuery({ queryKey: ['financeiro', 'contas-com-extrato'], queryFn: listContasComExtrato })
   const contaBanco = (contasComExtrato ?? []).find((c) => c.carteiraId === carteiraId)
@@ -76,7 +80,11 @@ export function ConciliacaoPage() {
   const vinculos: Record<string, string> = Object.fromEntries(gravadas.filter((l) => l.situacao === 'conciliado' && l.movimentoId).map((l) => [l.id, l.movimentoId]))
   const ignorados = gravadas.filter((l) => l.situacao === 'ignorado').map((l) => l.id)
   // O motor marca como "conciliado" o par sem dúvida; enquanto não for gravado, é sugestão (um clique aceita).
-  const resultado: LinhaConciliada[] = conciliar({ linhas, movimentos, vinculos, ignorados, regras }).map((l) =>
+  const contexto = {
+    documentos: Object.fromEntries([...(fornecedoresData ?? []), ...(clientesData ?? [])].map((p) => [p.id, (p.cpfCnpj ?? '').replace(/\D/g, '')])),
+    proprios: new Set((empresasData ?? []).map((e) => (e.cnpj ?? '').replace(/\D/g, '')).filter(Boolean)),
+  }
+  const resultado: LinhaConciliada[] = conciliar({ linhas, movimentos, vinculos, ignorados, regras, contexto }).map((l) =>
     l.situacao === 'conciliado' && !vinculos[l.linha.id] ? { ...l, situacao: 'sugestao' } : l,
   )
   const r = resumoConciliacao(resultado)
@@ -86,6 +94,7 @@ export function ConciliacaoPage() {
     return true
   })
   const datas = linhas.map((l) => l.data).sort()
+  const fortes = resultado.filter((l) => l.situacao === 'sugestao' && l.movimento && l.confianca === 'exata').length
 
   /** Executa no servidor, recarrega e mostra o motivo quando ele recusa. */
   const exec = async (acao: () => Promise<unknown>): Promise<boolean> => {
@@ -138,10 +147,23 @@ export function ConciliacaoPage() {
   // ── ações de linha ──
   /** Vincula a linha ao lançamento: se ainda estava em aberto, o servidor liquida na data do extrato. */
   const aceitar = async (l: LinhaConciliada, m: Movimento) => {
+    // Valor do extrato diferente do lançado (digitação, por exemplo): o valor pago passa a ser o do banco.
+    const doBanco = Math.abs(l.linha.valor)
+    const lancado = liquidoDe(m)
+    if (!m.pagoEm && Math.abs(doBanco - lancado) >= 0.005) {
+      const ok = await confirmar({
+        titulo: 'Valor diferente do lançado',
+        mensagem: `O banco mostra ${formatBRL(doBanco)} e o lançamento nº ${m.numero} tem ${formatBRL(lancado)}. Ao conciliar, o valor pago do lançamento fica ${formatBRL(doBanco)} (o do extrato).`,
+        confirmar: 'Conciliar com o valor do extrato',
+        cancelar: 'Voltar',
+      })
+      if (!ok) return
+    }
     if (await exec(() => vincularExtrato(l.linha.id, m.id))) setAberta(null)
   }
   const aceitarTodas = async () => {
-    const pares = resultado.filter((l) => l.situacao === 'sugestao' && l.movimento)
+    // Em lote só as fortes (valor exato + nome ou CNPJ); as outras pedem um olhar, uma a uma.
+    const pares = resultado.filter((l) => l.situacao === 'sugestao' && l.movimento && l.confianca === 'exata')
     let ok = 0
     const falhas: string[] = []
     setTrabalhando(true)
@@ -277,9 +299,15 @@ export function ConciliacaoPage() {
               <span className={`${s.st} ${s.stSem}`}><Search /> {r.semPar} sem par</span>
               {r.ignorados > 0 && <span className={`${s.st} ${s.stIgn}`}><Ban /> {r.ignorados} ignoradas</span>}
             </div>
-            {r.sugestoes > 0 && (
-              <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={trabalhando} onClick={aceitarTodas}>
-                <CheckCheck /> Aceitar as {r.sugestoes} sugestões
+            {fortes > 0 && (
+              <button
+                type="button"
+                className={`${ui.btn} ${ui.btnPrimary}`}
+                disabled={trabalhando}
+                onClick={aceitarTodas}
+                title="Aceita de uma vez só as sugestões fortes (valor exato e nome ou CNPJ no extrato). As outras, confira e aceite uma a uma."
+              >
+                <CheckCheck /> Aceitar as {fortes} {fortes === 1 ? 'sugestão forte' : 'sugestões fortes'}
               </button>
             )}
           </div>

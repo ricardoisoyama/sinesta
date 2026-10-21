@@ -71,6 +71,14 @@ public class FinanceiroTests
         Assert.Equal(("aprovado", "2026-10-20"), (depois.Aprovacao, depois.PagoEm));
         Assert.Contains("pela conciliação", depois.Aprovacoes.Single().Nome);
 
+        // Valor do extrato diferente do lançado: o valor pago fica o do banco.
+        extrato.Itens.Add(new ExtratoLinha { Id = "l2", CarteiraId = "cart", Fitid = "F2", Data = "2026-10-20", Valor = -436.18m, Memo = "PIX ENVIADO" });
+        var m2 = Base(436.13m);
+        m2.Id = "m-dig"; m2.Vencimento = "2026-10-20";
+        movs.Itens.Add(m2);
+        Assert.True((await svc.VincularAsync(new VincularExtratoDto("l2", "m-dig"), Ana)).IsSuccess);
+        Assert.Equal((436.13m, 436.18m), (movs.Itens.Single(x => x.Id == "m-dig").Valor, movs.Itens.Single(x => x.Id == "m-dig").ValorPago));
+
         Assert.True((await svc.DesfazerAsync("l1", Ana)).IsSuccess);
         var desfeito = movs.Itens.Single(x => x.Id == "m-conc");
         Assert.Equal(("pendente", ""), (desfeito.Aprovacao, desfeito.PagoEm));

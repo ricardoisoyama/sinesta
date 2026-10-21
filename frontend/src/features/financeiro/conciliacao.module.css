@@ -51,6 +51,7 @@
 .par { display: flex; flex-direction: column; line-height: 1.3; }
 .par small { color: #6b7b72; font-size: 11.5px; }
 .par b { color: #143d18; }
+.par > span { color: #3d4a42; }
 .par em { font-style: normal; }
 .conf_exata { color: #2e7d44; }
 .conf_valor { color: #8a6d00; }

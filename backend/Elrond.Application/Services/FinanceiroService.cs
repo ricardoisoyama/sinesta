@@ -500,6 +500,17 @@ public class FinanceiroService : IFinanceiroService
             // Lançamento em aberto: a conciliação é a baixa dele, na data do extrato.
             var baixa = await LiquidarAsync(new BaixaDto(new() { m.Id }, l.Data, l.CarteiraId), quem);
             if (!baixa.IsSuccess) return Result.Failure<ExtratoLinha>(baixa.Error!);
+            // O valor que saiu (ou entrou) é o do banco: se o lançado difere (digitação), o valor pago fica o do extrato,
+            // sem supor juros ou desconto.
+            var doBanco = Math.Abs(l.Valor);
+            if (!m.Transferencia && await _movimentos.GetByIdAsync(m.Id) is { } baixado && Math.Abs(baixado.ValorPago - doBanco) >= 0.005m)
+            {
+                var lancado = baixado.ValorPago;
+                baixado.ValorPago = doBanco;
+                await _movimentos.UpdateAsync(baixado.Id, baixado);
+                await _auditoria.RegistrarAsync("conciliar", "Movimento", baixado.Id,
+                    $"{quem.Nome} conciliou com valor do extrato {doBanco:N2} (lançado {lancado:N2}): valor pago corrigido");
+            }
         }
         l.Situacao = "conciliado";
         l.MovimentoId = m.Id;

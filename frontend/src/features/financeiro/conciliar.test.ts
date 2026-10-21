@@ -42,6 +42,16 @@ describe('conciliar', () => {
     expect(r[1].confianca).toBe('valor')
   })
 
+  it('CNPJ do cadastro no extrato casa mesmo com nome diferente; o CNPJ da própria empresa não conta', () => {
+    const l = [{ id: 'X', data: '2026-10-20', valor: -450, memo: 'Pix enviado · Plataforma Frete SA · IUGU IP · 10885840000132', tipo: 'debito' as const }]
+    const fb = mov({ id: 'fb', tipo: 'pagar', parceiroNome: 'Fretebras', valor: 450, vencimento: '2026-10-20', parceiroId: 'f1' })
+    const ok = conciliar({ linhas: l, movimentos: [fb], vinculos: {}, ignorados: [], regras: [], contexto: { documentos: { f1: '10885840000132' } } })
+    expect(ok[0].situacao).toBe('conciliado')
+    expect(ok[0].motivo).toContain('CNPJ no extrato')
+    const nosso = conciliar({ linhas: l, movimentos: [fb], vinculos: {}, ignorados: [], regras: [], contexto: { documentos: { f1: '10885840000132' }, proprios: new Set(['10885840000132']) } })
+    expect(nosso[0].situacao).toBe('sugestao')
+  })
+
   it('lançamento com Pix em andamento no banco não é par (o dinheiro ainda não saiu)', () => {
     const das = mov({ id: 'das', tipo: 'pagar', parceiroNome: 'Receita Federal', valor: 12198.21, vencimento: '2026-09-20', pixSituacao: 'agendado' })
     const r = conciliar({ linhas, movimentos: [das], vinculos: {}, ignorados: [], regras: [] })
