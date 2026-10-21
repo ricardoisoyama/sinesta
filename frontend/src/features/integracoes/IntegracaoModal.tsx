@@ -426,7 +426,7 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
           {aviso ? (
             <span className={`${s.aviso} ${s.avisoOk}`} style={{ margin: 0 }}><ShieldCheck /> <span>Cadastrado no banco em {new Date(aviso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}, apontando para {window.location.host}.</span></span>
           ) : (
-            <span className={s.nota} style={{ margin: 0 }}>Ainda não cadastrado: o pagamento só aparece pela conferência de hora em hora ou quando alguém consulta.</span>
+            <span className={s.nota} style={{ margin: 0 }}>Ainda não cadastrado: o pagamento só aparece pela conferência automática (Pix a cada 5 minutos, boleto de hora em hora) ou quando alguém clica em Atualizar.</span>
           )}
           {integracao?.configurada && integracao.ativa && (
             <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void cadastrarAviso()} disabled={cadastrandoAviso}>
@@ -436,8 +436,8 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
         </div>
         <span className={s.nota}>
           O banco chama o ELROND na hora em que o boleto é pago, cancelado ou expira e, com Pagamentos ligado, quando um Pix enviado é
-          efetivado (depois da aprovação no app); o ELROND confere no banco antes de dar baixa. Uma conferência automática de hora em hora
-          cobre qualquer aviso perdido. Ligou Pagamentos depois de cadastrar o aviso? Clique em "Cadastrar de novo".
+          efetivado (depois da aprovação no app); o ELROND confere no banco antes de dar baixa. Uma conferência automática cobre qualquer
+          aviso perdido: Pix em andamento a cada 5 minutos, boletos de hora em hora. Ligou Pagamentos depois de cadastrar o aviso? Clique em "Cadastrar de novo".
         </span>
       </section>
     </Modal>
