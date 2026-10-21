@@ -3,13 +3,15 @@ using Elrond.Application.Services;
 namespace Elrond.API.Background;
 
 /// <summary>
-/// Conferência das cobranças em aberto: de hora em hora consulta no banco os boletos a receber,
-/// em processamento ou sem confirmação. É a rede de segurança do aviso (webhook): se o aviso se
-/// perder (servidor reiniciando, banco fora), o pagamento aparece mesmo assim.
+/// Conferência no banco, rede de segurança do aviso (webhook): se o aviso se perder (servidor
+/// reiniciando, banco fora, aviso não cadastrado), a mudança aparece mesmo assim. Pix em andamento
+/// a cada 5 minutos (o agendado para outro dia só na rodada de hora em hora); cobranças de hora em hora.
 /// </summary>
 public sealed class CobrancasConferenciaWorker(IServiceScopeFactory escopos, ILogger<CobrancasConferenciaWorker> log) : BackgroundService
 {
-    private static readonly TimeSpan Intervalo = TimeSpan.FromHours(1);
+    private static readonly TimeSpan Intervalo = TimeSpan.FromMinutes(5);
+    /// <summary>A cada quantas rodadas de 5 minutos vem a completa (cobranças e Pix agendados para outro dia).</summary>
+    private const int RodadasPorHora = 12;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -23,15 +25,20 @@ public sealed class CobrancasConferenciaWorker(IServiceScopeFactory escopos, ILo
             return;
         }
         using var timer = new PeriodicTimer(Intervalo);
+        var rodada = 0;
         do
         {
             try
             {
                 using var escopo = escopos.CreateScope();
-                var mudaram = await escopo.ServiceProvider.GetRequiredService<ICobrancaService>().ConferirAbertasAsync(stoppingToken);
-                if (mudaram > 0) log.LogInformation("Cobranças: {Quantidade} mudaram de situação na conferência.", mudaram);
+                var completa = rodada++ % RodadasPorHora == 0;
+                if (completa)
+                {
+                    var mudaram = await escopo.ServiceProvider.GetRequiredService<ICobrancaService>().ConferirAbertasAsync(stoppingToken);
+                    if (mudaram > 0) log.LogInformation("Cobranças: {Quantidade} mudaram de situação na conferência.", mudaram);
+                }
                 // Pagamentos que esperam aprovação no app ou o processamento do banco.
-                var pagos = await escopo.ServiceProvider.GetRequiredService<PagamentoService>().ConferirAbertosAsync(stoppingToken);
+                var pagos = await escopo.ServiceProvider.GetRequiredService<PagamentoService>().ConferirAbertosAsync(stoppingToken, incluirAgendadosFuturos: completa);
                 if (pagos > 0) log.LogInformation("Pagamentos: {Quantidade} mudaram de situação na conferência.", pagos);
             }
             catch (Exception e) when (e is not OperationCanceledException)

@@ -113,7 +113,11 @@ public sealed class IntegracaoBancariaService(
         i.Ambiente = ambiente;
         i.ClientId = dto.ClientId.Trim();
         i.ContaCorrente = new string((dto.ContaCorrente ?? string.Empty).Where(char.IsDigit).ToArray());
+        var tinhaPagamento = i.Recursos.Contains(IntegracaoBancaria.RecursoPagamento);
         i.Recursos = (dto.Recursos ?? new()).Select(r => r.Trim().ToLowerInvariant()).Where(RecursosValidos.Contains).Distinct().ToList();
+        // Ligou pagamentos depois de cadastrar o aviso: o aviso de pagamento (Pix pago) ainda não existe no banco,
+        // então a tela volta a pedir "Cadastrar aviso".
+        if (!tinhaPagamento && i.Recursos.Contains(IntegracaoBancaria.RecursoPagamento)) i.AvisoRegistradoEm = string.Empty;
         i.Ativa = dto.Ativa;
         i.Status = "ativo";
         if (dto.CarteiraId is not null) i.CarteiraId = dto.CarteiraId;

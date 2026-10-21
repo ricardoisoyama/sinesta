@@ -199,9 +199,13 @@ public sealed class PagamentoService(
     }
 
     /// <summary>Rotina: confere no banco os pagamentos que ainda esperam (rede de segurança do aviso).</summary>
-    public async Task<int> ConferirAbertosAsync(CancellationToken ct = default)
+    public async Task<int> ConferirAbertosAsync(CancellationToken ct = default, bool incluirAgendadosFuturos = true)
     {
-        var abertos = (await pagamentos.GetAllAsync()).Where(p => p.EmAberto).ToList();
+        var hoje = relogio.GetLocalNow().ToString("yyyy-MM-dd");
+        // Agendado para outro dia não muda antes do dia: na rodada rápida fica de fora (poupa consultas ao banco).
+        var abertos = (await pagamentos.GetAllAsync())
+            .Where(p => p.EmAberto && (incluirAgendadosFuturos || !(p.Situacao == PagamentoBancario.Agendado && string.CompareOrdinal(p.Data, hoje) > 0)))
+            .ToList();
         var mudaram = 0;
         foreach (var p in abertos)
         {
