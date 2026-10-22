@@ -117,7 +117,14 @@ public class ExtratoLinha : Rastreavel, IEntity
     public string Memo { get; set; } = string.Empty;
     /// <summary>pendente | conciliado | ignorado.</summary>
     public string Situacao { get; set; } = "pendente";
+    /// <summary>O lançamento conciliado (o primeiro, quando a linha pagou vários).</summary>
     public string MovimentoId { get; set; } = string.Empty;
+    /// <summary>Todos os lançamentos que esta linha pagou (ex.: pró-labore + participação num Pix só).</summary>
+    public List<string> MovimentoIds { get; set; } = new();
+
+    /// <summary>Os lançamentos ligados (os antigos só têm o MovimentoId).</summary>
+    public IReadOnlyList<string> Vinculados() =>
+        MovimentoIds.Count > 0 ? MovimentoIds : MovimentoId.Length > 0 ? new[] { MovimentoId } : Array.Empty<string>();
 }
 
 /// <summary>"De/para" aprendido na conciliação: memo do extrato → quem é e qual conta.</summary>

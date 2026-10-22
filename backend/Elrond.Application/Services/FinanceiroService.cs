@@ -423,8 +423,8 @@ public class FinanceiroService : IFinanceiroService
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(Array.Empty<Movimento>(), alvo));
         // A linha do extrato que apontava para ele (ou para a outra perna) volta a ficar pendente.
         var idsAlvo = alvo.Select(x => x.Id).ToHashSet();
-        var linhas = await _extrato.ListarAsync(l => idsAlvo.Contains(l.MovimentoId));
-        foreach (var l in linhas) { l.Situacao = "pendente"; l.MovimentoId = string.Empty; }
+        var linhas = (await _extrato.ListarAsync(l => l.Situacao == "conciliado")).Where(l => l.Vinculados().Any(idsAlvo.Contains)).ToList();
+        foreach (var l in linhas) { l.Situacao = "pendente"; l.MovimentoId = string.Empty; l.MovimentoIds = new(); }
         if (linhas.Count > 0) await _extrato.SalvarLoteAsync(Array.Empty<ExtratoLinha>(), linhas);
         await _auditoria.RegistrarAsync("estornar", "Movimento", id, $"{quem.Nome} estornou a baixa de \"{m.Descricao}\" (pago em {antes})");
         return Result.Success(m);
@@ -477,13 +477,49 @@ public class FinanceiroService : IFinanceiroService
         var l = await _extrato.GetByIdAsync(dto.LinhaId);
         if (l is null) return Result.Failure<ExtratoLinha>("Linha do extrato não encontrada.");
         if (l.Situacao == "conciliado") return Result.Failure<ExtratoLinha>("Esta linha já está conciliada.");
-        var m = await _movimentos.GetByIdAsync(dto.MovimentoId);
-        if (m is null || m.Cancelado) return Result.Failure<ExtratoLinha>("Lançamento não encontrado.");
-        if ((l.Valor >= 0) != (m.Tipo == "receber")) return Result.Failure<ExtratoLinha>("Entrada no extrato só casa com lançamento a receber, e saída com a pagar.");
+        var ids = (dto.MovimentoIds is { Count: > 0 } lista ? lista : new List<string> { dto.MovimentoId }).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
+        if (ids.Count == 0) return Result.Failure<ExtratoLinha>("Escolha o lançamento.");
+        var movs = new List<Movimento>();
+        foreach (var id in ids)
+        {
+            var x = await _movimentos.GetByIdAsync(id);
+            if (x is null || x.Cancelado) return Result.Failure<ExtratoLinha>("Lançamento não encontrado.");
+            if ((l.Valor >= 0) != (x.Tipo == "receber")) return Result.Failure<ExtratoLinha>("Entrada no extrato só casa com lançamento a receber, e saída com a pagar.");
+            movs.Add(x);
+        }
+        // Um lançamento não paga duas linhas do extrato.
+        var jaLigados = (await _extrato.ListarAsync(x => x.Situacao == "conciliado" && x.Id != l.Id)).SelectMany(x => x.Vinculados()).ToHashSet();
+        if (movs.FirstOrDefault(x => jaLigados.Contains(x.Id)) is { } usado)
+            return Result.Failure<ExtratoLinha>($"O lançamento nº {usado.Numero} já está conciliado com outra linha do extrato.");
+        if (movs.Count > 1)
+        {
+            // Vários lançamentos numa linha só: a soma precisa ser o valor do extrato.
+            var soma = movs.Sum(x => x.PagoEm.Length > 0 && x.ValorPago > 0 ? x.ValorPago : Math.Max(0, x.Valor - x.Desconto + x.Juros + x.Multa));
+            var diferenca = R2(Math.Abs(l.Valor) - soma);
+            if (Math.Abs(diferenca) >= 0.005m)
+                return Result.Failure<ExtratoLinha>($"A soma dos {movs.Count} lançamentos ({R2(soma):N2}) não bate com o extrato ({R2(Math.Abs(l.Valor)):N2}): {(diferenca > 0 ? "faltam" : "sobram")} {Math.Abs(diferenca):N2}.");
+        }
+        foreach (var m in movs)
+        {
+            var r = await BaixarPelaConciliacaoAsync(l, m, quem, corrigirValor: movs.Count == 1);
+            if (!r.IsSuccess) return Result.Failure<ExtratoLinha>(r.Error!);
+        }
+        l.Situacao = "conciliado";
+        l.MovimentoId = movs[0].Id;
+        l.MovimentoIds = movs.Select(x => x.Id).ToList();
+        await _extrato.UpdateAsync(l.Id, l);
+        await _auditoria.RegistrarAsync("conciliar", "ExtratoLinha", l.Id,
+            $"{quem.Nome} conciliou \"{l.Memo}\" ({l.Valor:N2}) com {string.Join(" + ", movs.Select(x => $"nº {x.Numero} \"{x.Descricao}\" ({x.ParceiroNome})"))}");
+        return Result.Success(l);
+    }
+
+    /// <summary>A conciliação baixa o lançamento em aberto (aprovando o pendente: o extrato prova que já saiu/entrou).</summary>
+    private async Task<Result> BaixarPelaConciliacaoAsync(ExtratoLinha l, Movimento m, UsuarioAtual quem, bool corrigirValor)
+    {
         if (m.PagoEm.Length == 0)
         {
             var pernas = await ComPernasAsync(new List<Movimento> { m });
-            if ((await PixEmAndamentoAsync(pernas.Select(x => x.Id))).Count > 0) return Result.Failure<ExtratoLinha>(PixEmAndamentoMsg);
+            if ((await PixEmAndamentoAsync(pernas.Select(x => x.Id))).Count > 0) return Result.Failure(PixEmAndamentoMsg);
             // O extrato prova que o dinheiro já saiu (ou entrou): o que estava pendente é aprovado pela conciliação.
             var pendentes = pernas.Where(x => x.Aprovacao != "aprovado").ToList();
             if (pendentes.Count > 0)
@@ -499,11 +535,11 @@ public class FinanceiroService : IFinanceiroService
             }
             // Lançamento em aberto: a conciliação é a baixa dele, na data do extrato.
             var baixa = await LiquidarAsync(new BaixaDto(new() { m.Id }, l.Data, l.CarteiraId), quem);
-            if (!baixa.IsSuccess) return Result.Failure<ExtratoLinha>(baixa.Error!);
+            if (!baixa.IsSuccess) return Result.Failure(baixa.Error!);
             // O valor que saiu (ou entrou) é o do banco: se o lançado difere (digitação), o valor pago fica o do extrato,
-            // sem supor juros ou desconto.
+            // sem supor juros ou desconto. (Com vários lançamentos a soma já bate: cada um fica com o dele.)
             var doBanco = Math.Abs(l.Valor);
-            if (!m.Transferencia && await _movimentos.GetByIdAsync(m.Id) is { } baixado && Math.Abs(baixado.ValorPago - doBanco) >= 0.005m)
+            if (corrigirValor && !m.Transferencia && await _movimentos.GetByIdAsync(m.Id) is { } baixado && Math.Abs(baixado.ValorPago - doBanco) >= 0.005m)
             {
                 var lancado = baixado.ValorPago;
                 baixado.ValorPago = doBanco;
@@ -512,11 +548,7 @@ public class FinanceiroService : IFinanceiroService
                     $"{quem.Nome} conciliou com valor do extrato {doBanco:N2} (lançado {lancado:N2}): valor pago corrigido");
             }
         }
-        l.Situacao = "conciliado";
-        l.MovimentoId = m.Id;
-        await _extrato.UpdateAsync(l.Id, l);
-        await _auditoria.RegistrarAsync("conciliar", "ExtratoLinha", l.Id, $"{quem.Nome} conciliou \"{l.Memo}\" ({l.Valor:N2}) com \"{m.Descricao}\" ({m.ParceiroNome})");
-        return Result.Success(l);
+        return Result.Success();
     }
 
     public async Task<Result<ExtratoLinha>> CriarDoExtratoAsync(CriarDoExtratoDto dto, UsuarioAtual quem)
@@ -547,6 +579,7 @@ public class FinanceiroService : IFinanceiroService
         if (!r.IsSuccess) return Result.Failure<ExtratoLinha>(r.Error!);
         l.Situacao = "conciliado";
         l.MovimentoId = r.Value![0].Id;
+        l.MovimentoIds = new() { l.MovimentoId };
         await _extrato.UpdateAsync(l.Id, l);
         return Result.Success(l);
     }
@@ -555,8 +588,9 @@ public class FinanceiroService : IFinanceiroService
     {
         var l = await _extrato.GetByIdAsync(linhaId);
         if (l is null) return Result.Failure<ExtratoLinha>("Linha do extrato não encontrada.");
-        if (l.Situacao == "conciliado" && l.MovimentoId.Length > 0 && await _movimentos.GetByIdAsync(l.MovimentoId) is { } m)
+        foreach (var id in l.Situacao == "conciliado" ? l.Vinculados() : Array.Empty<string>())
         {
+            if (await _movimentos.GetByIdAsync(id) is not { } m) continue;
             if (m.Origem == "conciliacao")
             {
                 // Lançamento nascido da linha: cancela (fica no histórico).
@@ -580,6 +614,7 @@ public class FinanceiroService : IFinanceiroService
         var antes = l.Situacao;
         l.Situacao = "pendente";
         l.MovimentoId = string.Empty;
+        l.MovimentoIds = new();
         await _extrato.UpdateAsync(l.Id, l);
         await _auditoria.RegistrarAsync("desfazer", "ExtratoLinha", l.Id, $"{quem.Nome} desfez \"{l.Memo}\" ({antes})");
         return Result.Success(l);

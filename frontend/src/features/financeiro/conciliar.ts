@@ -121,10 +121,12 @@ export interface EntradaConciliacao {
   ignorados: string[]
   regras: RegraConciliacao[]
   contexto?: ContextoPontuacao
+  /** Lançamentos já usados além do principal de cada vínculo (linhas que pagaram vários). */
+  outrosUsados?: string[]
 }
 
-export function conciliar({ linhas, movimentos, vinculos, ignorados, regras, contexto }: EntradaConciliacao): LinhaConciliada[] {
-  const usados = new Set(Object.values(vinculos))
+export function conciliar({ linhas, movimentos, vinculos, ignorados, regras, contexto, outrosUsados = [] }: EntradaConciliacao): LinhaConciliada[] {
+  const usados = new Set([...Object.values(vinculos), ...outrosUsados])
   // Pix em andamento no banco ainda não saiu da conta: não é par de nenhuma linha do extrato.
   const livres = movimentos.filter((m) => !m.cancelado && !usados.has(m.id) && !m.pixSituacao)
 

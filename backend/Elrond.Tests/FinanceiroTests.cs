@@ -56,6 +56,30 @@ public class FinanceiroTests
     }
 
     [Fact]
+    public async Task Uma_linha_do_extrato_concilia_varios_lancamentos_que_somam_o_valor()
+    {
+        var (svc, movs, _) = Montar();
+        var extrato = (MemRepo<ExtratoLinha>)typeof(FinanceiroService).GetField("_extrato", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(svc)!;
+        extrato.Itens.Add(new ExtratoLinha { Id = "lg", CarteiraId = "cart", Fitid = "G1", Data = "2026-10-20", Valor = -4000m, Memo = "PIX ENVIADO TANIA" });
+        foreach (var (id, desc) in new[] { ("pro", "Pró-labore"), ("plr", "Participação nos lucros"), ("outro", "Outro") })
+        {
+            var m = Base(2000m);
+            m.Id = id; m.Descricao = desc; m.Vencimento = "2026-10-20";
+            movs.Itens.Add(m);
+        }
+        // Soma errada (6.000) é recusada com a diferença.
+        Assert.Contains("sobram 2.000,00", (await svc.VincularAsync(new VincularExtratoDto("lg", "", new() { "pro", "plr", "outro" }), Ana)).Error);
+        var r = await svc.VincularAsync(new VincularExtratoDto("lg", "", new() { "pro", "plr" }), Ana);
+        Assert.True(r.IsSuccess, r.Error);
+        Assert.All(movs.Itens.Where(x => x.Id != "outro"), x => Assert.Equal(("aprovado", "2026-10-20", 2000m), (x.Aprovacao, x.PagoEm, x.ValorPago)));
+        Assert.Equal(new[] { "pro", "plr" }, extrato.Itens.Single().MovimentoIds);
+
+        // Desfazer solta os dois.
+        Assert.True((await svc.DesfazerAsync("lg", Ana)).IsSuccess);
+        Assert.All(movs.Itens, x => Assert.Equal(string.Empty, x.PagoEm));
+    }
+
+    [Fact]
     public async Task Conciliar_aprova_o_pendente_e_desfazer_volta_a_pendente()
     {
         var (svc, movs, _) = Montar();  // sem regra: no fluxo normal ninguém aprovaria

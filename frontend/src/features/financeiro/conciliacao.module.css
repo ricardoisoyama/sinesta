@@ -100,3 +100,8 @@
 .rodape kbd { font-family: inherit; font-size: 11px; background: #fff; border: 1px solid #d8d4c9; border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 .regraChip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: #3c4fa3; background: #eef1fb; border-radius: 6px; padding: 1px 7px; margin-left: 6px; }
 .regraChip button { border: none; background: none; color: #3c4fa3; cursor: pointer; display: inline-flex; padding: 0; }
+/* Vincular vários lançamentos numa linha */
+.opcaoMarcada { background: #eef4ef !important; }
+.opcaoCheck { width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: -2px; accent-color: #1a4d1e; pointer-events: none; }
+.vincularRodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid #ede6d8; font-size: 12.5px; color: #4a5a50; }
+.vincularRodape em { font-style: normal; font-weight: 600; margin-left: 6px; }

@@ -35,6 +35,8 @@ export interface ExtratoLinhaApi {
   memo: string
   situacao: 'pendente' | 'conciliado' | 'ignorado'
   movimentoId: string
+  /** Todos os lançamentos que a linha pagou (vazio nas antigas: vale o movimentoId). */
+  movimentoIds?: string[]
 }
 export const listExtrato = (carteiraId: string) => apiFetch<ExtratoLinhaApi[]>(`/financeiro/conciliacao?carteiraId=${encodeURIComponent(carteiraId)}`)
 export const importarExtrato = (carteiraId: string, linhas: { fitid: string; data: string; valor: number; memo: string }[]) =>
@@ -44,8 +46,11 @@ export const listContasComExtrato = () => apiFetch<{ carteiraId: string; banco: 
 /** Lê o extrato pela API do banco no período e grava como o OFX (o que já veio não duplica). */
 export const buscarDoBanco = (carteiraId: string, de: string, ate: string) =>
   apiFetch<{ lidas: number; novas: number; jaImportadas: number; de: string; ate: string }>('/financeiro/conciliacao/buscar-banco', { method: 'POST', body: J({ carteiraId, de, ate }) })
-export const vincularExtrato = (linhaId: string, movimentoId: string) =>
-  apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/vincular', { method: 'POST', body: J({ linhaId, movimentoId }) })
+/** Uma linha com um lançamento, ou com vários que somam o valor dela. */
+export const vincularExtrato = (linhaId: string, movimentoIds: string | string[]) => {
+  const ids = Array.isArray(movimentoIds) ? movimentoIds : [movimentoIds]
+  return apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/vincular', { method: 'POST', body: J({ linhaId, movimentoId: ids[0], movimentoIds: ids }) })
+}
 export const criarDoExtrato = (d: { linhaId: string; parceiroNome: string; descricao: string; planoContaId: string; centroCustoId: string; formaPagamento: string; empresaId: string }) =>
   apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/criar', { method: 'POST', body: J(d) })
 export const desfazerExtrato = (linhaId: string) => apiFetch<ExtratoLinhaApi>(`/financeiro/conciliacao/${linhaId}/desfazer`, { method: 'POST' })

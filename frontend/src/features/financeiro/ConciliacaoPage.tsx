@@ -78,13 +78,16 @@ export function ConciliacaoPage() {
   const fitidDe = new Map(gravadas.map((l) => [l.id, l.fitid]))
   const linhas: LinhaExtrato[] = gravadas.map((l) => ({ id: l.id, data: l.data, valor: l.valor, memo: l.memo, tipo: l.valor >= 0 ? 'credito' : 'debito' }))
   const vinculos: Record<string, string> = Object.fromEntries(gravadas.filter((l) => l.situacao === 'conciliado' && l.movimentoId).map((l) => [l.id, l.movimentoId]))
+  // Linha que pagou vários lançamentos: os outros (além do principal) também estão usados.
+  const grupoDe = (linhaId: string) => gravadas.find((x) => x.id === linhaId)?.movimentoIds ?? []
+  const outrosUsados = gravadas.filter((l) => l.situacao === 'conciliado').flatMap((l) => (l.movimentoIds ?? []).filter((id) => id !== l.movimentoId))
   const ignorados = gravadas.filter((l) => l.situacao === 'ignorado').map((l) => l.id)
   // O motor marca como "conciliado" o par sem dúvida; enquanto não for gravado, é sugestão (um clique aceita).
   const contexto = {
     documentos: Object.fromEntries([...(fornecedoresData ?? []), ...(clientesData ?? [])].map((p) => [p.id, (p.cpfCnpj ?? '').replace(/\D/g, '')])),
     proprios: new Set((empresasData ?? []).map((e) => (e.cnpj ?? '').replace(/\D/g, '')).filter(Boolean)),
   }
-  const resultado: LinhaConciliada[] = conciliar({ linhas, movimentos, vinculos, ignorados, regras, contexto }).map((l) =>
+  const resultado: LinhaConciliada[] = conciliar({ linhas, movimentos, vinculos, ignorados, regras, contexto, outrosUsados }).map((l) =>
     l.situacao === 'conciliado' && !vinculos[l.linha.id] ? { ...l, situacao: 'sugestao' } : l,
   )
   const r = resumoConciliacao(resultado)
@@ -146,6 +149,11 @@ export function ConciliacaoPage() {
 
   // ── ações de linha ──
   /** Vincula a linha ao lançamento: se ainda estava em aberto, o servidor liquida na data do extrato. */
+  /** Vários lançamentos numa linha só (ex.: pró-labore + participação num Pix): a soma já bate. */
+  const aceitarVarios = async (l: LinhaConciliada, ms: Movimento[]) => {
+    if (ms.length === 1) return aceitar(l, ms[0])
+    if (await exec(() => vincularExtrato(l.linha.id, ms.map((m) => m.id)))) setAberta(null)
+  }
   const aceitar = async (l: LinhaConciliada, m: Movimento) => {
     // Valor do extrato diferente do lançado (digitação, por exemplo): o valor pago passa a ser o do banco.
     const doBanco = Math.abs(l.linha.valor)
@@ -196,7 +204,7 @@ export function ConciliacaoPage() {
   }
 
   const nomesConhecidos = [...new Set(movimentos.map((m) => m.parceiroNome).filter(Boolean))].sort()
-  const usados = new Set(Object.values(vinculos))
+  const usados = new Set([...Object.values(vinculos), ...outrosUsados])
 
   return (
     <>
@@ -336,6 +344,8 @@ export function ConciliacaoPage() {
                     onAbrir={(modo) => setAberta(aberta?.id === l.linha.id && aberta.modo === modo ? null : { id: l.linha.id, modo })}
                     onFechar={() => setAberta(null)}
                     onAceitar={(m) => aceitar(l, m)}
+                    onAceitarVarios={(ms) => aceitarVarios(l, ms)}
+                    qtdGrupo={grupoDe(l.linha.id).length}
                     onDesfazer={() => exec(() => desfazerExtrato(l.linha.id))}
                     onIgnorar={() => exec(() => ignorarExtrato(l.linha.id))}
                     onDesfazerIgnorar={() => exec(() => desfazerExtrato(l.linha.id))}
@@ -380,6 +390,9 @@ interface RowProps {
   onAbrir: (modo: 'vincular' | 'criar') => void
   onFechar: () => void
   onAceitar: (m: Movimento) => void
+  onAceitarVarios: (ms: Movimento[]) => void
+  /** Quantos lançamentos a linha conciliada pagou (mais de 1 = grupo). */
+  qtdGrupo: number
   onDesfazer: () => void
   onIgnorar: () => void
   onDesfazerIgnorar: () => void
@@ -388,7 +401,7 @@ interface RowProps {
   nomesConhecidos: string[]
 }
 
-function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDesfazer, onIgnorar, onDesfazerIgnorar, onCriar, movimentosAbertos, nomesConhecidos }: RowProps) {
+function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onAceitarVarios, qtdGrupo, onDesfazer, onIgnorar, onDesfazerIgnorar, onCriar, movimentosAbertos, nomesConhecidos }: RowProps) {
   const st = SITUACAO[l.situacao]
   const credito = l.linha.tipo === 'credito'
   const m = l.movimento
@@ -426,6 +439,7 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDes
                 <i className={`${fin.tipoDot} ${fin[m.tipo]}`} />
                 <b>{m.parceiroNome}</b> · {m.descricao}
                 {m.totalParcelas > 1 && <span className={fin.parcelaTag}>{m.parcela}/{m.totalParcelas}</span>}
+                {l.situacao === 'conciliado' && qtdGrupo > 1 && <span className={fin.parcelaTag}>+ {qtdGrupo - 1} lançamento{qtdGrupo > 2 ? 's' : ''}</span>}
               </span>
               <small>
                 {m.numero ? `nº ${m.numero} · ` : ''}
@@ -475,7 +489,7 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDes
       {aberta === 'vincular' && (
         <tr className={s.painelRow}>
           <td colSpan={6}>
-            <Vincular l={l} movimentos={movimentosAbertos} onEscolher={onAceitar} onFechar={onFechar} />
+            <Vincular l={l} movimentos={movimentosAbertos} onEscolher={onAceitarVarios} onFechar={onFechar} />
           </td>
         </tr>
       )}
@@ -491,8 +505,12 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onDes
 }
 
 /** Lista dos lançamentos em aberto para escolher o par, já ordenada do mais parecido ao menos. */
-function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada; movimentos: Movimento[]; onEscolher: (m: Movimento) => void; onFechar: () => void }) {
+function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada; movimentos: Movimento[]; onEscolher: (ms: Movimento[]) => void; onFechar: () => void }) {
   const [busca, setBusca] = useState('')
+  // Marcados para vincular juntos (a linha pagou vários: pró-labore + participação, por exemplo).
+  const [marcados, setMarcados] = useState<Movimento[]>([])
+  const alternar = (m: Movimento) => setMarcados((xs) => (xs.some((x) => x.id === m.id) ? xs.filter((x) => x.id !== m.id) : [...xs, m]))
+  const somaMarcados = marcados.reduce((a, m) => a + liquidoDe(m), 0)
   const credito = l.linha.tipo === 'credito'
   const pontos = new Map<string, Candidato>(l.candidatos.map((c) => [c.movimento.id, c]))
   const q = semAcento(busca.trim())
@@ -505,11 +523,15 @@ function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada;
       const pb = pontos.get(b.id)?.pontos ?? -Math.abs(liquidoDe(b) - alvo) / 100
       return pb - pa
     })
-    .slice(0, 12)
+        .slice(0, 12)
+  // Marcados que saíram da lista pela busca continuam no topo (não somem da soma sem o usuário ver).
+  const visiveis = [...marcados.filter((m) => !lista.some((x) => x.id === m.id)), ...lista]
+  const diferenca = Math.round((alvo - somaMarcados) * 100) / 100
+  const bate = marcados.length > 0 && Math.abs(diferenca) < 0.005
   return (
     <div className={s.painel}>
       <div className={s.painelHead}>
-        <b>Vincular a um lançamento {credito ? 'a receber' : 'a pagar'}</b>
+        <b>Vincular a lançamento(s) {credito ? 'a receber' : 'a pagar'}</b>
         <div className={ui.search}>
           <Search />
           <input autoFocus placeholder="Buscar por nº, nome, descrição ou documento" value={busca} onChange={(e) => setBusca(e.target.value)} />
@@ -517,18 +539,35 @@ function Vincular({ l, movimentos, onEscolher, onFechar }: { l: LinhaConciliada;
         <button type="button" className={ui.iconBtn} onClick={onFechar} title="Fechar"><X /></button>
       </div>
       <div className={s.lista}>
-        {lista.map((m) => {
+        {visiveis.map((m) => {
           const c = pontos.get(m.id)
+          const marcado = marcados.some((x) => x.id === m.id)
           return (
-            <button key={m.id} type="button" className={s.opcao} onClick={() => onEscolher(m)}>
-              <span className={s.opcaoNome}>{m.numero ? <>nº {m.numero} · </> : null}<b>{m.parceiroNome}</b> · {m.descricao}{m.documento ? ` · ${m.documento}` : ''}</span>
+            <button key={m.id} type="button" className={`${s.opcao} ${marcado ? s.opcaoMarcada : ''}`} onClick={() => alternar(m)} aria-pressed={marcado}>
+              <span className={s.opcaoNome}><input type="checkbox" readOnly checked={marcado} tabIndex={-1} className={s.opcaoCheck} />{m.numero ? <>nº {m.numero} · </> : null}<b>{m.parceiroNome}</b> · {m.descricao}{m.documento ? ` · ${m.documento}` : ''}</span>
               <span className={s.opcaoMeta}>{m.pagoEm ? `pago ${dataBR(m.pagoEm)}` : `vence ${dataBR(m.vencimento)}${m.aprovacao === 'aprovado' ? '' : ' · aguardando aprovação'}`}</span>
               <span className={`${s.opcaoValor} ${Math.abs(liquidoDe(m) - alvo) < 0.005 ? s.cred : ''}`}>{formatBRL(liquidoDe(m))}</span>
               <span className={s.opcaoConf}>{c ? <em className={s[`conf_${c.confianca}`]}>{c.motivo}</em> : <em className={s.mut}>valor diferente</em>}</span>
             </button>
           )
         })}
-        {lista.length === 0 && <div className={s.nada}>Nenhum lançamento em aberto com esse filtro. Use "Criar".</div>}
+        {visiveis.length === 0 && <div className={s.nada}>Nenhum lançamento em aberto com esse filtro. Use "Criar".</div>}
+      </div>
+      <div className={s.vincularRodape}>
+        <span>
+          {marcados.length === 0
+            ? 'Marque um ou mais lançamentos (vários quando um só pagamento quitou mais de um lançamento).'
+            : <>{marcados.length} marcado{marcados.length > 1 ? 's' : ''} · <b>{formatBRL(somaMarcados)}</b> de {formatBRL(alvo)} {bate ? <em className={s.cred}>✓ bate com o extrato</em> : <em className={s.deb}>{diferenca > 0 ? `faltam ${formatBRL(diferenca)}` : `sobram ${formatBRL(-diferenca)}`}</em>}</>}
+        </span>
+        <button
+          type="button"
+          className={`${ui.btn} ${ui.btnPrimary}`}
+          disabled={marcados.length === 0 || (marcados.length > 1 && !bate)}
+          title={marcados.length > 1 && !bate ? 'Com mais de um lançamento, a soma precisa ser o valor do extrato' : undefined}
+          onClick={() => onEscolher(marcados)}
+        >
+          <Link2 /> Vincular {marcados.length > 1 ? `${marcados.length} lançamentos` : ''}
+        </button>
       </div>
     </div>
   )

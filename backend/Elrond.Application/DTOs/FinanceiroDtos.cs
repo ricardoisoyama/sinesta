@@ -21,7 +21,8 @@ public record LinhaExtratoDto(string Fitid, string Data, decimal Valor, string M
 public record ImportarExtratoDto(string CarteiraId, List<LinhaExtratoDto> Linhas);
 public record ImportarExtratoResultado(int Novas, int JaImportadas);
 
-public record VincularExtratoDto(string LinhaId, string MovimentoId);
+/// <summary>Uma linha do extrato com um lançamento, ou com vários (<paramref name="MovimentoIds"/>) que somam o valor dela.</summary>
+public record VincularExtratoDto(string LinhaId, string MovimentoId, List<string>? MovimentoIds = null);
 
 /// <summary>Cria o lançamento a partir da linha do extrato (já liquidado) e concilia.</summary>
 public record CriarDoExtratoDto(string LinhaId, string ParceiroNome, string Descricao, string PlanoContaId, string CentroCustoId, string FormaPagamento, string EmpresaId);

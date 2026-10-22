@@ -756,6 +756,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("extrato_linhas");
             e.HasKey(l => l.Id);
+            e.Property(l => l.MovimentoIds).HasColumnType("text[]").HasDefaultValueSql("'{}'::text[]");
             e.Property(l => l.CarteiraId).IsRequired().HasMaxLength(80);
             e.Property(l => l.Fitid).IsRequired().HasMaxLength(120);
             e.Property(l => l.Memo).HasMaxLength(400);
