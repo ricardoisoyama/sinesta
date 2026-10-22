@@ -189,7 +189,8 @@ export function DashboardPage() {
           const st = STATUS_INFO[p.status] ?? STATUS_INFO.rascunho
           return (
             <div key={p.id} className={s.recentRow}>
-              <span className={s.recentNum}>{p.numero.replace('PROP-', '')}</span>
+              {/* Na bolinha só a sequência ("PRO-ALD-0001" → "0001"); o número inteiro no title. */}
+              <span className={s.recentNum} title={p.numero}>{p.numero.match(/\d+$/)?.[0] ?? p.numero}</span>
               <div className={s.recentMain}>
                 <div className={s.recentName}>{p.cliente}</div>
                 <div className={s.recentMut}>
