@@ -270,7 +270,7 @@ export function PricingPage() {
   const retratoDados = (): DadoOperacaoItem[] =>
     campos.map((c) => {
       const v = valores[c.chave]
-      const numerico = c.tipo === 'numero' || c.tipo === 'valor' || c.tipo === 'percentual' || c.tipo === 'advalorem' || c.tipo === 'icms'
+      const numerico = c.tipo === 'numero' || c.tipo === 'peso' || c.tipo === 'valor' || c.tipo === 'percentual' || c.tipo === 'advalorem' || c.tipo === 'icms'
       const texto =
         c.tipo === 'cadastro'
           ? nomeCadastro(c.cadastro, String(v ?? ''))
@@ -278,7 +278,9 @@ export function PricingPage() {
             ? (v ? formatBRL(Number(v)) : '')
             : c.tipo === 'percentual' || c.tipo === 'advalorem' || c.tipo === 'icms'
               ? (v ? formatPct(Number(v)) : '')
-              : String(v ?? '')
+              : c.tipo === 'peso'
+                ? (v ? `${numeroDe(v).toLocaleString('pt-BR', { maximumFractionDigits: 3 })} kg` : '')
+                : String(v ?? '')
       return { campoId: c.id, chave: c.chave, nome: c.nome, tipo: c.tipo, efeito: efeitoDe(c), texto, numero: numerico ? numeroDe(v) : 0 }
     })
   const retratoFichas = (): FichaItemProposta[] =>
@@ -408,7 +410,7 @@ export function PricingPage() {
           origem === 'veiculo' ? (veiculosData ?? []).map((x) => ({ id: x.id, nome: nomeVeiculo(x) })) :
           (fornecedoresData ?? []).map((x) => ({ id: x.id, nome: x.nomeFantasia || x.nome }))
         v[campo.chave] = lista.find((x) => x.nome === d.texto)?.id ?? atual ?? ''
-      } else if (['numero', 'valor', 'percentual', 'advalorem', 'icms'].includes(campo.tipo)) v[campo.chave] = d.numero
+      } else if (['numero', 'peso', 'valor', 'percentual', 'advalorem', 'icms'].includes(campo.tipo)) v[campo.chave] = d.numero
       else v[campo.chave] = d.texto
     }
     setValores(v)
@@ -576,7 +578,21 @@ export function PricingPage() {
           <Receipt /> Dados da operação
           <Link to="/cadastros/campos-operacao" className={s.linkConfig} title="Configurar os campos desta empresa"><Settings2 size={12} /> configurar campos</Link>
         </div>
-        <BlocoDadosOperacao empresaId={empresaId} campos={campos} valores={valores} onChange={(k, v) => setValores((p) => ({ ...p, [k]: v }))} mostrarFaltas={tentou} />
+        <BlocoDadosOperacao
+          empresaId={empresaId}
+          campos={campos}
+          valores={valores}
+          onChange={(k, v) => {
+            setValores((p) => ({ ...p, [k]: v }))
+            // Escolheu o serviço: a descrição do item começa com o nome dele (se ainda está vazia ou era o serviço anterior).
+            if (campoServico && k === campoServico.chave) {
+              const anterior = nomeCadastro('servico', String(valores[k] ?? ''))
+              const novo = nomeCadastro('servico', String(v ?? ''))
+              setDescricao((d) => (!d.trim() || d === anterior ? novo : d))
+            }
+          }}
+          mostrarFaltas={tentou}
+        />
       </section>
 
       {/* ── 2. Custos pela ficha técnica (quantidade por custo) ── */}

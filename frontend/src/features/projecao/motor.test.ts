@@ -70,6 +70,20 @@ describe('projeção (motor)', () => {
     expect(receitaDoMes([meta], 'b', fev27)).toBeNull()
   })
 
+  it('fração do mês (DF% do ano na base): cortar despesa vira lucro; custo variável é só demonstrativo', () => {
+    const porAno = { ...params, contribuicaoDoMes: (m: { ano: number }) => (m.ano === 2026 ? 0.25 : 0.2) }
+    const corte: Hipotese = { id: 'k', tipo: 'cortar-custo', nome: '', valor: 0, inicio: '2026-11', custoId: 'c', ativa: true }
+    const cv: Hipotese = { id: 'v', tipo: 'custo-variavel', nome: 'Motoristas', valor: 20_000, inicio: '2026-12', ativa: true }
+    const [out, nov, dez] = projetar({ ...entrada([corte, cv]), parametros: porAno })
+    expect(out.lucro).toBe(10_000)
+    expect(nov.lucro).toBe(12_000) // 100.000 × 25% − 13.000
+    expect([dez.custoVariavel, dez.lucro]).toEqual([20_000, 12_000]) // informado não muda o lucro
+    expect(out.custoVariavel).toBeNull()
+    // pelo preço: 100.000 × (1 − (15% + 15% + 10%)) = 60.000
+    expect(out.custoVariavelPreco).toBe(60_000)
+    expect(resumir([out, nov, dez]).quedaAteZerar).toBeCloseTo(1 - 41_000 / 75_000)
+  })
+
   it('ponte do lucro: efeito da receita + efeito das despesas = diferença do lucro', () => {
     const novo: Hipotese = { id: 'h', tipo: 'novo-custo', nome: 'Supervisor', valor: 5_000, inicio: '2026-11', ativa: true }
     const receita: Hipotese = { id: 'r', tipo: 'nova-receita', nome: 'Cliente', valor: 20_000, inicio: '2026-10', ativa: true }

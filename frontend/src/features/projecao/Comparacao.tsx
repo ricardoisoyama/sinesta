@@ -38,7 +38,7 @@ const pontos = (n: number) => `${(n * 100).toLocaleString('pt-BR', { maximumFrac
  * lucro (quanto veio da receita e quanto das despesas), o impacto de cada hipótese e os
  * indicadores lado a lado com a diferença sobre a base.
  */
-export function Comparacao({ series, contribuicao, rodar, escopo }: { series: Serie[]; contribuicao: number; rodar: (h: Hipotese[]) => LinhaMes[]; escopo: string }) {
+export function Comparacao({ series, rodar, escopo, periodo }: { series: Serie[]; rodar: (h: Hipotese[]) => LinhaMes[]; escopo: string; periodo: string }) {
   const [base, ...cenarios] = series
   const [escolhidos, setEscolhidos] = useState<string[] | null>(null)
   const [metrica, setMetrica] = useState<Metrica>('acumulado')
@@ -64,7 +64,7 @@ export function Comparacao({ series, contribuicao, rodar, escopo }: { series: Se
     ...Object.fromEntries(visiveis.map((c) => [c.id, valor(c.linhas[i], i, c.linhas)])),
   }))
   const fmt = (v: number) => (metrica === 'fator' ? fatorTxt(v) : formatBRL(v))
-  const ind = new Map([base, ...visiveis].map((c) => [c.id, indicadores(c.linhas, contribuicao)]))
+  const ind = new Map([base, ...visiveis].map((c) => [c.id, indicadores(c.linhas)]))
   const ib = ind.get(base.id)!
 
   type Linha = { rotulo: string; v: (x: ReturnType<typeof indicadores>) => number; txt: (n: number) => string; menorMelhor?: boolean; dica?: string; pontos?: boolean }
@@ -122,7 +122,7 @@ export function Comparacao({ series, contribuicao, rodar, escopo }: { series: Se
           {visiveis.length > 0 && (
             <div className={s.ponteGrade}>
               {visiveis.map((c) => {
-                const ponte = ponteDoLucro(base.linhas, c.linhas, contribuicao)
+                const ponte = ponteDoLucro(base.linhas, c.linhas)
                 const impactos = impactoDasHipoteses(rodar, c.hipoteses)
                 const maior = Math.max(1, ...impactos.map((x) => Math.abs(x.lucro)), Math.abs(ponte.receita), Math.abs(ponte.despesas))
                 const ic = ind.get(c.id)!
@@ -130,7 +130,7 @@ export function Comparacao({ series, contribuicao, rodar, escopo }: { series: Se
                   <div key={c.id} className={s.ponte}>
                     <div className={s.ponteTitulo}><i style={{ background: corDe(c.id) }} /> {c.nome}</div>
                     <div className={s.ponteLucro}>
-                      <span>Lucro 12 meses</span>
+                      <span>Lucro · {periodo}</span>
                       <b>{formatBRL(ib.lucro)} → {formatBRL(ic.lucro)}</b>
                       <Delta v={ic.lucro - ib.lucro} txt={formatBRL} />
                     </div>
@@ -154,7 +154,7 @@ export function Comparacao({ series, contribuicao, rodar, escopo }: { series: Se
             <table className={`${ui.table} ${s.tabela} ${s.cmpTabela}`}>
               <thead>
                 <tr>
-                  <th>12 meses</th>
+                  <th>{periodo}</th>
                   <th className={ui.right}><i className={s.cmpTracoTh} /> Base</th>
                   {visiveis.map((c) => <th key={c.id} className={ui.right}><i className={s.cmpPonto} style={{ background: corDe(c.id) }} /> {c.nome}</th>)}
                 </tr>

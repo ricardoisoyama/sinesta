@@ -105,7 +105,7 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
     <div className={s.bloco}>
       {campos.map((c) => {
         const v = valores[c.chave]
-        const vazio = v === undefined || v === '' || (typeof v === 'number' && v === 0 && c.tipo !== 'numero')
+        const vazio = v === undefined || v === '' || (typeof v === 'number' && v === 0 && c.tipo !== 'numero' && c.tipo !== 'peso')
         const falta = mostrarFaltas && c.obrigatorio && vazio
         const efeito = efeitoDe(c)
         const rotulo = mostrarEfeito && efeito !== 'informativo' ? `${c.nome}` : c.nome
@@ -132,6 +132,17 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
                 onChange={(e) => onChange(c.chave, e.target.value.replace(/[^\d.,]/g, ''))}
                 placeholder={efeito === 'multiplica' ? '1' : '0'}
               />
+            )}
+            {c.tipo === 'peso' && (
+              <div className={s.comUnidade}>
+                <input
+                  inputMode="decimal"
+                  value={v === undefined ? '' : String(v)}
+                  onChange={(e) => onChange(c.chave, e.target.value.replace(/[^\d.,]/g, ''))}
+                  placeholder="0"
+                />
+                <span>kg</span>
+              </div>
             )}
             {c.tipo === 'valor' && <MoneyInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}
             {c.tipo === 'percentual' && <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}

@@ -11,6 +11,7 @@ import ui from '@/features/common/ui.module.css'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { listCategoriasCusto, listFornecedores } from '@/features/cadastros/api'
 import { usePlanoContas } from '@/features/planoContas/store'
+import { PlanoContaBusca } from '@/features/planoContas/PlanoContaBusca'
 import { useUsuarios } from '@/features/usuarios/store'
 import { formatCpfCnpj } from '@/lib/format'
 import { CadastroBusca } from '@/features/camposOperacao/CadastroBusca'
@@ -36,7 +37,7 @@ const FUNC = 'func-'
 const ID_RATEIO = 'custo-fixo-rateio'
 
 export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Props) {
-  const { analiticas } = usePlanoContas()
+  const { contas: planoContas } = usePlanoContas()
   const { data: empresasData, isLoading: carregandoEmpresas } = useEmpresasQuery()
   const empresasAtivas = (empresasData ?? []).filter((u) => u.status === 'ativo')
   const semEmpresa = !carregandoEmpresas && empresasAtivas.length === 0
@@ -47,8 +48,6 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
   const fornecedores = (fornecedoresData ?? []).filter((f) => f.status === 'ativo')
   const { usuarios } = useUsuarios()
   const funcionarios = usuarios.filter((u) => u.status === 'ativo')
-  // Só contas de Despesa (raiz 2) e analíticas: é isso que uma despesa classifica.
-  const contasDespesa = analiticas().filter((c) => c.grupoDre === 'Despesa' && c.status === 'ativo')
 
   const {
     register,
@@ -80,6 +79,7 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
   }, [open, initial, reset])
 
   const rateio = useWatch({ control, name: 'rateio' }) ?? []
+  const planoContaId = useWatch({ control, name: 'planoContaId' }) ?? ''
   // Trocar quem paga com o rateio ligado: a nova pagadora entra na grade (com 0%, para a pessoa ajustar).
   const trocarPagadora = (empresaId: string) => {
     setValue('unidadeId', empresaId, { shouldValidate: true })
@@ -246,14 +246,14 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
               />
             </Field>
             <Field className={ui.col2} label="Plano de contas" hint="Só contas de Despesa. Vem do cadastro do fornecedor quando ele tem uma.">
-              <select {...register('planoContaId')}>
-                <option value="">Nenhuma</option>
-                {contasDespesa.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.codigo} · {p.nome}
-                  </option>
-                ))}
-              </select>
+              {/* Só contas de Despesa: é isso que uma despesa classifica. */}
+              <PlanoContaBusca
+                value={planoContaId}
+                onChange={(id) => setValue('planoContaId', id, { shouldDirty: true })}
+                contas={planoContas}
+                permitida={(c) => c.grupoDre === 'Despesa' && c.status === 'ativo'}
+                vazio="Nenhuma"
+              />
             </Field>
           </div>
         </section>

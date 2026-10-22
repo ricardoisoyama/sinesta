@@ -74,7 +74,7 @@ export function MixPage() {
   return (
     <div>
       <PageHeader
-        breadcrumb="Relatórios"
+        breadcrumb="Gerencial"
         title="Mix / Equilíbrio"
         subtitle="Margem das propostas aprovadas no período e quantos serviços/produtos para o equilíbrio."
         action={

@@ -1,10 +1,12 @@
-import { useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
+import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AlertTriangle, BadgeCheck, CalendarClock, Copy, Gauge, Layers, LineChart, Plus, Scale, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { confirmar } from '@/features/common/dialogo/dialogo'
+import { MoneyInput } from '@/features/common/MoneyInput'
+import { PercentInput } from '@/features/common/PercentInput'
 import { formatBRL, formatPct } from '@/lib/format'
 import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hooks'
 import { useMetas } from '@/features/metas/store'
@@ -20,13 +22,40 @@ const novoId = (p: string) => `${p}${Date.now().toString(36)}${Math.random().toS
 const kBRL = (v: number) => `${v < 0 ? '−' : ''}R$ ${Math.round(Math.abs(v) / 1000)}k`
 const fatorTxt = (f: number) => (f > 0 ? f.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—')
 const PORCENTO: TipoHipotese[] = ['reajuste-custos', 'variacao-meta']
+/** Hipóteses que podem ser para menos (queda da meta, reajuste para baixo, perda de receita). */
+const COM_SINAL: TipoHipotese[] = ['reajuste-custos', 'variacao-meta', 'nova-receita']
+
+/** Período da projeção: próximos N meses ou um ano fechado (jan–dez). */
+const mesesDoPeriodo = (periodo: string, hoje: Date) =>
+  periodo.startsWith('a') ? proximosMeses(new Date(Number(periodo.slice(1)), 0, 1), 12) : proximosMeses(hoje, periodo === 'p6' ? 6 : 12)
+const rotuloDoPeriodo = (periodo: string) => (periodo.startsWith('a') ? `jan–dez/${periodo.slice(1)}` : periodo === 'p6' ? '6 meses' : '12 meses')
 
 /**
  * Projeção: 12 meses para frente com a META como receita e a DF dos cadastros (reais).
  * Hipóteses só existem no cenário (gravado no servidor); os cadastros não mudam.
  */
 export function ProjecaoPage() {
-  const [meses] = useState(() => proximosMeses(new Date()))
+  const [hoje] = useState(() => new Date())
+  // Período e receita da projeção: escolhas da tela (não são gravadas; os cadastros não mudam).
+  const [periodo, setPeriodo] = useState('p12')
+  const [fonte, setFonte] = useState('metas')
+  const [digitada, setDigitada] = useState(0)
+  const meses = mesesDoPeriodo(periodo, hoje)
+  const rotuloPeriodo = rotuloDoPeriodo(periodo)
+  const qc = useQueryClient()
+  // Meta e despesa fixa costumam ser mudadas em outra aba: ao voltar para esta, relê os cadastros.
+  useEffect(() => {
+    const atualizar = () => {
+      if (document.visibilityState !== 'visible') return
+      for (const queryKey of [['metas'], ['custos-fixos'], ['fator'], ['empresas']]) void qc.invalidateQueries({ queryKey })
+    }
+    window.addEventListener('focus', atualizar)
+    document.addEventListener('visibilitychange', atualizar)
+    return () => {
+      window.removeEventListener('focus', atualizar)
+      document.removeEventListener('visibilitychange', atualizar)
+    }
+  }, [qc])
   const { data: empresasData } = useEmpresasQuery()
   const { data: custosData } = useCustosFixosQuery()
   const { metas } = useMetas()
@@ -48,20 +77,47 @@ export function ProjecaoPage() {
 
   const ids = escopo === 'grupo' ? empresas.map((e) => e.id) : [escopo]
   const nomeEscopo = escopo === 'grupo' ? 'Grupo (todas as empresas)' : empresas.find((e) => e.id === escopo)?.nome ?? ''
+  const nomeEmpresa = (id?: string) => empresas.find((e) => e.id === id)?.nome ?? ''
 
-  // Parâmetros do preço: ponderados pela receita de cada empresa no horizonte.
-  const pesos = ids.map((id) => ({ id, peso: meses.reduce((a, m) => a + (receitaDoMes(metas, id, m)?.valor ?? 0), 0), f: fatorDe(id) }))
+  // Receita: as metas de cada ano (padrão), uma meta escolhida (o perfil dela em todos os anos) ou um valor digitado.
+  const metasDoEscopo = metas.filter((m) => m.status !== 'inativo' && !!m.empresaId && ids.includes(m.empresaId))
+  const metaEscolhida = fonte.startsWith('meta:') ? metasDoEscopo.find((m) => `meta:${m.id}` === fonte) : undefined
+  const fonteEfetiva = fonte === 'digitada' ? 'digitada' : metaEscolhida ? 'meta' : 'metas'
+  const receitaDaEmpresa = (id: string, m: Mes) => {
+    if (fonteEfetiva === 'metas') return receitaDoMes(metas, id, m)
+    if (fonteEfetiva === 'meta')
+      return metaEscolhida!.empresaId === id
+        ? { valor: metaEscolhida!.valoresMensais?.length === 12 ? metaEscolhida!.valoresMensais[m.mes] ?? 0 : metaEscolhida!.metaAnual / 12, repetida: false }
+        : null
+    return null
+  }
+  const rotuloReceita = fonteEfetiva === 'digitada' ? 'Receita (digitada)' : fonteEfetiva === 'meta' ? `Receita (${metaEscolhida!.nome})` : 'Receita (meta)'
+
+  // Parâmetros do preço (DV e lucro): ponderados pela receita de cada empresa no período.
+  const pesos = ids.map((id) => ({ id, peso: fonteEfetiva === 'digitada' ? 1 : meses.reduce((a, m) => a + (receitaDaEmpresa(id, m)?.valor ?? 0), 0), f: fatorDe(id) }))
   const pesoTotal = pesos.reduce((a, p) => a + p.peso, 0)
   const media = (fn: (f: FatorResultado) => number) => (pesoTotal > 0 ? pesos.reduce((a, p) => a + (p.f ? fn(p.f) * p.peso : 0), 0) / pesoTotal : 0)
-  const parametros = { contribuicao: media((f) => f.dfPct + f.lucro), dvSemLucro: media((f) => f.dvSemLucro), lucro: media((f) => f.lucro) }
   const semFator = pesos.filter((p) => !p.f?.pronto).map((p) => ({ nome: empresas.find((e) => e.id === p.id)?.nome ?? p.id, aviso: p.f?.aviso }))
 
   const receita = (m: Mes) => {
-    const v = ids.map((id) => receitaDoMes(metas, id, m))
+    if (fonteEfetiva === 'digitada') return digitada > 0 ? { valor: digitada, repetida: false } : null
+    const v = ids.map((id) => receitaDaEmpresa(id, m))
     if (v.every((x) => x === null)) return null
     return { valor: v.reduce((a, x) => a + (x?.valor ?? 0), 0), repetida: v.some((x) => x?.repetida) }
   }
   const df = (m: Mes) => dfDoMes(custos, ids, m)
+  // DF% que os preços do ano carregam (na base, sem hipóteses): DF do ano ÷ receita do ano.
+  const dfPctDoAno = new Map<number, number>()
+  const dfPctAno = (ano: number) => {
+    if (!dfPctDoAno.has(ano)) {
+      const doAno = proximosMeses(new Date(ano, 0, 1), 12)
+      const rec = doAno.reduce((a, m) => a + (receita(m)?.valor ?? 0), 0)
+      dfPctDoAno.set(ano, rec > 0 ? doAno.reduce((a, m) => a + df(m), 0) / rec : 0)
+    }
+    return dfPctDoAno.get(ano)!
+  }
+  const lucroPct = media((f) => f.lucro)
+  const parametros = { contribuicao: media((f) => f.dfPct + f.lucro), contribuicaoDoMes: (m: Mes) => dfPctAno(m.ano) + lucroPct, dvSemLucro: media((f) => f.dvSemLucro), lucro: lucroPct }
   const valorDoCusto = (custoId: string, m: Mes) => {
     const c = custos.find((x) => x.id === custoId)
     return c && custoNoMes(c, m) ? c.valorMensal * Math.min(1, ids.reduce((a, id) => a + percentualDaEmpresa(c, id), 0)) : 0
@@ -71,8 +127,8 @@ export function ProjecaoPage() {
   const cenario = cenarios.find((c) => c.id === ativo)
   const linhasBase = rodar([])
   const linhas = rodar(cenario?.hipoteses ?? [], sensibilidade)
-  const rBase = resumir(linhasBase, parametros.contribuicao)
-  const r = resumir(linhas, parametros.contribuicao)
+  const rBase = resumir(linhasBase)
+  const r = resumir(linhas)
   const carregando = !empresasData || !custosData || fatores.some((q) => q.isLoading)
 
   const soma = (lista: LinhaMes[], ate: number) => lista.slice(0, ate + 1).reduce((a, l) => a + l.lucro, 0)
@@ -98,20 +154,37 @@ export function ProjecaoPage() {
   const iFator = Math.max(0, linhas.findIndex((l, i) => Math.abs(l.fator - linhasBase[i].fator) > 1e-6))
   const fatorHoje = linhas[iFator]?.fator ?? 0
   const fatorBaseHoje = linhasBase[iFator]?.fator ?? 0
-  const rSemSens = resumir(rodar(cenario?.hipoteses ?? []), parametros.contribuicao)
+  const rSemSens = resumir(rodar(cenario?.hipoteses ?? []))
   const delta = (a: number, b: number) => (b ? (a - b) / Math.abs(b) : 0)
 
   return (
     <div>
       <PageHeader
-        breadcrumb="Relatórios"
+        breadcrumb="Gerencial"
         title="Projeção"
-        subtitle="Os próximos 12 meses com a meta como receita e as despesas fixas dos cadastros. As hipóteses vivem só no cenário: nada nos cadastros muda."
+        subtitle="O período escolhido, com a meta (ou um valor digitado) como receita e as despesas fixas dos cadastros. As hipóteses vivem só no cenário: nada nos cadastros muda."
         action={
-          <select className={ui.filterSelect} value={escopo} onChange={(e) => setEscopo(e.target.value)} aria-label="Empresa ou grupo">
-            <option value="grupo">Grupo (todas as empresas)</option>
-            {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
-          </select>
+          <div className={s.controles}>
+            <select className={ui.filterSelect} value={escopo} onChange={(e) => setEscopo(e.target.value)} aria-label="Empresa ou grupo">
+              <option value="grupo">Grupo (todas as empresas)</option>
+              {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+            </select>
+            <select className={ui.filterSelect} value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Período">
+              <option value="p6">Próximos 6 meses</option>
+              <option value="p12">Próximos 12 meses</option>
+              {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
+            </select>
+            <select className={ui.filterSelect} value={fonteEfetiva === 'meta' ? fonte : fonteEfetiva} onChange={(e) => setFonte(e.target.value)} aria-label="Receita">
+              <option value="metas">Receita: metas de cada ano</option>
+              {metasDoEscopo.map((m) => <option key={m.id} value={`meta:${m.id}`}>Receita: {m.nome} ({nomeEmpresa(m.empresaId)}{m.ano ? ` · ${m.ano}` : ''})</option>)}
+              <option value="digitada">Receita: digitar valor por mês</option>
+            </select>
+            {fonteEfetiva === 'digitada' && (
+              <div className={s.receitaDigitada} title="Receita de cada mês do período (R$)">
+                <MoneyInput value={digitada} onChange={setDigitada} placeholder="por mês" />
+              </div>
+            )}
+          </div>
         }
       />
       {erroCenarios && (
@@ -143,9 +216,9 @@ export function ProjecaoPage() {
 
       {/* números do período */}
       <div className={s.kpis}>
-        <Kpi icone={TrendingUp} rotulo="Receita (meta) · 12 meses" valor={formatBRL(r.receita)} delta={cenario ? delta(r.receita, rBase.receita) : null} />
-        <Kpi icone={Wallet} rotulo="Despesas fixas · 12 meses" valor={formatBRL(r.df)} delta={cenario ? delta(r.df, rBase.df) : null} inverso />
-        <Kpi icone={Scale} rotulo="Lucro projetado · 12 meses" valor={formatBRL(r.lucro)} delta={cenario ? delta(r.lucro, rBase.lucro) : null} destaque={r.lucro < 0 ? 'ruim' : 'bom'} />
+        <Kpi icone={TrendingUp} rotulo={`${rotuloReceita} · ${rotuloPeriodo}`} valor={formatBRL(r.receita)} delta={cenario ? delta(r.receita, rBase.receita) : null} />
+        <Kpi icone={Wallet} rotulo={`Despesas fixas · ${rotuloPeriodo}`} valor={formatBRL(r.df)} delta={cenario ? delta(r.df, rBase.df) : null} inverso />
+        <Kpi icone={Scale} rotulo={`Lucro projetado · ${rotuloPeriodo}`} valor={formatBRL(r.lucro)} delta={cenario ? delta(r.lucro, rBase.lucro) : null} destaque={r.lucro < 0 ? 'ruim' : 'bom'} />
         <Kpi icone={CalendarClock} rotulo="Meses no vermelho" valor={String(r.mesesNoVermelho)} sub={r.mesesNoVermelho ? vermelho.map((l) => l.rotulo).join(', ') : 'nenhum mês abaixo do equilíbrio'} destaque={r.mesesNoVermelho ? 'ruim' : undefined} />
         <Kpi
           icone={Gauge}
@@ -166,12 +239,12 @@ export function ProjecaoPage() {
                 <YAxis tickFormatter={kBRL} tick={{ fontSize: 12, fill: '#6b7b72' }} width={64} />
                 <Tooltip formatter={(v) => formatBRL(Number(v))} cursor={{ fill: 'rgba(26,77,30,0.05)' }} contentStyle={{ borderRadius: 10, border: '1px solid #e6e3db', fontSize: 13 }} />
                 <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 12, paddingBottom: 6 }} />
-                <Bar isAnimationActive={false} dataKey="receita" name={cenario ? `Receita · ${cenario.nome}` : 'Receita (meta)'} fill="#1a4d1e" radius={[3, 3, 0, 0]} maxBarSize={34} />
+                <Bar isAnimationActive={false} dataKey="receita" name={cenario ? `Receita · ${cenario.nome}` : rotuloReceita} fill="#1a4d1e" radius={[3, 3, 0, 0]} maxBarSize={34} />
                 {cenario && <Line isAnimationActive={false} dataKey="receitaBase" name="Receita · base" stroke="#9aa39b" strokeDasharray="4 4" dot={false} strokeWidth={2} />}
                 <Line isAnimationActive={false} dataKey="equilibrio" name="Ponto de equilíbrio" stroke="#e8702f" strokeWidth={2.5} dot={{ r: 3, fill: '#e8702f' }} />
               </ComposedChart>
             </ResponsiveContainer>
-            <div className={s.nota}>Abaixo da linha laranja o mês não paga as despesas fixas. Equilíbrio = DF do mês ÷ {formatPct(parametros.contribuicao, 1)} (a parte do preço que cobre DF e lucro).</div>
+            <div className={s.nota}>Abaixo da linha laranja o mês não paga as despesas fixas. Equilíbrio = DF do mês ÷ (DF% do ano + lucro de {formatPct(lucroPct, 1)}): a parte do preço que cobre DF e lucro. O DF% do ano é o da base: DF do ano ÷ receita do ano.</div>
           </div>
 
           <div className={s.cartao}>
@@ -213,7 +286,7 @@ export function ProjecaoPage() {
             <input className={s.slider} type="range" min={-30} max={30} step={1} value={Math.round(sensibilidade * 100)} onChange={(e) => setSensibilidade(Number(e.target.value) / 100)} aria-label="Variação do faturamento" />
             <div className={s.sliderEscala}><span>−30%</span><b>{sensibilidade > 0 ? '+' : ''}{Math.round(sensibilidade * 100)}%</b><span>+30%</span></div>
             <div className={s.sensResposta}>
-              Com o faturamento {sensibilidade === 0 ? 'como está' : `${sensibilidade > 0 ? '+' : ''}${Math.round(sensibilidade * 100)}%`}, o lucro em 12 meses é <b className={r.lucro < 0 ? s.ruim : s.bom}>{formatBRL(r.lucro)}</b>.
+              Com o faturamento {sensibilidade === 0 ? 'como está' : `${sensibilidade > 0 ? '+' : ''}${Math.round(sensibilidade * 100)}%`}, o lucro em {rotuloPeriodo} é <b className={r.lucro < 0 ? s.ruim : s.bom}>{formatBRL(r.lucro)}</b>.
               {' '}
               {rSemSens.lucro >= 0 ? (
                 <>O faturamento pode cair até <b>{formatPct(rSemSens.quedaAteZerar, 1)}</b> antes de o período dar prejuízo.</>
@@ -229,9 +302,10 @@ export function ProjecaoPage() {
               {comecam.map((c) => <li key={`i${c.id}`}><TrendingUp size={13} /> <span><b>{c.descricao}</b> começa em {rotuloMes(c.dataInicio)} ({formatBRL(c.valorMensal)}/mês)</span></li>)}
               {terminam.map((c) => <li key={`f${c.id}`}><TrendingDown size={13} /> <span><b>{c.descricao}</b> termina em {rotuloMes(c.dataFim)}</span></li>)}
               {repetidas.length > 0 && <li><CalendarClock size={13} /> <span>Sem meta para {repetidas[0].ano}: {repetidas.map((l) => l.rotulo).join(', ')} repetem a meta do mesmo mês de {repetidas[0].ano - 1}. Cadastre a meta do ano em Metas.</span></li>}
-              {semMeta.length > 0 && <li className={s.alertaRuim}><AlertTriangle size={13} /> <span>Sem meta cadastrada para {semMeta.map((l) => l.rotulo).join(', ')}: a receita desses meses fica zerada.</span></li>}
+              {fonteEfetiva === 'metas' && semMeta.length > 0 && <li className={s.alertaRuim}><AlertTriangle size={13} /> <span>Sem meta cadastrada para {semMeta.map((l) => l.rotulo).join(', ')}: a receita desses meses fica zerada.</span></li>}
               {vermelho.length > 0 && <li className={s.alertaRuim}><AlertTriangle size={13} /> <span>{vermelho.length} mês(es) abaixo do ponto de equilíbrio neste cenário.</span></li>}
-              {!comecam.length && !terminam.length && !semMeta.length && !vermelho.length && !repetidas.length &&<li><BadgeCheck size={13} /> <span>Nada fora do normal nos próximos 12 meses.</span></li>}
+              {fonteEfetiva === 'digitada' && digitada <= 0 && <li className={s.alertaRuim}><AlertTriangle size={13} /> <span>Digite a receita por mês, no topo da tela.</span></li>}
+              {!comecam.length && !terminam.length && !semMeta.length && !vermelho.length && !repetidas.length && <li><BadgeCheck size={13} /> <span>Nada fora do normal no período.</span></li>}
             </ul>
           </div>
         </div>
@@ -240,14 +314,14 @@ export function ProjecaoPage() {
       {/* comparação: base + até três cenários */}
       <Comparacao
         escopo={nomeEscopo}
-        contribuicao={parametros.contribuicao}
+        periodo={rotuloPeriodo}
         rodar={(h) => rodar(h)}
         series={[{ id: 'base', nome: 'Base', hipoteses: [], linhas: linhasBase }, ...cenarios.map((c) => ({ id: c.id, nome: c.nome, hipoteses: c.hipoteses, linhas: rodar(c.hipoteses) }))]}
       />
 
       <details className={`${s.cartao} ${s.mesAMes}`}>
         <summary>Ver mês a mês</summary>
-        <TabelaMeses linhas={linhas} />
+        <TabelaMeses linhas={linhas} base={cenario || sensibilidade ? linhasBase : undefined} />
       </details>
     </div>
   )
@@ -279,7 +353,7 @@ interface PainelProps {
 }
 
 function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDuplicar, onExcluir }: PainelProps) {
-  const vazio = { tipo: 'novo-custo' as TipoHipotese, nome: '', valor: 0, inicio: meses[1]?.chave ?? meses[0].chave, fim: '', custoId: '' }
+  const vazio = { tipo: 'novo-custo' as TipoHipotese, nome: '', valor: 0, negativo: false, inicio: meses[1]?.chave ?? meses[0].chave, fim: '', custoId: '' }
   const [form, setForm] = useState(vazio)
   const [abrindo, setAbrindo] = useState(false)
   const rotulo = (chave: string) => meses.find((m) => m.chave === chave)?.rotulo ?? chave
@@ -293,10 +367,12 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
     )
 
   const porcento = PORCENTO.includes(form.tipo)
-  const valido = form.tipo === 'cortar-custo' ? !!form.custoId : form.valor !== 0
+  const comSinal = COM_SINAL.includes(form.tipo)
+  const valido = form.tipo === 'cortar-custo' ? !!form.custoId : form.valor > 0
   const adicionar = () => {
     const nomeAuto = form.tipo === 'cortar-custo' ? `Cortar: ${custos.find((c) => c.id === form.custoId)?.nome ?? ''}` : ROTULO_HIPOTESE[form.tipo]
-    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: porcento ? form.valor / 100 : form.valor, inicio: form.inicio, fim: form.fim || undefined, custoId: form.custoId || undefined, ativa: true }])
+    const sinal = comSinal && form.negativo ? -1 : 1
+    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: sinal * (porcento ? form.valor / 100 : form.valor), inicio: form.inicio, fim: form.fim || undefined, custoId: form.custoId || undefined, ativa: true }])
     setForm(vazio)
     setAbrindo(false)
   }
@@ -333,7 +409,7 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
         <div className={s.hipForm}>
           <label>
             Tipo
-            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoHipotese, valor: 0 })}>
+            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoHipotese, valor: 0, negativo: false })}>
               {(Object.keys(ROTULO_HIPOTESE) as TipoHipotese[]).map((t) => <option key={t} value={t}>{ROTULO_HIPOTESE[t]}</option>)}
             </select>
           </label>
@@ -349,12 +425,32 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
             <>
               <label className={s.hipLargo}>
                 Descrição
-                <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder={form.tipo === 'novo-custo' ? 'Ex.: 2 motoristas' : form.tipo === 'nova-receita' ? 'Ex.: cliente novo' : 'Ex.: dissídio'} />
+                <input
+                  value={form.nome}
+                  onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  placeholder={form.tipo === 'novo-custo' ? 'Ex.: 2 motoristas' : form.tipo === 'nova-receita' ? 'Ex.: cliente novo' : form.tipo === 'custo-variavel' ? 'Ex.: motoristas (40 contêineres)' : 'Ex.: dissídio'}
+                />
               </label>
+              {comSinal && (
+                <label>
+                  Sentido
+                  <select value={form.negativo ? '-' : '+'} onChange={(e) => setForm({ ...form, negativo: e.target.value === '-' })}>
+                    <option value="+">{form.tipo === 'nova-receita' ? 'Receita a mais' : 'Para mais'}</option>
+                    <option value="-">{form.tipo === 'nova-receita' ? 'Receita a menos (perda)' : 'Para menos'}</option>
+                  </select>
+                </label>
+              )}
               <label>
-                {porcento ? 'Percentual (%)' : 'Valor por mês (R$)'}
-                <input type="number" step={porcento ? 1 : 100} value={form.valor} onChange={(e) => setForm({ ...form, valor: Number(e.target.value) })} />
+                {porcento ? 'Percentual' : 'Valor por mês'}
+                {porcento ? (
+                  <PercentInput value={form.valor / 100} onChange={(f) => setForm({ ...form, valor: f * 100 })} />
+                ) : (
+                  <MoneyInput value={form.valor} onChange={(n) => setForm({ ...form, valor: n })} />
+                )}
               </label>
+              {form.tipo === 'custo-variavel' && (
+                <p className={`${s.textoBase} ${s.hipLargo}`}>Só demonstrativo: aparece na coluna Custo variável do mês a mês, ao lado do que o preço cobre. Não muda lucro nem fator.</p>
+              )}
             </>
           )}
           <label>
@@ -382,14 +478,22 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   )
 }
 
-function TabelaMeses({ linhas }: { linhas: LinhaMes[] }) {
+/** Diferença sobre a base, embaixo do valor (só quando mudou). */
+function DifBase({ v, b, menorMelhor, txt = formatBRL }: { v: number; b?: number; menorMelhor?: boolean; txt?: (n: number) => string }) {
+  if (b === undefined || Math.abs(v - b) < 0.005) return null
+  const bom = menorMelhor ? v < b : v > b
+  return <small className={`${s.difBase} ${bom ? s.bom : s.ruim}`}>{v > b ? '↑' : '↓'} {txt(Math.abs(v - b))} da base</small>
+}
+
+function TabelaMeses({ linhas, base }: { linhas: LinhaMes[]; base?: LinhaMes[] }) {
   return (
     <div className={ui.tableScroll}>
       <table className={`${ui.table} ${s.tabela}`}>
         <thead>
           <tr>
             <th>Mês</th>
-            <th className={ui.right}>Receita (meta)</th>
+            <th className={ui.right}>Receita</th>
+            <th className={ui.right} title="Custo da operação (motorista, combustível...). Cinza: o que o preço cobre, receita × (1 − markup). Em negrito: o informado na hipótese Custo variável. Só demonstrativo.">Custo variável</th>
             <th className={ui.right}>Despesas fixas</th>
             <th className={ui.right}>DF % da receita</th>
             <th className={ui.right}>Equilíbrio</th>
@@ -398,21 +502,34 @@ function TabelaMeses({ linhas }: { linhas: LinhaMes[] }) {
           </tr>
         </thead>
         <tbody>
-          {linhas.map((l) => (
-            <tr key={l.chave}>
-              <td className={ui.cellStrong}>
-                {l.rotulo}
-                {l.semMeta && <span className={s.semMeta}>sem meta</span>}
-                {l.metaRepetida && <span className={s.metaRepetida}>meta de {l.ano - 1}</span>}
-              </td>
-              <td className={ui.right}>{formatBRL(l.receita)}</td>
-              <td className={ui.right}>{formatBRL(l.df)}</td>
-              <td className={ui.right}>{formatPct(l.dfPct, 1)}</td>
-              <td className={ui.right}>{formatBRL(l.equilibrio)}</td>
-              <td className={`${ui.right} ${l.lucro < 0 ? s.ruim : s.bom}`}>{formatBRL(l.lucro)}</td>
-              <td className={ui.right}>{fatorTxt(l.fator)}</td>
-            </tr>
-          ))}
+          {linhas.map((l, i) => {
+            const b = base?.[i]
+            return (
+              <tr key={l.chave}>
+                <td className={ui.cellStrong}>
+                  {l.rotulo}
+                  {l.semMeta && <span className={s.semMeta}>sem meta</span>}
+                  {l.metaRepetida && <span className={s.metaRepetida}>meta de {l.ano - 1}</span>}
+                </td>
+                <td className={ui.right}>{formatBRL(l.receita)}<DifBase v={l.receita} b={b?.receita} /></td>
+                <td className={ui.right}>
+                  {l.custoVariavel !== null ? (
+                    <>
+                      <b>{formatBRL(l.custoVariavel)}</b>
+                      <small className={s.difBase}>o preço cobre {formatBRL(l.custoVariavelPreco)}</small>
+                    </>
+                  ) : (
+                    <span className={ui.cellMut} title="O que o preço cobre de custo da operação">{formatBRL(l.custoVariavelPreco)}</span>
+                  )}
+                </td>
+                <td className={ui.right}>{formatBRL(l.df)}<DifBase v={l.df} b={b?.df} menorMelhor /></td>
+                <td className={ui.right}>{formatPct(l.dfPct, 1)}</td>
+                <td className={ui.right}>{formatBRL(l.equilibrio)}<DifBase v={l.equilibrio} b={b?.equilibrio} menorMelhor /></td>
+                <td className={`${ui.right} ${l.lucro < 0 ? s.ruim : s.bom}`}>{formatBRL(l.lucro)}<DifBase v={l.lucro} b={b?.lucro} /></td>
+                <td className={ui.right}>{fatorTxt(l.fator)}<DifBase v={l.fator} b={b?.fator} menorMelhor txt={(n) => n.toLocaleString('pt-BR', { maximumFractionDigits: 4 })} /></td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>

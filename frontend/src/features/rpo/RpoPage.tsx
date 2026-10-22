@@ -104,7 +104,7 @@ export function RpoPage() {
     return (
       <div>
         <PageHeader
-          breadcrumb="Relatórios"
+          breadcrumb="Gerencial"
           title="RPO (Orçado × Realizado)"
           subtitle="Resultado por operação: o custo planejado contra o executado."
         />
@@ -117,7 +117,7 @@ export function RpoPage() {
   return (
     <div>
       <PageHeader
-        breadcrumb="Relatórios"
+        breadcrumb="Gerencial"
         title="RPO (Orçado × Realizado)"
         subtitle="Resultado por operação: o custo planejado na precificação contra o executado."
         action={

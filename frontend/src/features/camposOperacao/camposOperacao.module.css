@@ -39,3 +39,7 @@
 /* Ligações do ad valorem dentro da célula "Opções / origem". */
 .ligacoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
 .ligacoes select { min-width: 0; }
+/* Campo com unidade à direita (peso em kg) */
+.comUnidade { display: flex; align-items: center; gap: 6px; }
+.comUnidade input { flex: 1; min-width: 0; }
+.comUnidade span { font-size: 12px; font-weight: 600; color: #6b7b72; }

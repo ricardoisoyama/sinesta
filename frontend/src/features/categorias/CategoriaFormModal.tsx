@@ -8,6 +8,7 @@ import { Field } from '@/features/common/Field'
 import { StatusToggle } from '@/features/common/StatusToggle'
 import ui from '@/features/common/ui.module.css'
 import { usePlanoContas } from '@/features/planoContas/store'
+import { PlanoContaBusca } from '@/features/planoContas/PlanoContaBusca'
 import type { CategoriaCusto } from './types'
 
 const categoriaSchema = z.object({
@@ -29,7 +30,7 @@ interface Props {
 }
 
 export function CategoriaFormModal({ open, initial, error, onClose, onSave }: Props) {
-  const { analiticas } = usePlanoContas()
+  const { contas: planoContas } = usePlanoContas()
   const {
     register,
     handleSubmit,
@@ -43,6 +44,7 @@ export function CategoriaFormModal({ open, initial, error, onClose, onSave }: Pr
   })
 
   const ativo = useWatch({ control, name: 'status' }) !== 'inativo'
+  const planoContaId = useWatch({ control, name: 'planoContaId' }) ?? ''
 
   useEffect(() => {
     if (open) reset(initial ? { ...emptyCategoria, ...initial } : emptyCategoria)
@@ -88,14 +90,7 @@ export function CategoriaFormModal({ open, initial, error, onClose, onSave }: Pr
               label="Conta padrão do plano de contas"
               hint="Ao lançar um custo neste centro de custo, esta conta vem preenchida automaticamente."
             >
-              <select {...register('planoContaId')}>
-                <option value="">Nenhuma</option>
-                {analiticas().map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.codigo} · {p.nome}
-                  </option>
-                ))}
-              </select>
+              <PlanoContaBusca value={planoContaId} onChange={(id) => setValue('planoContaId', id, { shouldDirty: true })} contas={planoContas} vazio="Nenhuma" />
             </Field>
           </div>
         </section>

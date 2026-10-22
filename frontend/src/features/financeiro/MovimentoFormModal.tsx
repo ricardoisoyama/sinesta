@@ -16,6 +16,7 @@ import { avisar } from '@/features/common/dialogo/dialogo'
 import { getErrorMessage } from '@/lib/api'
 import { listCategoriasCusto, listClientes, listFornecedores } from '@/features/cadastros/api'
 import { usePlanoContas } from '@/features/planoContas/store'
+import { PlanoContaBusca } from '@/features/planoContas/PlanoContaBusca'
 import { useUsuarios } from '@/features/usuarios/store'
 import { FORMAS_PAGAMENTO } from '@/features/parceiros/types'
 import { formatBRL } from '@/lib/format'
@@ -92,7 +93,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
   const { data: categorias } = useQuery({ queryKey: ['categorias-custo'], queryFn: listCategoriasCusto })
   const { data: custosFixos } = useCustosFixosQuery()
   const { usuarios } = useUsuarios()
-  const { analiticas } = usePlanoContas()
+  const { analiticas, contas: planoContas } = usePlanoContas()
 
   const receber = d.tipo === 'receber'
   // Receita para receber, despesa para pagar (regra do plano de contas do cliente).
@@ -295,12 +296,13 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
             <input value={d.descricao} onChange={(e) => set({ descricao: e.target.value })} placeholder={receber ? 'Ex.: PROP-0007 · Consultoria mensal' : 'Ex.: Aluguel · sala 402'} />
           </Field>
           <Field className={ui.col2} label="Plano de contas" hint={receber ? 'Só contas de Receita.' : 'Só contas de Despesa. Ao escolher o fornecedor, vem da despesa fixa (DF) ou do cadastro dele.'}>
-            <select value={d.planoContaId} onChange={(e) => set({ planoContaId: e.target.value })}>
-              <option value="">Nenhuma</option>
-              {contas.map((c) => (
-                <option key={c.id} value={c.id}>{c.codigo} · {c.nome}</option>
-              ))}
-            </select>
+            <PlanoContaBusca
+              value={d.planoContaId}
+              onChange={(id) => set({ planoContaId: id })}
+              contas={planoContas}
+              permitida={(c) => (receber ? c.grupoDre === 'Receita' : c.grupoDre === 'Despesa') && c.status === 'ativo'}
+              vazio="Nenhuma"
+            />
           </Field>
           <Field className={ui.col2} label="Centro de custo">
             <select value={d.centroCustoId} onChange={(e) => set({ centroCustoId: e.target.value })}>

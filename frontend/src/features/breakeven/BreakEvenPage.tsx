@@ -107,7 +107,7 @@ export function BreakEvenPage() {
   return (
     <div>
       <PageHeader
-        breadcrumb="Relatórios"
+        breadcrumb="Gerencial"
         title="Break-even"
         subtitle="Ponto de equilíbrio mensal por empresa e como a meta de cada mês fica em relação a ele."
         action={comboUnidade}

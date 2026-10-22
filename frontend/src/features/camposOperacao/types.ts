@@ -7,7 +7,7 @@
  * Remover é inativar. A proposta guarda um retrato (nome, tipo, efeito e valor de cada
  * campo) no dia em que o item entrou, então mudar os campos depois não altera propostas feitas.
  */
-export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'valor' | 'percentual' | 'advalorem' | 'icms'
+export type TipoCampoOperacao = 'texto' | 'lista' | 'uf' | 'cidade' | 'cadastro' | 'data' | 'numero' | 'peso' | 'valor' | 'percentual' | 'advalorem' | 'icms'
 
 export type CadastroOrigem = 'cliente' | 'fornecedor' | 'vendedor' | 'servico' | 'veiculo'
 
@@ -21,7 +21,8 @@ export const TIPOS_CAMPO: { valor: TipoCampoOperacao; label: string; ajuda: stri
   { valor: 'cidade', label: 'Lista de cidades', ajuda: 'Busca na base de municípios do IBGE ("SP - São Paulo"). Filtra pela UF do campo de UF mais próximo, quando preenchida.' },
   { valor: 'cadastro', label: 'Cadastro', ajuda: 'Escolhe um registro do sistema (cliente, fornecedor, vendedor, serviço, veículo).' },
   { valor: 'data', label: 'Data', ajuda: 'Uma data (início do contrato, coleta...).' },
-  { valor: 'numero', label: 'Número', ajuda: 'Quantidade, peso, metragem. Pode multiplicar o preço.' },
+  { valor: 'numero', label: 'Número', ajuda: 'Quantidade, metragem. Pode multiplicar o preço.' },
+  { valor: 'peso', label: 'Peso (kg)', ajuda: 'Peso em quilos (ex.: 25.000 kg). Pode multiplicar o preço (frete por kg).' },
   { valor: 'valor', label: 'Valor (R$)', ajuda: 'Valor em reais. Pode entrar como custo da operação.' },
   { valor: 'percentual', label: 'Percentual', ajuda: 'Percentual. Pode ser aplicado sobre o custo da operação.' },
   {
@@ -52,6 +53,7 @@ export const EFEITOS_POR_TIPO: Record<TipoCampoOperacao, EfeitoCampo[]> = {
   cadastro: ['informativo'],
   data: ['informativo'],
   numero: ['informativo', 'multiplica'],
+  peso: ['informativo', 'multiplica'],
   valor: ['informativo', 'soma-custo'],
   percentual: ['informativo', 'pct-custo'],
   advalorem: ['informativo'],

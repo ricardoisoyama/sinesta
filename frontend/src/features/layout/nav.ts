@@ -124,7 +124,7 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: 'Relatórios',
+    label: 'Gerencial',
     icon: BarChart3,
     items: [
       // Protótipo: a base é real (DF, metas, fator); os cenários ficam no navegador.

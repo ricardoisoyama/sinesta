@@ -104,7 +104,7 @@ export function PropostasPage() {
   const aprovada = detalhe?.status === 'aprovada'
 
   const columns: Column<Proposta>[] = [
-    { header: 'Nº', largura: LARGURA.curta, cell: (p) => <span className={ui.cellStrong}>{p.numero}</span> },
+    { header: 'Nº', largura: LARGURA.documento, cell: (p) => <span className={ui.cellStrong}>{p.numero}</span> },
     { header: 'Cliente', valor: (p) => p.cliente, cell: (p) => <span className={ui.cellStrong}>{p.cliente}</span> },
     { header: 'Data', largura: LARGURA.data, cell: (p) => <span className={ui.cellMut}>{p.data}</span> },
     { header: 'Itens', largura: LARGURA.numero, cell: (p) => <span className={ui.cellMut}>{p.itens.length}</span> },

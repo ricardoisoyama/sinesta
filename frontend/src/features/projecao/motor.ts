@@ -6,10 +6,13 @@ import { metaDoAno } from '@/features/metas/realizado'
 /**
  * Motor da projeção (protótipo, funções puras). A receita é a META (decisão de 15/10) e a DF vem
  * das despesas fixas, mês a mês, pela vigência de cada uma. O preço já embute DF% + lucro: do que
- * entra, essa fatia paga a DF e o que sobra é lucro. Assim:
- *   lucro(mês) = receita × (DF% da base + lucro%) − DF(mês)
- *   equilíbrio(mês) = DF(mês) ÷ (DF% da base + lucro%)
+ * entra, essa fatia paga a DF e o que sobra é lucro. O DF% do preço é o do ANO do mês, na base
+ * (DF do ano ÷ receita do ano, como a meta com base média): os preços do ano ficam fixos e uma
+ * despesa a menos (hipótese) vira lucro. Assim:
+ *   lucro(mês) = receita × (DF% do ano na base + lucro%) − DF(mês)
+ *   equilíbrio(mês) = DF(mês) ÷ (DF% do ano na base + lucro%)
  *   fator dos preços novos = 1 ÷ (1 − (DF(mês) ÷ receita + DV + lucro))   (mesma conta do Pricing)
+ *   custo variável pelo preço = receita × (1 − markup): o custo da operação que o preço cobre (só demonstrativo).
  */
 
 export interface Mes {
@@ -72,7 +75,7 @@ export function dfDoMes(custos: CustoFixo[], empresaIds: string[], m: Mes): numb
 
 // ── hipóteses ─────────────────────────────────────────────────────────────
 
-export type TipoHipotese = 'novo-custo' | 'reajuste-custos' | 'variacao-meta' | 'nova-receita' | 'cortar-custo'
+export type TipoHipotese = 'novo-custo' | 'reajuste-custos' | 'variacao-meta' | 'nova-receita' | 'cortar-custo' | 'custo-variavel'
 
 export interface Hipotese {
   id: string
@@ -95,6 +98,7 @@ export const ROTULO_HIPOTESE: Record<TipoHipotese, string> = {
   'variacao-meta': 'Variação da meta',
   'nova-receita': 'Nova receita (cliente)',
   'cortar-custo': 'Cortar uma despesa',
+  'custo-variavel': 'Custo variável da operação',
 }
 
 const vale = (h: Hipotese, m: Mes) => h.ativa && h.inicio <= m.chave && (!h.fim || h.fim >= m.chave)
@@ -102,6 +106,8 @@ const vale = (h: Hipotese, m: Mes) => h.ativa && h.inicio <= m.chave && (!h.fim 
 export interface Parametros {
   /** Fração da receita que paga DF + lucro (DF% da base + lucro), ponderada pela receita no grupo. */
   contribuicao: number
+  /** A mesma fração, por mês (DF% do ano do mês na base + lucro). Sem ela, vale a única acima. */
+  contribuicaoDoMes?: (m: Mes) => number
   /** DV sem o lucro (impostos, comissão, despesa financeira, outras). */
   dvSemLucro: number
   lucro: number
@@ -119,6 +125,12 @@ export interface LinhaMes extends Mes {
   semMeta: boolean
   /** Receita veio da meta do ano anterior (o ano não tem meta). */
   metaRepetida: boolean
+  /** Fração da receita que paga DF + lucro neste mês. */
+  contribuicao: number
+  /** Custo variável da operação que o preço cobre: receita × (1 − markup). Demonstrativo. */
+  custoVariavelPreco: number
+  /** Custo variável informado nas hipóteses ("Custo variável da operação"); null = não informado. Demonstrativo. */
+  custoVariavel: number | null
 }
 
 export interface Entrada {
@@ -137,8 +149,9 @@ export interface Entrada {
 const r2 = (v: number) => Math.round(v * 100) / 100
 
 export function projetar(e: Entrada): LinhaMes[] {
-  const { contribuicao, dvSemLucro, lucro } = e.parametros
+  const { contribuicao: unica, contribuicaoDoMes, dvSemLucro, lucro } = e.parametros
   return e.meses.map((m) => {
+    const contribuicao = contribuicaoDoMes ? contribuicaoDoMes(m) : unica
     const base = e.receita(m)
     const hs = e.hipoteses.filter((h) => vale(h, m))
     let receita = base?.valor ?? 0
@@ -152,6 +165,8 @@ export function projetar(e: Entrada): LinhaMes[] {
     df = Math.max(0, df)
     const dfPct = receita > 0 ? df / receita : 0
     const markup = dfPct + dvSemLucro + lucro
+    // Só demonstrativo: não mexe em lucro nem fator.
+    const informados = hs.filter((h) => h.tipo === 'custo-variavel')
     return {
       ...m,
       receita: r2(receita),
@@ -162,6 +177,9 @@ export function projetar(e: Entrada): LinhaMes[] {
       fator: receita > 0 && markup < 1 ? 1 / (1 - markup) : 0,
       semMeta: base === null,
       metaRepetida: !!base?.repetida,
+      contribuicao,
+      custoVariavelPreco: receita > 0 && markup < 1 ? r2(receita * (1 - markup)) : 0,
+      custoVariavel: informados.length ? r2(informados.reduce((a, h) => a + h.valor, 0)) : null,
     }
   })
 }
@@ -178,10 +196,12 @@ export interface Resumo {
 }
 
 /** Ponte do lucro: quanto do lucro a mais (ou a menos) veio da receita e quanto das despesas. Soma exata da diferença. */
-export function ponteDoLucro(base: LinhaMes[], cenario: LinhaMes[], contribuicao: number) {
+export function ponteDoLucro(base: LinhaMes[], cenario: LinhaMes[], contribuicao?: number) {
   const soma = (l: LinhaMes[], k: 'receita' | 'df') => l.reduce((a, x) => a + x[k], 0)
+  // Cada mês com a fração dele (a da base é a mesma do cenário: os preços do ano são os da base).
+  const efeitoReceita = cenario.reduce((a, x, i) => a + (x.receita - (base[i]?.receita ?? 0)) * (contribuicao ?? x.contribuicao), 0)
   return {
-    receita: r2((soma(cenario, 'receita') - soma(base, 'receita')) * contribuicao),
+    receita: r2(efeitoReceita),
     despesas: r2(soma(base, 'df') - soma(cenario, 'df')),
   }
 }
@@ -206,7 +226,7 @@ export function impactoDasHipoteses(rodar: (h: Hipotese[]) => LinhaMes[], hipote
 }
 
 /** Indicadores para comparar cenários lado a lado. */
-export function indicadores(linhas: LinhaMes[], contribuicao: number) {
+export function indicadores(linhas: LinhaMes[], contribuicao?: number) {
   const r = resumir(linhas, contribuicao)
   const pior = linhas.reduce((m, l) => (l.lucro < m.lucro ? l : m), linhas[0])
   const comReceita = linhas.filter((l) => l.fator > 0)
@@ -219,11 +239,12 @@ export function indicadores(linhas: LinhaMes[], contribuicao: number) {
   }
 }
 
-export function resumir(linhas: LinhaMes[], contribuicao: number): Resumo {
+export function resumir(linhas: LinhaMes[], contribuicao?: number): Resumo {
   const receita = linhas.reduce((a, l) => a + l.receita, 0)
   const df = linhas.reduce((a, l) => a + l.df, 0)
   const lucro = linhas.reduce((a, l) => a + l.lucro, 0)
-  const capacidade = receita * contribuicao
+  // Quanto a receita do período consegue pagar de DF (cada mês com a fração dele).
+  const capacidade = linhas.reduce((a, l) => a + l.receita * (contribuicao ?? l.contribuicao), 0)
   return {
     receita: r2(receita),
     df: r2(df),

@@ -32,15 +32,15 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/crm', label: 'CRM', grupo: 'Comercial' },
   { key: '/agenda', label: 'Agenda', grupo: 'Comercial' },
   { key: '/analises/metas', label: 'Metas', grupo: 'Comercial' },
-  { key: '/analises/rpo', label: 'RPO (Orçado × Real)', grupo: 'Relatórios' },
+  { key: '/analises/rpo', label: 'RPO (Orçado × Real)', grupo: 'Gerencial' },
   { key: '/financeiro/entradas-saidas', label: 'Entradas e Saídas (a pagar / a receber)', grupo: 'Financeiro' },
   { key: '/financeiro/caixa', label: 'Caixa (saldos e previsão)', grupo: 'Financeiro' },
   { key: '/financeiro/conciliacao', label: 'Conciliação bancária (extrato .ofx)', grupo: 'Financeiro' },
   // Não é tela: permite assinar a aprovação dos lançamentos (quem assina vem da regra). Gestor já nasce com ela.
   { key: '/financeiro/aprovar', label: 'Aprovar lançamentos financeiros', grupo: 'Financeiro' },
   { key: '/cadastros/custos-fixos', label: 'Despesas Fixas (DF)', grupo: 'Financeiro' },
-  { key: '/analises/break-even', label: 'Break-even', grupo: 'Relatórios' },
-  { key: '/analises/mix', label: 'Mix / Equilíbrio', grupo: 'Relatórios' },
+  { key: '/analises/break-even', label: 'Break-even', grupo: 'Gerencial' },
+  { key: '/analises/mix', label: 'Mix / Equilíbrio', grupo: 'Gerencial' },
   { key: '/cadastros/unidades', label: 'Empresas', grupo: 'Cadastros' },
   // Não é tela: libera o campo de lucro da empresa (compõe o fator). Gestor já nasce com ela.
   { key: '/cadastros/unidades/markup', label: 'Alterar o lucro da empresa (compõe o fator)', grupo: 'Cadastros' },
@@ -66,7 +66,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/contratos', label: 'Contratos', grupo: 'Comercial' },
   { key: '/cadastros/modelos-contrato', label: 'Modelos de Contrato', grupo: 'Parametrizações' },
   { key: '/financeiro/faturamento', label: 'Central de Faturamento', grupo: 'Financeiro' },
-  { key: '/analises/projecao', label: 'Projeção', grupo: 'Relatórios' },
+  { key: '/analises/projecao', label: 'Projeção', grupo: 'Gerencial' },
 
   // ── Especiais: desligadas por padrão para todo mundo ─────────────────────
   { key: '/simulador/calculo', label: 'Ver o cálculo do preço no Pricing (custos, fator, margem)', grupo: GRUPO_ESPECIAIS, extra: true },
@@ -92,7 +92,7 @@ export const ehExtra = (key: string) => FUNCIONALIDADES_EXTRAS.includes(key)
 export const ehAdministrativa = (key: string) => FUNCIONALIDADES.some((f) => f.key === key && f.admin)
 
 /** Ordem dos grupos na matriz de permissões (espelha o menu). */
-export const GRUPOS_FUNCIONALIDADE = ['Geral', 'Cadastros', 'Comercial', 'Parametrizações', 'Financeiro', 'Relatórios', 'Administrativo', GRUPO_ESPECIAIS, GRUPO_EQUIPE]
+export const GRUPOS_FUNCIONALIDADE = ['Geral', 'Cadastros', 'Comercial', 'Parametrizações', 'Financeiro', 'Gerencial', 'Administrativo', GRUPO_ESPECIAIS, GRUPO_EQUIPE]
 
 /** Funcionalidades agrupadas, na ordem de exibição. O grupo da equipe só aparece para o Admin. */
 export function funcionalidadesPorGrupo(comEquipe = false): { grupo: string; itens: Funcionalidade[] }[] {

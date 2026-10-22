@@ -244,7 +244,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
 
       <div className={s.tabs}>
         {aba('empresa', 'Empresa')}
-        {aba('dv', 'Despesa Variável')}
+        {aba('dv', 'Markup')}
         {aba('impostos', 'Impostos')}
         {aba('icms', 'ICMS')}
         {aba('proposta', 'Proposta')}

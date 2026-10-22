@@ -113,3 +113,9 @@
 .delta { display: flex; align-items: center; justify-content: flex-end; gap: 2px; font-size: 11px; font-weight: 600; color: #6b7b72; margin-top: 2px; }
 .deltaBom { color: #1d6b3e; }
 .deltaRuim { color: #b42318; }
+
+/* Controles do topo: empresa, período, receita */
+.controles { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
+.receitaDigitada { width: 170px; }
+/* Diferença sobre a base (mês a mês) */
+.difBase { display: block; font-size: 11px; font-weight: 600; margin-top: 2px; color: #6b7b72; }

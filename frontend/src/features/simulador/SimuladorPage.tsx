@@ -560,7 +560,7 @@ export function SimuladorPage() {
           </div>
           <p style={{ fontSize: 13.5, color: '#6b7b72', lineHeight: 1.6 }}>
             Para precificar, cadastre primeiro uma empresa em <b>Cadastros &gt; Empresas</b> (com a
-            Despesa Variável, os impostos e o markup preenchidos). O preço é calculado a partir dos
+            aba Markup preenchida: impostos, comissão, despesa financeira e lucro). O preço é calculado a partir dos
             dados da empresa.
           </p>
         </div>

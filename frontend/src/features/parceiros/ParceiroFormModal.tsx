@@ -12,6 +12,7 @@ import { Loader2 } from 'lucide-react'
 import { mesclar } from '@/lib/mesclar'
 import { listCategoriasCusto, listVendedores } from '@/features/cadastros/api'
 import { usePlanoContas } from '@/features/planoContas/store'
+import { PlanoContaBusca } from '@/features/planoContas/PlanoContaBusca'
 import { parceiroSchema, emptyParceiro, type ParceiroForm } from './parceiro-schema'
 import {
   FORMAS_PAGAMENTO,
@@ -164,7 +165,7 @@ export function ParceiroFormModal({
   // Cadastros de apoio das abas.
   const { data: categorias } = useQuery({ queryKey: ['categorias-custo'], queryFn: listCategoriasCusto })
   const { data: vendedores } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores, enabled: ehCliente })
-  const { analiticas } = usePlanoContas()
+  const { contas: planoContas } = usePlanoContas()
   const centros = (categorias ?? []).filter((c) => c.status === 'ativo')
   const vendedoresAtivos = (vendedores ?? []).filter((v) => v.status === 'ativo')
 
@@ -593,14 +594,7 @@ export function ParceiroFormModal({
                 label="Conta do plano de contas"
                 hint="As despesas deste fornecedor entram automaticamente nesta conta."
               >
-                <select value={planoContaId} onChange={(e) => setValue('planoContaId', e.target.value)}>
-                  <option value="">Não definida</option>
-                  {analiticas().map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.codigo} · {c.nome}
-                    </option>
-                  ))}
-                </select>
+                <PlanoContaBusca value={planoContaId} onChange={(id) => setValue('planoContaId', id)} contas={planoContas} vazio="Não definida" />
               </Field>
               <div className={`${ui.col4} ${ui.modalNote}`}>
                 Limite de compra por comprador e aprovadores ficam em <b>Parametrizações &gt; Aprovadores e Regras</b> (Regra de
