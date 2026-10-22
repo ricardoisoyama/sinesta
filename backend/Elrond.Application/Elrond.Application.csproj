@@ -13,4 +13,8 @@
     <ProjectReference Include="..\Elrond.Domain\Elrond.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Faixa do ELROND (logo) do e-mail e do PDF do comprovante do Pix. -->
+    <EmbeddedResource Include="Recursos\faixa-elrond.jpg" LogicalName="Elrond.Application.Recursos.faixa-elrond.jpg" />
+  </ItemGroup>
 </Project>

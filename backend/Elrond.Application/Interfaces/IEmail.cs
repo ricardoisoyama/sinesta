@@ -3,7 +3,10 @@ namespace Elrond.Application.Interfaces;
 /// <summary>Servidor SMTP com a senha já aberta (só em memória, na hora do envio).</summary>
 public sealed record ServidorSmtp(string Host, int Porta, string Seguranca, string Usuario, string Senha, string RemetenteNome, string RemetenteEmail, string ResponderPara);
 
-public sealed record MensagemEmail(string Para, string Assunto, string Html, string Texto);
+/// <summary>Arquivo do e-mail. Com <paramref name="IdInline"/>, vai embutido no corpo (src="cid:IdInline"), não como anexo.</summary>
+public sealed record AnexoEmail(string Nome, string Tipo, byte[] Conteudo, string? IdInline = null);
+
+public sealed record MensagemEmail(string Para, string Assunto, string Html, string Texto, IReadOnlyList<AnexoEmail>? Anexos = null);
 
 /// <summary>Envio por SMTP (a biblioteca fica na infraestrutura). Devolve o erro, ou null quando foi.</summary>
 public interface IEnvioSmtp

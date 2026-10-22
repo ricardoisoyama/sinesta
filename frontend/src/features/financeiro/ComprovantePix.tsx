@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Copy, Landmark, Printer } from 'lucide-react'
-import { apiFetch } from '@/lib/api'
+import { Copy, Download, Landmark, Printer } from 'lucide-react'
+import { apiFetch, getErrorMessage } from '@/lib/api'
+import { env } from '@/config/env'
+import { avisar } from '@/features/common/dialogo/dialogo'
 import { formatBRL } from '@/lib/format'
 import ui from '@/features/common/ui.module.css'
 import s from './financeiro.module.css'
@@ -83,6 +85,23 @@ function imprimir(c: ComprovantePixDados) {
   w.document.close()
 }
 
+/** Baixa o PDF do comprovante (o mesmo que vai anexo no e-mail ao favorecido). */
+async function baixarPdf(movimentoId: string, numero: number) {
+  try {
+    const token = localStorage.getItem('token')
+    const res = await fetch(`${env.apiUrl}/financeiro/movimentos/${encodeURIComponent(movimentoId)}/comprovante-pix/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+    if (!res.ok) throw new Error((await res.text()) || 'Não foi possível gerar o PDF.')
+    const url = URL.createObjectURL(await res.blob())
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `comprovante-pix-lancamento-${numero}.pdf`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    void avisar({ titulo: 'Não foi possível baixar o PDF', mensagem: getErrorMessage(e) })
+  }
+}
+
 /** Bloco do comprovante no lançamento pago por Pix pelo ELROND. */
 export function ComprovantePix({ movimentoId }: { movimentoId: string }) {
   const { data: c, isLoading, isError } = useQuery({
@@ -119,10 +138,13 @@ export function ComprovantePix({ movimentoId }: { movimentoId: string }) {
         ))}
       </dl>
       <div className={s.comprovanteAcoes}>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => imprimir(c)}>
-          <Printer /> Imprimir comprovante
+        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void baixarPdf(c.movimentoId, c.numero)}>
+          <Download /> Baixar PDF
         </button>
-        <span className={ui.cellMut}>Na impressão, escolha “Salvar como PDF” para guardar o arquivo.</span>
+        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => imprimir(c)}>
+          <Printer /> Imprimir
+        </button>
+        <span className={ui.cellMut}>O PDF é o mesmo que vai anexo no e-mail ao favorecido.</span>
       </div>
     </section>
   )

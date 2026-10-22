@@ -20,7 +20,19 @@ public sealed class SmtpMailKit(ILogger<SmtpMailKit> log) : IEnvioSmtp
             msg.To.Add(MailboxAddress.Parse(m.Para));
             if (s.ResponderPara.Length > 0) msg.ReplyTo.Add(MailboxAddress.Parse(s.ResponderPara));
             msg.Subject = m.Assunto;
-            msg.Body = new BodyBuilder { HtmlBody = m.Html, TextBody = m.Texto }.ToMessageBody();
+            var corpo = new BodyBuilder { HtmlBody = m.Html, TextBody = m.Texto };
+            foreach (var a in m.Anexos ?? Array.Empty<AnexoEmail>())
+            {
+                var tipo = ContentType.Parse(a.Tipo);
+                if (a.IdInline is { Length: > 0 } cid)
+                {
+                    // Imagem do próprio e-mail (faixa com o logo): embutida, aparece sem "baixar imagens".
+                    var recurso = corpo.LinkedResources.Add(a.Nome, a.Conteudo, tipo);
+                    recurso.ContentId = cid;
+                }
+                else corpo.Attachments.Add(a.Nome, a.Conteudo, tipo);
+            }
+            msg.Body = corpo.ToMessageBody();
 
             using var smtp = new SmtpClient { Timeout = 30_000 };
             var seguranca = s.Seguranca switch

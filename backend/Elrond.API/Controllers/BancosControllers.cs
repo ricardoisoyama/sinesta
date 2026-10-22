@@ -100,6 +100,13 @@ public class ComprovantePixController(PagamentoService pagamentos) : ControllerB
     [HttpGet]
     public async Task<IActionResult> Obter(string id) =>
         await pagamentos.ComprovanteAsync(id) is { } c ? Ok(c) : NotFound("Este lançamento não foi pago por Pix pelo ELROND.");
+
+    /// <summary>O mesmo PDF que vai anexo no e-mail ao favorecido.</summary>
+    [HttpGet("pdf")]
+    public async Task<IActionResult> Pdf(string id) =>
+        await pagamentos.ComprovanteAsync(id) is { } c
+            ? File(ComprovantePdf.Gerar(c), "application/pdf", ComprovanteEmail.NomeDoPdf(c))
+            : NotFound("Este lançamento não foi pago por Pix pelo ELROND.");
 }
 
 /// <summary>

@@ -90,7 +90,15 @@ public sealed class EmailService(
     /// Envio do sistema. SMTP desligado: registra como "desligado" e devolve a falha (quem chamou segue).
     /// Modo piloto: vai para o e-mail de teste, com o destinatário real no assunto.
     /// </summary>
-    public async Task<Result<string>> EnviarAsync(string para, string assunto, string corpoHtml, string corpoTexto, string origem, string origemId, CancellationToken ct = default)
+    public async Task<Result<string>> EnviarAsync(string para, string assunto, string corpoHtml, string corpoTexto, string origem, string origemId, CancellationToken ct = default) =>
+        await EnviarAsync(para, assunto, corpoHtml, corpoTexto, origem, origemId, anexos: null, layoutProprio: false, ct);
+
+    /// <summary>
+    /// Envio com anexos (PDF, imagem embutida). <paramref name="layoutProprio"/>: o HTML já vem montado
+    /// (cabeçalho e rodapé próprios), sem a moldura simples padrão.
+    /// </summary>
+    public async Task<Result<string>> EnviarAsync(string para, string assunto, string corpoHtml, string corpoTexto, string origem, string origemId,
+        IReadOnlyList<AnexoEmail>? anexos, bool layoutProprio, CancellationToken ct = default)
     {
         var c = await configuracoes.GetByIdAsync(ConfiguracaoSmtp.IdPadrao);
         if (c is null || !c.Ativo || c.Host.Length == 0)
@@ -105,7 +113,7 @@ public sealed class EmailService(
             await Registrar(para, destino, assunto, origem, origemId, "falhou", "Destinatário sem e-mail válido.");
             return Result.Failure<string>("O destinatário não tem e-mail válido no cadastro.");
         }
-        var erro = await smtp.EnviarAsync(Servidor(c), new MensagemEmail(destino, titulo, Html(corpoHtml), corpoTexto), ct);
+        var erro = await smtp.EnviarAsync(Servidor(c), new MensagemEmail(destino, titulo, layoutProprio ? corpoHtml : Html(corpoHtml), corpoTexto, anexos), ct);
         await Registrar(para, destino, titulo, origem, origemId, erro is null ? "enviado" : "falhou", erro);
         return erro is null ? Result.Success(destino) : Result.Failure<string>(erro);
     }

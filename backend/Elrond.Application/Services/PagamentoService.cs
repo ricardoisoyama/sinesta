@@ -24,7 +24,8 @@ public sealed record ComprovantePixDto(
     string Banco, string Empresa, string Conta, string Ambiente,
     string IdPix, string CodigoBanco,
     string AgendadoPor, string AgendadoEm, string ConfirmadoComo, string ConfirmadoEm,
-    string EmailSituacao, string EmailPara, string EmailEm);
+    string EmailSituacao, string EmailPara, string EmailEm,
+    string EmpresaCnpj = "");
 
 /// <summary>
 /// Pagamentos pelo banco (piloto: Pix). Para cada lançamento a pagar APROVADO, grava o pagamento
@@ -73,7 +74,8 @@ public sealed class PagamentoService(
             conta?.Nome ?? string.Empty, p.Ambiente,
             p.EndToEnd, p.IdBanco,
             p.CriadoPor, p.CriadoEm, QuemConfirmou(p.ConfirmadaPor), p.ConfirmadaEm,
-            p.EmailSituacao, mailMascarado, p.EmailEm);
+            p.EmailSituacao, mailMascarado, p.EmailEm,
+            empresa?.Cnpj ?? string.Empty);
     }
 
     public async Task<List<PagamentoBancario>> ListarAsync() =>
@@ -272,14 +274,12 @@ public sealed class PagamentoService(
 
     private async Task AvisarFavorecidoAsync(PagamentoBancario p, CancellationToken ct)
     {
-        var quando = p.PagoEm.Length >= 10 && DateTime.TryParse(p.PagoEm, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? d.ToString("dd/MM/yyyy 'às' HH:mm") : relogio.GetLocalNow().ToString("dd/MM/yyyy");
-        var valor = p.Valor.ToString("C", PtBr);
-        var assunto = $"Pagamento efetuado · {valor}";
-        var html = $"<p>Olá, {System.Net.WebUtility.HtmlEncode(p.FavorecidoNome)}.</p>" +
-                   $"<p>Informamos que o pagamento de <b>{valor}</b> foi efetuado por Pix em {quando}.</p>" +
-                   $"<p>Referência: {System.Net.WebUtility.HtmlEncode(p.Descricao)}{(p.EndToEnd.Length > 0 ? $"<br/>Identificador do Pix: {p.EndToEnd}" : string.Empty)}</p>";
-        var texto = $"Olá, {p.FavorecidoNome}. O pagamento de {valor} foi efetuado por Pix em {quando}. Referência: {p.Descricao}." + (p.EndToEnd.Length > 0 ? $" Identificador do Pix: {p.EndToEnd}." : string.Empty);
-        var r = await email.EnviarAsync(p.FavorecidoEmail, assunto, html, texto, "pagamento", p.Id, ct);
+        // O mesmo comprovante da tela (só o que interessa ao favorecido), no corpo e em PDF anexo.
+        var c = await ComprovanteAsync(p.MovimentoId);
+        var aviso = c is null
+            ? ComprovanteEmail.SemComprovante(p)
+            : ComprovanteEmail.Montar(c);
+        var r = await email.EnviarAsync(p.FavorecidoEmail, aviso.Assunto, aviso.Html, aviso.Texto, "pagamento", p.Id, aviso.Anexos, layoutProprio: true, ct);
         p.EmailEm = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
         p.EmailSituacao = r.IsSuccess ? "enviado" : $"não enviado: {r.Error}";
         await pagamentos.UpdateAsync(p.Id, p);
