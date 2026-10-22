@@ -49,6 +49,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/vendedores', label: 'Vendedores', grupo: 'Cadastros' },
   { key: '/cadastros/servicos', label: 'Serviços', grupo: 'Cadastros' },
   { key: '/cadastros/veiculos', label: 'Veículos', grupo: 'Cadastros' },
+  { key: '/cadastros/motoristas', label: 'Motoristas', grupo: 'Cadastros' },
   { key: '/cadastros/apolices', label: 'Apólices de seguro', grupo: 'Cadastros' },
   { key: '/cadastros/fichas-tecnicas', label: 'Ficha Técnica (custos parametrizáveis)', grupo: 'Parametrizações' },
   { key: '/cadastros/campos-operacao', label: 'Dados da Operação (campos da Precificação)', grupo: 'Parametrizações' },
@@ -79,6 +80,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/administrativo/integracoes', label: 'Integrações Bancárias (bancos das empresas: credenciais, certificado, boleto, pagamentos)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/administrativo/smtp', label: 'Integração SMTP (servidor de e-mail do sistema)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/administrativo/modulos', label: 'Módulos do sistema (o que o menu do ambiente mostra)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/pagamento-banco', label: 'Mandar pagamentos (Pix) ao banco pelas Entradas e Saídas (piloto)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 

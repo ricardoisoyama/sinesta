@@ -1,3 +1,6 @@
+import { MotoristasPage } from '@/features/motoristas/MotoristasPage'
+import { ModulosPage } from '@/features/modulos/ModulosPage'
+import { ConvitePage } from '@/features/auth/ConvitePage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from '@/features/auth/protected-route'
@@ -50,6 +53,8 @@ export function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* Convite por e-mail: público (a pessoa ainda não tem senha) */}
+      <Route path="/convite/:token" element={<ConvitePage />} />
 
       {/* Rotas protegidas dentro do layout */}
       <Route element={<ProtectedRoute />}>
@@ -86,6 +91,7 @@ export function App() {
           <Route path="/cadastros/servicos" element={<ServicosPage />} />
           <Route path="/cadastros/tipos-custo" element={<TiposCustoPage />} />
           <Route path="/cadastros/veiculos" element={<VeiculosPage />} />
+          <Route path="/cadastros/motoristas" element={<MotoristasPage />} />
           {/* Provisória, fora do menu: testes de boleto (permissão especial /financeiro/boleto-teste). */}
           <Route path="/boleto" element={<BoletoTestePage />} />
           <Route path="/cadastros/categorias" element={<CategoriasPage />} />
@@ -97,6 +103,7 @@ export function App() {
           {/* Administrativo: só o perfil Suporte (a chave protege a rota no RotaPermitida). */}
           <Route path="/administrativo/integracoes" element={<IntegracoesPage />} />
           <Route path="/administrativo/smtp" element={<SmtpPage />} />
+          <Route path="/administrativo/modulos" element={<ModulosPage />} />
           {/* Cadastros parametrizáveis (fase de layout) */}
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/icms" element={<TabelaIcmsPage />} />

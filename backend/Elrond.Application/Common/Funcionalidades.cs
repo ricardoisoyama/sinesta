@@ -39,6 +39,8 @@ public static class Funcionalidades
         "/cadastros/vendedores",
         "/cadastros/servicos",
         "/cadastros/veiculos",
+        // Motoristas (o menu só aparece se a equipe ELROND ligar o módulo no ambiente).
+        "/cadastros/motoristas",
         // "/cadastros/tipos-custo" saiu em 01/10/2026: os tipos de custo viraram a ficha Tecnologia.
         "/cadastros/categorias",
         "/cadastros/aprovadores",
@@ -93,6 +95,8 @@ public static class Funcionalidades
         "/administrativo/smtp",
         // Piloto: mandar pagamentos (Pix) ao banco pelas Entradas e Saídas.
         "/financeiro/pagamento-banco",
+        // Implantação: quais menus o ambiente mostra (Administrativo › Módulos do sistema).
+        "/administrativo/modulos",
     };
 
     /// <summary>O que pode ficar gravado no cadastro (as administrativas não se gravam: vêm do perfil).</summary>

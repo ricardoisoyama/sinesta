@@ -154,6 +154,7 @@ public static class DependencyInjection
         services.AddSingleton<ICofreSegredos, Elrond.Infrastructure.Email.CofreSegredos>();
         services.AddScoped<EmailService>();
         services.AddScoped<PagamentoService>();
+        services.AddScoped<ConviteService>();
 
         // Validators (FluentValidation)
         services.AddValidatorsFromAssemblyContaining<LoginDtoValidator>();

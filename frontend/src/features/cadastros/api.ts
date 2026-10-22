@@ -1,3 +1,4 @@
+import type { Motorista } from '@/features/motoristas/types'
 import { apiFetch } from '@/lib/api'
 import type { Taxa } from '@/features/taxas/types'
 import type { CustoFixo } from '@/features/custosFixos/types'
@@ -59,12 +60,19 @@ export const enviarCertificadoEmpresa = (id: string, envio: { arquivoBase64: str
 export const removerCertificadoEmpresa = (id: string) => apiFetch<void>(`/empresas/${id}/certificado`, { method: 'DELETE' })
 
 // ── Usuários ────────────────────────────────────────────────────────────────
-export type SalvarUsuario = Omit<Usuario, 'id'> & { senha?: string }
+export type SalvarUsuario = Omit<Usuario, 'id'> & { senha?: string; enviarConvite?: boolean; urlBase?: string }
 export const listUsuarios = () => apiFetch<Usuario[]>('/usuarios')
 export const createUsuario = (u: SalvarUsuario) =>
   apiFetch<Usuario>('/usuarios', { method: 'POST', body: JSON.stringify(u) })
 export const updateUsuario = (id: string, u: SalvarUsuario) =>
   apiFetch<Usuario>(`/usuarios/${id}`, { method: 'PUT', body: JSON.stringify(u) })
+/** Manda (ou reenvia) o convite por e-mail; o link aponta para este endereço do ELROND. */
+export const enviarConviteUsuario = (id: string) =>
+  apiFetch<Usuario>(`/usuarios/${id}/convite`, { method: 'POST', body: JSON.stringify({ urlBase: window.location.origin }) })
+/** Link do convite (público): quem é, e criar a senha. */
+export const abrirConvite = (token: string) => apiFetch<{ nome: string; email: string }>(`/convite/${encodeURIComponent(token)}`)
+export const aceitarConvite = (token: string, senha: string) =>
+  apiFetch<{ email: string }>(`/convite/${encodeURIComponent(token)}`, { method: 'POST', body: JSON.stringify({ senha }) })
 
 // ── Propostas ───────────────────────────────────────────────────────────────
 export const listPropostas = () => apiFetch<Proposta[]>('/propostas')
@@ -157,6 +165,9 @@ export const updateTipoCusto = (t: TipoCustoDto) =>
   apiFetch<TipoCustoDto>(`/tipos-custo/${t.id}`, { method: 'PUT', body: JSON.stringify(t) })
 
 // ── Veículos ────────────────────────────────────────────────────────────────
+export const listMotoristas = () => apiFetch<Motorista[]>('/motoristas')
+export const createMotorista = (m: Motorista) => apiFetch<Motorista>('/motoristas', { method: 'POST', body: JSON.stringify(m) })
+export const updateMotorista = (m: Motorista) => apiFetch<Motorista>(`/motoristas/${m.id}`, { method: 'PUT', body: JSON.stringify(m) })
 export const listVeiculos = () => apiFetch<Veiculo[]>('/veiculos')
 export const createVeiculo = (v: Veiculo) => apiFetch<Veiculo>('/veiculos', { method: 'POST', body: JSON.stringify(v) })
 export const updateVeiculo = (v: Veiculo) => apiFetch<Veiculo>(`/veiculos/${v.id}`, { method: 'PUT', body: JSON.stringify(v) })

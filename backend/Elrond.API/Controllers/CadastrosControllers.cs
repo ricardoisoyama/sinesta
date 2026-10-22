@@ -441,3 +441,57 @@ public class CompromissosController(ICrudRepository<Compromisso> repo, UsuarioCo
         return null;
     }
 }
+
+[Route("api/motoristas")]
+public class MotoristasController(ICrudRepository<Motorista> repo) : CrudControllerBase<Motorista>(repo)
+{
+    /// <summary>CPF só com dígitos e único entre os motoristas ativos.</summary>
+    protected override async Task<string?> AntesDeGravarAsync(Motorista entity)
+    {
+        entity.Normalizar();
+        if (entity.Nome.Length < 2) return "Informe o nome do motorista.";
+        if (entity.Cpf.Length is > 0 and not 11) return "CPF inválido: informe os 11 dígitos.";
+        if (entity.Status == "inativo" || entity.Cpf.Length == 0) return null;
+        var cpf = entity.Cpf;
+        var repetido = (await Repo.ListarAsync(m => m.Cpf == cpf && m.Status != "inativo" && m.Id != entity.Id)).FirstOrDefault();
+        return repetido is null ? null : $"Já existe um motorista ativo com este CPF ({repetido.Nome}).";
+    }
+}
+
+/// <summary>
+/// Menus do ambiente: todo mundo lê (o menu se monta com isso); só a equipe ELROND altera.
+/// </summary>
+[ApiController]
+[Route("api/configuracao-sistema")]
+public class ConfiguracaoSistemaController(ICrudRepository<ConfiguracaoSistema> repo, IAuditoriaService auditoria, UsuarioContexto usuario) : ControllerBase
+{
+    public record SalvarModulosDto(List<string>? MenusDesligados);
+
+    private async Task<ConfiguracaoSistema> AtualAsync() =>
+        await repo.GetByIdAsync(ConfiguracaoSistema.IdPadrao)
+        ?? new ConfiguracaoSistema { MenusDesligados = ConfiguracaoSistema.DesligadosPorPadrao.ToList() };
+
+    [HttpGet]
+    [Authorize]
+    public async Task<IActionResult> Obter() => Ok(new { menusDesligados = (await AtualAsync()).MenusDesligados });
+
+    [HttpPut]
+    [Authorize(Policy = "func:/administrativo/modulos")]
+    public async Task<IActionResult> Salvar([FromBody] SalvarModulosDto dto)
+    {
+        // A tela de módulos nunca se desliga (senão ninguém liga de volta).
+        var desligados = (dto.MenusDesligados ?? new()).Where(p => p.StartsWith('/') && p != "/administrativo/modulos").Distinct().ToList();
+        var existente = await repo.GetByIdAsync(ConfiguracaoSistema.IdPadrao);
+        var antes = existente?.MenusDesligados ?? ConfiguracaoSistema.DesligadosPorPadrao.ToList();
+        if (existente is null) await repo.AddAsync(new ConfiguracaoSistema { MenusDesligados = desligados });
+        else
+        {
+            existente.MenusDesligados = desligados;
+            await repo.UpdateAsync(existente.Id, existente);
+        }
+        var quem = await usuario.QuemAsync();
+        await auditoria.RegistrarAsync("editar", "ConfiguracaoSistema", ConfiguracaoSistema.IdPadrao,
+            $"{quem.Nome} alterou os módulos do menu: desligados {(desligados.Count == 0 ? "nenhum" : string.Join(", ", desligados))}", new { menusDesligados = antes }, new { menusDesligados = desligados });
+        return Ok(new { menusDesligados = desligados });
+    }
+}

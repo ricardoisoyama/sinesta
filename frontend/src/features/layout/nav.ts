@@ -42,6 +42,8 @@ import {
   LayoutTemplate,
   Truck,
   Plug,
+  IdCard,
+  Blocks,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -77,6 +79,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Vendedores', path: '/cadastros/vendedores', icon: UserRound },
       { label: 'Serviços', path: '/cadastros/servicos', icon: Briefcase },
       { label: 'Veículos', path: '/cadastros/veiculos', icon: Truck },
+      // Nasce desligado: a equipe ELROND liga em Administrativo › Módulos do sistema.
+      { label: 'Motoristas', path: '/cadastros/motoristas', icon: IdCard },
       { label: 'Apólices de seguro', path: '/cadastros/apolices', icon: ShieldPlus },
       // Taxas e Seguros e Tipos de Custo ficam ocultos; as rotas continuam existindo.
       // O funcionário é o usuário do portal: cadastro e permissões no mesmo lugar.
@@ -145,6 +149,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Integrações Bancárias', path: '/administrativo/integracoes', icon: Plug },
       // Só o perfil Suporte: servidor de e-mail do ambiente.
       { label: 'Integração SMTP', path: '/administrativo/smtp', icon: Mail },
+      // Só o perfil Suporte: o que o menu deste ambiente mostra.
+      { label: 'Módulos do sistema', path: '/administrativo/modulos', icon: Blocks },
     ],
   },
 ]
@@ -154,11 +160,12 @@ export const navGroups: NavGroup[] = [
  * `perms` = chaves (rotas) liberadas. `null`/`undefined` = libera tudo
  * (fallback quando o usuário logado não está cadastrado).
  */
-export function visibleGroups(perms: string[] | null | undefined): NavGroup[] {
+export function visibleGroups(perms: string[] | null | undefined, desligados: string[] = []): NavGroup[] {
   return navGroups
     .map((g) => ({
       ...g,
-      items: g.items.filter((it) => !perms || it.livre || perms.includes(it.path)),
+      // Desligado em Módulos do sistema some do menu do ambiente inteiro (a tela de módulos nunca).
+      items: g.items.filter((it) => (!perms || it.livre || perms.includes(it.path)) && (it.path === '/administrativo/modulos' || !desligados.includes(it.path))),
     }))
     .filter((g) => g.items.length > 0)
 }

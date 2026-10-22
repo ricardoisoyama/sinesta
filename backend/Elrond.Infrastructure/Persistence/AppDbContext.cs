@@ -84,6 +84,9 @@ public class AppDbContext : DbContext
             e.Property(u => u.Cidade).HasMaxLength(120).HasDefaultValue(string.Empty);
             e.OwnsOne(u => u.Endereco, b => b.ToJson());
             e.OwnsOne(u => u.Banco, b => b.ToJson());
+            e.Property(u => u.ConviteTokenHash).HasMaxLength(64).HasDefaultValue(string.Empty);
+            e.Property(u => u.ConviteEmail).HasMaxLength(300).HasDefaultValue(string.Empty);
+            e.HasIndex(u => u.ConviteTokenHash);
         });
 
         modelBuilder.Entity<PagamentoBancario>(e =>
@@ -476,6 +479,24 @@ public class AppDbContext : DbContext
             e.HasIndex(c => new { c.EmpresaId, c.SeuNumero }).IsUnique();
             e.HasIndex(c => new { c.OrigemTipo, c.OrigemId });
             e.HasIndex(c => c.IdBanco);
+        });
+
+        modelBuilder.Entity<Motorista>(e =>
+        {
+            e.ToTable("motoristas");
+            e.HasKey(m => m.Id);
+            e.Property(m => m.Nome).IsRequired().HasMaxLength(160);
+            e.Property(m => m.Cpf).HasMaxLength(14);
+            e.HasIndex(m => m.Cpf);
+            e.OwnsOne(m => m.Endereco, b => b.ToJson());
+            e.OwnsMany(m => m.Referencias, b => b.ToJson());
+        });
+
+        modelBuilder.Entity<ConfiguracaoSistema>(e =>
+        {
+            e.ToTable("configuracao_sistema");
+            e.HasKey(c => c.Id);
+            e.Property(c => c.MenusDesligados).HasColumnType("text[]");
         });
 
         modelBuilder.Entity<Veiculo>(e =>

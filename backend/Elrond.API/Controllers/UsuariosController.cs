@@ -2,6 +2,7 @@ using Elrond.API.Security;
 using Elrond.Application.Common;
 using Elrond.Application.DTOs;
 using Elrond.Application.Interfaces;
+using Elrond.Application.Services;
 using Elrond.Domain.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,14 +27,18 @@ public class UsuariosController : ControllerBase
     private readonly IPasswordHasher _hasher;
     private readonly UsuarioContexto _usuario;
     private readonly IAuditoriaService _auditoria;
+    private readonly ConviteService _convite;
 
-    public UsuariosController(IUsuarioRepository repo, IPasswordHasher hasher, UsuarioContexto usuario, IAuditoriaService auditoria)
+    public UsuariosController(IUsuarioRepository repo, IPasswordHasher hasher, UsuarioContexto usuario, IAuditoriaService auditoria, ConviteService convite)
     {
         _repo = repo;
         _hasher = hasher;
         _usuario = usuario;
         _auditoria = auditoria;
+        _convite = convite;
     }
+
+    private static string Iso(DateTime? d) => d is { } x ? DateTime.SpecifyKind(x, DateTimeKind.Utc).ToString("o") : string.Empty;
 
     /// <summary>Retrato do usuário para a trilha (sem hash de senha).</summary>
     private static object Retrato(User u) => new
@@ -46,7 +51,9 @@ public class UsuariosController : ControllerBase
 
     private static UsuarioDto ToDto(User u) =>
         new(u.Id.ToString(), u.Name, u.Email, u.Perfil, u.Permissoes, u.Ativo ? "ativo" : "inativo",
-            u.Cargo, u.Departamento, u.Cpf, u.Rg, u.Telefone, u.DataAdmissao, u.Cidade, u.Endereco, u.Banco);
+            u.Cargo, u.Departamento, u.Cpf, u.Rg, u.Telefone, u.DataAdmissao, u.Cidade, u.Endereco, u.Banco,
+            ConviteService.Situacao(u, DateTime.UtcNow), Iso(u.ConviteEnviadoEm), Iso(u.ConviteClicadoEm), Iso(u.ConviteAceitoEm),
+            u.ConviteEmail.StartsWith("não enviado", StringComparison.Ordinal) ? u.ConviteEmail : string.Empty);
 
     private static void AplicarDadosPessoais(User user, SalvarUsuarioDto dto)
     {
@@ -72,16 +79,25 @@ public class UsuariosController : ControllerBase
     public async Task<IActionResult> Create([FromBody] SalvarUsuarioDto dto)
     {
         if (await ValidarAsync(dto, atual: null) is { } erro) return BadRequest(erro);
-        if (string.IsNullOrWhiteSpace(dto.Senha))
-            return BadRequest($"Informe a senha inicial (mínimo {SenhaMinima} caracteres).");
+        // Convite: a pessoa cria a própria senha pelo link do e-mail; sem convite, a senha inicial é obrigatória.
+        if (!dto.EnviarConvite && string.IsNullOrWhiteSpace(dto.Senha))
+            return BadRequest($"Informe a senha inicial (mínimo {SenhaMinima} caracteres) ou mande o convite por e-mail.");
+        if (dto.EnviarConvite && ConviteService.Base(dto.UrlBase) is null)
+            return BadRequest("Endereço do sistema inválido para o link do convite.");
         if (await EmailEmUsoAsync(dto.Email, ignorarId: null))
             return BadRequest("Já existe um usuário com este e-mail.");
 
-        var user = new User(dto.Email, dto.Nome, _hasher.Hash(dto.Senha),
+        var senha = dto.EnviarConvite ? ConviteService.SenhaDeQuemFoiConvidado() : dto.Senha!;
+        var user = new User(dto.Email, dto.Nome, _hasher.Hash(senha),
             dto.Perfil, PermissoesConhecidas(dto.Permissoes), dto.Status != "inativo");
         AplicarDadosPessoais(user, dto);
         await _repo.AddAsync(user);
         await _auditoria.RegistrarAsync("criar", "Usuario", user.Id.ToString(), $"Usuário \"{user.Name}\" ({user.Email}) criado como {user.Perfil}");
+        if (dto.EnviarConvite)
+        {
+            // Cadastro gravado mesmo se o e-mail falhar: a lista mostra "não enviado" e dá para reenviar.
+            await _convite.EnviarAsync(user, dto.UrlBase, await _usuario.QuemAsync());
+        }
         return Ok(ToDto(user));
     }
 
@@ -118,6 +134,21 @@ public class UsuariosController : ControllerBase
         await _auditoria.RegistrarAsync("editar", "Usuario", user.Id.ToString(),
             $"Usuário \"{user.Name}\" alterado" + (trocouSenha ? " (senha redefinida)" : string.Empty), antes, Retrato(user));
         return Ok(ToDto(user));
+    }
+
+    /// <summary>Manda (ou reenvia) o convite por e-mail: link novo, o anterior deixa de valer.</summary>
+    [HttpPost("{id}/convite")]
+    public async Task<IActionResult> EnviarConvite(string id, [FromBody] EnviarConviteDto dto)
+    {
+        var user = await _repo.GetByIdAsync(id);
+        if (user is null) return NotFound();
+        // Mesmas regras de quem pode mexer no cadastro dele.
+        if (user.Perfil == Perfis.Admin && !await _usuario.EhAdminAsync())
+            return BadRequest("Este é um usuário de suporte da equipe ELROND: o convite não pode ser mandado por aqui.");
+        if (user.Perfil == "Gestor" && !await _usuario.EhGestorAsync() && !await _usuario.EhAdminAsync())
+            return BadRequest("Só um gestor pode convidar outro gestor.");
+        var r = await _convite.EnviarAsync(user, dto.UrlBase, await _usuario.QuemAsync());
+        return r.IsSuccess ? Ok(ToDto(r.Value!)) : BadRequest(r.Error);
     }
 
     /// <summary>Regras comuns a criar/editar. Devolve a mensagem do problema ou null.</summary>

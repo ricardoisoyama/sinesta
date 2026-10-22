@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Plus, UserRound } from 'lucide-react'
+import { Mail, Plus, UserRound } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
@@ -9,12 +9,23 @@ import type { Column } from '@/features/common/DataTable'
 import { LARGURA } from '@/features/common/grid'
 import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
+import { useQueryClient } from '@tanstack/react-query'
+import { enviarConviteUsuario } from '@/features/cadastros/api'
 import { useUsuarios } from './store'
 import { UsuarioFormModal } from './UsuarioFormModal'
 import { useAuth } from '@/features/auth/auth-context'
 import { FUNCIONALIDADES_CONCEDIVEIS } from './funcionalidades'
 import { rotuloPerfil, temPoderDeGestor, type Usuario } from './types'
 import type { UsuarioForm } from './usuario-schema'
+
+const ROTULO_CONVITE: Record<string, string> = {
+  enviado: 'Convite enviado',
+  'nao-enviado': 'Convite não enviado',
+  clicou: 'Abriu o link',
+  aceito: 'Ativo (criou a senha)',
+  expirado: 'Convite expirado',
+}
+const dataHora = (iso: string) => new Date(iso).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
 
 function iniciais(nome: string) {
   const p = nome.trim().split(/\s+/)
@@ -43,11 +54,30 @@ export function UsuariosPage() {
   const openEdit = (u: Usuario) => { setEditing(u); setModalOpen(true) }
   const close = () => { setEditing(null); setModalOpen(false) }
 
+  const qc = useQueryClient()
+  const [reenviando, setReenviando] = useState<string | null>(null)
+  const reenviar = async (u: Usuario) => {
+    setReenviando(u.id)
+    try {
+      await enviarConviteUsuario(u.id)
+      void avisar({ titulo: 'Convite enviado', mensagem: `Mandamos um link novo para ${u.email}. O anterior deixou de valer.` })
+    } catch (err) {
+      void avisar({ titulo: 'Não foi possível mandar o convite', mensagem: getErrorMessage(err) })
+    } finally {
+      setReenviando(null)
+      void qc.invalidateQueries({ queryKey: ['usuarios'] })
+    }
+  }
+
   const save = async (data: UsuarioForm) => {
     setSaveError(null)
     try {
       if (editing) await update(editing.id, data)
-      else await add({ ...data, id: crypto.randomUUID() })
+      else {
+        const criado = await add({ ...data, id: crypto.randomUUID() })
+        if (data.enviarConvite && criado?.convite === 'nao-enviado')
+          void avisar({ titulo: 'Cadastro feito, convite não enviado', mensagem: `${criado.conviteErro || 'O e-mail não saiu.'} Confira a Integração SMTP e use "Reenviar convite" na lista.` })
+      }
     } catch (err) {
       setSaveError(getErrorMessage(err))
       return
@@ -111,13 +141,41 @@ export function UsuariosPage() {
         </span>
       ),
     },
+    {
+      header: 'Convite',
+      largura: LARGURA.media,
+      valor: (u) => ROTULO_CONVITE[u.convite ?? ''] ?? '',
+      cell: (u) => {
+        const c = u.convite ?? ''
+        if (!c) return <span className={ui.cellMut}>—</span>
+        const quando = c === 'aceito' ? u.conviteAceitoEm : c === 'clicou' ? u.conviteClicadoEm : u.conviteEnviadoEm
+        return (
+          <div title={c === 'nao-enviado' ? u.conviteErro : undefined}>
+            <span className={`${ui.badge} ${c === 'aceito' ? ui.badgeOk : c === 'nao-enviado' || c === 'expirado' ? ui.badgeErr : ui.badgeInfo}`}>{ROTULO_CONVITE[c]}</span>
+            {quando && <div className={ui.cellMut}>{dataHora(quando)}</div>}
+          </div>
+        )
+      },
+    },
     { header: 'Status', largura: LARGURA.status, valor: (u) => u.status, cell: (u) => <StatusBadge status={u.status} /> },
     {
       header: 'Ações',
       fixa: true,
-      largura: LARGURA.acoes,
+      largura: LARGURA.acoes + 34,
       className: ui.colActions,
       cell: (u) => (
+        <>
+        {u.status === 'ativo' && u.convite !== 'aceito' && (souAdmin || u.perfil !== 'Admin') && (
+          <button
+            type="button"
+            className={ui.iconBtn}
+            title={u.convite ? 'Reenviar convite (link novo; o anterior deixa de valer)' : 'Mandar convite por e-mail'}
+            disabled={reenviando === u.id}
+            onClick={() => void reenviar(u)}
+          >
+            <Mail />
+          </button>
+        )}
         <RowActions
           status={u.status}
           onEdit={() => openEdit(u)}
@@ -126,6 +184,7 @@ export function UsuariosPage() {
           podeEditar={souAdmin || u.perfil !== 'Admin'}
           motivoBloqueio="Usuário de suporte da equipe ELROND"
         />
+        </>
       ),
     },
   ]

@@ -1,0 +1,17 @@
+/* Página do convite (pública): criar a senha e entrar */
+.fundo { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #143d18; padding: 24px 16px; }
+.cartao { width: 100%; max-width: 400px; background: #fff; border-radius: 16px; padding: 28px 26px; box-shadow: 0 24px 60px -24px rgba(0, 0, 0, 0.45); }
+.marca { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; letter-spacing: 1px; color: #e8702f; font-size: 13px; margin-bottom: 14px; }
+.titulo { font-size: 22px; color: #143d18; margin: 0 0 6px; text-wrap: balance; }
+.texto { font-size: 14px; color: #4a5a50; line-height: 1.5; margin: 0 0 16px; }
+.form { display: flex; flex-direction: column; }
+.rotulo { font-size: 12px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; color: #6b7b72; margin: 10px 0 6px; }
+.senha { display: flex; align-items: center; border: 1px solid #d7d3ca; border-radius: 10px; padding: 0 10px; height: 42px; }
+.senha:focus-within { border-color: #1a4d1e; box-shadow: 0 0 0 3px rgba(26, 77, 30, 0.12); }
+.senha input { flex: 1; min-width: 0; border: none; outline: none; font: inherit; font-size: 14px; background: transparent; }
+.senha button { border: none; background: none; color: #6b7b72; cursor: pointer; display: inline-flex; }
+.erro { color: #c0392b; font-size: 13px; margin: 10px 0 0; }
+.botao { margin-top: 18px; height: 44px; border: none; border-radius: 10px; background: #e8702f; color: #fff; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.botao:disabled { opacity: 0.7; cursor: default; }
+.botao:focus-visible, .botaoSec:focus-visible { outline: 3px solid rgba(232, 112, 47, 0.4); outline-offset: 2px; }
+.botaoSec { height: 40px; border: 1px solid #d7d3ca; border-radius: 10px; background: #fff; color: #143d18; font: inherit; font-weight: 600; cursor: pointer; padding: 0 16px; }

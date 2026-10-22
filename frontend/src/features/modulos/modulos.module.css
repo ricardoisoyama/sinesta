@@ -1,0 +1,17 @@
+/* Administrativo › Módulos do sistema */
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.grupoTitulo { font-size: 11px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: #e8702f; padding: 14px 16px 8px; border-bottom: 1px solid #ede6d8; }
+.lista { list-style: none; margin: 0; padding: 4px 0; }
+.item { display: flex; align-items: center; gap: 10px; padding: 9px 16px; border-bottom: 1px solid #f4f2ec; }
+.item:last-child { border-bottom: none; }
+.desligado { background: #faf9f5; }
+.desligado b { color: #9aa39b; text-decoration: line-through; }
+.icone { color: #1a4d1e; flex-shrink: 0; }
+.desligado .icone { color: #b9bfb8; }
+.texto { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.texto b { font-size: 13px; color: #143d18; }
+.texto small { font-size: 11.5px; color: #6b7b72; display: flex; align-items: flex-start; gap: 4px; line-height: 1.35; }
+.aviso { color: #b5651d !important; }
+.chave { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #4a5a50; cursor: pointer; white-space: nowrap; }
+.chave input { width: 16px; height: 16px; accent-color: #1a4d1e; cursor: pointer; }
+.chave input:disabled { cursor: default; }

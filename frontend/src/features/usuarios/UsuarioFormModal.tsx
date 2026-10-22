@@ -77,6 +77,8 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
     )
   }, [open, initial, reset])
 
+  const enviarConvite = useWatch({ control, name: 'enviarConvite' })
+
   const trocarPerfil = (p: Perfil) => {
     setValue('perfil', p)
     // As especiais que já estavam ligadas continuam: são independentes do perfil.
@@ -104,9 +106,10 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
   }
 
   const submit = handleSubmit((data) => {
-    // No cadastro a senha é obrigatória (mín. 8, igual ao servidor). Na edição, em branco = manter.
+    // No cadastro a senha é obrigatória (mín. 8, igual ao servidor), a não ser que vá o convite. Na edição, em branco = manter.
     const senha = data.senha.trim()
-    if ((!initial && senha.length < 8) || (initial && senha.length > 0 && senha.length < 8)) {
+    const convidando = !initial && data.enviarConvite
+    if ((!initial && !convidando && senha.length < 8) || (senha.length > 0 && senha.length < 8)) {
       setError('senha', { message: 'Defina uma senha de ao menos 8 caracteres.' })
       return
     }
@@ -157,6 +160,15 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
                 <option value="Colaborador">Colaborador (acesso restrito)</option>
               </select>
             </Field>
+            {!initial && (
+              <div className={ui.col4}>
+                <label className={ui.checkItem}>
+                  <input type="checkbox" {...register('enviarConvite')} />
+                  Mandar convite por e-mail: a pessoa recebe um link e cria a própria senha
+                </label>
+              </div>
+            )}
+            {(initial || !enviarConvite) && (
             <Field
               className={ui.col2}
               label={initial ? 'Nova senha' : 'Senha'}
@@ -181,6 +193,7 @@ export function UsuarioFormModal({ open, initial, error, onClose, onSave }: Prop
                 </button>
               </div>
             </Field>
+            )}
           </div>
         </section>
 

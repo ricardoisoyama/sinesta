@@ -11,6 +11,8 @@ export const usuarioSchema = z.object({
   status: z.enum(['ativo', 'inativo']),
   /** No cadastro é obrigatória (validada no modal); na edição, em branco = manter. */
   senha: z.string(),
+  /** Só no cadastro: manda o convite por e-mail e a pessoa cria a própria senha. */
+  enviarConvite: z.boolean(),
 
   cargo: z.string(),
   departamento: z.string(),
@@ -32,6 +34,7 @@ export const emptyUsuario: UsuarioForm = {
   permissoes: PERFIL_PRESET.Colaborador,
   status: 'ativo',
   senha: '',
+  enviarConvite: true,
   cargo: '',
   departamento: '',
   cpf: '',

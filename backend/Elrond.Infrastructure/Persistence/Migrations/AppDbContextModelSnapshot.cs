@@ -1147,6 +1147,44 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("configuracoes_fiscais", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.ConfiguracaoSistema", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.PrimitiveCollection<List<string>>("MenusDesligados")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("configuracao_sistema", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.ConfiguracaoSmtp", b =>
                 {
                     b.Property<string>("Id")
@@ -2721,6 +2759,120 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("modelos_proposta", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.Motorista", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CategoriaCnh")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Cpf")
+                        .IsRequired()
+                        .HasMaxLength(14)
+                        .HasColumnType("character varying(14)");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataEmissaoRg")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("DataNascimento")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<string>("NomeMae")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NomePai")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("NumeroCnh")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Observacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PrimeiraHabilitacao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("RegistroCnh")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Rg")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Telefone")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ValidadeCnh")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Vinculo")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Cpf");
+
+                    b.ToTable("motoristas", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.Movimento", b =>
                 {
                     b.Property<string>("Id")
@@ -4056,6 +4208,32 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(120)")
                         .HasDefaultValue("");
 
+                    b.Property<DateTime?>("ConviteAceitoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ConviteClicadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConviteEmail")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasDefaultValue("");
+
+                    b.Property<DateTime?>("ConviteEnviadoEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ConviteExpiraEm")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConviteTokenHash")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("Cpf")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -4108,6 +4286,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ConviteTokenHash");
 
                     b.HasIndex("Email")
                         .IsUnique();
@@ -6016,6 +6196,72 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Paginas");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Motorista", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.ContatoReferencia", "Referencias", b1 =>
+                        {
+                            b1.Property<string>("MotoristaId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.Property<string>("Telefone")
+                                .IsRequired();
+
+                            b1.HasKey("MotoristaId", "__synthesizedOrdinal");
+
+                            b1.ToTable("motoristas");
+
+                            b1
+                                .ToJson("Referencias")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("MotoristaId");
+                        });
+
+                    b.OwnsOne("Elrond.Domain.Entities.Endereco", "Endereco", b1 =>
+                        {
+                            b1.Property<string>("MotoristaId");
+
+                            b1.Property<string>("Bairro")
+                                .IsRequired();
+
+                            b1.Property<string>("Cep")
+                                .IsRequired();
+
+                            b1.Property<string>("Complemento")
+                                .IsRequired();
+
+                            b1.Property<string>("Estado")
+                                .IsRequired();
+
+                            b1.Property<string>("Logradouro")
+                                .IsRequired();
+
+                            b1.Property<string>("Numero")
+                                .IsRequired();
+
+                            b1.HasKey("MotoristaId");
+
+                            b1.ToTable("motoristas");
+
+                            b1
+                                .ToJson("Endereco")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("MotoristaId");
+                        });
+
+                    b.Navigation("Endereco");
+
+                    b.Navigation("Referencias");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.Movimento", b =>

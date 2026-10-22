@@ -1,3 +1,4 @@
+import { useMenusDesligados } from '@/features/modulos/api'
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ChevronsLeft, ChevronDown } from 'lucide-react'
@@ -35,7 +36,8 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
   useParticleField(bgRef, asideRef, SIDEBAR_PARTICLES)
   useSunOrbit(sunRef)
 
-  const groups = visibleGroups(user?.permissoes)
+  const desligados = useMenusDesligados(!!user)
+  const groups = visibleGroups(user?.permissoes, desligados)
   // Versão publicada neste ambiente (a mesma que o deploy confere em todos os ambientes).
   const { data: saude } = useQuery({
     queryKey: ['saude'],

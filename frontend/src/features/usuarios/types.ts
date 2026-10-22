@@ -40,4 +40,12 @@ export interface Usuario {
   endereco?: Endereco | null
   /** Conta para pagamento (salário, reembolso). */
   banco?: DadosBancarios | null
+
+  // ── Convite por e-mail (vem do servidor) ─────────────────────
+  /** "" sem convite · enviado · nao-enviado · clicou (abriu o link) · aceito (criou a senha) · expirado. */
+  convite?: '' | 'enviado' | 'nao-enviado' | 'clicou' | 'aceito' | 'expirado'
+  conviteEnviadoEm?: string
+  conviteClicadoEm?: string
+  conviteAceitoEm?: string
+  conviteErro?: string
 }

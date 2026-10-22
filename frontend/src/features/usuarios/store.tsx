@@ -10,7 +10,7 @@ const KEY = ['usuarios']
  * de propósito: antes, campo novo do formulário (endereço, banco) ficava de fora e não era salvo.
  */
 // eslint-disable-next-line react-refresh/only-export-components
-export const toSalvar = (u: Omit<Usuario, 'id'> & { id?: string; senha?: string }): SalvarUsuario => {
+export const toSalvar = (u: Omit<Usuario, 'id'> & { id?: string; senha?: string; enviarConvite?: boolean }): SalvarUsuario => {
   const dados = { ...u }
   delete dados.id
   return dados
@@ -36,7 +36,7 @@ export function useUsuarios() {
 
   return {
     usuarios,
-    add: (u: Usuario & { senha?: string }) => addM.mutateAsync(toSalvar(u)),
+    add: (u: Usuario & { senha?: string; enviarConvite?: boolean }) => addM.mutateAsync({ ...toSalvar(u), urlBase: window.location.origin }),
     update: (id: string, patch: Partial<Usuario> & { senha?: string }) => {
       const cur = usuarios.find((x) => x.id === id)
       if (!cur) return Promise.resolve()

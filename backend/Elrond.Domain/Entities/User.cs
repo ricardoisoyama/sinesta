@@ -29,6 +29,18 @@ public class User
     /// <summary>Conta para pagamento (salário, reembolso).</summary>
     public DadosBancarios? Banco { get; private set; }
 
+    // ── Convite por e-mail: a pessoa cria a própria senha pelo link ───────────
+    /// <summary>SHA-256 do token do link (o token em si só vai no e-mail). Vazio = sem convite aberto.</summary>
+    public string ConviteTokenHash { get; private set; } = string.Empty;
+    public DateTime? ConviteExpiraEm { get; private set; }
+    public DateTime? ConviteEnviadoEm { get; private set; }
+    /// <summary>"enviado" ou "não enviado: motivo" (o servidor de e-mail aceitou ou não).</summary>
+    public string ConviteEmail { get; private set; } = string.Empty;
+    /// <summary>Primeira vez que o link foi aberto.</summary>
+    public DateTime? ConviteClicadoEm { get; private set; }
+    /// <summary>Quando a pessoa criou a senha pelo convite.</summary>
+    public DateTime? ConviteAceitoEm { get; private set; }
+
     private User() { } // EF Core
 
     public User(string email, string name, string passwordHash, string perfil, IEnumerable<string> permissoes, bool ativo = true)
@@ -76,4 +88,31 @@ public class User
 
     /// <summary>Define uma nova senha (já com hash).</summary>
     public void DefinirSenha(string passwordHash) => PasswordHash = passwordHash;
+
+    /// <summary>Abre um convite novo (o anterior deixa de valer).</summary>
+    public void AbrirConvite(string tokenHash, DateTime expiraEm)
+    {
+        ConviteTokenHash = tokenHash;
+        ConviteExpiraEm = expiraEm;
+        ConviteClicadoEm = null;
+        ConviteAceitoEm = null;
+        ConviteEmail = string.Empty;
+    }
+
+    public void RegistrarEnvioConvite(string situacao, DateTime em)
+    {
+        ConviteEmail = situacao.Length > 300 ? situacao[..300] : situacao;
+        ConviteEnviadoEm = em;
+    }
+
+    public void RegistrarCliqueConvite(DateTime em) => ConviteClicadoEm ??= em;
+
+    /// <summary>A pessoa criou a senha: o link deixa de valer.</summary>
+    public void AceitarConvite(string passwordHash, DateTime em)
+    {
+        PasswordHash = passwordHash;
+        ConviteAceitoEm = em;
+        ConviteTokenHash = string.Empty;
+        ConviteExpiraEm = null;
+    }
 }
