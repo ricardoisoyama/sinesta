@@ -209,7 +209,7 @@ export function CustosFixosPage() {
     },
     {
       header: 'Tipo',
-      largura: LARGURA.curta,
+      largura: LARGURA.status + 30,
       valor: (c) => (c.tipo === 'spot' ? 'Spot' : 'Recorrente'),
       // A vigência (início e término) fica no cadastro; aqui só o tipo e o aviso de fora da DF.
       cell: (c) => (

@@ -111,7 +111,7 @@ export function IntegracoesPage() {
     },
     {
       header: 'Certificado',
-      largura: LARGURA.data,
+      largura: LARGURA.dataHora,
       valor: (l) => l.integracao?.certificadoValidoAte ?? '',
       cell: (l) => {
         if (!l.integracao) return <span className={ui.cellMut}>—</span>

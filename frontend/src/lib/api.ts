@@ -46,14 +46,8 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
 
   if (!res.ok) {
     sessaoExpirou(path, res)
-    let message = 'Ocorreu um erro inesperado.'
-    try {
-      const data = (await res.json()) as { detail?: string; message?: string; title?: string }
-      message = data.detail ?? data.message ?? data.title ?? message
-    } catch {
-      /* corpo vazio ou não-JSON */
-    }
-    throw new ApiError(res.status, message)
+    // O servidor responde ProblemDetails (JSON) ou a mensagem em texto puro (BadRequest("...")): as duas valem.
+    throw new ApiError(res.status, await mensagemDeErro(res))
   }
 
   if (res.status === 204) return undefined as T

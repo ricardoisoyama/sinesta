@@ -123,7 +123,7 @@ export function UsuariosPage() {
     },
     {
       header: 'Perfil',
-      largura: LARGURA.curta,
+      largura: LARGURA.status + 30,
       valor: (u) => rotuloPerfil(u.perfil),
       cell: (u) => (
         <span className={`${ui.badge} ${u.perfil === 'Admin' ? ui.badgeInfo : u.perfil === 'Gestor' ? ui.badgeOk : ui.badgeOff}`}>
@@ -165,11 +165,11 @@ export function UsuariosPage() {
       className: ui.colActions,
       cell: (u) => (
         <>
-        {u.status === 'ativo' && u.convite !== 'aceito' && (souAdmin || u.perfil !== 'Admin') && (
+        {u.status === 'ativo' && !!u.convite && u.convite !== 'aceito' && (souAdmin || u.perfil !== 'Admin') && (
           <button
             type="button"
             className={ui.iconBtn}
-            title={u.convite ? 'Reenviar convite (link novo; o anterior deixa de valer)' : 'Mandar convite por e-mail'}
+            title="Reenviar convite (link novo; o anterior deixa de valer)"
             disabled={reenviando === u.id}
             onClick={() => void reenviar(u)}
           >

@@ -74,7 +74,7 @@ export const LARGURA = {
   media: 160,
   longa: 220,
   documento: 168,
-  rastro: 170,
+  rastro: 215,
   /** Ações de linha com até 2 ícones; cada ícone a mais soma LARGURA_ICONE. */
   acoes: 96,
 } as const

@@ -61,7 +61,7 @@ export function ContratosPage() {
         </div>
       ),
     },
-    { header: 'Modalidade', largura: LARGURA.curta, valor: (c) => (c.modalidade === 'spot' ? 'Spot' : 'Recorrente'), cell: (c) => <BadgeModalidade modalidade={c.modalidade} /> },
+    { header: 'Modalidade', largura: LARGURA.status + 30, valor: (c) => (c.modalidade === 'spot' ? 'Spot' : 'Recorrente'), cell: (c) => <BadgeModalidade modalidade={c.modalidade} /> },
     {
       header: 'Vigência',
       largura: LARGURA.media,

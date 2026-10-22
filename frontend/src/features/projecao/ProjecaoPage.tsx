@@ -479,15 +479,16 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
 }
 
 /** Diferença sobre a base, embaixo do valor (só quando mudou). */
-function DifBase({ v, b, menorMelhor, txt = formatBRL }: { v: number; b?: number; menorMelhor?: boolean; txt?: (n: number) => string }) {
+function DifBase({ v, b, menorMelhor, txt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }: { v: number; b?: number; menorMelhor?: boolean; txt?: (n: number) => string }) {
   if (b === undefined || Math.abs(v - b) < 0.005) return null
   const bom = menorMelhor ? v < b : v > b
-  return <small className={`${s.difBase} ${bom ? s.bom : s.ruim}`}>{v > b ? '↑' : '↓'} {txt(Math.abs(v - b))} da base</small>
+  return <small className={`${s.difBase} ${bom ? s.bom : s.ruim}`} title="Diferença para a base">{v > b ? '↑' : '↓'} {txt(Math.abs(v - b))}</small>
 }
 
 function TabelaMeses({ linhas, base }: { linhas: LinhaMes[]; base?: LinhaMes[] }) {
   return (
     <div className={ui.tableScroll}>
+      {base && <p className={s.nota}>Embaixo de cada valor que mudou: a diferença para a base (verde melhora, vermelho piora).</p>}
       <table className={`${ui.table} ${s.tabela}`}>
         <thead>
           <tr>

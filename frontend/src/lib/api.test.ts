@@ -19,9 +19,17 @@ describe('apiFetch', () => {
   it('lança ApiError em caso de erro', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn(async () => ({ ok: false, status: 401, json: async () => ({ message: 'falhou' }) }) as unknown as Response),
+      vi.fn(async () => ({ ok: false, status: 401, text: async () => JSON.stringify({ message: 'falhou' }) }) as unknown as Response),
     )
     await expect(apiFetch('/teste')).rejects.toBeInstanceOf(ApiError)
+  })
+
+  it('mostra a mensagem do servidor também quando vem em texto puro (BadRequest("..."))', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: false, status: 400, text: async () => 'Convite não encontrado.' }) as unknown as Response),
+    )
+    await expect(apiFetch('/teste')).rejects.toMatchObject({ status: 400, message: 'Convite não encontrado.' })
   })
 
   it('injeta o header Authorization quando há token', async () => {
