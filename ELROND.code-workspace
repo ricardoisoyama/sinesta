@@ -1,7 +1,12 @@
 {
 	"folders": [
 		{
+			"name": "ELROND",
 			"path": "."
+		},
+		{
+			"name": "EREBOR",
+			"path": "../EREBOR"
 		}
 	],
 	"settings": {}
