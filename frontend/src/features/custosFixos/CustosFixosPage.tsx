@@ -223,7 +223,7 @@ export function CustosFixosPage() {
     },
     {
       header: 'Plano de contas',
-      largura: LARGURA.media,
+      largura: LARGURA.longa,
       valor: (c) => (c.planoContaId ? nomePlanoConta(c.planoContaId) : ''),
       cell: (c) => (
         <span className={`${ui.cellMut} ${ui.umaLinha}`} title={c.planoContaId ? nomePlanoConta(c.planoContaId) : undefined}>

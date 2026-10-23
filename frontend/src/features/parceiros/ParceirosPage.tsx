@@ -184,7 +184,8 @@ export function ParceirosPage({ recurso, titulo, subtitulo, botao, singular, ico
     },
     {
       header: 'Cidade',
-      largura: LARGURA.media,
+      // "São Caetano do Sul - SP" cabe inteiro.
+      largura: LARGURA.media + 30,
       valor: (p) => (p.externo ? `${p.cidade} ${p.pais ?? ''}` : p.cidade),
       cell: (p) => <span className={ui.cellMut}>{p.externo ? [p.cidade, p.pais].filter(Boolean).join(', ') || 'Exterior' : p.cidade || '—'}</span>,
     },

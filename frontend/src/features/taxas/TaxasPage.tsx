@@ -77,7 +77,7 @@ export function TaxasPage() {
     },
     {
       header: 'Tipo',
-      largura: LARGURA.curta,
+      largura: LARGURA.media,
       valor: (t) => (t.tipo === 'percentual' ? 'Percentual (NF)' : 'Valor fixo'),
       cell: (t) => (
         <span className={ui.cellMut}>{t.tipo === 'percentual' ? 'Percentual (NF)' : 'Valor fixo'}</span>
@@ -85,7 +85,7 @@ export function TaxasPage() {
     },
     {
       header: 'Valor',
-      largura: LARGURA.valor,
+      largura: LARGURA.media,
       className: ui.right,
       valor: (t) => (t.tipo === 'percentual' ? formatPct(t.valor) : formatBRL(t.valor)),
       cell: (t) => (

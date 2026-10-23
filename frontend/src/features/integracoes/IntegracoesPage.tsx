@@ -105,7 +105,8 @@ export function IntegracoesPage() {
     },
     {
       header: 'Recursos',
-      largura: LARGURA.longa,
+      // Os três recursos lado a lado (cobrança, extrato, pagamentos) cabem sem corte.
+      largura: LARGURA.longa + 130,
       valor: (l) => l.integracao?.recursos.map((r) => ROTULO_RECURSO[r]).join(', ') ?? '',
       cell: (l) => <span className={ui.cellMut}>{l.integracao?.recursos.map((r) => ROTULO_RECURSO[r]).join(' · ') || '—'}</span>,
     },

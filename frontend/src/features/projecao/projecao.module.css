@@ -19,7 +19,8 @@
 .kpi { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 13px 15px; box-shadow: 0 1px 2px rgba(20, 61, 24, 0.04); min-width: 0; }
 .kpiRotulo { display: flex; align-items: flex-start; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; line-height: 1.35; }
 .kpiRotulo svg { flex-shrink: 0; margin-top: 1px; }
-.kpiValor { font-size: 21px; font-weight: 700; color: #143d18; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Diminui em tela estreita: R$ 6.000.000,00 cabe no cartão em 1366 px. */
+.kpiValor { font-size: clamp(16px, 1.35vw, 21px); font-weight: 700; color: #143d18; margin-top: 4px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpiSub { font-size: 11.5px; color: #6b7b72; margin-top: 2px; line-height: 1.35; min-height: 15px; }
 .bom { color: #1d6b3e; }
 .bomForte { color: #1d6b3e; }
