@@ -44,6 +44,17 @@ export interface ImpostoConfig {
 }
 
 /** Empresa/estabelecimento que emite as propostas (Matriz, Filial 02, ...). */
+/** Padrões da fatura ao cliente: conta que recebe, plano por tipo de documento e o contato do financeiro. */
+export interface FaturamentoEmpresa {
+  carteiraId: string
+  planoContaCte: string
+  planoContaMinuta: string
+  telefone: string
+  email: string
+}
+
+export const faturamentoVazio = (): FaturamentoEmpresa => ({ carteiraId: '', planoContaCte: '', planoContaMinuta: '', telefone: '', email: '' })
+
 export interface Unidade {
   id: string
   /** Nome curto de exibição (usado nos seletores). */
@@ -104,6 +115,8 @@ export interface Unidade {
 
   /** Dados bancários da empresa (opcional nos registros antigos). */
   banco?: DadosBancarios | null
+  /** Padrões da fatura ao cliente (aba Faturamento). Nulo = ainda não configurado. */
+  faturamento?: FaturamentoEmpresa | null
   /**
    * Markup mínimo (fração) acima da cobertura de custos e impostos: piso que o
    * desconto não pode furar sem alerta/aprovação. O praticado é `dv.lucro`.

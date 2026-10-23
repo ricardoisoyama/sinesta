@@ -10,9 +10,10 @@ import { formatCnpj, formatPct } from '@/lib/format'
 import { Link } from 'react-router-dom'
 import { Hint } from '@/features/common/Hint'
 import { mesclar } from '@/lib/mesclar'
-import { REGIMES, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
+import { REGIMES, faturamentoVazio, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
 import { emptyUnidade, type UnidadeForm } from './unidade-schema'
 import { ContasEmpresa } from './ContasEmpresa'
+import { FaturamentoEmpresaCampos } from './FaturamentoEmpresaCampos'
 import { bancoVazio, enderecoVazio } from '@/features/parceiros/types'
 import { useAuth } from '@/features/auth/auth-context'
 import { useFator } from '@/features/pricing/usePreco'
@@ -37,7 +38,7 @@ const IMPOSTOS: { key: ImpostoKey; nome: string }[] = [
 /** No Presumido e no Real estas alíquotas são obrigatórias (o INSS sobre a receita só existe em casos específicos). */
 const OBRIGATORIOS: ImpostoKey[] = ['ir', 'csll', 'pis', 'cofins', 'iss']
 
-type Aba = 'empresa' | 'dv' | 'impostos' | 'icms' | 'proposta' | 'banco'
+type Aba = 'empresa' | 'dv' | 'impostos' | 'icms' | 'proposta' | 'faturamento' | 'banco'
 
 interface Props {
   open: boolean
@@ -92,6 +93,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
           das: ehSimples(initial.regime) && !initial.das ? initial.dv.impostos : initial.das,
           simplesAnexo: initial.simplesAnexo ?? '',
           banco: mesclar(bancoVazio(), initial.banco),
+          faturamento: mesclar(faturamentoVazio(), initial.faturamento),
           markupMinimo: initial.markupMinimo ?? 0,
           enderecoCompleto: mesclar(enderecoVazio(), initial.enderecoCompleto),
           inscricaoMunicipal: initial.inscricaoMunicipal ?? '',
@@ -248,8 +250,15 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
         {aba('impostos', 'Impostos')}
         {aba('icms', 'ICMS')}
         {aba('proposta', 'Proposta')}
+        {aba('faturamento', 'Faturamento')}
         {aba('banco', 'Dados bancários')}
       </div>
+
+      {tab === 'faturamento' && (
+        <section className={ui.fsection}>
+          <FaturamentoEmpresaCampos empresaId={initial?.id ?? ''} valor={d.faturamento} onChange={(faturamento) => set({ faturamento })} />
+        </section>
+      )}
 
       {tab === 'banco' && (
         <section className={ui.fsection}>

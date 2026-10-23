@@ -27,6 +27,8 @@ import {
   type Parceiro,
   type PerfilNegocio,
   type TipoFornecimento,
+  type VencimentoFimDeSemana,
+  VENCIMENTO_FIM_DE_SEMANA,
 } from './types'
 import { ContatosEditor } from './ContatosEditor'
 import { DadosBancariosFields } from './DadosBancariosFields'
@@ -118,6 +120,7 @@ export function ParceiroFormModal({
   const vendedorCsId = useWatch({ control, name: 'vendedorCsId' }) ?? ''
   const formaPagamento = useWatch({ control, name: 'formaPagamento' }) ?? ''
   const prazoPagamentoDias = useWatch({ control, name: 'prazoPagamentoDias' }) ?? 0
+  const vencimentoFimDeSemana = useWatch({ control, name: 'vencimentoFimDeSemana' }) ?? 'manter'
   const externo = useWatch({ control, name: 'externo' }) ?? false
   const pais = useWatch({ control, name: 'pais' }) ?? ''
   const moeda = useWatch({ control, name: 'moeda' }) ?? ''
@@ -197,6 +200,7 @@ export function ParceiroFormModal({
         centroCustoId: initial.centroCustoId ?? '',
         formaPagamento: initial.formaPagamento ?? '',
         prazoPagamentoDias: initial.prazoPagamentoDias ?? 0,
+        vencimentoFimDeSemana: initial.vencimentoFimDeSemana ?? 'manter',
         externo: initial.externo ?? false,
         pais: initial.pais ?? '',
         taxId: initial.taxId ?? '',
@@ -541,7 +545,15 @@ export function ParceiroFormModal({
                   ))}
                 </datalist>
               </Field>
-              <div className={ui.col2} />
+              <Field className={ui.col2} label="Vencimento no fim de semana" hint="Quando o prazo cai no sábado ou no domingo, a fatura e o boleto vencem conforme esta regra.">
+                <select value={vencimentoFimDeSemana} onChange={(e) => setValue('vencimentoFimDeSemana', e.target.value as VencimentoFimDeSemana)}>
+                  {VENCIMENTO_FIM_DE_SEMANA.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
               <div className={ui.col4}>
                 <div className={ui.fsectionTitle}>
                   Vendedores <span className={ui.fsectionHint}>a mesma pessoa pode ocupar as três funções</span>

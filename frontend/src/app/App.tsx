@@ -1,4 +1,5 @@
 import { MotoristasPage } from '@/features/motoristas/MotoristasPage'
+import { NumeracoesPage } from '@/features/numeracoes/NumeracoesPage'
 import { ModulosPage } from '@/features/modulos/ModulosPage'
 import { ConvitePage } from '@/features/auth/ConvitePage'
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -104,6 +105,7 @@ export function App() {
           <Route path="/administrativo/integracoes" element={<IntegracoesPage />} />
           <Route path="/administrativo/smtp" element={<SmtpPage />} />
           <Route path="/administrativo/modulos" element={<ModulosPage />} />
+          <Route path="/administrativo/numeracoes" element={<NumeracoesPage />} />
           {/* Cadastros parametrizáveis (fase de layout) */}
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/icms" element={<TabelaIcmsPage />} />

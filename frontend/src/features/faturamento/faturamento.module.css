@@ -131,3 +131,21 @@ a.alertaCelula:hover { text-decoration: underline; }
 @keyframes girar { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
 @media (max-width: 720px) { .pendAcao { align-items: flex-start; text-align: left; } }
+
+/* Fretes sem fatura: abas Documentos | Faturas emitidas */
+.abas { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
+.abas button { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e6e3db; background: #fff; color: #143d18; font-family: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 10px; cursor: pointer; }
+.abas button small { font-size: 11px; font-weight: 700; color: #6b7b72; background: #f0eee7; border-radius: 999px; padding: 1px 8px; }
+.abas button.abaOn { background: #143d18; border-color: #143d18; color: #fff; }
+.abas button.abaOn small { background: #e8702f; color: #fff; }
+
+/* Faturar */
+.faturarAvisos { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; background: #fdf6e9; border: 1px solid #f1dfba; border-radius: 10px; padding: 10px 12px; }
+.faturarAvisos p { margin: 0; display: flex; gap: 7px; align-items: flex-start; font-size: 12.5px; color: #8a5a0c; line-height: 1.4; }
+.faturarAvisos svg { flex-shrink: 0; margin-top: 2px; }
+.faturarEnvio { margin-top: 16px; border-top: 1px solid #efebe2; padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.faturarCheck { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #143d18; cursor: pointer; }
+.faturarDest { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.faturarDest li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12.5px; color: #1f2a24; }
+.faturarDest li span { color: #6b7b72; }
+.faturarDest li small { font-size: 11px; font-weight: 600; color: #2e7d44; background: #e8f5ec; border-radius: 999px; padding: 1px 8px; }

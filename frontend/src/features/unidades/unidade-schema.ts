@@ -71,6 +71,7 @@ export const unidadeSchema = z.object({
   icms: z.array(icmsUfSchema),
 
   banco: bancoSchema,
+  faturamento: z.object({ carteiraId: z.string(), planoContaCte: z.string(), planoContaMinuta: z.string(), telefone: z.string(), email: z.string() }),
   markupMinimo: z.number().min(0),
 })
 
@@ -122,5 +123,6 @@ export const emptyUnidade: UnidadeForm = {
   icms: mockIcms.map((u) => ({ ...u })),
 
   banco: bancoVazio(),
+  faturamento: { carteiraId: '', planoContaCte: '', planoContaMinuta: '', telefone: '', email: '' },
   markupMinimo: 0,
 }

@@ -13,6 +13,7 @@ export const contatoSchema = z.object({
   recebeFatura: z.boolean(),
   recebeBoleto: z.boolean(),
   recebeNotaFiscal: z.boolean(),
+  recebeProposta: z.boolean().optional(),
 })
 
 export const bancoSchema = z.object({
@@ -64,6 +65,7 @@ export const parceiroSchema = z.object({
   vendedorCsId: z.string(),
   formaPagamento: z.string(),
   prazoPagamentoDias: z.number().int().min(0, 'Prazo inválido'),
+  vencimentoFimDeSemana: z.enum(['manter', 'antecipar', 'postergar']),
 
   tipoFornecimento: z.enum(['', 'produto', 'servico']),
   naturezaCusto: z.enum(['', 'fixo', 'variavel']),
@@ -109,6 +111,7 @@ export const emptyParceiro: ParceiroForm = {
   vendedorCsId: '',
   formaPagamento: '',
   prazoPagamentoDias: 0,
+  vencimentoFimDeSemana: 'manter',
 
   tipoFornecimento: '',
   naturezaCusto: '',

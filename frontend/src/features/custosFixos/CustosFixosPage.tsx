@@ -181,7 +181,7 @@ export function CustosFixosPage() {
     },
     {
       header: 'Empresa que paga',
-      largura: LARGURA.etiqueta,
+      largura: LARGURA.longa,
       valor: (c) => nomeEmpresa(c.unidadeId) + (rateada(c) ? ` (${resumoRateio(c)})` : ''),
       cell: (c) => (
         <div className={s.empresaCel} title={nomeEmpresa(c.unidadeId) + (rateada(c) ? ` · ${resumoRateio(c)}` : '')}>

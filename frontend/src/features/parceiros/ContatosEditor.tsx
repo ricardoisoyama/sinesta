@@ -99,6 +99,10 @@ export function ContatosEditor({ value, onChange, cliente, errosEmail = {}, ddi 
                       <input type="checkbox" checked={c.recebeNotaFiscal} onChange={(e) => upd(c.id, { recebeNotaFiscal: e.target.checked })} />
                       Nota fiscal
                     </label>
+                    <label className={ui.checkItem}>
+                      <input type="checkbox" checked={!!c.recebeProposta} onChange={(e) => upd(c.id, { recebeProposta: e.target.checked })} />
+                      Proposta
+                    </label>
                   </div>
                 </Field>
               </>

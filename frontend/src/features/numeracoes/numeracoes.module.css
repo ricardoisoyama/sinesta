@@ -1,0 +1,12 @@
+.empresa { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+.titulo { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; color: #143d18; }
+.tabela { overflow-x: auto; }
+.linha { display: grid; grid-template-columns: minmax(260px, 2.4fr) 90px 130px 90px minmax(150px, 1fr) 120px; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f0eee7; min-width: 860px; }
+.cabecalho { border-top: none; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #6b7b72; padding-top: 0; }
+.doc { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.doc b { font-size: 13px; color: #143d18; }
+.doc small { font-size: 11.5px; color: #6b7b72; line-height: 1.35; }
+.linha input { width: 100%; box-sizing: border-box; font: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid #e6e3db; border-radius: 8px; background: #fff; color: #1f2a24; font-variant-numeric: tabular-nums; }
+.linha input:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+.proximo { font-weight: 700; color: #143d18; font-variant-numeric: tabular-nums; }
+.salvar { padding: 7px 12px; font-size: 12.5px; }

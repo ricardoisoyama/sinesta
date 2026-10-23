@@ -11,6 +11,9 @@ import { formatBRL, formatCpfCnpj } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { semAcento } from '@/lib/texto'
 import { dataBR } from '@/features/contratos/regras'
+import { FaturarModal } from './FaturarModal'
+import { FaturasEmitidas } from './FaturasEmitidas'
+import { useFaturasClientes } from './faturasClientes'
 import { consultarSiimp, ROTULO_PENDENTE, usePendentes, useSituacaoConsulta, type DocumentoFaturavel, type SituacaoPendente } from './pendentes'
 import s from './faturamento.module.css'
 
@@ -54,6 +57,11 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
   const [filtro, setFiltro] = useState<Filtro>('pendente')
   const [busca, setBusca] = useState('')
   const rodando = !!consulta?.rodando
+  // Aba: os documentos da SIIMP ou as faturas que o ELROND já emitiu com eles.
+  const [aba, setAba] = useState<'documentos' | 'faturas'>('documentos')
+  const [faturando, setFaturando] = useState<DocumentoFaturavel[] | null>(null)
+  const { data: emitidas } = useFaturasClientes(de, ate)
+  const qtdEmitidas = (emitidas ?? []).filter((f) => empresa === 'todas' || f.fatura.empresaId === empresa).length
 
   const daEmpresa = (data ?? []).filter((d) => empresa === 'todas' || d.empresaId === empresa)
   const q = semAcento(busca.trim())
@@ -72,6 +80,25 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
     } catch (err) {
       void avisar({ titulo: 'Não foi possível consultar', mensagem: getErrorMessage(err) })
     }
+  }
+
+  /** Só pendentes, de uma empresa, de um cliente e de um tipo: o servidor confere de novo. */
+  const abrirFaturar = (itens: DocumentoFaturavel[]) => {
+    const aptos = itens.filter((d) => d.situacao === 'pendente')
+    const problema =
+      aptos.length === 0 ? 'Escolha documentos "a faturar".'
+        : aptos.some((d) => !d.empresaId) ? 'Há documento de um CNPJ emitente que não está cadastrado como empresa.'
+          : aptos.some((d) => !d.clienteId) ? 'Há documento de um tomador que não está cadastrado como cliente.'
+            : new Set(aptos.map((d) => d.empresaId)).size > 1 ? 'Os documentos são de empresas diferentes: cada empresa emite a sua fatura.'
+              : new Set(aptos.map((d) => d.clienteId)).size > 1 ? 'Os documentos são de clientes diferentes: escolha os de um cliente só.'
+                : new Set(aptos.map((d) => d.tipo)).size > 1 ? 'Fature CT-es e minutas separadamente.'
+                  : ''
+    if (problema) {
+      void avisar({ titulo: 'Não dá para faturar juntos', mensagem: problema })
+      return false
+    }
+    setFaturando(aptos)
+    return true
   }
 
   const columns: Column<DocumentoFaturavel>[] = [
@@ -185,6 +212,18 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
         )}
       </div>
 
+      <div className={s.abas} role="tablist" aria-label="Documentos ou faturas">
+        <button type="button" role="tab" aria-selected={aba === 'documentos'} className={aba === 'documentos' ? s.abaOn : ''} onClick={() => setAba('documentos')}>
+          Documentos da SIIMP <small>{aFaturar.length} a faturar</small>
+        </button>
+        <button type="button" role="tab" aria-selected={aba === 'faturas'} className={aba === 'faturas' ? s.abaOn : ''} onClick={() => setAba('faturas')}>
+          Faturas emitidas pelo ELROND <small>{qtdEmitidas}</small>
+        </button>
+      </div>
+
+      {aba === 'faturas' ? (
+        <FaturasEmitidas de={de} ate={ate} empresa={empresa} nomeEmpresa={nomeEmpresa} />
+      ) : (
       <CrudList
         id="faturamento-pendentes"
         query={busca}
@@ -196,6 +235,11 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
         rotulo={['documento', 'documentos']}
         pageSize={15}
         empty={isLoading ? 'Carregando...' : (data ?? []).length === 0 ? 'Clique em "Consultar SIIMP" para trazer os CT-es e as minutas do período.' : 'Nenhum documento neste filtro.'}
+        acoesLote={({ itens, limpar }) => (
+          <button type="button" className={ui.selBtn} onClick={() => { if (abrirFaturar(itens)) limpar() }}>
+            <Receipt size={14} /> Faturar ({itens.filter((d) => d.situacao === 'pendente').length})
+          </button>
+        )}
         filters={
           <select className={ui.filterSelect} value={filtro} onChange={(e) => setFiltro(e.target.value as Filtro)} aria-label="Situação">
             <option value="pendente">A faturar ({aFaturar.length})</option>
@@ -206,6 +250,21 @@ export function PendentesSiimp({ mes, empresa, nomeEmpresa }: Props) {
           </select>
         }
       />
+      )}
+
+      {faturando && (
+        <FaturarModal
+          documentos={faturando}
+          nomeEmpresa={nomeEmpresa}
+          onClose={() => setFaturando(null)}
+          onFaturado={() => {
+            setFaturando(null)
+            setAba('faturas')
+            void qc.invalidateQueries({ queryKey: ['faturamento-pendente'] })
+            void qc.invalidateQueries({ queryKey: ['faturas-clientes'] })
+          }}
+        />
+      )}
     </>
   )
 }

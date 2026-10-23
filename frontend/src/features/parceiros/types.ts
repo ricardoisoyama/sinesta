@@ -17,6 +17,13 @@ export const PERFIS_COMPRA: { valor: PerfilCompra; label: string }[] = [
 ]
 
 /** Uma pessoa de contato no cliente/fornecedor. */
+export type VencimentoFimDeSemana = 'manter' | 'antecipar' | 'postergar'
+export const VENCIMENTO_FIM_DE_SEMANA: { valor: VencimentoFimDeSemana; label: string }[] = [
+  { valor: 'manter', label: 'Manter a data (vence no sábado/domingo)' },
+  { valor: 'antecipar', label: 'Antecipar para a sexta-feira' },
+  { valor: 'postergar', label: 'Postergar para a segunda-feira' },
+]
+
 export interface Contato {
   id: string
   nome: string
@@ -28,6 +35,8 @@ export interface Contato {
   recebeFatura: boolean
   recebeBoleto: boolean
   recebeNotaFiscal: boolean
+  /** Recebe a proposta comercial (contatos antigos não têm: falso). */
+  recebeProposta?: boolean
 }
 
 export const novoContato = (): Contato => ({
@@ -37,9 +46,11 @@ export const novoContato = (): Contato => ({
   telefone: '',
   email: '',
   perfilCompra: '',
-  recebeFatura: false,
-  recebeBoleto: false,
-  recebeNotaFiscal: false,
+  // Contato novo recebe tudo (como o financeiro manda hoje); desmarque o que não for para ele.
+  recebeFatura: true,
+  recebeBoleto: true,
+  recebeNotaFiscal: true,
+  recebeProposta: true,
 })
 
 export type TipoConta = '' | 'corrente' | 'poupanca'
@@ -135,6 +146,8 @@ export interface Parceiro {
   formaPagamento?: string
   /** Prazo de pagamento em dias (0 = à vista). */
   prazoPagamentoDias?: number
+  /** Vencimento que cai no fim de semana: manter, antecipar (sexta) ou postergar (segunda). */
+  vencimentoFimDeSemana?: VencimentoFimDeSemana
 
   // ── Só fornecedor ──────────────────────────────────────────
   tipoFornecimento?: TipoFornecimento

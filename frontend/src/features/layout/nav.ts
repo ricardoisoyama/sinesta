@@ -44,6 +44,7 @@ import {
   Plug,
   IdCard,
   Blocks,
+  Hash,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -151,6 +152,8 @@ export const navGroups: NavGroup[] = [
       { label: 'Integração SMTP', path: '/administrativo/smtp', icon: Mail },
       // Só o perfil Suporte: o que o menu deste ambiente mostra.
       { label: 'Módulos do sistema', path: '/administrativo/modulos', icon: Blocks },
+      // Só o perfil Suporte: de onde parte a numeração da fatura, NF, CT-e... (implantação).
+      { label: 'Numerações', path: '/administrativo/numeracoes', icon: Hash },
     ],
   },
 ]

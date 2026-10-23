@@ -81,6 +81,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/financeiro/boleto-teste', label: 'Página de testes de boleto (/boleto)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/administrativo/smtp', label: 'Integração SMTP (servidor de e-mail do sistema)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/administrativo/modulos', label: 'Módulos do sistema (o que o menu do ambiente mostra)', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/administrativo/numeracoes', label: 'Numerações (de onde parte a fatura, NF-e, NFS-e, CT-e e MDF-e de cada empresa)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/financeiro/pagamento-banco', label: 'Mandar pagamentos (Pix) ao banco pelas Entradas e Saídas (piloto)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
