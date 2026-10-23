@@ -108,9 +108,12 @@ export function NumeracoesPage() {
                   <span role="cell" className={s.proximo}>{(Number(v.ultimo) || 0) + 1}</span>
                   <span role="cell" className={ui.cellMut}>{n.alteradoEm ? `${quando(n.alteradoEm)} · ${n.alteradoPor}` : 'nunca'}</span>
                   <span role="cell">
-                    <button type="button" className={`${ui.btn} ${ui.btnPrimary} ${s.salvar}`} disabled={!mudou(n) || gravando === id} onClick={() => void gravar(n)}>
-                      <Save /> {gravando === id ? 'Salvando...' : 'Salvar'}
-                    </button>
+                    {/* Só aparece na linha alterada (o botão em todas parecia ter algo para salvar). */}
+                    {mudou(n) && (
+                      <button type="button" className={`${ui.btn} ${ui.btnPrimary} ${s.salvar}`} disabled={gravando === id} onClick={() => void gravar(n)}>
+                        <Save /> {gravando === id ? 'Salvando...' : 'Salvar'}
+                      </button>
+                    )}
                   </span>
                 </div>
               )

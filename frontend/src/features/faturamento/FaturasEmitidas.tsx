@@ -202,7 +202,7 @@ export function FaturasEmitidas({ de, ate, empresa, nomeEmpresa }: Props) {
         rotulo={['fatura', 'faturas']}
         pageSize={15}
         onAtualizar={() => refetch()}
-        empty={isLoading ? 'Carregando...' : 'Nenhuma fatura emitida pelo ELROND neste período. Marque os documentos em "A faturar" e clique em Faturar.'}
+        empty={isLoading ? 'Carregando...' : 'Nenhuma fatura emitida pelo ELROND neste período.'}
       />
       <Modal
         open={!!cancelando}

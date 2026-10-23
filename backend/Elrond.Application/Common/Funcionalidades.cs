@@ -97,6 +97,8 @@ public static class Funcionalidades
         "/financeiro/pagamento-banco",
         // Implantação: quais menus o ambiente mostra (Administrativo › Módulos do sistema).
         "/administrativo/modulos",
+        // Implantação: de onde parte a numeração da fatura, NF-e, NFS-e, CT-e e MDF-e (Administrativo › Numerações).
+        "/administrativo/numeracoes",
     };
 
     /// <summary>O que pode ficar gravado no cadastro (as administrativas não se gravam: vêm do perfil).</summary>
