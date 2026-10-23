@@ -25,23 +25,57 @@ const PORCENTO: TipoHipotese[] = ['reajuste-custos', 'variacao-meta']
 /** Hipóteses que podem ser para menos (queda da meta, reajuste para baixo, perda de receita). */
 const COM_SINAL: TipoHipotese[] = ['reajuste-custos', 'variacao-meta', 'nova-receita']
 
-/** Período da projeção: próximos N meses ou um ano fechado (jan–dez). */
-const mesesDoPeriodo = (periodo: string, hoje: Date) =>
-  periodo.startsWith('a') ? proximosMeses(new Date(Number(periodo.slice(1)), 0, 1), 12) : proximosMeses(hoje, periodo === 'p6' ? 6 : 12)
-const rotuloDoPeriodo = (periodo: string) => (periodo.startsWith('a') ? `jan–dez/${periodo.slice(1)}` : periodo === 'p6' ? '6 meses' : '12 meses')
+/** Período personalizado: até 36 meses (o gráfico e a tabela continuam legíveis). */
+const MAX_MESES = 36
+const chaveMes = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+const dataDaChave = (chave: string) => new Date(Number(chave.slice(0, 4)), Number(chave.slice(5, 7)) - 1, 1)
+const mesesEntre = (de: string, ate: string) => (Number(ate.slice(0, 4)) - Number(de.slice(0, 4))) * 12 + Number(ate.slice(5, 7)) - Number(de.slice(5, 7)) + 1
+
+/** Período da projeção: próximos N meses, um ano fechado (jan–dez) ou de/até escolhidos. */
+const mesesDoPeriodo = (periodo: string, hoje: Date, de: string, ate: string) => {
+  if (periodo === 'c') return proximosMeses(dataDaChave(de), Math.min(MAX_MESES, Math.max(1, mesesEntre(de, ate))))
+  return periodo.startsWith('a') ? proximosMeses(new Date(Number(periodo.slice(1)), 0, 1), 12) : proximosMeses(hoje, periodo === 'p6' ? 6 : 12)
+}
+const rotuloDoPeriodo = (periodo: string, meses: Mes[]) =>
+  periodo === 'c' ? (meses.length === 1 ? meses[0].rotulo : `${meses[0].rotulo} a ${meses[meses.length - 1].rotulo}`)
+    : periodo.startsWith('a') ? `jan–dez/${periodo.slice(1)}` : periodo === 'p6' ? '6 meses' : '12 meses'
 
 /**
- * Projeção: 12 meses para frente com a META como receita e a DF dos cadastros (reais).
+ * Projeção: o período escolhido (atalhos ou de/até) com a META como receita e a DF dos cadastros (reais).
+ * Tudo na tela (cartões, gráficos, mês a mês, alertas, comparação, hipóteses) sai de `meses`.
  * Hipóteses só existem no cenário (gravado no servidor); os cadastros não mudam.
  */
 export function ProjecaoPage() {
   const [hoje] = useState(() => new Date())
   // Período e receita da projeção: escolhas da tela (não são gravadas; os cadastros não mudam).
   const [periodo, setPeriodo] = useState('p12')
+  const [de, setDe] = useState(() => chaveMes(hoje))
+  const [ate, setAte] = useState(() => chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() + 11, 1)))
   const [fonte, setFonte] = useState('metas')
   const [digitada, setDigitada] = useState(0)
-  const meses = mesesDoPeriodo(periodo, hoje)
-  const rotuloPeriodo = rotuloDoPeriodo(periodo)
+  const meses = mesesDoPeriodo(periodo, hoje, de, ate)
+  const rotuloPeriodo = rotuloDoPeriodo(periodo, meses)
+  // "De" depois do "até" empurra o "até"; intervalo maior que o limite puxa o outro lado.
+  const mudarDe = (v: string) => {
+    if (!v) return
+    setDe(v)
+    if (v > ate) setAte(v)
+    else if (mesesEntre(v, ate) > MAX_MESES) setAte(chaveMes(new Date(dataDaChave(v).getFullYear(), dataDaChave(v).getMonth() + MAX_MESES - 1, 1)))
+  }
+  const mudarAte = (v: string) => {
+    if (!v) return
+    setAte(v)
+    if (v < de) setDe(v)
+    else if (mesesEntre(de, v) > MAX_MESES) setDe(chaveMes(new Date(dataDaChave(v).getFullYear(), dataDaChave(v).getMonth() - MAX_MESES + 1, 1)))
+  }
+  // Ao escolher "Personalizado", parte do período que estava na tela.
+  const escolherPeriodo = (v: string) => {
+    if (v === 'c' && periodo !== 'c') {
+      setDe(meses[0].chave)
+      setAte(meses[meses.length - 1].chave)
+    }
+    setPeriodo(v)
+  }
   const qc = useQueryClient()
   // Meta e despesa fixa costumam ser mudadas em outra aba: ao voltar para esta, relê os cadastros.
   useEffect(() => {
@@ -169,11 +203,20 @@ export function ProjecaoPage() {
               <option value="grupo">Grupo (todas as empresas)</option>
               {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
             </select>
-            <select className={ui.filterSelect} value={periodo} onChange={(e) => setPeriodo(e.target.value)} aria-label="Período">
+            <select className={ui.filterSelect} value={periodo} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período">
               <option value="p6">Próximos 6 meses</option>
               <option value="p12">Próximos 12 meses</option>
               {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
+              <option value="c">Personalizado (de/até)</option>
             </select>
+            {periodo === 'c' && (
+              <div className={s.periodoLivre} title={`Até ${MAX_MESES} meses`}>
+                <label htmlFor="projecao-de">de</label>
+                <input id="projecao-de" type="month" className={ui.filterSelect} value={de} onChange={(e) => mudarDe(e.target.value)} />
+                <label htmlFor="projecao-ate">até</label>
+                <input id="projecao-ate" type="month" className={ui.filterSelect} value={ate} onChange={(e) => mudarAte(e.target.value)} />
+              </div>
+            )}
             <select className={ui.filterSelect} value={fonteEfetiva === 'meta' ? fonte : fonteEfetiva} onChange={(e) => setFonte(e.target.value)} aria-label="Receita">
               <option value="metas">Receita: metas de cada ano</option>
               {metasDoEscopo.map((m) => <option key={m.id} value={`meta:${m.id}`}>Receita: {m.nome} ({nomeEmpresa(m.empresaId)}{m.ano ? ` · ${m.ano}` : ''})</option>)}
@@ -356,7 +399,11 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const vazio = { tipo: 'novo-custo' as TipoHipotese, nome: '', valor: 0, negativo: false, inicio: meses[1]?.chave ?? meses[0].chave, fim: '', custoId: '' }
   const [form, setForm] = useState(vazio)
   const [abrindo, setAbrindo] = useState(false)
-  const rotulo = (chave: string) => meses.find((m) => m.chave === chave)?.rotulo ?? chave
+  // Hipótese de fora do período mostra o mês do mesmo jeito ("nov/26"), não a chave.
+  const rotulo = (chave: string) => meses.find((m) => m.chave === chave)?.rotulo ?? proximosMeses(dataDaChave(chave), 1)[0].rotulo
+  // Se o período muda com o formulário aberto, os meses escolhidos voltam para dentro dele.
+  const inicio = meses.some((m) => m.chave === form.inicio) ? form.inicio : vazio.inicio
+  const fim = form.fim && form.fim >= inicio && meses.some((m) => m.chave === form.fim) ? form.fim : ''
 
   if (!cenario)
     return (
@@ -372,7 +419,7 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const adicionar = () => {
     const nomeAuto = form.tipo === 'cortar-custo' ? `Cortar: ${custos.find((c) => c.id === form.custoId)?.nome ?? ''}` : ROTULO_HIPOTESE[form.tipo]
     const sinal = comSinal && form.negativo ? -1 : 1
-    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: sinal * (porcento ? form.valor / 100 : form.valor), inicio: form.inicio, fim: form.fim || undefined, custoId: form.custoId || undefined, ativa: true }])
+    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: sinal * (porcento ? form.valor / 100 : form.valor), inicio, fim: fim || undefined, custoId: form.custoId || undefined, ativa: true }])
     setForm(vazio)
     setAbrindo(false)
   }
@@ -455,15 +502,15 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
           )}
           <label>
             A partir de
-            <select value={form.inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })}>
+            <select value={inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })}>
               {meses.map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}
             </select>
           </label>
           <label>
             Até
-            <select value={form.fim} onChange={(e) => setForm({ ...form, fim: e.target.value })}>
+            <select value={fim} onChange={(e) => setForm({ ...form, fim: e.target.value })}>
               <option value="">o fim</option>
-              {meses.filter((m) => m.chave >= form.inicio).map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}
+              {meses.filter((m) => m.chave >= inicio).map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}
             </select>
           </label>
           <div className={s.hipBotoes}>
