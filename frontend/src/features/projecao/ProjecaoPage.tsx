@@ -197,39 +197,37 @@ export function ProjecaoPage() {
         breadcrumb="Gerencial"
         title="Projeção"
         subtitle="O período escolhido, com a meta (ou um valor digitado) como receita e as despesas fixas dos cadastros. As hipóteses vivem só no cenário: nada nos cadastros muda."
-        action={
-          <div className={s.controles}>
-            <select className={ui.filterSelect} value={escopo} onChange={(e) => setEscopo(e.target.value)} aria-label="Empresa ou grupo">
-              <option value="grupo">Grupo (todas as empresas)</option>
-              {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
-            </select>
-            <select className={ui.filterSelect} value={periodo} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período">
-              <option value="p6">Próximos 6 meses</option>
-              <option value="p12">Próximos 12 meses</option>
-              {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
-              <option value="c">Personalizado (de/até)</option>
-            </select>
-            {periodo === 'c' && (
-              <div className={s.periodoLivre} title={`Até ${MAX_MESES} meses`}>
-                <label htmlFor="projecao-de">de</label>
-                <input id="projecao-de" type="month" className={ui.filterSelect} value={de} onChange={(e) => mudarDe(e.target.value)} />
-                <label htmlFor="projecao-ate">até</label>
-                <input id="projecao-ate" type="month" className={ui.filterSelect} value={ate} onChange={(e) => mudarAte(e.target.value)} />
-              </div>
-            )}
-            <select className={ui.filterSelect} value={fonteEfetiva === 'meta' ? fonte : fonteEfetiva} onChange={(e) => setFonte(e.target.value)} aria-label="Receita">
-              <option value="metas">Receita: metas de cada ano</option>
-              {metasDoEscopo.map((m) => <option key={m.id} value={`meta:${m.id}`}>Receita: {m.nome} ({nomeEmpresa(m.empresaId)}{m.ano ? ` · ${m.ano}` : ''})</option>)}
-              <option value="digitada">Receita: digitar valor por mês</option>
-            </select>
-            {fonteEfetiva === 'digitada' && (
-              <div className={s.receitaDigitada} title="Receita de cada mês do período (R$)">
-                <MoneyInput value={digitada} onChange={setDigitada} placeholder="por mês" />
-              </div>
-            )}
-          </div>
-        }
       />
+      {/* Filtros numa faixa própria (no canto do cabeçalho quebravam em duas linhas desalinhadas). */}
+      <div className={s.filtros}>
+        <select className={ui.filterSelect} value={escopo} onChange={(e) => setEscopo(e.target.value)} aria-label="Empresa ou grupo">
+          <option value="grupo">Grupo (todas as empresas)</option>
+          {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
+        </select>
+        <select className={ui.filterSelect} value={periodo} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período">
+          <option value="p6">Próximos 6 meses</option>
+          <option value="p12">Próximos 12 meses</option>
+          {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
+          <option value="c">Personalizado (de/até)</option>
+        </select>
+        {periodo === 'c' && (
+          <div className={s.periodoLivre} title={`Até ${MAX_MESES} meses`}>
+            <input id="projecao-de" type="month" aria-label="Período: de" value={de} onChange={(e) => mudarDe(e.target.value)} />
+            <span>a</span>
+            <input id="projecao-ate" type="month" aria-label="Período: até" value={ate} onChange={(e) => mudarAte(e.target.value)} />
+          </div>
+        )}
+        <select className={ui.filterSelect} value={fonteEfetiva === 'meta' ? fonte : fonteEfetiva} onChange={(e) => setFonte(e.target.value)} aria-label="Receita">
+          <option value="metas">Receita: metas de cada ano</option>
+          {metasDoEscopo.map((m) => <option key={m.id} value={`meta:${m.id}`}>Receita: {m.nome} ({nomeEmpresa(m.empresaId)}{m.ano ? ` · ${m.ano}` : ''})</option>)}
+          <option value="digitada">Receita: digitar valor por mês</option>
+        </select>
+        {fonteEfetiva === 'digitada' && (
+          <div className={s.receitaDigitada} title="Receita de cada mês do período (R$)">
+            <MoneyInput value={digitada} onChange={setDigitada} placeholder="por mês" />
+          </div>
+        )}
+      </div>
       {erroCenarios && (
         <div className={s.avisoFator} role="alert"><AlertTriangle size={15} /> <span>Não foi possível gravar o cenário: {erroCenarios}</span></div>
       )}
