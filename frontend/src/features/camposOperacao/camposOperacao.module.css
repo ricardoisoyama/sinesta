@@ -37,9 +37,7 @@
 .dica kbd { font-family: inherit; font-size: 11px; background: #fff; border: 1px solid #d8d4c9; border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
 
 /* Ligações do ad valorem dentro da célula "Opções / origem". */
-.ligacoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
-.ligacoes select { min-width: 0; }
-/* Campo com unidade à direita (peso em kg) */
-.comUnidade { display: flex; align-items: center; gap: 6px; }
-.comUnidade input { flex: 1; min-width: 0; }
-.comUnidade span { font-size: 12px; font-weight: 600; color: #6b7b72; }
+/* height: auto: o ".sheet td > div" fixa 38px e a 2ª linha de seletores (ad valorem tem 4) vazava
+   por cima da linha de baixo; assim a linha da planilha cresce para caber. */
+.ligacoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; height: auto !important; }
+.ligacoes select { min-width: 0; height: 32px !important; }

@@ -148,6 +148,20 @@ public class PendentesFaturamentoTests
         }
         public Task<RespostaSiimp<PessoaSiimp>> PessoaAsync(long id, CancellationToken ct = default) =>
             Task.FromResult(Pessoas.TryGetValue(id, out var p) ? RespostaSiimp<PessoaSiimp>.Ok(p) : RespostaSiimp<PessoaSiimp>.Falha("não achou"));
+        public int DetalhesTransporteLidos { get; set; }
+        public Task<RespostaSiimp<DetalheTransporteSiimp>> DetalheTransporteAsync(string tipo, long id, CancellationToken ct = default)
+        {
+            DetalhesTransporteLidos++;
+            var d = Documentos.Single(x => x.Tipo == tipo && x.Id == id);
+            return Task.FromResult(RespostaSiimp<DetalheTransporteSiimp>.Ok(new DetalheTransporteSiimp(tipo, id, d.Total, 1000, 50000, 0, 10, 5, 0, 0, d.NfseNumero, 0,
+                [new NfTransporteSiimp(1, "1", "123", "2026-10-01", 1000, 50000)])));
+        }
+        public Task<RespostaSiimp<IReadOnlyDictionary<long, long>>> UltimasFaturasAsync(string desde, CancellationToken ct = default) =>
+            Task.FromResult(RespostaSiimp<IReadOnlyDictionary<long, long>>.Ok(new Dictionary<long, long>()));
+        public Task<RespostaSiimp<ArquivoSiimp>> DacteAsync(long cteId, CancellationToken ct = default) =>
+            Task.FromResult(RespostaSiimp<ArquivoSiimp>.Ok(new ArquivoSiimp("%PDF-1.4 dacte"u8.ToArray(), "application/pdf")));
+        public Task<RespostaSiimp<ArquivoSiimp>> NfsePdfAsync(long nfseId, CancellationToken ct = default) =>
+            Task.FromResult(RespostaSiimp<ArquivoSiimp>.Ok(new ArquivoSiimp("%PDF-1.4 nfse"u8.ToArray(), "application/pdf")));
     }
 
     private sealed class ReceitaFalsa : IConsultaPublicaService

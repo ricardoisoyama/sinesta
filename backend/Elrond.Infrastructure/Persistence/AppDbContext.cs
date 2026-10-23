@@ -132,8 +132,48 @@ public class AppDbContext : DbContext
             e.Property(d => d.Chave).HasMaxLength(44);
             e.Property(d => d.Motivo).HasMaxLength(300);
             e.Property(d => d.Descricao).HasMaxLength(400);
+            e.OwnsOne(d => d.Detalhe, b =>
+            {
+                b.ToJson();
+                b.OwnsMany(x => x.Nfs);
+            });
             e.HasIndex(d => d.CriadoEm);
             e.HasIndex(d => d.FaturaId);
+        });
+
+        modelBuilder.Entity<FaturaCliente>(e =>
+        {
+            e.ToTable("faturas_clientes");
+            e.HasKey(f => f.Id);
+            e.Property(f => f.EmpresaId).IsRequired().HasMaxLength(80);
+            e.Property(f => f.ClienteId).HasMaxLength(80);
+            e.Property(f => f.Tipo).IsRequired().HasMaxLength(10);
+            e.Property(f => f.Situacao).IsRequired().HasMaxLength(20);
+            e.Property(f => f.Observacao).HasMaxLength(500);
+            e.Property(f => f.MotivoCancelamento).HasMaxLength(300);
+            e.OwnsOne(f => f.Cliente, b => b.ToJson());
+            e.OwnsMany(f => f.Documentos, b =>
+            {
+                b.ToJson();
+                b.OwnsMany(x => x.Nfs);
+            });
+            e.OwnsMany(f => f.Envios, b => b.ToJson());
+            e.OwnsMany(f => f.Eventos, b => b.ToJson());
+            // Um número por empresa (a sequência continua a da SIIMP).
+            e.HasIndex(f => new { f.EmpresaId, f.Numero }).IsUnique();
+            e.HasIndex(f => f.ClienteId);
+            e.HasIndex(f => f.Emissao);
+        });
+
+        modelBuilder.Entity<NumeracaoDocumento>(e =>
+        {
+            e.ToTable("numeracoes_documentos");
+            e.HasKey(n => n.Id);
+            e.Property(n => n.Id).HasMaxLength(120);
+            e.Property(n => n.EmpresaId).IsRequired().HasMaxLength(80);
+            e.Property(n => n.Tipo).IsRequired().HasMaxLength(10);
+            e.Property(n => n.Serie).HasMaxLength(10);
+            e.HasIndex(n => n.EmpresaId);
         });
 
         modelBuilder.Entity<FaturaSiimpLida>(e =>
@@ -210,6 +250,7 @@ public class AppDbContext : DbContext
             e.Property(x => x.InscricaoMunicipal).HasMaxLength(20).HasDefaultValue(string.Empty);
             e.Property(x => x.InscricaoEstadual).HasMaxLength(20).HasDefaultValue(string.Empty);
             e.OwnsOne(x => x.EnderecoCompleto, b => b.ToJson());
+            e.OwnsOne(x => x.Faturamento, b => b.ToJson());
             e.OwnsMany(x => x.ValidadesProposta, b => b.ToJson());
             e.Property(x => x.SimplesAnexo).HasMaxLength(5).HasDefaultValue(string.Empty);
             // Estruturas aninhadas → colunas JSON (jsonb) espelhando o shape do front.
@@ -576,6 +617,7 @@ public class AppDbContext : DbContext
             e.OwnsMany(c => c.Contatos, b => b.ToJson());
             e.OwnsOne(c => c.Banco, b => b.ToJson());
             e.OwnsOne(c => c.Endereco, b => b.ToJson());
+            e.Property(c => c.VencimentoFimDeSemana).IsRequired().HasMaxLength(10).HasDefaultValue(VencimentoFimDeSemana.Manter);
         });
 
         modelBuilder.Entity<Fornecedor>(e =>

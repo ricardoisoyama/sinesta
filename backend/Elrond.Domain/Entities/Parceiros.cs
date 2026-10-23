@@ -16,6 +16,28 @@ public class ContatoParceiro
     public bool RecebeFatura { get; set; }
     public bool RecebeBoleto { get; set; }
     public bool RecebeNotaFiscal { get; set; }
+    /// <summary>Recebe a proposta comercial (vem marcado quando a proposta for enviada a este cliente).</summary>
+    public bool RecebeProposta { get; set; }
+}
+
+/// <summary>O que fazer com o vencimento que cai no sábado ou no domingo (cadastro do cliente, aba Comercial).</summary>
+public static class VencimentoFimDeSemana
+{
+    public const string Manter = "manter";
+    public const string Antecipar = "antecipar";
+    public const string Postergar = "postergar";
+
+    public static bool Valido(string v) => v is Manter or Antecipar or Postergar;
+
+    /// <summary>Sábado/domingo vai para a sexta (antecipar) ou para a segunda (postergar).</summary>
+    public static DateOnly Ajustar(DateOnly data, string regra) => (regra, data.DayOfWeek) switch
+    {
+        (Antecipar, DayOfWeek.Saturday) => data.AddDays(-1),
+        (Antecipar, DayOfWeek.Sunday) => data.AddDays(-2),
+        (Postergar, DayOfWeek.Saturday) => data.AddDays(2),
+        (Postergar, DayOfWeek.Sunday) => data.AddDays(1),
+        _ => data,
+    };
 }
 
 /// <summary>Endereço (cliente, fornecedor e empresa). A cidade fica no campo próprio de cada cadastro, "Praia Grande - SP".</summary>
@@ -88,6 +110,8 @@ public class Cliente : Rastreavel, IEntity, IInativavel
     public string FormaPagamento { get; set; } = string.Empty;
     /// <summary>Prazo de pagamento em dias (0 = à vista).</summary>
     public int PrazoPagamentoDias { get; set; }
+    /// <summary>Vencimento que cai em fim de semana: manter | antecipar | postergar (ver <see cref="Entities.VencimentoFimDeSemana"/>).</summary>
+    public string VencimentoFimDeSemana { get; set; } = Entities.VencimentoFimDeSemana.Manter;
 }
 
 /// <summary>Fornecedor de despesas (vinculado aos custos fixos).</summary>

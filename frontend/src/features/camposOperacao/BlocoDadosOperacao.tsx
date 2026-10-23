@@ -15,6 +15,7 @@ import { listAliquotasIcms } from '@/features/icms/api'
 import { useApolices } from './useApolices'
 import { formatBRL, formatPct } from '@/lib/format'
 import s from './camposOperacao.module.css'
+import money from '@/features/common/MoneyInput.module.css'
 
 interface Props {
   /** Empresa dos campos: escolhe a apólice do ad valorem. */
@@ -134,14 +135,15 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
               />
             )}
             {c.tipo === 'peso' && (
-              <div className={s.comUnidade}>
+              // Mesmo desenho do campo em R$: unidade à esquerda, dentro do campo.
+              <div className={money.money}>
+                <span>kg</span>
                 <input
                   inputMode="decimal"
                   value={v === undefined ? '' : String(v)}
                   onChange={(e) => onChange(c.chave, e.target.value.replace(/[^\d.,]/g, ''))}
                   placeholder="0"
                 />
-                <span>kg</span>
               </div>
             )}
             {c.tipo === 'valor' && <MoneyInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />}

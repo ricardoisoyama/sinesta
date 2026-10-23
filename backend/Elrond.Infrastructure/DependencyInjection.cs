@@ -148,6 +148,10 @@ public static class DependencyInjection
         services.AddScoped<TabelaIcmsService>();
         services.AddScoped<ExtratoBancoService>();
         services.AddScoped<PendentesFaturamentoService>();
+        services.AddScoped<INumeradorDocumentos, NumeradorDocumentos>();
+        services.AddScoped<NumeracaoService>();
+        services.AddScoped<FaturaClienteService>();
+        services.AddScoped<IAoReceberCobranca, BaixaDaFaturaPeloBoleto>();
 
         // E-mail (Administrativo › Integração SMTP)
         services.AddSingleton<IEnvioSmtp, Elrond.Infrastructure.Email.SmtpMailKit>();

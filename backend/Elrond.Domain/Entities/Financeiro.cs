@@ -72,6 +72,8 @@ public class Movimento : Rastreavel, IEntity, INumerado
     /// </summary>
     public string Origem { get; set; } = "manual";
     public const string OrigemTransferencia = "transferencia";
+    /// <summary>A receber criado pela fatura ao cliente (OrigemId = a fatura): nasce aprovado.</summary>
+    public const string OrigemFatura = "fatura";
     public bool Transferencia => Origem == OrigemTransferencia;
     /// <summary>Transferência já feita no banco: ao ser aprovada, as duas pernas entram baixadas na data dela.</summary>
     public bool BaixarAoAprovar { get; set; }

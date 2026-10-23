@@ -6,7 +6,8 @@ public sealed record ServidorSmtp(string Host, int Porta, string Seguranca, stri
 /// <summary>Arquivo do e-mail. Com <paramref name="IdInline"/>, vai embutido no corpo (src="cid:IdInline"), não como anexo.</summary>
 public sealed record AnexoEmail(string Nome, string Tipo, byte[] Conteudo, string? IdInline = null);
 
-public sealed record MensagemEmail(string Para, string Assunto, string Html, string Texto, IReadOnlyList<AnexoEmail>? Anexos = null);
+/// <summary>Copia: um endereço em cópia (Cc), ex.: o financeiro da empresa que emitiu a fatura.</summary>
+public sealed record MensagemEmail(string Para, string Assunto, string Html, string Texto, IReadOnlyList<AnexoEmail>? Anexos = null, string? Copia = null);
 
 /// <summary>Envio por SMTP (a biblioteca fica na infraestrutura). Devolve o erro, ou null quando foi.</summary>
 public interface IEnvioSmtp

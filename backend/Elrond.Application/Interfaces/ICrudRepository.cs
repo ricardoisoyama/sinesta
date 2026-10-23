@@ -31,6 +31,16 @@ public interface INumerador
     Task<IReadOnlyList<long>> ProximosMovimentosAsync(int quantidade);
 }
 
+/// <summary>Numeração dos documentos por empresa (fatura, NF-e, NFS-e...): atômica, nunca repete.</summary>
+public interface INumeradorDocumentos
+{
+    /// <summary>
+    /// Próximo número: o maior entre o último gravado e <paramref name="minimoUltimo"/> (o último usado fora do
+    /// ELROND, ex.: na SIIMP), mais um. Grava como o novo último na mesma operação.
+    /// </summary>
+    Task<long> ProximoAsync(string empresaId, string tipo, long minimoUltimo = 0);
+}
+
 /// <summary>Agrupa várias gravações numa transação só (tudo ou nada).</summary>
 public interface IUnidadeTrabalho
 {

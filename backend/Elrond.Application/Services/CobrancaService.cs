@@ -25,6 +25,14 @@ public interface ICobrancaService
     Task<Result<int>> ReceberAvisoAsync(string token, string corpo, CancellationToken ct = default);
     /// <summary>Rotina: confere no banco as cobranças ainda em aberto (rede de segurança do aviso). Devolve quantas mudaram.</summary>
     Task<int> ConferirAbertasAsync(CancellationToken ct = default);
+    /// <summary>Confere o pedido sem chamar o banco (null = ok; texto = o que falta).</summary>
+    string? ConferirPedido(NovaCobranca p);
+}
+
+/// <summary>Quem precisa saber que uma cobrança foi paga (a fatura baixa o lançamento dela).</summary>
+public interface IAoReceberCobranca
+{
+    Task AoReceberAsync(CobrancaBancaria cobranca, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -40,7 +48,8 @@ public sealed class CobrancaService(
     ICofreBancario cofre,
     IAuditoriaService auditoria,
     TimeProvider relogio,
-    ILogger<CobrancaService> log) : ICobrancaService
+    ILogger<CobrancaService> log,
+    IEnumerable<IAoReceberCobranca>? aoReceber = null) : ICobrancaService
 {
     /// <summary>Valor mínimo aceito pelo Inter (e uma referência razoável para os demais).</summary>
     public const decimal ValorMinimo = 2.50m;
@@ -212,6 +221,7 @@ public sealed class CobrancaService(
         var consulta = c.IdBanco.Length > 0
             ? await banco.ConsultarAsync(credencial, c.IdBanco, ct)
             : await banco.ConsultarPorSeuNumeroAsync(credencial, c.SeuNumero, c.Vencimento, ct);
+        var acabouDePagar = false;
 
         if (consulta.Situacao is { } s)
         {
@@ -228,6 +238,7 @@ public sealed class CobrancaService(
             c.Mensagem = s.Mensagem;
             if (antes != c.Situacao && c.Situacao == CobrancaBancaria.Recebida && c.ConfirmadaEm.Length == 0)
             {
+                acabouDePagar = true;
                 c.ConfirmadaEm = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
                 c.ConfirmadaPor = origem;
             }
@@ -246,6 +257,13 @@ public sealed class CobrancaService(
             c.Mensagem = $"Não foi possível consultar o banco agora: {consulta.Falha}";
         }
         await cobrancas.UpdateAsync(c.Id, c);
+        // Paga agora (não numa consulta anterior): avisa quem depende (a fatura baixa o lançamento).
+        if (acabouDePagar && aoReceber is not null)
+            foreach (var a in aoReceber)
+            {
+                try { await a.AoReceberAsync(c, ct); }
+                catch (Exception e) { log.LogError(e, "Boleto {SeuNumero} pago, mas o aviso a {Quem} falhou", c.SeuNumero, a.GetType().Name); }
+            }
         return c;
     }
 

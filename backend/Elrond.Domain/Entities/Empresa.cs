@@ -45,6 +45,22 @@ public class EmpresaIcms
     public decimal Aliquota { get; set; }
 }
 
+/// <summary>
+/// Padrões da fatura ao cliente (aba Faturamento da empresa): onde o lançamento a receber entra (conta e
+/// plano por tipo de documento) e o contato do financeiro que sai no cabeçalho e recebe cópia dos envios.
+/// </summary>
+public class FaturamentoEmpresa
+{
+    public string CarteiraId { get; set; } = string.Empty;
+    /// <summary>Plano de contas da fatura de CT-e (frete).</summary>
+    public string PlanoContaCte { get; set; } = string.Empty;
+    /// <summary>Plano de contas da fatura de minuta (NFS-e / NF-e).</summary>
+    public string PlanoContaMinuta { get; set; } = string.Empty;
+    public string Telefone { get; set; } = string.Empty;
+    /// <summary>E-mail do financeiro: sai na fatura e recebe cópia de cada envio.</summary>
+    public string Email { get; set; } = string.Empty;
+}
+
 /// <summary>Validade que a empresa oferece nas propostas (ex.: "15 dias"). A proposta guarda o texto.</summary>
 public class ValidadeEmpresa
 {
@@ -112,6 +128,9 @@ public class Empresa : Rastreavel, IEntity, IInativavel
 
     /// <summary>Dados bancários da empresa (saem na proposta/fatura).</summary>
     public DadosBancarios? Banco { get; set; }
+
+    /// <summary>Padrões da fatura ao cliente (nulo = ainda não configurado; a tela de faturar pede na hora).</summary>
+    public FaturamentoEmpresa? Faturamento { get; set; }
 
     /// <summary>
     /// Markup mínimo (fração) acima da cobertura de custos e impostos: piso que o desconto

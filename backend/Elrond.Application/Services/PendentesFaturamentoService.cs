@@ -158,11 +158,23 @@ public sealed class PendentesFaturamentoService(
                 ClienteId = tomador is null ? string.Empty : clientePorDoc.GetValueOrDefault(tomador.Documento) ?? string.Empty,
                 CriadoEm = l.CriadoEm, Emissao = l.Emissao, Valor = l.Total, Descricao = l.Descricao.Length > 400 ? l.Descricao[..400] : l.Descricao,
                 NfseNumero = l.NfseNumero, FaturaId = antes?.FaturaId ?? string.Empty, LidoEm = agora,
+                Detalhe = antes?.Detalhe,
             };
             var fatura = faturaDoDocumento.GetValueOrDefault(id) ?? string.Empty;
             (d.Situacao, d.Motivo) = FaturamentoPendente.Situar(d, fatura);
             d.FaturaSiimp = fatura;
             if (antes is null) novos.Add(d); else alterados.Add(d);
+        }
+
+        // ── Detalhe dos pendentes (peso, componentes, NFs): só a busca por id traz; relê se o valor mudou ──
+        var semDetalhe = novos.Concat(alterados)
+            .Where(d => d.Situacao == DocumentoFaturavel.Pendente && (d.Detalhe is null || d.Detalhe.Total != d.Valor)).ToList();
+        feitas = 0;
+        foreach (var d in semDetalhe)
+        {
+            progresso?.Invoke("Lendo o detalhe dos pendentes", ++feitas, semDetalhe.Count);
+            var det = await siimp.DetalheTransporteAsync(d.Tipo, d.SiimpId, ct);
+            if (det.Dados is { } x) d.Detalhe = DetalheDe(x, agora); // falhou: fica sem, e a fatura relê na hora
         }
         await documentos.SalvarLoteAsync(novos, alterados);
 
@@ -175,6 +187,13 @@ public sealed class PendentesFaturamentoService(
             $"{quem.Nome} consultou a SIIMP ({de} a {ate}): {resumo.Lidos} documento(s), {resumo.Pendentes} pendente(s) de faturamento");
         return Result.Success(resumo);
     }
+
+    public static DetalheFaturavel DetalheDe(DetalheTransporteSiimp x, string agora) => new()
+    {
+        Total = x.Total, Peso = x.Peso, ValorCarga = x.ValorCarga, Gris = x.Gris, Seguro = x.Seguro, Pedagio = x.Pedagio, Icms = x.Icms,
+        NfseId = x.NfseId, CentroCustoSiimpId = x.CentroCustoId, LidoEm = agora,
+        Nfs = x.Nfs.Select(n => new NfDoDocumento { Id = n.Id, Serie = n.Serie, Numero = n.Numero, Emissao = n.Emissao, Peso = n.Peso, Valor = n.Valor }).ToList(),
+    };
 
     /// <summary>
     /// Cliente novo. Razão social, fantasia e inscrição de situação vêm da Receita (<paramref name="rf"/>);

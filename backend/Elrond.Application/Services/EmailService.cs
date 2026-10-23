@@ -98,7 +98,12 @@ public sealed class EmailService(
     /// (cabeçalho e rodapé próprios), sem a moldura simples padrão.
     /// </summary>
     public async Task<Result<string>> EnviarAsync(string para, string assunto, string corpoHtml, string corpoTexto, string origem, string origemId,
-        IReadOnlyList<AnexoEmail>? anexos, bool layoutProprio, CancellationToken ct = default)
+        IReadOnlyList<AnexoEmail>? anexos, bool layoutProprio, CancellationToken ct = default) =>
+        await EnviarAsync(para, assunto, corpoHtml, corpoTexto, origem, origemId, anexos, layoutProprio, copia: null, ct);
+
+    /// <summary>Com <paramref name="copia"/> em Cc (no modo piloto a cópia não sai: só o e-mail de teste recebe).</summary>
+    public async Task<Result<string>> EnviarAsync(string para, string assunto, string corpoHtml, string corpoTexto, string origem, string origemId,
+        IReadOnlyList<AnexoEmail>? anexos, bool layoutProprio, string? copia, CancellationToken ct = default)
     {
         var c = await configuracoes.GetByIdAsync(ConfiguracaoSmtp.IdPadrao);
         if (c is null || !c.Ativo || c.Host.Length == 0)
@@ -113,7 +118,8 @@ public sealed class EmailService(
             await Registrar(para, destino, assunto, origem, origemId, "falhou", "Destinatário sem e-mail válido.");
             return Result.Failure<string>("O destinatário não tem e-mail válido no cadastro.");
         }
-        var erro = await smtp.EnviarAsync(Servidor(c), new MensagemEmail(destino, titulo, layoutProprio ? corpoHtml : Html(corpoHtml), corpoTexto, anexos), ct);
+        var cc = !c.SomenteTeste && EmailValido(copia) && !string.Equals(copia!.Trim(), destino, StringComparison.OrdinalIgnoreCase) ? copia.Trim() : null;
+        var erro = await smtp.EnviarAsync(Servidor(c), new MensagemEmail(destino, titulo, layoutProprio ? corpoHtml : Html(corpoHtml), corpoTexto, anexos, cc), ct);
         await Registrar(para, destino, titulo, origem, origemId, erro is null ? "enviado" : "falhou", erro);
         return erro is null ? Result.Success(destino) : Result.Failure<string>(erro);
     }

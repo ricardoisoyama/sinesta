@@ -251,15 +251,18 @@ public class FinanceiroService : IFinanceiroService
                 // Só a conciliação cria lançamento já pago (é um fato do extrato).
                 PagoEm = b.Origem == "conciliacao" ? b.PagoEm : string.Empty,
                 ValorPago = b.Origem == "conciliacao" ? b.ValorPago : 0m,
-                Aprovacao = b.Origem == "conciliacao" ? "aprovado" : "pendente",
-                Aprovacoes = b.Origem == "conciliacao" ? new() { AssinaturaDaConciliacao(quem) } : new(),
+                // Conciliação (o extrato prova) e fatura emitida (é o fato que gera o a receber) nascem aprovados.
+                Aprovacao = b.Origem is "conciliacao" or Movimento.OrigemFatura ? "aprovado" : "pendente",
+                Aprovacoes = b.Origem == "conciliacao" ? new() { AssinaturaDaConciliacao(quem) }
+                    : b.Origem == Movimento.OrigemFatura ? new() { new AprovacaoMovimento { UsuarioId = "fatura:" + quem.Id, Nome = $"{quem.Nome} · pela fatura emitida", Em = Agora() } }
+                    : new(),
                 RegraId = regra?.Id ?? string.Empty,
             };
         }).ToList();
 
         await _uow.ExecutarAsync(() => _movimentos.SalvarLoteAsync(novos, Array.Empty<Movimento>()));
         await _auditoria.RegistrarAsync("criar", "Movimento", novos[0].Id,
-            $"Lançamento {NumerosDe(novos)} {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}");
+            $"Lançamento {NumerosDe(novos)} {(b.Tipo == "receber" ? "a receber" : "a pagar")} \"{b.Descricao.Trim()}\" ({b.ParceiroNome.Trim()}, {b.Valor:N2}{(qtd > 1 ? $" em {qtd} parcelas" : "")}) · {(novos[0].Aprovacao == "aprovado" ? $"aprovado ({novos[0].Aprovacoes[0].Nome})" : $"pendente de aprovação{(regra is null ? " (sem regra que cubra o valor)" : $" ({regra.Nome})")}")}");
         return Result.Success(novos);
     }
 

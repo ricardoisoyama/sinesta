@@ -18,6 +18,7 @@ public sealed class SmtpMailKit(ILogger<SmtpMailKit> log) : IEnvioSmtp
             var msg = new MimeMessage();
             msg.From.Add(new MailboxAddress(s.RemetenteNome, s.RemetenteEmail));
             msg.To.Add(MailboxAddress.Parse(m.Para));
+            if (m.Copia is { Length: > 0 } cc) msg.Cc.Add(MailboxAddress.Parse(cc));
             if (s.ResponderPara.Length > 0) msg.ReplyTo.Add(MailboxAddress.Parse(s.ResponderPara));
             msg.Subject = m.Assunto;
             var corpo = new BodyBuilder { HtmlBody = m.Html, TextBody = m.Texto };

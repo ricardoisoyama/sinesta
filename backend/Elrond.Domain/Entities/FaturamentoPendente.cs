@@ -58,6 +58,40 @@ public class DocumentoFaturavel : IEntity
     public string FaturaId { get; set; } = string.Empty;
     /// <summary>Quando a consulta leu o documento pela última vez (UTC, ISO).</summary>
     public string LidoEm { get; set; } = string.Empty;
+    /// <summary>
+    /// O que a fatura impressa mostra do documento (peso, componentes, NFs). Só a busca por id da SIIMP traz;
+    /// a consulta lê dos pendentes (e relê se o valor mudou). Nulo = ainda não lido.
+    /// </summary>
+    public DetalheFaturavel? Detalhe { get; set; }
+}
+
+/// <summary>Detalhe de CT-e ou minuta para a fatura (cópia do que a SIIMP devolve na busca por id).</summary>
+public class DetalheFaturavel
+{
+    public decimal Total { get; set; }
+    /// <summary>Peso e valor da carga inteira (os totalizadores da fatura somam estes).</summary>
+    public decimal Peso { get; set; }
+    public decimal ValorCarga { get; set; }
+    public decimal Gris { get; set; }
+    public decimal Seguro { get; set; }
+    public decimal Pedagio { get; set; }
+    public decimal Icms { get; set; }
+    /// <summary>Id da NFS-e da minuta na SIIMP (para baixar o PDF). 0 = sem NFS-e.</summary>
+    public long NfseId { get; set; }
+    public long CentroCustoSiimpId { get; set; }
+    public List<NfDoDocumento> Nfs { get; set; } = new();
+    public string LidoEm { get; set; } = string.Empty;
+}
+
+public class NfDoDocumento
+{
+    public long Id { get; set; }
+    public string Serie { get; set; } = string.Empty;
+    public string Numero { get; set; } = string.Empty;
+    /// <summary>yyyy-MM-dd.</summary>
+    public string Emissao { get; set; } = string.Empty;
+    public decimal Peso { get; set; }
+    public decimal Valor { get; set; }
 }
 
 /// <summary>

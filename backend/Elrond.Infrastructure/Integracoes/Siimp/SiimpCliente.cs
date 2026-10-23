@@ -64,6 +64,102 @@ public sealed class SiimpCliente(HttpClient http, SiimpOpcoes opcoes, ILogger<Si
         return RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>.Ok(lista);
     }
 
+    public async Task<RespostaSiimp<DetalheTransporteSiimp>> DetalheTransporteAsync(string tipo, long id, CancellationToken ct = default)
+    {
+        var minuta = tipo == "minuta";
+        var r = await GetAsync(minuta ? $"/incomes/search?id={id}" : $"/ctes/search?id={id}", ct);
+        if (r.Erro.Length > 0) return RespostaSiimp<DetalheTransporteSiimp>.Falha(r.Erro);
+        if (r.Dados.GetArrayLength() == 0) return RespostaSiimp<DetalheTransporteSiimp>.Falha($"{(minuta ? "Minuta" : "CT-e")} não encontrado na SIIMP.");
+        var d = r.Dados[0];
+        var totais = Obj(d, "totals");
+        var componentes = Obj(totais, "components");
+        var carga = Obj(d, "cargo");
+        var nfs = new List<NfTransporteSiimp>();
+        foreach (var nf in Lista(d, "nfs"))
+        {
+            var emissao = Data(Str(nf, "issued_at"));
+            // A minuta não traz a data da NF: busca a NF (uma chamada por NF, só quando falta).
+            if (emissao.Length == 0 && Long(nf, "id") is > 0 and var nfId)
+            {
+                var b = await GetAsync($"/nfs/search?id={nfId}", ct);
+                if (b.Erro.Length == 0 && b.Dados.GetArrayLength() > 0) emissao = Data(Str(b.Dados[0], "issued_at"));
+            }
+            nfs.Add(new NfTransporteSiimp(Long(nf, "id"), Str(nf, "serie"), Str(nf, "number"), emissao, Dec(nf, "weight"), Dec(nf, "total")));
+        }
+        var nfse = Obj(d, "nfse");
+        return RespostaSiimp<DetalheTransporteSiimp>.Ok(new DetalheTransporteSiimp(
+            minuta ? "minuta" : "cte", Long(d, "id"), Dec(totais, "total"), Dec(carga, "weight"), Dec(carga, "value"),
+            Dec(componentes, "gris"), Dec(componentes, "insurance"), Dec(componentes, "toll"), minuta ? 0m : Dec(d, "icms"),
+            Long(nfse, "id"), Str(nfse, "number"), Long(Obj(d, "classifications"), "costcenter"), nfs));
+    }
+
+    public async Task<RespostaSiimp<IReadOnlyDictionary<long, long>>> UltimasFaturasAsync(string desde, CancellationToken ct = default)
+    {
+        var maiores = new Dictionary<long, long>();
+        // Cadastradas (ainda sem emissão) já têm número; as demais pela data de emissão.
+        foreach (var caminho in new[] { "/invoices/search?status=0", $"/invoices/search?invoice_issued_at_from={desde}" })
+        {
+            var r = await TodasAsync(caminho, ct);
+            if (r.Erro.Length > 0) return RespostaSiimp<IReadOnlyDictionary<long, long>>.Falha(r.Erro);
+            foreach (var f in r.Itens)
+            {
+                var dono = Long(f, "owner_id");
+                var numero = Long(f, "invoice_number");
+                if (dono > 0 && numero > maiores.GetValueOrDefault(dono)) maiores[dono] = numero;
+            }
+        }
+        return RespostaSiimp<IReadOnlyDictionary<long, long>>.Ok(maiores);
+    }
+
+    public Task<RespostaSiimp<ArquivoSiimp>> DacteAsync(long cteId, CancellationToken ct = default) =>
+        ArquivoAsync($"/ctes/dacte?id={cteId}&layout=0", ct);
+
+    public Task<RespostaSiimp<ArquivoSiimp>> NfsePdfAsync(long nfseId, CancellationToken ct = default) =>
+        ArquivoAsync($"/nfses/print?ids={nfseId}", ct);
+
+    /// <summary>Arquivo binário (PDF): mesma fila e intervalo das consultas; resposta que não é PDF vira erro.</summary>
+    private async Task<RespostaSiimp<ArquivoSiimp>> ArquivoAsync(string caminho, CancellationToken ct)
+    {
+        if (!Configurado) return RespostaSiimp<ArquivoSiimp>.Falha("A SIIMP não está configurada neste ambiente (Siimp__Url e Siimp__Token).");
+        for (var tentativa = 1; ; tentativa++)
+        {
+            await _fila.WaitAsync(ct);
+            byte[] corpo;
+            string tipo;
+            int status;
+            try
+            {
+                var falta = _ultima + Intervalo - DateTime.UtcNow;
+                if (falta > TimeSpan.Zero) await Task.Delay(falta, ct);
+                using var req = new HttpRequestMessage(HttpMethod.Get, opcoes.Url.TrimEnd('/') + caminho);
+                req.Headers.Add("X-Api-Key", opcoes.Token);
+                using var resp = await http.SendAsync(req, ct);
+                corpo = await resp.Content.ReadAsByteArrayAsync(ct);
+                tipo = resp.Content.Headers.ContentType?.MediaType ?? string.Empty;
+                status = (int)resp.StatusCode;
+                _ultima = DateTime.UtcNow;
+            }
+            catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+            {
+                log.LogWarning(e, "Arquivo da SIIMP falhou ({Caminho})", caminho.Split('?')[0]);
+                return RespostaSiimp<ArquivoSiimp>.Falha(e is TaskCanceledException ? "A SIIMP demorou demais para responder." : "Não foi possível falar com a SIIMP agora.");
+            }
+            finally
+            {
+                _fila.Release();
+            }
+            if (status == 200 && corpo.Length > 4 && corpo[0] == '%' && corpo[1] == 'P' && corpo[2] == 'D' && corpo[3] == 'F')
+                return RespostaSiimp<ArquivoSiimp>.Ok(new ArquivoSiimp(corpo, "application/pdf"));
+            // HTML = limite de chamadas: espera e tenta de novo (como nas consultas).
+            if (tipo.Contains("html", StringComparison.OrdinalIgnoreCase) && tentativa < 3)
+            {
+                await Task.Delay(EsperaNoLimite, ct);
+                continue;
+            }
+            return RespostaSiimp<ArquivoSiimp>.Falha($"A SIIMP não devolveu o PDF (HTTP {status}).");
+        }
+    }
+
     private static FaturaSiimpResumo Resumo(JsonElement f) =>
         new(Long(f, "id"), Long(f, "invoice_number"), Int(f, "invoice_status"), Dec(f, "total"), Str(f, "maturity"), Int(f, "payment_form"), Str(f, "created_at"), Long(f, "owner_id"));
 

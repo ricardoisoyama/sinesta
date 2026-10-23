@@ -34,6 +34,20 @@ public sealed record PessoaSiimp(
     long Id, string Nome, string Documento, string Email, string Telefone,
     string Rua, string Numero, string Complemento, string Bairro, string Cidade, string Uf, string Cep);
 
+/// <summary>NF da carga ligada ao CT-e ou à minuta. Emissao yyyy-MM-dd (a minuta não traz: vem da busca da NF).</summary>
+public sealed record NfTransporteSiimp(long Id, string Serie, string Numero, string Emissao, decimal Peso, decimal Valor);
+
+/// <summary>
+/// Detalhe do CT-e ou da minuta (só a busca por id traz): o que a fatura impressa mostra por documento.
+/// Peso e ValorCarga são os da carga inteira (o totalizador da fatura soma estes); NfseId: a NFS-e da minuta.
+/// </summary>
+public sealed record DetalheTransporteSiimp(
+    string Tipo, long Id, decimal Total, decimal Peso, decimal ValorCarga, decimal Gris, decimal Seguro, decimal Pedagio, decimal Icms,
+    long NfseId, string NfseNumero, long CentroCustoId, IReadOnlyList<NfTransporteSiimp> Nfs);
+
+/// <summary>Arquivo baixado da SIIMP (DACTE, PDF da NFS-e).</summary>
+public sealed record ArquivoSiimp(byte[] Conteudo, string Tipo);
+
 public sealed record RespostaSiimp<T>(T? Dados, string Erro)
 {
     public static RespostaSiimp<T> Ok(T dados) => new(dados, string.Empty);
@@ -54,4 +68,15 @@ public interface ISiimp
     /// editáveis, de qualquer data) e as emitidas desde então. Todas as páginas, sem repetir.
     /// </summary>
     Task<RespostaSiimp<IReadOnlyList<FaturaSiimpResumo>>> FaturasParaConferirAsync(string desde, CancellationToken ct = default);
+    /// <summary>Detalhe de um CT-e ("cte") ou de uma minuta ("minuta"), com as NFs (a data da NF da minuta vem da busca da NF).</summary>
+    Task<RespostaSiimp<DetalheTransporteSiimp>> DetalheTransporteAsync(string tipo, long id, CancellationToken ct = default);
+    /// <summary>
+    /// Maior número de fatura de cada emitente (owner_id), olhando todas as faturas (cadastradas, emitidas,
+    /// liquidadas e canceladas) desde <paramref name="desde"/>: a SIIMP numera por CNPJ e o ELROND continua a sequência.
+    /// </summary>
+    Task<RespostaSiimp<IReadOnlyDictionary<long, long>>> UltimasFaturasAsync(string desde, CancellationToken ct = default);
+    /// <summary>DACTE (PDF) do CT-e.</summary>
+    Task<RespostaSiimp<ArquivoSiimp>> DacteAsync(long cteId, CancellationToken ct = default);
+    /// <summary>PDF da NFS-e.</summary>
+    Task<RespostaSiimp<ArquivoSiimp>> NfsePdfAsync(long nfseId, CancellationToken ct = default);
 }
