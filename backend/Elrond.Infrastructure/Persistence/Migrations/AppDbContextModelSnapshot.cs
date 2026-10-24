@@ -225,7 +225,15 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<decimal>("TaxaPadraoVenda")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
                     b.Property<decimal>("TaxaUrbana")
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)");
+
+                    b.Property<decimal>("TaxaUrbanaVenda")
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
@@ -1395,6 +1403,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CarteiraId")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -4785,6 +4797,9 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                             b1.Property<decimal>("Percentual")
                                 .HasPrecision(18, 6);
 
+                            b1.Property<decimal>("PercentualVenda")
+                                .HasPrecision(18, 6);
+
                             b1.Property<string>("UfDestino")
                                 .IsRequired();
 
@@ -6314,6 +6329,9 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                                         .ValueGeneratedOnAdd();
 
                                     b2.Property<decimal>("Percentual")
+                                        .HasPrecision(18, 6);
+
+                                    b2.Property<decimal>("PercentualVenda")
                                         .HasPrecision(18, 6);
 
                                     b2.Property<string>("UfDestino")

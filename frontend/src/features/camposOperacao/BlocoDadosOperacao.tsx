@@ -81,8 +81,10 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
     const a = c.seguro ? apoliceDe(c.seguro) : undefined
     if (!a) return [emReais, c.seguro ? `sem apólice ${c.seguro} vigente` : ''].filter(Boolean).join(' · ')
     const taxa = taxaDaRota(a.apolice, valores[c.campoOrigem ?? ''], valores[c.campoDestino ?? ''])
-    const fonte = !taxa ? '' : Math.abs(taxa.pct - pct) < 1e-9 ? `apólice ${a.apolice.numero || a.apolice.tipo}` : `ajustado (apólice: ${formatPct(taxa.pct)})`
-    return [emReais, fonte].filter(Boolean).join(' · ')
+    const fonte = !taxa ? '' : Math.abs(taxa.pct - pct) < 1e-9 ? `venda da apólice ${a.apolice.numero || a.apolice.tipo}` : `ajustado (venda da apólice: ${formatPct(taxa.pct)})`
+    // O custo aparece para mostrar a margem; sem venda cadastrada, avisa que está cobrando o custo.
+    const custo = !taxa ? '' : taxa.semVenda ? `sem % de venda na apólice: cobrando o custo (${formatPct(taxa.custo)})` : `custo ${formatPct(taxa.custo)}`
+    return [emReais, fonte, custo].filter(Boolean).join(' · ')
   }
 
   // Cidade ligada a um campo de UF: busca só naquela UF quando ela está preenchida.

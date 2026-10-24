@@ -14,6 +14,8 @@ export const custoFixoSchema = z
     fornecedorId: z.string(),
     /** 0 = não informado. */
     diaVencimento: z.number().int('Use um dia inteiro').min(0).max(31, 'O dia vai de 1 a 31'),
+    /** Conta que paga (vazio = não gera lançamentos). */
+    carteiraId: z.string(),
     /** Vazio = sem rateio (tudo da empresa que paga). */
     rateio: z.array(z.object({ empresaId: z.string(), percentual: z.number() })),
     status: z.enum(['ativo', 'inativo']),
@@ -40,6 +42,7 @@ export const emptyCustoFixo: CustoFixoForm = {
   dataFim: '',
   fornecedorId: '',
   diaVencimento: 0,
+  carteiraId: '',
   rateio: [],
   status: 'ativo',
 }

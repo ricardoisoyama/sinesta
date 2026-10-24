@@ -118,11 +118,17 @@ export function ApoliceFormModal({ open, initial, seguradoras, empresas, error, 
           <Field label="Custo de emissão" hint="Custo da apólice (R$).">
             <MoneyInput value={a.custoEmissao} onChange={(n) => upd({ custoEmissao: n })} />
           </Field>
-          <Field label="Taxa urbana" hint="Prêmio quando origem e destino são a mesma cidade. Vazio = usa a tabela.">
+          <Field label="Taxa urbana · custo" hint="Prêmio quando origem e destino são a mesma cidade. Vazio = usa a tabela.">
             <PercentInput value={a.taxaUrbana} onChange={(n) => upd({ taxaUrbana: n })} />
           </Field>
-          <Field label="Taxa padrão" hint="Prêmio das rotas que não estão na tabela. Vazio = a pessoa digita no Pricing.">
+          <Field label="Taxa urbana · venda" hint="O que o Pricing cobra do cliente na mesma cidade. Vazio = cobra o custo.">
+            <PercentInput value={a.taxaUrbanaVenda ?? 0} onChange={(n) => upd({ taxaUrbanaVenda: n })} />
+          </Field>
+          <Field label="Taxa padrão · custo" hint="Prêmio das rotas que não estão na tabela. Vazio = a pessoa digita no Pricing.">
             <PercentInput value={a.taxaPadrao} onChange={(n) => upd({ taxaPadrao: n })} />
+          </Field>
+          <Field label="Taxa padrão · venda" hint="O que o Pricing cobra nas rotas fora da tabela. Vazio = cobra o custo.">
+            <PercentInput value={a.taxaPadraoVenda ?? 0} onChange={(n) => upd({ taxaPadraoVenda: n })} />
           </Field>
           <Field label="IOF" hint="Fica só registrado: não entra no ad valorem.">
             <PercentInput value={a.iof} onChange={(n) => upd({ iof: n })} />
@@ -153,12 +159,13 @@ export function ApoliceFormModal({ open, initial, seguradoras, empresas, error, 
 
       <section className={ui.fsection}>
         <div className={ui.fsectionTitle}>
-          Tabela de prêmio por UF <span className={ui.fsectionHint}>sobre o valor da mercadoria; vazio = fora da tabela</span>
+          Tabela de prêmio por UF <span className={ui.fsectionHint}>sobre o valor da mercadoria; custo = a seguradora cobra, venda = o Pricing cobra do cliente</span>
         </div>
         <TabelaPorUf
-          linhas={a.taxas.map((t) => ({ ufOrigem: t.ufOrigem, ufDestino: t.ufDestino, valor: t.percentual }))}
-          onChange={(l) => upd({ taxas: l.map((t) => ({ ufOrigem: t.ufOrigem, ufDestino: t.ufDestino, percentual: t.valor })) })}
-          coluna="Prêmio %"
+          linhas={a.taxas.map((t) => ({ ufOrigem: t.ufOrigem, ufDestino: t.ufDestino, valor: t.percentual, venda: t.percentualVenda ?? 0 }))}
+          onChange={(l) => upd({ taxas: l.map((t) => ({ ufOrigem: t.ufOrigem, ufDestino: t.ufDestino, percentual: t.valor, percentualVenda: t.venda ?? 0 })) })}
+          coluna="Custo %"
+          colunaVenda="Venda %"
           nomeArquivo={`premio-${a.tipo}-${a.numero || 'apolice'}.xlsx`}
           zeroRemove
           base={a.tipo === 'RCTR-C' ? baseRctrc : undefined}

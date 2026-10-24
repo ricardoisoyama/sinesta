@@ -36,6 +36,17 @@ export const createCustoFixo = (c: CustoFixo) =>
   apiFetch<CustoFixo>('/custos-fixos', { method: 'POST', body: JSON.stringify(c) })
 export const updateCustoFixo = (c: CustoFixo) =>
   apiFetch<CustoFixo>(`/custos-fixos/${c.id}`, { method: 'PUT', body: JSON.stringify(c) })
+/** Resultado de alinhar os lançamentos a pagar da despesa (motivo: por que não gerou). */
+export interface ResumoLancamentosDf {
+  criados: number
+  atualizados: number
+  cancelados: number
+  emAberto: number
+  motivo: string
+}
+export const lancamentosDaDespesa = (id: string) => apiFetch<{ emAberto: number; motivo: string }>(`/custos-fixos/${id}/lancamentos`)
+export const gerarLancamentosDaDespesa = (id: string, atualizarAbertos: boolean) =>
+  apiFetch<ResumoLancamentosDf>(`/custos-fixos/${id}/lancamentos?atualizarAbertos=${atualizarAbertos}`, { method: 'POST' })
 
 /** Importação de planilha (lote). */
 export const importarCustosFixos = (list: CustoFixo[]) =>

@@ -25,8 +25,16 @@ public class CustoFixo : Rastreavel, IEntity, IInativavel, INumerado
     public string DataFim { get; set; } = string.Empty;
     /// <summary>Fornecedor que emite a despesa (cadastro <see cref="Fornecedor"/>).</summary>
     public string FornecedorId { get; set; } = string.Empty;
-    /// <summary>Dia do mês em que a despesa vence (1–31). 0 = não informado.</summary>
+    /// <summary>Dia do mês em que a despesa é paga (1–31; mês mais curto = último dia). 0 = não informado.</summary>
     public int DiaVencimento { get; set; }
+    /// <summary>Conta que paga (Caixa): com ela e o término, a recorrente gera os lançamentos a pagar.</summary>
+    public string CarteiraId { get; set; } = string.Empty;
+
+    /// <summary>Origem dos lançamentos a pagar gerados pela despesa (Movimento.OrigemId = a despesa).</summary>
+    public const string OrigemLancamentos = "custo-fixo";
+
+    /// <summary>Tem término de verdade (não o 31/12/9999 de quem não tem prazo)?</summary>
+    public bool TemTermino => DateOnly.TryParse(DataFim, out var fim) && fim.Year < 9999;
 
     /// <summary>
     /// Entra na base da DF (markup/fator)? Só custos ativos, recorrentes e vigentes

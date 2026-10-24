@@ -18,11 +18,13 @@ import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hook
 import {
   createCustoFixo,
   updateCustoFixo,
+  gerarLancamentosDaDespesa,
+  lancamentosDaDespesa,
   listCategoriasCusto,
   listFornecedores,
 } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
-import { avisar } from '@/features/common/dialogo/dialogo'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { mockCustosFixos } from './mock'
 import { entraNaDf, percentualDaEmpresa, rateada, valorDaEmpresa } from './regras'
 import { CustoFixoFormModal } from './CustoFixoFormModal'
@@ -76,15 +78,47 @@ export function CustosFixosPage() {
   const [saveError, setSaveError] = useState<string | null>(null)
   const [importarAberto, setImportarAberto] = useState(false)
 
+  /** O que nos lançamentos depende da despesa: mudou algum, pergunta se atualiza os em aberto. */
+  const mexeNosLancamentos = (a: CustoFixo, b: CustoFixoForm) =>
+    a.valorMensal !== b.valorMensal || (a.diaVencimento ?? 0) !== b.diaVencimento || (a.carteiraId ?? '') !== b.carteiraId ||
+    (a.planoContaId ?? '') !== b.planoContaId || a.categoriaId !== b.categoriaId || a.fornecedorId !== b.fornecedorId ||
+    a.descricao !== b.descricao || a.dataInicio !== b.dataInicio || a.dataFim !== b.dataFim
+
+  /** Depois de gravar: cria os meses que faltam e, se a pessoa quiser, atualiza os em aberto. Conta o que fez. */
+  const alinharLancamentos = async (salvo: CustoFixo, antes: CustoFixo | null, form: CustoFixoForm) => {
+    if (salvo.tipo !== 'recorrente') return
+    let atualizar = false
+    if (antes && mexeNosLancamentos(antes, form)) {
+      const { emAberto } = await lancamentosDaDespesa(salvo.id)
+      if (emAberto > 0)
+        atualizar = await confirmar({
+          titulo: 'Atualizar os lançamentos em aberto?',
+          mensagem: `Esta despesa tem ${emAberto} lançamento(s) a pagar em aberto nas Entradas e Saídas. Atualizar os que vencem de hoje em diante com os dados novos? Os já pagos não mudam; os que mudarem de valor voltam para aprovação.`,
+          confirmar: 'Atualizar',
+          cancelar: 'Manter como estão',
+        })
+    }
+    const r = await gerarLancamentosDaDespesa(salvo.id, atualizar)
+    const feito = [
+      r.criados && `${r.criados} lançamento(s) a pagar criado(s) (pendentes de aprovação)`,
+      r.atualizados && `${r.atualizados} atualizado(s)`,
+      r.cancelados && `${r.cancelados} cancelado(s)`,
+    ].filter(Boolean)
+    if (feito.length) void avisar({ titulo: 'Lançamentos da despesa', mensagem: `${feito.join(' · ')}. Veja em Financeiro › Entradas e Saídas.` })
+    else if (r.motivo && !antes) void avisar({ titulo: 'Despesa salva', mensagem: r.motivo })
+  }
+
   const save = async (form: CustoFixoForm) => {
     setSaveError(null)
+    const antes = crud.editing ? (crud.items.find((c) => c.id === crud.editing!.id) ?? null) : null
+    let salvo: CustoFixo
     try {
       if (crud.editing) {
-        const upd = await updateCustoFixo({ ...form, id: crud.editing.id })
-        crud.update(upd.id, upd)
+        salvo = await updateCustoFixo({ ...form, id: crud.editing.id })
+        crud.update(salvo.id, salvo)
       } else {
-        const created = await createCustoFixo({ ...form, id: '' })
-        crud.add(created)
+        salvo = await createCustoFixo({ ...form, id: '' })
+        crud.add(salvo)
       }
     } catch (err) {
       setSaveError(getErrorMessage(err))
@@ -92,12 +126,23 @@ export function CustosFixosPage() {
     }
     invalidate()
     crud.close()
+    try {
+      await alinharLancamentos(salvo, antes, form)
+    } catch (err) {
+      void avisar({ titulo: 'A despesa foi salva, mas os lançamentos não', mensagem: getErrorMessage(err) })
+    }
   }
 
   const setStatus = async (c: CustoFixo, status: 'ativo' | 'inativo') => {
     try {
       const upd = await updateCustoFixo({ ...c, status })
       crud.update(upd.id, upd)
+      // Inativar cancela os lançamentos em aberto que ainda não venceram; reativar cria os que faltam.
+      if (upd.tipo === 'recorrente') {
+        const r = await gerarLancamentosDaDespesa(upd.id, false)
+        if (r.cancelados || r.criados)
+          void avisar({ titulo: 'Lançamentos da despesa', mensagem: r.cancelados ? `${r.cancelados} lançamento(s) em aberto cancelado(s).` : `${r.criados} lançamento(s) a pagar criado(s).` })
+      }
     } catch (err) {
       void avisar({ titulo: 'Não foi possível concluir', mensagem: getErrorMessage(err) })
       return

@@ -15,9 +15,37 @@ public class TaxasController(ICrudRepository<Taxa> repo) : CrudControllerBase<Ta
 public class PlanoContasController(ICrudRepository<PlanoConta> repo) : CrudControllerBase<PlanoConta>(repo);
 
 [Route("api/custos-fixos")]
-public class CustosFixosController(ICrudRepository<CustoFixo> repo, ICompraService compras, UsuarioContexto usuario)
+public class CustosFixosController(ICrudRepository<CustoFixo> repo, ICompraService compras, UsuarioContexto usuario, LancamentosDespesaFixa lancamentos)
     : CrudControllerBase<CustoFixo>(repo)
 {
+    /// <summary>Quantos lançamentos a pagar em aberto a despesa tem (a tela pergunta se atualiza ao alterar).</summary>
+    [HttpGet("{id}/lancamentos")]
+    public async Task<IActionResult> Lancamentos(string id) =>
+        await Repo.GetByIdAsync(id) is { } df
+            ? Ok(new { emAberto = await lancamentos.EmAbertoAsync(id), motivo = LancamentosDespesaFixa.PorQueNaoGera(df) ?? string.Empty })
+            : NotFound();
+
+    /// <summary>
+    /// Alinha os lançamentos a pagar com a despesa (a tela chama depois de salvar): cria os meses que faltam;
+    /// com atualizarAbertos, atualiza os em aberto daqui para frente.
+    /// </summary>
+    [HttpPost("{id}/lancamentos")]
+    public async Task<IActionResult> GerarLancamentos(string id, [FromQuery] bool atualizarAbertos = false)
+    {
+        if (await Repo.GetByIdAsync(id) is not { } df) return NotFound();
+        var r = await lancamentos.SincronizarAsync(df, atualizarAbertos, await usuario.QuemAsync());
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    /// <summary>Inativar também cancela os lançamentos em aberto que ainda não venceram.</summary>
+    public override async Task<IActionResult> Delete(string id)
+    {
+        var r = await base.Delete(id);
+        if (r is NoContentResult && await Repo.GetByIdAsync(id) is { Status: "inativo" } df)
+            await lancamentos.SincronizarAsync(df, atualizarAbertos: false, await usuario.QuemAsync());
+        return r;
+    }
+
     /// <summary>Lançar despesa (uma ou em lote) respeita a Regra de Compras do comprador logado.</summary>
     protected override async Task<string?> AntesDeGravarAsync(CustoFixo entity)
     {

@@ -34,12 +34,21 @@ describe('ad valorem', () => {
 
   it('acha o prêmio pela tabela, pela taxa urbana ou pela padrão', () => {
     const a = apolice({ taxaUrbana: 0.0002, taxaPadrao: 0.003 })
-    expect(taxaDaRota(a, 'SP', 'RJ')).toEqual({ pct: 0.0014, fonte: 'tabela' })
-    expect(taxaDaRota(a, 'SP - Santos', 'SP - Campinas')).toEqual({ pct: 0.0005, fonte: 'tabela' })
-    expect(taxaDaRota(a, 'SP - São Paulo', 'SP - são paulo')).toEqual({ pct: 0.0002, fonte: 'urbana' })
-    expect(taxaDaRota(a, 'AC', 'RR')).toEqual({ pct: 0.003, fonte: 'padrao' })
+    // Sem % de venda cadastrado, cobra o custo (e avisa).
+    expect(taxaDaRota(a, 'SP', 'RJ')).toEqual({ pct: 0.0014, custo: 0.0014, semVenda: true, fonte: 'tabela' })
+    expect(taxaDaRota(a, 'SP - Santos', 'SP - Campinas')).toEqual({ pct: 0.0005, custo: 0.0005, semVenda: true, fonte: 'tabela' })
+    expect(taxaDaRota(a, 'SP - São Paulo', 'SP - são paulo')).toEqual({ pct: 0.0002, custo: 0.0002, semVenda: true, fonte: 'urbana' })
+    expect(taxaDaRota(a, 'AC', 'RR')).toEqual({ pct: 0.003, custo: 0.003, semVenda: true, fonte: 'padrao' })
     expect(taxaDaRota(apolice(), 'AC', 'RR')).toBeNull()
     expect(taxaDaRota(a, '', 'RJ')).toBeNull()
+  })
+
+  it('cobra a venda da rota quando a apólice tem, e mostra o custo', () => {
+    const base = apolice({ taxaUrbana: 0.0002, taxaUrbanaVenda: 0.0003, taxaPadrao: 0.003, taxaPadraoVenda: 0.004 })
+    const a = { ...base, taxas: base.taxas.map((t) => (t.ufOrigem === 'SP' && t.ufDestino === 'RJ' ? { ...t, percentualVenda: 0.0018 } : t)) }
+    expect(taxaDaRota(a, 'SP', 'RJ')).toEqual({ pct: 0.0018, custo: 0.0014, semVenda: false, fonte: 'tabela' })
+    expect(taxaDaRota(a, 'SP - São Paulo', 'SP - São Paulo')).toEqual({ pct: 0.0003, custo: 0.0002, semVenda: false, fonte: 'urbana' })
+    expect(taxaDaRota(a, 'AC', 'RR')).toEqual({ pct: 0.004, custo: 0.003, semVenda: false, fonte: 'padrao' })
   })
 
   it('usa a apólice vigente do tipo, da seguradora ativa e que cobre a empresa', () => {

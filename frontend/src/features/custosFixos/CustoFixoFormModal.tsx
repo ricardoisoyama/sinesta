@@ -21,6 +21,9 @@ import { DATA_FIM_SEM_PRAZO, TIPOS_CUSTO_FIXO, type CustoFixo } from './types'
 import { RateioEmpresas } from './RateioEmpresas'
 import { conferirRateio } from './regras'
 import { confirmar } from '@/features/common/dialogo/dialogo'
+import { listCarteiras } from '@/features/financeiro/api'
+import { carteiraDaEmpresa } from '@/features/financeiro/types'
+import s from './custos.module.css'
 
 const dataBR = (iso: string) => iso.split('-').reverse().join('/')
 
@@ -73,7 +76,7 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     if (!open) return
     reset(
         initial
-          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, rateio: initial.rateio ?? [] }
+          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, carteiraId: initial.carteiraId ?? '', rateio: initial.rateio ?? [] }
           : emptyCustoFixo,
       )
   }, [open, initial, reset])
@@ -96,6 +99,13 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, empresasAtivas.length, unidadeSel])
 
+  // Lançamentos a pagar: a recorrente com término, dia de pagamento e conta gera um por mês.
+  const { data: carteiras } = useQuery({ queryKey: ['carteiras'], queryFn: listCarteiras })
+  const contasDaEmpresa = (carteiras ?? []).filter((c) => c.status === 'ativo' && carteiraDaEmpresa(c, unidadeSel))
+  const dataFimSel = useWatch({ control, name: 'dataFim' })
+  const diaSel = useWatch({ control, name: 'diaVencimento' })
+  const carteiraSel = useWatch({ control, name: 'carteiraId' })
+  const geraLancamentos = recorrente && !!dataFimSel && dataFimSel < '9999' && diaSel > 0 && !!carteiraSel
   const fornecedorSel = useWatch({ control, name: 'fornecedorId' })
   const categoriaSel = useWatch({ control, name: 'categoriaId' })
   const fornecedor = fornecedores.find((f) => f.id === fornecedorSel)
@@ -135,7 +145,7 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     if (data.tipo === 'recorrente' && !data.dataFim) {
       const ok = await confirmar({
         titulo: 'Despesa sem data de término',
-        mensagem: `A data de término não foi preenchida.\n\nA despesa será gravada sem prazo final, com término em ${dataBR(DATA_FIM_SEM_PRAZO)}. Deseja continuar?`,
+        mensagem: `A data de término não foi preenchida.\n\nA despesa será gravada sem prazo final (término em ${dataBR(DATA_FIM_SEM_PRAZO)}) e os lançamentos a pagar NÃO serão criados automaticamente nas Entradas e Saídas. Para criá-los, informe a data de término.\n\nGravar sem prazo mesmo assim?`,
         confirmar: 'Gravar sem prazo',
       })
       if (!ok) return
@@ -302,8 +312,8 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
               </>
             )}
             <Field
-              label="Dia de vencimento"
-              hint="Dia do mês em que a conta vence (1 a 31). Mês mais curto vence no último dia. Em branco = não informado."
+              label="Dia de pagamento"
+              hint="Dia do mês em que a conta é paga (1 a 31). Mês mais curto: o último dia. Na recorrente com término, é o vencimento dos lançamentos a pagar."
               error={errors.diaVencimento?.message}
             >
               <input
@@ -315,6 +325,25 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
                 {...register('diaVencimento', { setValueAs: (v) => (v === '' || v == null ? 0 : Number(v)) })}
               />
             </Field>
+            {recorrente && (
+              <Field className={ui.col2} label="Conta que paga" hint="Com a conta, o término e o dia de pagamento, a despesa gera os lançamentos a pagar mês a mês nas Entradas e Saídas.">
+                <select {...register('carteiraId')}>
+                  <option value="">Nenhuma (não gera lançamentos)</option>
+                  {contasDaEmpresa.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            )}
+            {recorrente && (
+              <p className={`${ui.col4} ${s.notaLancamentos} ${geraLancamentos ? s.notaGera : ''}`}>
+                {geraLancamentos
+                  ? 'Ao salvar, os lançamentos a pagar são criados nas Entradas e Saídas, do mês atual até o término (pendentes de aprovação).'
+                  : 'Os lançamentos a pagar NÃO são criados automaticamente: para criar, informe o término, o dia de pagamento e a conta que paga.'}
+              </p>
+            )}
           </div>
         </section>
       </form>

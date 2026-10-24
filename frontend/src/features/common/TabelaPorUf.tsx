@@ -16,6 +16,8 @@ export interface TaxaUf {
   ufOrigem: string
   ufDestino: string
   valor: number
+  /** Segunda coluna (venda), quando a tabela tem: 0 = ainda não definida. */
+  venda?: number
 }
 
 interface Props {
@@ -28,6 +30,8 @@ interface Props {
   zeroRemove: boolean
   /** Base pronta para o botão "Preencher base" (ex.: a tabela da ESL). */
   base?: () => TaxaUf[]
+  /** Com segunda coluna (ex.: "Venda %"): custo e venda lado a lado, e a margem aplicada de uma vez. */
+  colunaVenda?: string
 }
 
 const SIGLAS = UFS.map((u) => u.sigla)
@@ -36,21 +40,36 @@ const SIGLAS = UFS.map((u) => u.sigla)
  * Tabela por UF de origem × destino (prêmio da apólice, alíquota de ICMS): uma origem por vez com
  * os 27 destinos, planilha para baixar e importar e, quando existe, a base pronta para preencher.
  */
-export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove, base }: Props) {
+export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove, base, colunaVenda }: Props) {
   const [origem, setOrigem] = useState('SP')
+  const [margem, setMargem] = useState(0.3)
   const [aviso, setAviso] = useState<{ texto: string; erro: boolean } | null>(null)
   const colunas: ColunaImport[] = [
     { titulo: 'UF origem', exemplo: 'SP', obrigatoria: true },
     { titulo: 'UF destino', exemplo: 'RJ', obrigatoria: true },
     { titulo: coluna, exemplo: '0,14', obrigatoria: true },
+    ...(colunaVenda ? [{ titulo: colunaVenda, exemplo: '0,18', obrigatoria: false }] : []),
   ]
   const valor = (o: string, d: string) => linhas.find((t) => t.ufOrigem === o && t.ufDestino === d)?.valor ?? 0
+  const venda = (o: string, d: string) => linhas.find((t) => t.ufOrigem === o && t.ufDestino === d)?.venda ?? 0
+  const semVenda = colunaVenda ? linhas.filter((t) => !(t.venda && t.venda > 0)).length : 0
   const porOrigem = (o: string) => linhas.filter((t) => t.ufOrigem === o).length
   const faixa = linhas.length ? [Math.min(...linhas.map((t) => t.valor)), Math.max(...linhas.map((t) => t.valor))] : null
 
   const mudar = (d: string, v: number) => {
     const resto = linhas.filter((t) => !(t.ufOrigem === origem && t.ufDestino === d))
-    onChange(v > 0 || !zeroRemove ? [...resto, { ufOrigem: origem, ufDestino: d, valor: v }] : resto)
+    onChange(v > 0 || !zeroRemove ? [...resto, { ufOrigem: origem, ufDestino: d, valor: v, venda: venda(origem, d) }] : resto)
+  }
+  /** Venda da rota: só existe com custo (a rota fora da tabela não tem o que vender). */
+  const mudarVenda = (d: string, v: number) =>
+    onChange(linhas.map((t) => (t.ufOrigem === origem && t.ufDestino === d ? { ...t, venda: v } : t)))
+  /** Venda = custo × (1 + margem) em todas as rotas (de todas as origens); depois dá para ajustar uma a uma. */
+  const aplicarMargem = async () => {
+    if (linhas.length === 0) return
+    if (linhas.some((t) => t.venda && t.venda > 0) && !(await confirmar({ titulo: 'Aplicar a margem', mensagem: `A venda das ${linhas.length} rotas passa a ser o custo + ${formatPct(margem)}. As vendas digitadas serão substituídas. Continuar?`, confirmar: 'Aplicar' })))
+      return
+    onChange(linhas.map((t) => ({ ...t, venda: Math.round(t.valor * (1 + margem) * 1e6) / 1e6 })))
+    setAviso({ texto: `Venda de ${linhas.length} rotas = custo + ${formatPct(margem)}. Ajuste o que for diferente e salve.`, erro: false })
   }
 
   const preencherBase = async () => {
@@ -66,7 +85,12 @@ export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove,
     const cab = colunas.map((c) => ({ value: c.titulo, fontWeight: 'bold' as const }))
     const corpo = [...linhas]
       .sort((x, y) => x.ufOrigem.localeCompare(y.ufOrigem) || x.ufDestino.localeCompare(y.ufDestino))
-      .map((t) => [{ value: t.ufOrigem }, { value: t.ufDestino }, { value: Math.round(t.valor * 1e6) / 1e4, type: Number }])
+      .map((t) => [
+        { value: t.ufOrigem },
+        { value: t.ufDestino },
+        { value: Math.round(t.valor * 1e6) / 1e4, type: Number },
+        ...(colunaVenda ? [{ value: Math.round((t.venda ?? 0) * 1e6) / 1e4, type: Number }] : []),
+      ])
     const dados: SheetData = [cab, ...(corpo.length ? corpo : [[{ value: 'SP' }, { value: 'RJ' }, { value: 0.14, type: Number }]])]
     await writeXlsxFile(dados, { columns: colunas.map(() => ({ width: 16 })) }).toFile(nomeArquivo)
   }
@@ -82,11 +106,15 @@ export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove,
         const o = l['UF origem'].toUpperCase()
         const d = l['UF destino'].toUpperCase()
         // Célula numérica chega como "0.035" (ponto decimal); digitada, como "0,035".
-        const bruto = l[coluna].replace('%', '').trim()
-        const v = (/^\d+(\.\d+)?$/.test(bruto) ? Number(bruto) : parseDigitado(bruto)) / 100
+        const numero = (txt: string | undefined) => {
+          const bruto = (txt ?? '').replace('%', '').trim()
+          return bruto ? (/^\d+(\.\d+)?$/.test(bruto) ? Number(bruto) : parseDigitado(bruto)) / 100 : 0
+        }
+        const v = numero(l[coluna])
+        const vv = colunaVenda ? numero(l[colunaVenda]) : 0
         if (!SIGLAS.includes(o) || !SIGLAS.includes(d)) return { erro: 'UF inválida' }
-        if (!(v >= 0 && v <= 1) || (zeroRemove && v === 0)) return { erro: 'valor inválido' }
-        return { item: { ufOrigem: o, ufDestino: d, valor: v }, resumo: `${o} → ${d}` }
+        if (!(v >= 0 && v <= 1) || (zeroRemove && v === 0) || !(vv >= 0 && vv <= 1)) return { erro: 'valor inválido' }
+        return { item: { ufOrigem: o, ufDestino: d, valor: v, ...(colunaVenda ? { venda: vv } : {}) }, resumo: `${o} → ${d}` }
       })
       if ('erro' in res) return setAviso({ texto: res.erro, erro: true })
       const validas = res.linhas.flatMap((l) => (l.item ? [l.item] : []))
@@ -120,7 +148,17 @@ export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove,
         <span className={s.resumo}>
           {linhas.length} {linhas.length === 1 ? 'rota' : 'rotas'}
           {faixa && ` · de ${formatPct(faixa[0])} a ${formatPct(faixa[1])}`}
+          {colunaVenda && semVenda > 0 && <b className={s.semVenda}> · {semVenda} sem venda (cobra o custo)</b>}
         </span>
+        {colunaVenda && (
+          <span className={s.margem}>
+            Margem
+            <PercentInput value={margem} onChange={setMargem} />
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void aplicarMargem()} disabled={linhas.length === 0} title="Venda = custo + margem, em todas as rotas">
+              Aplicar a todas
+            </button>
+          </span>
+        )}
         {base && (
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={preencherBase} title="Preenche a tabela com a base pronta">
             <DatabaseZap /> Preencher base
@@ -137,12 +175,27 @@ export function TabelaPorUf({ linhas, onChange, coluna, nomeArquivo, zeroRemove,
       {aviso && <div className={aviso.erro ? s.avisoErro : s.avisoOk}>{aviso.texto}</div>}
       <div className={s.destinos}>
         {SIGLAS.map((d) => (
-          <label key={d} className={s.destino}>
+          <div key={d} className={`${s.destino} ${colunaVenda ? s.destinoDuplo : ''}`}>
             <span>
               {origem} → {d}
             </span>
-            <PercentInput value={valor(origem, d)} onChange={(n) => mudar(d, n)} />
-          </label>
+            {colunaVenda ? (
+              <div className={s.duplo}>
+                <label>
+                  <small>{coluna}</small>
+                  <PercentInput value={valor(origem, d)} onChange={(n) => mudar(d, n)} />
+                </label>
+                <label>
+                  <small>{colunaVenda}</small>
+                  <PercentInput value={venda(origem, d)} onChange={(n) => mudarVenda(d, n)} invalid={valor(origem, d) > 0 && venda(origem, d) > 0 && venda(origem, d) < valor(origem, d)} />
+                </label>
+              </div>
+            ) : (
+              <label>
+                <PercentInput value={valor(origem, d)} onChange={(n) => mudar(d, n)} />
+              </label>
+            )}
+          </div>
         ))}
       </div>
     </div>

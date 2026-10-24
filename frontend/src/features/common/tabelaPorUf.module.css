@@ -9,3 +9,12 @@
 .avisoOk, .avisoErro { border-radius: 9px; padding: 8px 12px; font-size: 12.5px; margin-bottom: 10px; line-height: 1.4; }
 .avisoOk { background: #e8f5ec; color: #2e7d44; }
 .avisoErro { background: #fdf0e6; color: #8f4f15; }
+/* Com venda: custo e venda lado a lado em cada destino. */
+.destinos:has(.destinoDuplo) { grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); }
+.destinoDuplo { padding: 6px 8px; border: 1px solid #efebe2; border-radius: 9px; background: #fcfbf8; }
+.duplo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.duplo label { display: flex; flex-direction: column; gap: 2px; }
+.duplo small { font-size: 10px; font-weight: 600; color: #8a948c; letter-spacing: 0; }
+.semVenda { color: #b5651d; font-weight: 600; }
+.margem { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; color: #3d4b43; }
+.margem > div { width: 96px; }

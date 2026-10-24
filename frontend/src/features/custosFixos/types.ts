@@ -36,8 +36,10 @@ export interface CustoFixo {
   dataFim: string
   /** Fornecedor que emite a despesa (cadastro em features/parceiros). */
   fornecedorId: string
-  /** Dia do mês em que vence (1–31). 0 = não informado. */
+  /** Dia do mês em que é paga (1–31). 0 = não informado. */
   diaVencimento?: number
+  /** Conta que paga: com ela, o término e o dia, a recorrente gera os lançamentos a pagar. */
+  carteiraId?: string
   /**
    * Rateio entre empresas: a parte de cada uma vai para a DF (e o markup) dela. Vazio = sem rateio
    * (tudo de `unidadeId`, a empresa que paga a conta, que sempre faz parte quando há rateio).

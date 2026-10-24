@@ -45,18 +45,29 @@ export type FonteTaxa = 'urbana' | 'tabela' | 'padrao'
 /**
  * Prêmio da rota: mesma cidade com taxa urbana → urbana; par de UFs na tabela → tabela;
  * senão a taxa padrão da apólice (0 = sem padrão → null, a pessoa digita).
+ * `pct` é o que se cobra do cliente: a VENDA da rota; sem venda definida, o custo (semVenda = true).
  */
-export function taxaDaRota(a: Apolice, origem: string | number | undefined, destino: string | number | undefined): { pct: number; fonte: FonteTaxa } | null {
+export function taxaDaRota(
+  a: Apolice,
+  origem: string | number | undefined,
+  destino: string | number | undefined,
+): { pct: number; custo: number; semVenda: boolean; fonte: FonteTaxa } | null {
+  const r = custoDaRota(a, origem, destino)
+  if (!r) return null
+  return { pct: r.venda > 0 ? r.venda : r.custo, custo: r.custo, semVenda: !(r.venda > 0), fonte: r.fonte }
+}
+
+function custoDaRota(a: Apolice, origem: string | number | undefined, destino: string | number | undefined): { custo: number; venda: number; fonte: FonteTaxa } | null {
   const o = String(origem ?? '').trim()
   const d = String(destino ?? '').trim()
   const ufO = ufDoValor(o)
   const ufD = ufDoValor(d)
   if (!ufO || !ufD) return null
   const ehCidade = o.length > 2 && d.length > 2
-  if (ehCidade && a.taxaUrbana > 0 && o.localeCompare(d, 'pt-BR', { sensitivity: 'base' }) === 0) return { pct: a.taxaUrbana, fonte: 'urbana' }
+  if (ehCidade && a.taxaUrbana > 0 && o.localeCompare(d, 'pt-BR', { sensitivity: 'base' }) === 0) return { custo: a.taxaUrbana, venda: a.taxaUrbanaVenda ?? 0, fonte: 'urbana' }
   const linha = a.taxas.find((t) => t.ufOrigem === ufO && t.ufDestino === ufD)
-  if (linha) return { pct: linha.percentual, fonte: 'tabela' }
-  return a.taxaPadrao > 0 ? { pct: a.taxaPadrao, fonte: 'padrao' } : null
+  if (linha) return { custo: linha.percentual, venda: linha.percentualVenda ?? 0, fonte: 'tabela' }
+  return a.taxaPadrao > 0 ? { custo: a.taxaPadrao, venda: a.taxaPadraoVenda ?? 0, fonte: 'padrao' } : null
 }
 
 /**

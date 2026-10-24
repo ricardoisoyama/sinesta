@@ -122,3 +122,6 @@
     grid-template-columns: 1fr;
   }
 }
+/* Aviso dos lançamentos a pagar da recorrente (gera ou não gera). */
+.notaLancamentos { margin: 0; font-size: 12.5px; line-height: 1.45; color: #8a5a0c; background: #fdf6e9; border: 1px solid #f1dfba; border-radius: 9px; padding: 8px 12px; }
+.notaGera { color: #2e7d44; background: #e8f5ec; border-color: #cfe8d6; }

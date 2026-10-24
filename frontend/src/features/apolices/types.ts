@@ -13,7 +13,10 @@ export const DOCUMENTOS_APOLICE: { valor: DocumentoApolice; label: string }[] = 
 export interface TaxaApolice {
   ufOrigem: string
   ufDestino: string
+  /** Custo: o que a seguradora cobra. */
   percentual: number
+  /** Venda: o que o Pricing cobra do cliente (0 = ainda não definida: cobra o custo). */
+  percentualVenda?: number
 }
 
 /**
@@ -36,6 +39,9 @@ export interface Apolice {
   iof: number
   taxaUrbana: number
   taxaPadrao: number
+  /** Venda da taxa urbana e da padrão (0 = cobra o custo). */
+  taxaUrbanaVenda?: number
+  taxaPadraoVenda?: number
   documentos: DocumentoApolice[]
   observacao: string
   status: 'ativo' | 'inativo'
@@ -55,6 +61,8 @@ export const novaApolice = (): Apolice => ({
   iof: 0,
   taxaUrbana: 0,
   taxaPadrao: 0,
+  taxaUrbanaVenda: 0,
+  taxaPadraoVenda: 0,
   documentos: ['cte'],
   observacao: '',
   status: 'ativo',

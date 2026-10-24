@@ -34,7 +34,7 @@ public static class ApolicesSeguro
         if (a.VigenciaInicio.Length > 0 && a.VigenciaFim.Length > 0 && string.CompareOrdinal(a.VigenciaFim, a.VigenciaInicio) < 0)
             return $"{nome}: o fim da vigência vem antes do início.";
         if (a.LimitePorEmbarque < 0 || a.CustoEmissao < 0) return $"{nome}: valores não podem ser negativos.";
-        if (!Fracao(a.Iof) || !Fracao(a.TaxaUrbana) || !Fracao(a.TaxaPadrao)) return $"{nome}: percentual fora de 0% a 100%.";
+        if (!Fracao(a.Iof) || !Fracao(a.TaxaUrbana) || !Fracao(a.TaxaPadrao) || !Fracao(a.TaxaUrbanaVenda) || !Fracao(a.TaxaPadraoVenda)) return $"{nome}: percentual fora de 0% a 100%.";
 
         // Uma linha por par de UFs: a última informada vale (é o que a planilha faria ao corrigir).
         var taxas = new Dictionary<(string, string), TaxaApolice>();
@@ -43,8 +43,8 @@ public static class ApolicesSeguro
             var o = (t.UfOrigem ?? string.Empty).Trim().ToUpperInvariant();
             var d = (t.UfDestino ?? string.Empty).Trim().ToUpperInvariant();
             if (!Ufs.Contains(o) || !Ufs.Contains(d)) return $"{nome}: UF inválida na tabela de prêmio ({t.UfOrigem} → {t.UfDestino}).";
-            if (!Fracao(t.Percentual)) return $"{nome}: prêmio fora de 0% a 100% em {o} → {d}.";
-            taxas[(o, d)] = new TaxaApolice { UfOrigem = o, UfDestino = d, Percentual = t.Percentual };
+            if (!Fracao(t.Percentual) || !Fracao(t.PercentualVenda)) return $"{nome}: prêmio fora de 0% a 100% em {o} → {d}.";
+            taxas[(o, d)] = new TaxaApolice { UfOrigem = o, UfDestino = d, Percentual = t.Percentual, PercentualVenda = t.PercentualVenda };
         }
         a.Taxas = taxas.Values.OrderBy(t => t.UfOrigem).ThenBy(t => t.UfDestino).ToList();
         return null;

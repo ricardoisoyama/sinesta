@@ -151,6 +151,7 @@ public static class DependencyInjection
         services.AddScoped<INumeradorDocumentos, NumeradorDocumentos>();
         services.AddScoped<NumeracaoService>();
         services.AddScoped<FaturaClienteService>();
+        services.AddScoped<LancamentosDespesaFixa>();
         services.AddScoped<IAoReceberCobranca, BaixaDaFaturaPeloBoleto>();
 
         // E-mail (Administrativo › Integração SMTP)

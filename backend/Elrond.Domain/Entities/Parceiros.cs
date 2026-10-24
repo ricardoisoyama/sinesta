@@ -230,6 +230,9 @@ public class Apolice : Rastreavel, IEntity, IInativavel
     public decimal TaxaUrbana { get; set; }
     /// <summary>Prêmio das rotas que não estão na tabela (fração). 0 = sem padrão.</summary>
     public decimal TaxaPadrao { get; set; }
+    /// <summary>O que se cobra do cliente na taxa urbana e na padrão (fração). 0 = cobra o custo.</summary>
+    public decimal TaxaUrbanaVenda { get; set; }
+    public decimal TaxaPadraoVenda { get; set; }
     /// <summary>Documentos em que a apólice se aplica: cte | nfse | minuta.</summary>
     public List<string> Documentos { get; set; } = new();
     public string Observacao { get; set; } = string.Empty;
@@ -238,12 +241,16 @@ public class Apolice : Rastreavel, IEntity, IInativavel
     public List<TaxaApolice> Taxas { get; set; } = new();
 }
 
-/// <summary>Prêmio da rota (fração sobre o valor da mercadoria: 0,0014 = 0,14%).</summary>
+/// <summary>
+/// Prêmio da rota (fração sobre o valor da mercadoria: 0,0014 = 0,14%): o custo (o que a seguradora
+/// cobra) e a venda (o que o Pricing cobra do cliente). Venda 0 = ainda não definida: cobra o custo.
+/// </summary>
 public class TaxaApolice
 {
     public string UfOrigem { get; set; } = string.Empty;
     public string UfDestino { get; set; } = string.Empty;
     public decimal Percentual { get; set; }
+    public decimal PercentualVenda { get; set; }
 }
 
 /// <summary>Região em que o vendedor NÃO pode vender (lista de exclusão).</summary>
