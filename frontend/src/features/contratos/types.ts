@@ -195,6 +195,8 @@ export interface Fatura {
   extrasFora: string[]
   situacao: SituacaoFatura
   nf: string
+  /** NFS-e emitida pelo ELROND para a fatura (vazio = registrada à mão ou ainda não emitida). */
+  nfseId?: string
   boleto: string
   recebidaEm: string
   motivo: string

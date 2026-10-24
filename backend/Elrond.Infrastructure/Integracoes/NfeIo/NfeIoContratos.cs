@@ -10,6 +10,7 @@ internal sealed class NfeIoEmissao
     public string? FederalServiceCode { get; init; }
     public required string NbsCode { get; init; }
     public string? CnaeCode { get; init; }
+    public string? CstPisCofins { get; init; }
     public required string Description { get; init; }
     public decimal ServicesAmount { get; init; }
     public decimal? DiscountUnconditionedAmount { get; init; }
@@ -79,6 +80,7 @@ internal sealed class NfeIoIbsCbs
 {
     public required string OperationIndicator { get; init; }
     public required string ClassCode { get; init; }
+    public string? SituationCode { get; init; }
     public bool? PersonalUse { get; init; }
 }
 

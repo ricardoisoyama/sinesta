@@ -7,6 +7,8 @@ import { carteiraDaEmpresa } from '@/features/financeiro/types'
 import { usePlanoContas } from '@/features/planoContas/store'
 import { PlanoContaBusca } from '@/features/planoContas/PlanoContaBusca'
 import type { FaturamentoEmpresa } from './types'
+import { useAuth } from '@/features/auth/auth-context'
+import { ConfiguracaoNfseEmpresa } from './ConfiguracaoNfseEmpresa'
 
 interface Props {
   empresaId: string
@@ -25,6 +27,8 @@ export function FaturamentoEmpresaCampos({ empresaId, valor, onChange }: Props) 
   const set = (p: Partial<FaturamentoEmpresa>) => onChange({ ...valor, ...p })
   const daEmpresa = (carteiras ?? []).filter((c) => c.status === 'ativo' && carteiraDaEmpresa(c, empresaId))
   const receita = (c: { grupoDre: string; status: string }) => c.grupoDre === 'Receita' && c.status === 'ativo'
+  const { user } = useAuth()
+  const podeNfse = !!user?.permissoes?.includes('/fiscal/nfse')
 
   return (
     <>
@@ -52,6 +56,14 @@ export function FaturamentoEmpresaCampos({ empresaId, valor, onChange }: Props) 
           <input type="email" value={valor.email} onChange={(e) => set({ email: e.target.value })} placeholder="financeiro@empresa.com.br" />
         </Field>
       </div>
+      {podeNfse && (
+        <>
+          <div className={ui.fsectionTitle} style={{ marginTop: 16 }}>
+            Emissão de NFS-e <span className={ui.fsectionHint}>emissor e cadastro da empresa nele; grava na hora</span>
+          </div>
+          <ConfiguracaoNfseEmpresa empresaId={empresaId} />
+        </>
+      )}
     </>
   )
 }

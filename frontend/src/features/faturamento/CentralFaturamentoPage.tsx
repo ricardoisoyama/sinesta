@@ -19,6 +19,8 @@ import { ConferenciaModal } from './ConferenciaModal'
 import { NovaCobrancaModal } from './NovaCobrancaModal'
 import { RegistroModal, type Registro } from './RegistroModal'
 import { PendentesSiimp } from './PendentesSiimp'
+import { PERMISSAO_NFSE, abrirArquivoNfse, emitirNfseFatura, useNfseDasFaturas } from './nfseFatura'
+import { useAuth } from '@/features/auth/auth-context'
 import { usePendentes } from './pendentes'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import s from './faturamento.module.css'
@@ -80,6 +82,13 @@ export function CentralFaturamentoPage() {
   const { data, isLoading } = useFaturasDoMes(mes)
 
   const doMes = faturasCentrais(data?.contratos ?? [], data?.faturas ?? [], nomes)
+  // NFS-e emitidas pelo ELROND: situação ao lado da fatura (emitida vira a NF da fatura no servidor).
+  const { user } = useAuth()
+  const podeEmitirNfse = !!user?.permissoes?.includes(PERMISSAO_NFSE)
+  const { porFatura: nfses, recarregar: recarregarNfse } = useNfseDasFaturas(
+    doMes.filter((f) => !!f.nfseId).map((f) => f.id),
+    recarregar,
+  )
   const conferindo = conferindoId ? doMes.find((f) => f.id === conferindoId) ?? null : null
   const registrando = registro ? doMes.find((f) => f.id === registro.id) : undefined
   const daEmpresa = doMes.filter((f) => empresa === 'todas' || f.empresaId === empresa)
@@ -167,7 +176,20 @@ export function CentralFaturamentoPage() {
       cell: (f) => (
         <div className={s.docs}>
           <BadgeFatura situacao={f.situacao} />
-          {(f.nf || f.boleto) && <small>{[f.nf && (f.documentoDaOperacao ? f.nf : `NF ${f.nf}`), f.boleto && `boleto ${f.boleto}`].filter(Boolean).join(' · ')}</small>}
+          {(f.nf || f.boleto) && <small>{[f.nf && (f.documentoDaOperacao || f.nf.startsWith('NFS-e') ? f.nf : `NF ${f.nf}`), f.boleto && `boleto ${f.boleto}`].filter(Boolean).join(' · ')}</small>}
+          {(() => {
+            const n = nfses.get(f.id)?.nota
+            if (!n) return null
+            if (n.situacao === 'Rejeitada') return <small className={s.atrasado} title={n.mensagem}>NFS-e rejeitada: {n.mensagem}</small>
+            if (n.emAndamento) return <small>NFS-e na prefeitura…</small>
+            return n.temArquivos ? (
+              <small>
+                <button type="button" className={s.linkNfse} onClick={(e) => { e.stopPropagation(); void abrirArquivoNfse(n.id, 'pdf').catch((err) => avisar({ titulo: 'Não foi possível abrir', mensagem: getErrorMessage(err) })) }}>PDF</button>
+                {' · '}
+                <button type="button" className={s.linkNfse} onClick={(e) => { e.stopPropagation(); void abrirArquivoNfse(n.id, 'xml').catch((err) => avisar({ titulo: 'Não foi possível abrir', mensagem: getErrorMessage(err) })) }}>XML</button>
+              </small>
+            ) : null
+          })()}
         </div>
       ),
     },
@@ -320,7 +342,23 @@ export function CentralFaturamentoPage() {
         onDevolver={(f, motivo) => avancar(f.id, 'devolver', { motivo })}
       />
       {registro && registrando && (
-        <RegistroModal fatura={registrando} etapa={registro.etapa} onClose={() => setRegistro(null)} onConfirmar={(dados) => avancar(registrando.id, registro.etapa, dados)} />
+        <RegistroModal
+          fatura={registrando}
+          etapa={registro.etapa}
+          onClose={() => setRegistro(null)}
+          onConfirmar={(dados) => avancar(registrando.id, registro.etapa, dados)}
+          nfse={nfses.get(registrando.id)}
+          onEmitirNfse={
+            podeEmitirNfse
+              ? async () => {
+                  const r = await emitirNfseFatura(registrando.id)
+                  await recarregar()
+                  await recarregarNfse()
+                  return r
+                }
+              : undefined
+          }
+        />
       )}
       {novaCobranca && (
         <NovaCobrancaModal

@@ -1,0 +1,16 @@
+/* Dados fiscais do serviço (NFS-e), por empresa emitente */
+.fiscal { display: flex; flex-direction: column; gap: 12px; }
+.empresas { display: flex; flex-wrap: wrap; gap: 6px; }
+.empresa { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #e6e3db; background: #fff; color: #143d18; font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+.empresaOn { background: #143d18; border-color: #143d18; color: #fff; }
+.empresa small { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 8px; }
+.ok { background: #e8f5ec; color: #2e7d44; }
+.off { background: #f0eee7; color: #6b7b72; }
+.vazio { background: #fdf0e6; color: #b5651d; }
+.semDados { border: 1px dashed #d7d3ca; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.semDados p { margin: 0; font-size: 13px; color: #3d4b43; }
+.semDadosAcoes { display: flex; flex-wrap: wrap; gap: 8px; }
+.daEmpresa { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; line-height: 1.45; color: #1c5a82; background: #e7eef8; border-radius: 9px; padding: 8px 12px; }
+.daEmpresa svg { flex-shrink: 0; margin-top: 2px; }
+.marcas { display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+.rodapeFiscal { display: flex; justify-content: flex-end; }

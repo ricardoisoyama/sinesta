@@ -14,6 +14,7 @@ import { getErrorMessage } from '@/lib/api'
 import { avisar } from '@/features/common/dialogo/dialogo'
 import { usePropostas } from '@/features/propostas/store'
 import { ServicoFormModal } from './ServicoFormModal'
+import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import type { ServicoForm } from './servico-schema'
 
 export function ServicosPage() {
@@ -35,6 +36,8 @@ export function ServicosPage() {
     propostas.flatMap((p) => p.itens.map((i) => i.servicoId).filter((id): id is string => !!id)),
   )
   const jaUsado = (id: string) => usados.has(id)
+  const { data: empresasData } = useEmpresasQuery()
+  const nomeEmpresa = (id: string) => (empresasData ?? []).find((e) => e.id === id)?.nome ?? id
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['servicos'] })
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -97,6 +100,21 @@ export function ServicosPage() {
           <span className={ui.cellMut}>—</span>
         ),
     },
+    {
+      header: 'NFS-e',
+      largura: LARGURA.longa,
+      valor: (s) => (s.fiscais ?? []).filter((f) => f.ativo).map((f) => nomeEmpresa(f.empresaId)).join(', '),
+      cell: (s) => {
+        const ativas = (s.fiscais ?? []).filter((f) => f.ativo)
+        return ativas.length ? (
+          <span className={ui.cellMut} title={ativas.map((f) => `${nomeEmpresa(f.empresaId)}: ${f.itemLc116} · ${f.codigoMunicipal}`).join(' · ')}>
+            {ativas.map((f) => nomeEmpresa(f.empresaId)).join(', ')}
+          </span>
+        ) : (
+          <span className={ui.cellMut}>Sem dados fiscais</span>
+        )
+      },
+    },
     { header: 'Status', largura: LARGURA.status, valor: (s) => s.status, cell: (s) => <StatusBadge status={s.status} /> },
     {
       header: 'Ações',
@@ -108,8 +126,6 @@ export function ServicosPage() {
           status={s.status}
           onEdit={() => crud.openEdit(s)}
           onSetStatus={(st) => setStatus(s, st)}
-          podeEditar={!jaUsado(s.id)}
-          motivoBloqueio="Serviço já usado em proposta: só pode ser inativado"
         />
       ),
     },
@@ -146,6 +162,7 @@ export function ServicosPage() {
         initial={crud.editing}
         error={saveError}
         busy={salvando}
+        nomeTravado={!!crud.editing && jaUsado(crud.editing.id)}
         onClose={() => {
           setSaveError(null)
           crud.close()

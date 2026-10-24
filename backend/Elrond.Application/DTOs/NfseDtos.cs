@@ -54,12 +54,14 @@ public sealed record EnderecoNfseDto(
 /// <param name="ItemLc116">Item da LC 116 (ex.: "17.05").</param>
 /// <param name="Nbs">Nomenclatura Brasileira de Serviços (9 dígitos, com ou sem pontos).</param>
 /// <param name="Descricao">Texto da nota (até 2.000 caracteres).</param>
+/// <param name="CstPisCofins">CST do PIS/COFINS (2 dígitos); null = o padrão do provedor.</param>
 public sealed record ServicoNfseDto(
     string CodigoMunicipal,
     string ItemLc116,
     string Nbs,
     string Descricao,
-    string? Cnae = null);
+    string? Cnae = null,
+    string? CstPisCofins = null);
 
 public sealed record ValoresNfseDto(
     decimal ValorServicos,
@@ -102,10 +104,12 @@ public sealed record RetencoesNfseDto(
 /// <param name="IndicadorOperacao">cIndOp, 6 dígitos (ex.: 100301, 020201).</param>
 /// <param name="ClassificacaoTributaria">cClassTrib, 6 dígitos (000001 = tributação integral).</param>
 /// <param name="UsoPessoal">Uso ou consumo pessoal do tomador (pessoa física).</param>
+/// <param name="Cst">CST do IBS/CBS (3 dígitos); null = os 3 primeiros da classificação.</param>
 public sealed record IbsCbsNfseDto(
     string IndicadorOperacao,
     string ClassificacaoTributaria,
-    bool? UsoPessoal = null);
+    bool? UsoPessoal = null,
+    string? Cst = null);
 
 /// <summary>Quem originou a nota no ELROND (ex.: Tipo "movimento", Id do lançamento).</summary>
 public sealed record OrigemNfseDto(string Tipo, string Id);

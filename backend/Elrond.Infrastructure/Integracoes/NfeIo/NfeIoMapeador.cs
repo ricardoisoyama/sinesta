@@ -36,6 +36,7 @@ public static class NfeIoMapeador
             FederalServiceCode = p.Servico.ItemLc116.Trim(),
             NbsCode = DocumentoFiscal.Digitos(p.Servico.Nbs),
             CnaeCode = string.IsNullOrWhiteSpace(p.Servico.Cnae) ? null : DocumentoFiscal.Digitos(p.Servico.Cnae),
+            CstPisCofins = string.IsNullOrWhiteSpace(p.Servico.CstPisCofins) ? null : p.Servico.CstPisCofins.Trim(),
             Description = p.Servico.Descricao.Trim(),
             ServicesAmount = Dinheiro(p.Valores.ValorServicos),
             DiscountUnconditionedAmount = SeMaiorQueZero(p.Valores.DescontoIncondicionado),
@@ -59,6 +60,7 @@ public static class NfeIoMapeador
             {
                 OperationIndicator = p.IbsCbs.IndicadorOperacao,
                 ClassCode = p.IbsCbs.ClassificacaoTributaria,
+                SituationCode = string.IsNullOrWhiteSpace(p.IbsCbs.Cst) ? null : p.IbsCbs.Cst.Trim(),
                 PersonalUse = p.IbsCbs.UsoPessoal,
             },
             // Com o grupo estruturado, o texto livre vai dentro dele (a NFE.io faz o mesmo quando só há o texto).

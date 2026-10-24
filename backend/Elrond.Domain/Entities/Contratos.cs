@@ -325,6 +325,8 @@ public class Fatura : Rastreavel, IEntity
     public List<string> ExtrasFora { get; set; } = new();
     public string Situacao { get; set; } = SituacaoFatura.Prevista;
     public string Nf { get; set; } = string.Empty;
+    /// <summary>NFS-e emitida pelo ELROND para esta fatura (vazio = registrada à mão ou ainda não emitida).</summary>
+    public string NfseId { get; set; } = string.Empty;
     public string Boleto { get; set; } = string.Empty;
     public string RecebidaEm { get; set; } = string.Empty;
     /// <summary>Motivo da devolução na conferência.</summary>

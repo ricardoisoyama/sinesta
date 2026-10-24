@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { FileCheck2, HandCoins, Landmark } from 'lucide-react'
+import { FileCheck2, HandCoins, Landmark, Send } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import ui from '@/features/common/ui.module.css'
 import { formatBRL } from '@/lib/format'
 import { dataBR, hojeISO } from '@/features/contratos/regras'
 import type { FaturaCentral } from '@/features/contratos/faturas'
 import type { DadosEtapa } from '@/features/contratos/api'
+import { getErrorMessage } from '@/lib/api'
+import type { NfseDaFatura } from './nfseFatura'
 import s from './faturamento.module.css'
 
 export type Registro = 'nf' | 'boleto' | 'recebimento'
@@ -20,7 +22,37 @@ const TEXTO: Record<Registro, { titulo: string; icone: typeof Landmark; botao: s
  * NF, boleto e recebimento, por enquanto REGISTRADOS à mão (o número que saiu na prefeitura, no
  * banco ou no extrato). Quando a emissão pela Central entrar, este é o passo que vira automático.
  */
-export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar }: { fatura: FaturaCentral; etapa: Registro; onClose: () => void; onConfirmar: (dados: DadosEtapa) => Promise<void> }) {
+interface Props {
+  fatura: FaturaCentral
+  etapa: Registro
+  onClose: () => void
+  onConfirmar: (dados: DadosEtapa) => Promise<void>
+  /** Emissão da NFS-e pelo ELROND (só com a permissão "/fiscal/nfse"; sem ela, só o registro à mão). */
+  onEmitirNfse?: () => Promise<NfseDaFatura>
+  /** A NFS-e que a fatura já tem (em processamento, rejeitada...). */
+  nfse?: NfseDaFatura
+}
+
+export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar, onEmitirNfse, nfse }: Props) {
+  const [emitindo, setEmitindo] = useState(false)
+  const [resultado, setResultado] = useState<NfseDaFatura | null>(null)
+  const [erroNfse, setErroNfse] = useState<string | null>(null)
+  const nota = (resultado ?? nfse)?.nota ?? null
+  const emAndamento = !!nota?.emAndamento
+  const emitir = async () => {
+    if (!onEmitirNfse) return
+    setEmitindo(true)
+    setErroNfse(null)
+    try {
+      const r = await onEmitirNfse()
+      setResultado(r)
+      if (r.nota?.situacao === 'Emitida') onClose()
+    } catch (e) {
+      setErroNfse(getErrorMessage(e))
+    } finally {
+      setEmitindo(false)
+    }
+  }
   const [numero, setNumero] = useState('')
   const [data, setData] = useState(hojeISO())
   const [enviando, setEnviando] = useState(false)
@@ -54,8 +86,33 @@ export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar }: { fatu
         </>
       }
     >
+      {etapa === 'nf' && !ctePronto && onEmitirNfse && (
+        <div className={s.emitirNfse}>
+          <div>
+            <b>Emitir a NFS-e pelo ELROND</b>
+            <span>
+              Com o serviço do contrato ({f.servicoNome || 'sem serviço'}), os impostos da empresa e o endereço do cliente. Emitida, a NF entra na fatura sozinha.
+            </span>
+            {nota && (
+              <span className={nota.situacao === 'Rejeitada' ? s.alertaCelula : s.nfseSituacao}>
+                {nota.situacao === 'Rejeitada'
+                  ? `Rejeitada: ${nota.mensagem}`
+                  : emAndamento
+                    ? 'Enviada à prefeitura: a Central atualiza sozinha quando ela responder.'
+                    : `NFS-e ${nota.numero || ''} ${nota.situacao.toLowerCase()}`}
+                {nota.ambiente && nota.ambiente !== 'Production' ? ` · ambiente de teste (${nota.ambiente})` : ''}
+              </span>
+            )}
+            {erroNfse && <span className={s.alertaCelula}>{erroNfse}</span>}
+          </div>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={emitindo || emAndamento} onClick={() => void emitir()}>
+            <Send /> {emitindo ? 'Enviando...' : nota?.situacao === 'Rejeitada' ? 'Emitir de novo' : 'Emitir NFS-e'}
+          </button>
+        </div>
+      )}
       {etapa === 'nf' && (
         <>
+          {!ctePronto && onEmitirNfse && <p className={s.ouManual}>ou registre o número de uma nota emitida fora do ELROND:</p>}
           <p className={s.confNota}>
             {ctePronto
               ? 'Frete com CT-e: o documento fiscal já saiu na viagem. Deixe em branco para usar os CT-es da fatura, ou informe outro número.'

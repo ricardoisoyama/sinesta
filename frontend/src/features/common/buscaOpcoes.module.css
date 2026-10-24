@@ -1,0 +1,6 @@
+/* Complementos do seletor com busca (a base é a do plano de contas). */
+.lista { max-height: 320px; }
+.recuo { padding-left: 22px; }
+.detalhe { display: block; font-size: 11.5px; color: #6b7b72; margin-top: 1px; }
+.estrela { color: #e8702f; vertical-align: -1px; }
+.separador { border-top: 1px solid #efebe2; margin: 4px 0; }

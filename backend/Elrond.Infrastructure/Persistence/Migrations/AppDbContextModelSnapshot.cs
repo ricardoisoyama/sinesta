@@ -1927,6 +1927,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("NfseId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("Previsto")
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
@@ -7163,6 +7167,78 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Navigation("Aprovacoes");
 
                     b.Navigation("Itens");
+                });
+
+            modelBuilder.Entity("Elrond.Domain.Entities.Servico", b =>
+                {
+                    b.OwnsMany("Elrond.Domain.Entities.ServicoFiscal", "Fiscais", b1 =>
+                        {
+                            b1.Property<string>("ServicoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<bool>("Ativo");
+
+                            b1.Property<string>("ClassificacaoTributaria")
+                                .IsRequired();
+
+                            b1.Property<string>("Cnae")
+                                .IsRequired();
+
+                            b1.Property<string>("CodigoMunicipal")
+                                .IsRequired();
+
+                            b1.Property<string>("CodigoNacional")
+                                .IsRequired();
+
+                            b1.Property<string>("CstIbsCbs")
+                                .IsRequired();
+
+                            b1.Property<string>("CstPisCofins")
+                                .IsRequired();
+
+                            b1.Property<bool>("DescontarImpostos");
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("EmpresaId")
+                                .IsRequired();
+
+                            b1.Property<string>("IndicadorOperacao")
+                                .IsRequired();
+
+                            b1.Property<bool>("IssNoLiquido");
+
+                            b1.Property<string>("ItemLc116")
+                                .IsRequired();
+
+                            b1.Property<string>("Nbs")
+                                .IsRequired();
+
+                            b1.Property<decimal>("TransparenciaAliquota")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("TransparenciaFonte")
+                                .IsRequired();
+
+                            b1.Property<string>("TributacaoIss")
+                                .IsRequired();
+
+                            b1.HasKey("ServicoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("servicos");
+
+                            b1
+                                .ToJson("Fiscais")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ServicoId");
+                        });
+
+                    b.Navigation("Fiscais");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.User", b =>

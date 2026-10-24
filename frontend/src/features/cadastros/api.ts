@@ -1,3 +1,4 @@
+import type { ServicoFiscal } from '@/features/servicos/fiscal'
 import type { Motorista } from '@/features/motoristas/types'
 import { apiFetch } from '@/lib/api'
 import type { Taxa } from '@/features/taxas/types'
@@ -143,6 +144,8 @@ export interface ServicoDto {
   id: string
   nome: string
   status: 'ativo' | 'inativo'
+  /** Dados fiscais da NFS-e, um por empresa emitente (ISS e retenções ficam na empresa). */
+  fiscais?: ServicoFiscal[]
 }
 export type ModoCusto = 'valor' | 'percentual'
 export type BasePercentualCusto = 'nf' | 'servico'

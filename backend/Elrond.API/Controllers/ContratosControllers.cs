@@ -94,9 +94,30 @@ public class ContratosController(IContratoService servico) : ControllerBase
 [ApiController]
 [Authorize]
 [Route("api/faturas")]
-public class FaturasController(IFaturamentoService servico) : ControllerBase
+public class FaturasController(IFaturamentoService servico, EmissaoNfseFatura nfse) : ControllerBase
 {
     public sealed record LoteDto(List<string> Ids);
+
+    /// <summary>NFS-e das faturas (a Central pede para as que têm nota): a emitida vira a NF da fatura aqui.</summary>
+    [HttpPost("nfse/situacao")]
+    public async Task<IActionResult> SituacaoNfse([FromBody] LoteDto dto, CancellationToken ct) => Ok(await nfse.DasFaturasAsync(dto.Ids ?? new(), ct));
+
+    /// <summary>Emite a NFS-e da fatura conferida (serviço do contrato + impostos da empresa + cliente).</summary>
+    [HttpPost("{id}/nfse")]
+    [Authorize(Policy = "func:" + NfseController.Permissao)]
+    public async Task<IActionResult> EmitirNfse(string id, CancellationToken ct)
+    {
+        var r = await nfse.EmitirAsync(id, ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    /// <summary>Pergunta à prefeitura agora (sem esperar o acompanhamento de minuto em minuto).</summary>
+    [HttpPost("{id}/nfse/atualizar")]
+    public async Task<IActionResult> AtualizarNfse(string id, CancellationToken ct)
+    {
+        var r = await nfse.AtualizarAsync(id, ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
 
     [HttpGet]
     public async Task<IActionResult> DoMes([FromQuery] string competencia) =>

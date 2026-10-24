@@ -149,3 +149,13 @@ a.alertaCelula:hover { text-decoration: underline; }
 .faturarDest li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; font-size: 12.5px; color: #1f2a24; }
 .faturarDest li span { color: #6b7b72; }
 .faturarDest li small { font-size: 11px; font-weight: 600; color: #2e7d44; background: #e8f5ec; border-radius: 999px; padding: 1px 8px; }
+
+/* NFS-e pela Central (passo da NF) */
+.emitirNfse { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #eef4ef; border: 1px solid #d6e6da; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.emitirNfse > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.emitirNfse b { font-size: 13.5px; color: #143d18; }
+.emitirNfse span { font-size: 12.5px; color: #3d4b43; line-height: 1.4; }
+.emitirNfse button { flex-shrink: 0; }
+.nfseSituacao { color: #2e7d44 !important; font-weight: 600; }
+.ouManual { margin: 4px 0 6px; font-size: 12px; color: #6b7b72; }
+.linkNfse { border: none; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 700; color: #1c5a82; cursor: pointer; text-decoration: underline; }
