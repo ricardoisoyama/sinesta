@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Elrond.Application\Elrond.Application.csproj" />
     <ProjectReference Include="..\Elrond.Infrastructure\Elrond.Infrastructure.csproj" />
     <ProjectReference Include="..\Elrond.Domain\Elrond.Domain.csproj" />
+    <ProjectReference Include="..\Elrond.API\Elrond.API.csproj" />
   </ItemGroup>
 
 </Project>

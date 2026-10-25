@@ -51,6 +51,8 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
         ("api/modelos-contrato", "/cadastros/modelos-contrato"),
         ("api/contratos", "/contratos"),
         ("api/faturas", "/financeiro/faturamento"),
+        // Fatura ao cliente (CT-es e minutas da SIIMP): "api/faturas" não cobre "api/faturas-clientes" (o prefixo casa só com "/").
+        ("api/faturas-clientes", "/financeiro/faturamento"),
         ("api/faturamento-pendente", "/financeiro/faturamento"),
         ("api/cenarios-projecao", "/analises/projecao"),
     };
