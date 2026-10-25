@@ -94,3 +94,18 @@ public class NumeracoesController(NumeracaoService service, UsuarioContexto usua
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 }
+
+/// <summary>Gerencial › Curva ABC: só lê, mas mostra receita e despesa: exige a tela.</summary>
+[ApiController]
+[Route("api/analises/curva-abc")]
+[Authorize(Policy = "func:/analises/curva-abc")]
+public class CurvaAbcController(CurvaAbcService service) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> Calcular([FromQuery] string dimensao, [FromQuery] string de, [FromQuery] string ate, [FromQuery] string? empresaId,
+        [FromQuery] string natureza = "receita", [FromQuery] string @base = "lancado", [FromQuery] decimal corteA = 0.8m, [FromQuery] decimal corteB = 0.95m)
+    {
+        var r = await service.CalcularAsync(new PedidoCurvaAbc(dimensao, de, ate, empresaId, natureza, @base, corteA, corteB));
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+}

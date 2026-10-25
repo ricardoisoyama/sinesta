@@ -44,6 +44,7 @@ import {
   Plug,
   IdCard,
   Blocks,
+  ChartColumnDecreasing,
   Hash,
   type LucideIcon,
 } from 'lucide-react'
@@ -135,6 +136,7 @@ export const navGroups: NavGroup[] = [
       // Protótipo: a base é real (DF, metas, fator); os cenários ficam no navegador.
       { label: 'Projeção', path: '/analises/projecao', icon: LineChart },
       { label: 'Break-even', path: '/analises/break-even', icon: Scale },
+      { label: 'Curva ABC', path: '/analises/curva-abc', icon: ChartColumnDecreasing },
       { label: 'Mix / Equilíbrio', path: '/analises/mix', icon: PieChart },
       { label: 'RPO (Orçado × Real)', path: '/analises/rpo', icon: ClipboardList },
     ],

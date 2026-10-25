@@ -68,6 +68,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/modelos-contrato', label: 'Modelos de Contrato', grupo: 'Parametrizações' },
   { key: '/financeiro/faturamento', label: 'Central de Faturamento', grupo: 'Financeiro' },
   { key: '/analises/projecao', label: 'Projeção', grupo: 'Gerencial' },
+  { key: '/analises/curva-abc', label: 'Curva ABC (clientes, serviços, fornecedores, plano e centro de custo)', grupo: 'Gerencial' },
 
   // ── Especiais: desligadas por padrão para todo mundo ─────────────────────
   { key: '/simulador/calculo', label: 'Ver o cálculo do preço no Pricing (custos, fator, margem)', grupo: GRUPO_ESPECIAIS, extra: true },

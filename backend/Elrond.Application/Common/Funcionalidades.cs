@@ -61,6 +61,8 @@ public static class Funcionalidades
         "/cadastros/modelos-contrato",
         "/financeiro/faturamento",
         "/analises/projecao",
+        // Curva ABC (Pareto) de clientes, serviços, fornecedores, plano de contas e centro de custo (25/10/2026).
+        "/analises/curva-abc",
     };
 
     /// <summary>

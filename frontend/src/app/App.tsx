@@ -1,3 +1,4 @@
+import { CurvaAbcPage } from '@/features/curvaAbc/CurvaAbcPage'
 import { MotoristasPage } from '@/features/motoristas/MotoristasPage'
 import { NumeracoesPage } from '@/features/numeracoes/NumeracoesPage'
 import { ModulosPage } from '@/features/modulos/ModulosPage'
@@ -123,6 +124,7 @@ export function App() {
           <Route path="/analises/mix" element={<MixPage />} />
           <Route path="/analises/rpo" element={<RpoPage />} />
           <Route path="/analises/projecao" element={<ProjecaoPage />} />
+          <Route path="/analises/curva-abc" element={<CurvaAbcPage />} />
           <Route path="/analises/metas" element={<MetasPage />} />
         </Route>
       </Route>
