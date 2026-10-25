@@ -1,51 +1,46 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Calculator, CalendarDays, Route, BarChart3, PieChart as PieIcon, ArrowRight } from 'lucide-react'
 import {
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from 'recharts'
+  ArrowLeft,
+  ArrowRight,
+  GripVertical,
+  LayoutDashboard,
+  Plus,
+  RotateCcw,
+  Settings2,
+  Share2,
+  X,
+} from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
-import { formatBRL, formatPct } from '@/lib/format'
-import { nomeUnidade } from '@/features/unidades/mock'
+import { Modal } from '@/features/common/Modal'
+import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
-import { usePropostas } from '@/features/propostas/store'
-import { useMetas } from '@/features/metas/store'
-import { useFatorEmpresa } from '@/features/pricing/usePreco'
-import { receitaEquilibrio } from '@/features/pricing/engine'
-import { mesesDaMeta, mesesMeta } from '@/features/metas/mock'
-import { metaDoAno, realizadoPorMes } from '@/features/metas/realizado'
-import c from '@/features/common/charts.module.css'
+import { useAuth } from '@/features/auth/auth-context'
+import { BLOCOS, type DefinicaoBloco } from './blocos'
+import {
+  COLUNAS,
+  ROTULO_TAMANHO,
+  type BlocoNoLayout,
+  type LayoutDashboard as Layout,
+  useLayoutDashboard,
+} from './layout'
 import s from './dashboard.module.css'
 
-const COLORS = ['#1a4d1e', '#e8702f', '#2e7d44', '#b5651d', '#3a7d5d', '#d98a3d']
-const fator4 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
-const kBRL = (v: number) => `R$ ${Math.round(v / 1000)}k`
-
-const STATUS_INFO: Record<string, { label: string; color: string; bg: string }> = {
-  rascunho: { label: 'Rascunho', color: '#6b7b72', bg: '#f0eee7' },
-  enviada: { label: 'Enviada', color: '#b5651d', bg: '#fdf0e6' },
-  aprovada: { label: 'Aprovada', color: '#2e7d44', bg: '#e8f5ec' },
-  recusada: { label: 'Recusada', color: '#c0392b', bg: '#fdecea' },
-}
+const POR_ID = new Map(BLOCOS.map((b) => [b.id, b]))
+const iguais = (a: BlocoNoLayout[], b: BlocoNoLayout[]) => JSON.stringify(a) === JSON.stringify(b)
 
 export function DashboardPage() {
   const { data: empresasData } = useEmpresasQuery()
   useCustosFixosQuery()
   const unidades = (empresasData ?? []).filter((u) => u.status === 'ativo')
   const [unidadeId, setUnidadeId] = useState('')
-  const { propostas } = usePropostas()
-  const { metas } = useMetas()
+  const { user } = useAuth()
+  const { layout, personalizado, salvar, restaurar, salvarComoPadrao } = useLayoutDashboard()
+  // Enquanto personaliza, mexe num rascunho; "Concluir" grava.
+  const [rascunho, setRascunho] = useState<BlocoNoLayout[] | null>(null)
+  const [arrastando, setArrastando] = useState<string | null>(null)
+  const [catalogo, setCatalogo] = useState(false)
+  const [gravando, setGravando] = useState(false)
 
   useEffect(() => {
     if (unidades.length && !unidades.some((u) => u.id === unidadeId)) {
@@ -55,186 +50,329 @@ export function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unidades.map((u) => u.id).join(','), unidadeId])
 
-  const calc = useFatorEmpresa(unidadeId)
-  const df = calc?.totalDF ?? 0
-  const dvSem = calc?.dvSem ?? 0
-  const equilibrio = receitaEquilibrio(df, dvSem)
+  const ehAdmin = user?.perfil === 'Admin'
+  const ehGestor = ehAdmin || user?.perfil === 'Gestor'
+  const pode = (b: DefinicaoBloco) =>
+    !b.permissao || ehAdmin || !!user?.permissoes?.includes(b.permissao)
+  const editando = rascunho !== null
+  const blocos = rascunho ?? layout.blocos
+  // Bloco que a pessoa não pode ver (ou que saiu do sistema) fica no layout gravado, só não aparece.
+  const visiveis = blocos.filter((b) => {
+    const d = POR_ID.get(b.id)
+    return d && pode(d)
+  })
+  const disponiveis = BLOCOS.filter((d) => pode(d) && !blocos.some((b) => b.id === d.id))
 
-  // Itens de todas as propostas (a base "comercial" do sistema).
-  const itens = propostas.flatMap((p) => p.itens)
-  const itensEmpresa = itens.filter((i) => i.empresaId === unidadeId)
-  const mlMedia = itensEmpresa.length ? itensEmpresa.reduce((a, i) => a + i.ml, 0) / itensEmpresa.length : 0
+  const mudar = (fn: (l: BlocoNoLayout[]) => BlocoNoLayout[]) =>
+    setRascunho((r) => fn(r ?? layout.blocos))
+  const mover = (id: string, para: number) =>
+    mudar((l) => {
+      const de = l.findIndex((b) => b.id === id)
+      if (de < 0 || para < 0 || para >= l.length || de === para) return l
+      const n = [...l]
+      const [b] = n.splice(de, 1)
+      n.splice(para, 0, b)
+      return n
+    })
+  /** Move pela posição entre os visíveis (os escondidos não contam para as setas). */
+  const moverVisivel = (id: string, passo: number) => {
+    const i = visiveis.findIndex((b) => b.id === id)
+    const alvo = visiveis[i + passo]
+    if (alvo)
+      mover(
+        id,
+        blocos.findIndex((b) => b.id === alvo.id),
+      )
+  }
 
-  // Meta da empresa escolhida no ano corrente: a mesma que compõe o fator (única ou principal).
-  const ano = new Date().getFullYear()
-  const meta = metaDoAno(metas, unidadeId, ano)
-  const metaMeses = meta ? mesesDaMeta(meta) : Array<number>(12).fill(0)
-  const metaAno = metaMeses.reduce((a, v) => a + v, 0)
-  // Realizado = propostas aprovadas no ano, só os itens desta empresa (mesma regra da tela de Metas).
-  const realizadoMensal = realizadoPorMes(propostas, ano, unidadeId)
-  const realizadoAcum = realizadoMensal.reduce((a, v) => a + v, 0)
-  const pctMeta = metaAno > 0 ? realizadoAcum / metaAno : 0
+  const concluir = async () => {
+    if (!rascunho) return
+    if (iguais(rascunho, layout.blocos)) return setRascunho(null)
+    setGravando(true)
+    try {
+      await salvar({ versao: 1, blocos: rascunho })
+      setRascunho(null)
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Não foi possível salvar o dashboard.')
+    } finally {
+      setGravando(false)
+    }
+  }
 
-  // Pizza: participação na margem (MCT) por empresa.
-  const grupos = new Map<string, number>()
-  for (const i of itens) grupos.set(i.empresaId, (grupos.get(i.empresaId) ?? 0) + Math.max(0, i.precoFinal * i.ml))
-  const pieData = [...grupos.entries()].map(([id, value]) => ({ name: nomeUnidade(id), value }))
+  const voltarAoPadrao = async () => {
+    const ok = await confirmar({
+      titulo: 'Restaurar o padrão',
+      mensagem:
+        'O seu dashboard volta a ser o padrão do ambiente. As suas mudanças de blocos, ordem e tamanho são descartadas.',
+      confirmar: 'Restaurar',
+    })
+    if (!ok) return
+    setGravando(true)
+    try {
+      await restaurar()
+      setRascunho(null)
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Não foi possível restaurar o padrão.')
+    } finally {
+      setGravando(false)
+    }
+  }
 
-  // Barras: meta × realizado por mês.
-  const barData = mesesMeta.map((mes, i) => ({
-    mes,
-    meta: metaMeses[i],
-    realizado: realizadoMensal[i],
-  }))
-
-  const recentes = propostas.slice(0, 5)
+  const definirPadraoDoAmbiente = async () => {
+    const ok = await confirmar({
+      titulo: 'Usar como padrão do ambiente',
+      mensagem:
+        'Este layout passa a ser o que todo mundo vê ao entrar. Quem já personalizou o próprio dashboard continua com o seu (pode voltar com "Restaurar padrão"). Cada pessoa só vê os blocos das telas a que tem acesso.',
+      confirmar: 'Usar como padrão',
+    })
+    if (!ok) return
+    const l: Layout = { versao: 1, blocos }
+    setGravando(true)
+    try {
+      await salvarComoPadrao(l)
+      // O meu também fica igual, para não ficar preso a um layout antigo.
+      if (personalizado || rascunho) await restaurar()
+      setRascunho(null)
+    } catch (e) {
+      avisar(e instanceof Error ? e.message : 'Não foi possível definir o padrão do ambiente.')
+    } finally {
+      setGravando(false)
+    }
+  }
 
   return (
     <div>
       <div className={s.head}>
         <div className={ui.pageTitle}>Dashboard</div>
-        <select className={ui.filterSelect} value={unidadeId} onChange={(e) => setUnidadeId(e.target.value)}>
-          {unidades.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.nome}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className={s.kpis5}>
-        <div className={c.kpiCard}>
-          <div className={c.kpiLabel}>Fator atual</div>
-          <div className={`${c.kpiVal} ${c.accent}`}>{calc ? fator4(calc.fator) : '—'}</div>
-          <div className={c.kpiSub}>markup {calc ? formatPct(calc.markup) : '—'}</div>
-        </div>
-        <div className={c.kpiCard}>
-          <div className={c.kpiLabel}>Margem média (ML)</div>
-          <div className={c.kpiVal}>{formatPct(mlMedia)}</div>
-          <div className={c.kpiSub}>{nomeUnidade(unidadeId)}</div>
-        </div>
-        <div className={c.kpiCard}>
-          <div className={c.kpiLabel}>Propostas</div>
-          <div className={c.kpiVal}>{propostas.length}</div>
-          <div className={c.kpiSub}>{itens.length} itens no total</div>
-        </div>
-        <div className={c.kpiCard}>
-          <div className={c.kpiLabel}>Receita de equilíbrio</div>
-          <div className={c.kpiVal}>{formatBRL(equilibrio)}</div>
-          <div className={c.kpiSub}>por mês</div>
-        </div>
-        <div className={c.kpiCard}>
-          <div className={c.kpiLabel}>Meta do ano</div>
-          <div className={c.kpiVal}>{formatPct(pctMeta)}</div>
-          <div className={c.kpiSub}>{meta ? `atingido · ${meta.nome}` : `sem meta de ${ano} para a empresa`}</div>
+        <div className={s.headAcoes}>
+          <select
+            className={ui.filterSelect}
+            value={unidadeId}
+            onChange={(e) => setUnidadeId(e.target.value)}
+          >
+            {unidades.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.nome}
+              </option>
+            ))}
+          </select>
+          {!editando && (
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnGhost}`}
+              onClick={() => setRascunho(layout.blocos)}
+            >
+              <Settings2 /> Personalizar
+            </button>
+          )}
         </div>
       </div>
 
-      <div className={c.duo}>
-        <div className={c.chartCard}>
-          <div className={c.chartTitle}>
-            <PieIcon /> Margem por empresa
+      {editando && (
+        <div className={s.barraEdicao}>
+          <div className={s.barraTexto}>
+            <b>Personalizando o seu dashboard</b>
+            <span>
+              Arraste um bloco pela alça para mudar a ordem, escolha o tamanho (P, M ou G) e tire o
+              que não usa. Só você vê as mudanças.
+            </span>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={78}
-                label={({ percent }) => `${((percent ?? 0) * 100).toFixed(0)}%`}
+          <div className={s.barraBotoes}>
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnGhost}`}
+              onClick={() => setCatalogo(true)}
+              disabled={gravando}
+            >
+              <Plus /> Adicionar blocos
+            </button>
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnGhost}`}
+              onClick={voltarAoPadrao}
+              disabled={gravando}
+            >
+              <RotateCcw /> Restaurar padrão
+            </button>
+            {ehGestor && (
+              <button
+                type="button"
+                className={`${ui.btn} ${ui.btnGhost}`}
+                onClick={definirPadraoDoAmbiente}
+                disabled={gravando}
               >
-                {pieData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                formatter={(v) => formatBRL(Number(v))}
-                contentStyle={{ borderRadius: 10, border: '1px solid #e6e3db', fontSize: 13 }}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className={c.chartCard}>
-          <div className={c.chartTitle}>
-            <BarChart3 /> Meta × Realizado
+                <Share2 /> Usar como padrão do ambiente
+              </button>
+            )}
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnGhost}`}
+              onClick={() => setRascunho(null)}
+              disabled={gravando}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className={`${ui.btn} ${ui.btnPrimary}`}
+              onClick={concluir}
+              disabled={gravando}
+            >
+              {gravando ? 'Salvando…' : 'Concluir'}
+            </button>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={barData} margin={{ top: 14, right: 16, bottom: 6, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ede9e0" vertical={false} />
-              <XAxis dataKey="mes" tick={{ fontSize: 10, fill: '#6b7b72' }} interval={0} />
-              <YAxis tickFormatter={kBRL} tick={{ fontSize: 11, fill: '#6b7b72' }} width={48} />
-              <Tooltip
-                formatter={(v) => formatBRL(Number(v))}
-                cursor={{ fill: 'rgba(26,77,30,0.05)' }}
-                contentStyle={{ borderRadius: 10, border: '1px solid #e6e3db', fontSize: 13 }}
-              />
-              <Legend verticalAlign="top" align="center" height={26} wrapperStyle={{ fontSize: 11, paddingBottom: 4 }} />
-              <Bar dataKey="meta" name="Meta" fill="#1a4d1e" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="realizado" name="Realizado" fill="#e8702f" radius={[3, 3, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
-      </div>
+      )}
 
-      <div className={c.chartCard} style={{ marginTop: 14 }}>
-        <div className={c.chartTitle}>
-          <Route /> Propostas recentes
-        </div>
-        {recentes.map((p) => {
-          const st = STATUS_INFO[p.status] ?? STATUS_INFO.rascunho
+      <div className={`${s.grade} ${editando ? s.editando : ''}`}>
+        {visiveis.map((b, i) => {
+          const d = POR_ID.get(b.id)!
           return (
-            <div key={p.id} className={s.recentRow}>
-              {/* Na bolinha só a sequência ("PRO-ALD-0001" → "0001"); o número inteiro no title. */}
-              <span className={s.recentNum} title={p.numero}>{p.numero.match(/\d+$/)?.[0] ?? p.numero}</span>
-              <div className={s.recentMain}>
-                <div className={s.recentName}>{p.cliente}</div>
-                <div className={s.recentMut}>
-                  {p.data} · {p.itens.length} {p.itens.length === 1 ? 'item' : 'itens'}
+            <div
+              key={b.id}
+              className={`${s.bloco} ${s[`t${b.tamanho}`]} ${arrastando === b.id ? s.arrastado : ''}`}
+              style={{ ['--span' as string]: COLUNAS[b.tamanho] }}
+              draggable={editando}
+              onDragStart={(e) => {
+                e.dataTransfer.effectAllowed = 'move'
+                e.dataTransfer.setData('text/plain', b.id)
+                setArrastando(b.id)
+              }}
+              onDragEnter={() =>
+                arrastando &&
+                arrastando !== b.id &&
+                mover(
+                  arrastando,
+                  blocos.findIndex((x) => x.id === b.id),
+                )
+              }
+              onDragOver={(e) => editando && e.preventDefault()}
+              onDragEnd={() => setArrastando(null)}
+              onDrop={(e) => e.preventDefault()}
+            >
+              {editando && (
+                <div className={s.ferramentas}>
+                  <span className={s.alca} title="Arraste para mudar a ordem">
+                    <GripVertical />
+                    {d.titulo}
+                  </span>
+                  <span className={s.ferramentasDir}>
+                    <button
+                      type="button"
+                      title="Para trás"
+                      aria-label={`Mover ${d.titulo} para trás`}
+                      disabled={i === 0}
+                      onClick={() => moverVisivel(b.id, -1)}
+                    >
+                      <ArrowLeft />
+                    </button>
+                    <button
+                      type="button"
+                      title="Para a frente"
+                      aria-label={`Mover ${d.titulo} para a frente`}
+                      disabled={i === visiveis.length - 1}
+                      onClick={() => moverVisivel(b.id, 1)}
+                    >
+                      <ArrowRight />
+                    </button>
+                    {d.tamanhos.length > 1 && (
+                      <span className={s.tamanhos} role="group" aria-label="Tamanho">
+                        {d.tamanhos.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            title={ROTULO_TAMANHO[t]}
+                            className={b.tamanho === t ? s.tamanhoOn : undefined}
+                            aria-pressed={b.tamanho === t}
+                            onClick={() =>
+                              mudar((l) => l.map((x) => (x.id === b.id ? { ...x, tamanho: t } : x)))
+                            }
+                          >
+                            {t.toUpperCase()}
+                          </button>
+                        ))}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      title="Tirar do dashboard"
+                      aria-label={`Tirar ${d.titulo}`}
+                      className={s.tirar}
+                      onClick={() => mudar((l) => l.filter((x) => x.id !== b.id))}
+                    >
+                      <X />
+                    </button>
+                  </span>
                 </div>
-              </div>
-              <div className={s.recentRight}>
-                <div className={s.recentPv}>{formatBRL(p.total)}</div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    padding: '2px 9px',
-                    borderRadius: 20,
-                    color: st.color,
-                    background: st.bg,
-                  }}
-                >
-                  {st.label}
-                </span>
-              </div>
+              )}
+              <div className={s.conteudo}>{d.render({ empresaId: unidadeId })}</div>
             </div>
           )
         })}
-        {recentes.length === 0 && <div className={c.note}>Nenhuma proposta ainda.</div>}
-        <Link to="/propostas" className={s.seeAll}>
-          Ver propostas <ArrowRight />
-        </Link>
+        {editando && (
+          <button
+            type="button"
+            className={`${s.bloco} ${s.adicionar}`}
+            style={{ ['--span' as string]: 1 }}
+            onClick={() => setCatalogo(true)}
+          >
+            <Plus /> Adicionar blocos
+          </button>
+        )}
       </div>
 
-      <div className={s.quick}>
-        <Link to="/simulador" className={s.quickBtn}>
-          <Calculator /> Abrir o Pricing
-        </Link>
-        <Link to="/propostas" className={s.quickBtn}>
-          <Route /> Propostas
-        </Link>
-        <Link to="/agenda" className={s.quickBtn}>
-          <CalendarDays /> Agenda
-        </Link>
-        <Link to="/analises/break-even" className={s.quickBtn}>
-          <BarChart3 /> Ver relatórios
-        </Link>
-      </div>
+      {!editando && visiveis.length === 0 && (
+        <div className={s.vazio}>
+          <LayoutDashboard />
+          <b>O dashboard está vazio.</b>
+          <span>Clique em Personalizar para escolher os blocos.</span>
+        </div>
+      )}
+
+      <Modal
+        open={catalogo}
+        onClose={() => setCatalogo(false)}
+        title="Adicionar blocos"
+        subtitle="Escolha o que quer ver no dashboard. Depois é só arrastar para o lugar."
+        maxWidth={720}
+        maximizavel={false}
+        footer={
+          <button
+            type="button"
+            className={`${ui.btn} ${ui.btnPrimary}`}
+            onClick={() => setCatalogo(false)}
+          >
+            Pronto
+          </button>
+        }
+      >
+        {disponiveis.length === 0 ? (
+          <div className={s.catalogoVazio}>
+            Todos os blocos disponíveis para você já estão no dashboard.
+          </div>
+        ) : (
+          <div className={s.catalogo}>
+            {disponiveis.map((d) => (
+              <div key={d.id} className={s.catalogoItem}>
+                <span className={s.catalogoIcone}>
+                  <d.icone />
+                </span>
+                <span className={s.catalogoTexto}>
+                  <b>{d.titulo}</b>
+                  <small>{d.descricao}</small>
+                </span>
+                <button
+                  type="button"
+                  className={`${ui.btn} ${ui.btnGhost}`}
+                  onClick={() => mudar((l) => [...l, { id: d.id, tamanho: d.tamanhos[0] }])}
+                >
+                  <Plus /> Adicionar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

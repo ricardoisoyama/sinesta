@@ -63,6 +63,7 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
         "api/anexos",   // permissão depende da entidade (cliente/fornecedor) do anexo
         "api/auth",     // login é anônimo; o resto é GET
         "api/pricing/fator", // só calcula (não grava): a tela da empresa usa sem ter o Pricing
+        "api/preferencias", // só grava as preferências de quem está logado (o padrão do ambiente confere gestor)
     };
 
     private static readonly HashSet<string> MetodosDeEscrita = new(StringComparer.OrdinalIgnoreCase)

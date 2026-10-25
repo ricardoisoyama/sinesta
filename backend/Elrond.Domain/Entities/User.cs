@@ -41,6 +41,11 @@ public class User
     /// <summary>Quando a pessoa criou a senha pelo convite.</summary>
     public DateTime? ConviteAceitoEm { get; private set; }
 
+    /// <summary>Layout do dashboard escolhido pela pessoa (JSON dos blocos); vazio = o padrão do ambiente.</summary>
+    public string Dashboard { get; private set; } = string.Empty;
+
+    public void DefinirDashboard(string? layout) => Dashboard = layout ?? string.Empty;
+
     private User() { } // EF Core
 
     public User(string email, string name, string passwordHash, string perfil, IEnumerable<string> permissoes, bool ativo = true)

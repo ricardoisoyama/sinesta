@@ -1183,6 +1183,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DashboardPadrao")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<string>("InativadoEm")
                         .IsRequired()
                         .HasColumnType("text");
@@ -4443,6 +4447,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Dashboard")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("DataAdmissao")
                         .IsRequired()

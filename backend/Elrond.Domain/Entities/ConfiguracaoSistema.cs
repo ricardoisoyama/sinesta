@@ -16,4 +16,6 @@ public class ConfiguracaoSistema : Rastreavel, IEntity
     public string Id { get; set; } = IdPadrao;
     /// <summary>Rotas dos itens de menu desligados.</summary>
     public List<string> MenusDesligados { get; set; } = new();
+    /// <summary>Layout padrão do dashboard do ambiente (JSON dos blocos); vazio = o padrão do sistema.</summary>
+    public string DashboardPadrao { get; set; } = string.Empty;
 }
