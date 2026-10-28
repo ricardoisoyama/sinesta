@@ -165,11 +165,12 @@ export function UsuariosPage() {
       className: ui.colActions,
       cell: (u) => (
         <>
-        {u.status === 'ativo' && !!u.convite && u.convite !== 'aceito' && (souAdmin || u.perfil !== 'Admin') && (
+        {/* Também para quem foi cadastrado com senha (sem convite): a senha atual vale até a pessoa criar a nova pelo link. */}
+        {u.status === 'ativo' && u.convite !== 'aceito' && (souAdmin || u.perfil !== 'Admin') && (
           <button
             type="button"
             className={ui.iconBtn}
-            title="Reenviar convite (link novo; o anterior deixa de valer)"
+            title={u.convite ? 'Reenviar convite (link novo; o anterior deixa de valer)' : 'Mandar convite por e-mail (a pessoa cria a própria senha)'}
             disabled={reenviando === u.id}
             onClick={() => void reenviar(u)}
           >
