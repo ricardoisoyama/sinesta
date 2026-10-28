@@ -51,20 +51,21 @@ function comChaveUnica(lista: CampoOperacao[]): CampoOperacao[] {
 }
 
 /**
- * Cadastro de "Dados da operação": a empresa tem tipos de operação (Transporte, Armazenagem...)
- * e cada tipo tem os seus campos, uma linha por campo editada direto na tabela (como numa
- * planilha), com a prévia do bloco do Pricing logo acima. Grava sozinho a cada alteração.
+ * Cadastro de "Dados da operação": tipos de operação (Transporte, Armazenagem...) e os campos de
+ * cada tipo, uma linha por campo editada direto na tabela (como numa planilha), com a prévia do
+ * bloco do Pricing logo acima. Vale para todas as empresas. Grava sozinho a cada alteração.
  */
 export function CamposOperacaoPage() {
-  const { empresas, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
+  // Só para a prévia (o ad valorem busca a apólice da empresa): a padrão.
+  const { empresaId } = useEmpresaAtiva()
   const auto = useSalvamentoAutomatico<DadosOperacao>({
-    chave: chaveCampos(empresaId),
-    carregar: () => listDadosOperacao(empresaId),
-    salvar: (dados) => salvarDadosOperacao(empresaId, dados),
-    habilitado: !!empresaId,
+    chave: chaveCampos,
+    carregar: listDadosOperacao,
+    salvar: salvarDadosOperacao,
+    habilitado: true,
   })
-  // Empresa ainda sem tipos: começa com "Geral" (vira registro na primeira gravação).
-  const tipoPadrao: TipoOperacao = { id: idTipoPadrao(empresaId), nome: 'Geral', status: 'ativo' }
+  // Ainda sem tipos: começa com "Geral" (vira registro na primeira gravação).
+  const tipoPadrao: TipoOperacao = { id: idTipoPadrao('geral'), nome: 'Geral', status: 'ativo' }
   const dados = auto.dados ?? { tipos: [], campos: [] }
   const tipos = dados.tipos.length > 0 ? dados.tipos : [tipoPadrao]
   const tiposAtivos = tipos.filter((t) => t.status === 'ativo')
@@ -126,11 +127,6 @@ export function CamposOperacaoPage() {
     lista.splice(apos === undefined ? lista.length : apos + 1, 0, novo)
     gravar([...lista, ...removidos])
     setFocoId(novo.id)
-  }
-  const trocarEmpresa = (id: string) => {
-    setEmpresaId(id)
-    setTipoEscolhido('')
-    setValoresPrevia({})
   }
 
   const linha = (c: CampoOperacao, i: number, removido: boolean) => {
@@ -259,19 +255,11 @@ export function CamposOperacaoPage() {
       <PageHeader
         breadcrumb="Cadastros"
         title="Dados da Operação"
-        subtitle="Monte, para cada tipo de operação da empresa (Transporte, Armazenagem...), os campos que o Pricing mostra. Nada é fixo: cada campo tem um tipo, e você escolhe o que ele faz com o preço."
+        subtitle="Monte, para cada tipo de operação (Transporte, Armazenagem...), os campos que o Pricing mostra. Nada é fixo: cada campo tem um tipo, e você escolhe o que ele faz com o preço. Vale para todas as empresas."
         action={
           <div className={s.acoes}>
-            {empresaId && <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />}
-            <label className={s.empresaSel}>
-              Empresa
-              <select value={empresaId} onChange={(e) => trocarEmpresa(e.target.value)} disabled={carregando}>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>{e.nome}</option>
-                ))}
-              </select>
-            </label>
-            {empresaId && (
+            <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />
+            {!auto.carregando && (
               <SeletorTipoOperacao
                 tipos={tipos}
                 selecionadoId={tipoId}
@@ -338,7 +326,7 @@ export function CamposOperacaoPage() {
               )}
               <tr className={sheet.addRow}>
                 <td colSpan={9}>
-                  <button type="button" onClick={() => adicionar()} disabled={!empresaId}><Plus /> Adicionar campo</button>
+                  <button type="button" onClick={() => adicionar()} disabled={auto.carregando}><Plus /> Adicionar campo</button>
                 </td>
               </tr>
               {mostrarRemovidos && removidos.map((c, i) => linha(c, i, true))}

@@ -86,7 +86,7 @@ public class ParametrizacaoTests
     public async Task Campos_normaliza_tipo_efeito_chave_e_nao_apaga_o_que_nao_veio()
     {
         var (svc, campos, _, _, _, auditoria, _) = Montar();
-        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        var r = await svc.SalvarCamposAsync(new List<CampoOperacao>
         {
             new() { Id = "c1", Nome = "Qtd. de postos", Tipo = "numero", Efeito = "multiplica" },
             new() { Id = "c2", Nome = "Cidade", Tipo = "texto", Efeito = "soma-custo" }, // texto não soma: vira informativo
@@ -103,7 +103,7 @@ public class ParametrizacaoTests
         Assert.Equal(new List<string> { "A", "B" }, lista[2].Opcoes);
 
         // Segundo envio só com c1 inativado: c2 e c3 continuam lá (nada é apagado).
-        await svc.SalvarCamposAsync("emp", new List<CampoOperacao> { new() { Id = "c1", Nome = "Qtd. de postos", Tipo = "numero", Efeito = "multiplica", Status = "inativo" } });
+        await svc.SalvarCamposAsync(new List<CampoOperacao> { new() { Id = "c1", Nome = "Qtd. de postos", Tipo = "numero", Efeito = "multiplica", Status = "inativo" } });
         Assert.Equal(3, campos.Itens.Count);
         Assert.Equal("inativo", campos.Itens.Single(c => c.Id == "c1").Status);
         Assert.Contains("inativar", auditoria.Acoes);
@@ -113,7 +113,7 @@ public class ParametrizacaoTests
     public async Task Campos_de_uf_e_cidade_sao_aceitos_e_so_informam()
     {
         var (svc, _, _, _, _, _, _) = Montar();
-        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        var r = await svc.SalvarCamposAsync(new List<CampoOperacao>
         {
             new() { Id = "u", Nome = "UF de origem", Tipo = "uf", Efeito = "multiplica", Opcoes = new() { "x" } },
             new() { Id = "c", Nome = "Cidade de origem", Tipo = "cidade" },
@@ -128,7 +128,7 @@ public class ParametrizacaoTests
     public async Task Campo_advalorem_guarda_as_ligacoes_e_nao_mexe_no_custo()
     {
         var (svc, _, _, _, _, _, _) = Montar();
-        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        var r = await svc.SalvarCamposAsync(new List<CampoOperacao>
         {
             new() { Id = "a", Nome = "Ad valorem", Tipo = "advalorem", Efeito = "pct-custo", Seguro = "rcf-dc?", CampoBase = "Valor da NF", CampoOrigem = "uf_origem", CampoDestino = "uf_destino" },
             new() { Id = "t", Nome = "Observação", Tipo = "texto", Seguro = "RCTR-C", CampoBase = "x" },
@@ -173,7 +173,7 @@ public class ParametrizacaoTests
     public async Task Campo_icms_guarda_so_origem_e_destino()
     {
         var (svc, _, _, _, _, _, _) = Montar();
-        var r = await svc.SalvarCamposAsync("emp", new List<CampoOperacao>
+        var r = await svc.SalvarCamposAsync(new List<CampoOperacao>
         {
             new() { Id = "i", Nome = "ICMS", Tipo = "icms", Seguro = "RCTR-C", CampoBase = "valor", CampoOrigem = "UF origem", CampoDestino = "uf_destino" },
         });
@@ -211,7 +211,7 @@ public class ParametrizacaoTests
     public async Task Tipos_de_operacao_separam_os_campos_e_a_chave_so_e_unica_dentro_do_tipo()
     {
         var (svc, campos, _, _, _, auditoria, _) = Montar();
-        var r = await svc.SalvarDadosOperacaoAsync("emp", new DadosOperacaoDto(
+        var r = await svc.SalvarDadosOperacaoAsync(new DadosOperacaoDto(
             new List<TipoOperacao>
             {
                 new() { Id = "tr", Nome = " Transporte " },
@@ -235,7 +235,7 @@ public class ParametrizacaoTests
         Assert.Contains("criar", auditoria.Acoes);
 
         // Inativar o tipo não apaga nada: tipo e campos continuam guardados.
-        await svc.SalvarDadosOperacaoAsync("emp", new DadosOperacaoDto(new List<TipoOperacao> { new() { Id = "ar", Nome = "Armazenagem", Status = "inativo" } }, null));
+        await svc.SalvarDadosOperacaoAsync(new DadosOperacaoDto(new List<TipoOperacao> { new() { Id = "ar", Nome = "Armazenagem", Status = "inativo" } }, null));
         Assert.Equal(2, Tipos.Itens.Count);
         Assert.Equal("inativo", Tipos.Itens.Single(t => t.Id == "ar").Status);
         Assert.Equal(4, campos.Itens.Count);
@@ -279,7 +279,7 @@ public class ParametrizacaoTests
                 }),
             });
 
-        var r = await svc.SalvarFichasAsync("emp", dto);
+        var r = await svc.SalvarFichasAsync(dto);
         Assert.True(r.IsSuccess);
         var f = r.Value!.Fichas.Single();
         Assert.Equal(Math.Round(2031.57m * 1.7m, 2), f.Total);
@@ -289,25 +289,66 @@ public class ParametrizacaoTests
 
         // Inativar a coluna de encargos recalcula o total sem apagar nada.
         dto.Colunas![1].Status = "inativo";
-        r = await svc.SalvarFichasAsync("emp", new SalvarFichasDto(null, dto.Colunas, null));
+        r = await svc.SalvarFichasAsync(new SalvarFichasDto(null, dto.Colunas, null));
         Assert.Equal(2031.57m, r.Value!.Fichas.Single().Total);
         Assert.Equal(3, colunas.Itens.Count);
         Assert.Single(fichas.Itens);
     }
 
     [Fact]
-    public async Task Empresa_inexistente_e_recusada()
+    public async Task Dados_da_operacao_valem_para_todas_as_empresas_e_os_de_antes_mantem_a_origem()
     {
-        var (svc, _, _, _, _, _, _) = Montar();
-        Assert.False((await svc.SalvarCamposAsync("nao-existe", new())).IsSuccess);
-        Assert.False((await svc.SalvarFichasAsync("nao-existe", new SalvarFichasDto(null, null, null))).IsSuccess);
+        var (svc, campos, _, _, _, _, _) = Montar();
+        Tipos.Itens.Add(new TipoOperacao { Id = "geral", EmpresaId = "matriz", Nome = "Geral", Ordem = 0 });
+        Tipos.Itens.Add(new TipoOperacao { Id = "arm", EmpresaId = "filial", Nome = "Armazenagem", Ordem = 0 });
+        campos.Itens.Add(new CampoOperacao { Id = "peso", EmpresaId = "matriz", TipoOperacaoId = "geral", Nome = "Peso bruto", Chave = "peso_bruto", Tipo = "peso" });
+
+        var lidos = await svc.DadosOperacaoAsync();
+        Assert.Equal(2, lidos.Tipos!.Count);
+        Assert.Single(lidos.Campos!);
+
+        var r = await svc.SalvarDadosOperacaoAsync(new DadosOperacaoDto(lidos.Tipos, new List<CampoOperacao>
+        {
+            lidos.Campos!.Single(),
+            new() { Id = "desc", TipoOperacaoId = "arm", Nome = "Descarga", Tipo = "texto" },
+        }));
+        Assert.True(r.IsSuccess);
+        Assert.Equal("matriz", campos.Itens.Single(c => c.Id == "peso").EmpresaId);
+        Assert.Equal(string.Empty, campos.Itens.Single(c => c.Id == "desc").EmpresaId);
+        Assert.Equal("filial", Tipos.Itens.Single(x => x.Id == "arm").EmpresaId);
+    }
+
+    [Fact]
+    public async Task Ficha_vale_para_todas_as_empresas_e_as_de_antes_aparecem_juntas_sem_perder_a_origem()
+    {
+        var (svc, _, _, fichas, _, _, grupos) = Montar();
+        // Como estava: cada empresa com a sua ficha (Aldrava: Matriz e Filial 02).
+        grupos.Itens.Add(new FichaGrupo { Id = "gru", EmpresaId = "matriz", Nome = "GRU - Aeroporto", Ordem = 0 });
+        grupos.Itens.Add(new FichaGrupo { Id = "svi", EmpresaId = "filial", Nome = "São Vicente x Itu", Ordem = 0 });
+        fichas.Itens.Add(new FichaTecnica { Id = "a", EmpresaId = "matriz", GrupoId = "gru", Nome = "Ajudante", Status = "ativo" });
+        fichas.Itens.Add(new FichaTecnica { Id = "b", EmpresaId = "filial", GrupoId = "svi", Nome = "Motorista", Status = "ativo" });
+
+        var lida = await svc.FichasAsync();
+        Assert.Equal(2, lida.Grupos.Count);
+        Assert.Equal(2, lida.Fichas.Count);
+
+        // Gravar a grade inteira (como a tela faz) mantém a origem e cria o novo sem empresa.
+        var r = await svc.SalvarFichasAsync(new SalvarFichasDto(
+            lida.Grupos.Concat(new[] { new FichaGrupo { Id = "novo", Nome = "Tecnologia" } }).ToList(), null,
+            new List<FichaEntradaDto> { new("a", "gru", "Ajudante", "ativo", new()), new("b", "svi", "Motorista", "ativo", new()), new("c", "novo", "Plano CRM", "ativo", new()) }));
+        Assert.True(r.IsSuccess);
+        Assert.Equal(3, r.Value!.Grupos.Count);
+        Assert.Equal("matriz", fichas.Itens.Single(f => f.Id == "a").EmpresaId);
+        Assert.Equal("filial", fichas.Itens.Single(f => f.Id == "b").EmpresaId);
+        Assert.Equal(string.Empty, fichas.Itens.Single(f => f.Id == "c").EmpresaId);
+        Assert.Equal(string.Empty, grupos.Itens.Single(g => g.Id == "novo").EmpresaId);
     }
 
     [Fact]
     public async Task Cada_ficha_tem_as_suas_colunas_e_o_total_do_item_so_usa_as_dela()
     {
         var (svc, _, colunas, _, _, _, grupos) = Montar();
-        var r = await svc.SalvarFichasAsync("emp", new SalvarFichasDto(
+        var r = await svc.SalvarFichasAsync(new SalvarFichasDto(
             new List<FichaGrupo> { new() { Id = "func", Nome = "Funcionários" }, new() { Id = "tec", Nome = "Tecnologia" } },
             new List<FichaColuna>
             {
@@ -327,7 +368,7 @@ public class ParametrizacaoTests
         // A mesma chave "valor" vale nas duas fichas, sem virar valor_2.
         Assert.Equal("valor", g.Colunas.Single(c => c.Id == "men").Chave);
         Assert.Equal("valor", g.Colunas.Single(c => c.Id == "sal").Chave);
-        // Coluna de ficha que não é da empresa fica sem ficha.
+        // Coluna de ficha que não existe fica sem ficha.
         Assert.Equal(string.Empty, colunas.Itens.Single(c => c.Id == "x").GrupoId);
         Assert.Equal(3000m, g.Fichas.Single(f => f.Id == "porteiro").Total); // 2000 + 50%; ignora a coluna da Tecnologia
         Assert.Equal(450m, g.Fichas.Single(f => f.Id == "crm").Total);       // ignora o salário
@@ -351,11 +392,9 @@ public class ParametrizacaoTests
         var colunas = new MemRepo<FichaColuna>();
         var fichas = new MemRepo<FichaTecnica>();
         var valores = new MemRepo<FichaValor>();
-        var empresas = new MemRepo<Empresa>();
-        empresas.Itens.Add(new Empresa { Id = "emp", Nome = "Sinesta" });
         var auditoria = new FakeAuditoria();
         Tipos = new MemRepo<TipoOperacao>();
-        return (new ParametrizacaoService(campos, Tipos, grupos, colunas, fichas, valores, empresas, new SemTransacao(), auditoria), campos, colunas, fichas, valores, auditoria, grupos);
+        return (new ParametrizacaoService(campos, Tipos, grupos, colunas, fichas, valores, new SemTransacao(), auditoria), campos, colunas, fichas, valores, auditoria, grupos);
     }
 
     private sealed class SemTransacao : IUnidadeTrabalho

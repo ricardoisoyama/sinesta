@@ -2,9 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
 import type { ColunaFicha, FichaTecnica, GradeFichas, GrupoFicha } from './types'
 
-/** Ficha Técnica da empresa (fichas, colunas e itens, ativos e inativos), na ordem da tela. */
-export const listFichas = async (empresaId: string): Promise<GradeFichas> => {
-  const g = await apiFetch<GradeFichas>(`/fichas-tecnicas?empresaId=${encodeURIComponent(empresaId)}`)
+/** Ficha Técnica (fichas, colunas e itens, ativos e inativos), na ordem da tela. Vale para todas as empresas. */
+export const listFichas = async (): Promise<GradeFichas> => {
+  const g = await apiFetch<GradeFichas>('/fichas-tecnicas')
   return {
     grupos: (g.grupos ?? []).map((x) => ({ ...x, formulaTotal: x.formulaTotal ?? '', status: x.status ?? 'ativo' })),
     colunas: g.colunas.map((c) => ({ ...c, grupoId: c.grupoId ?? '', base: c.base ?? '', formula: c.formula ?? '', opcoes: c.opcoes ?? [], status: c.status ?? 'ativo' })),
@@ -13,8 +13,8 @@ export const listFichas = async (empresaId: string): Promise<GradeFichas> => {
 }
 
 /** Grava a Ficha Técnica inteira; o servidor não apaga o que não vier (remover = status "inativo"). */
-export const salvarFichas = (empresaId: string, g: GradeFichas) =>
-  apiFetch<GradeFichas>(`/fichas-tecnicas/${encodeURIComponent(empresaId)}`, {
+export const salvarFichas = (g: GradeFichas) =>
+  apiFetch<GradeFichas>('/fichas-tecnicas', {
     method: 'PUT',
     body: JSON.stringify({
       grupos: g.grupos,
@@ -23,11 +23,11 @@ export const salvarFichas = (empresaId: string, g: GradeFichas) =>
     }),
   })
 
-export const chaveFichas = (empresaId: string) => ['fichas-tecnicas', empresaId] as const
+export const chaveFichas = ['fichas-tecnicas'] as const
 
-/** Fichas, colunas e itens ATIVOS de uma empresa (para o Pricing). `fichas` são os itens. */
-export function useFichasDaEmpresa(empresaId: string) {
-  const q = useQuery({ queryKey: chaveFichas(empresaId), queryFn: () => listFichas(empresaId), enabled: !!empresaId })
+/** Fichas, colunas e itens ATIVOS (para o Pricing de qualquer empresa). `fichas` são os itens. */
+export function useFichas() {
+  const q = useQuery({ queryKey: chaveFichas, queryFn: listFichas })
   const grupos: GrupoFicha[] = (q.data?.grupos ?? []).filter((g) => g.status === 'ativo')
   const ativos = new Set(grupos.map((g) => g.id))
   const colunas: ColunaFicha[] = (q.data?.colunas ?? []).filter((c) => c.status === 'ativo')

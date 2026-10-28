@@ -102,7 +102,7 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
   }
 
   if (campos.length === 0)
-    return <div className={s.blocoVazio}>Nenhum campo configurado para esta empresa. Configure em Parametrizações › Dados da Operação.</div>
+    return <div className={s.blocoVazio}>Nenhum campo configurado. Configure em Parametrizações › Dados da Operação.</div>
 
   return (
     <div className={s.bloco}>

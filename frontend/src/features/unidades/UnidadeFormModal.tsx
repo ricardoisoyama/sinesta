@@ -334,7 +334,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
               />
             </Field>
 
-            <Field className={ui.col4} label="Empresa padrão" hint="As telas (Pricing, Ficha Técnica, Dados da Operação, relatórios) abrem com esta empresa selecionada. Só uma pode ser a padrão.">
+            <Field className={ui.col4} label="Empresa padrão" hint="As telas (Pricing, Dados da Operação, relatórios) abrem com esta empresa selecionada. Só uma pode ser a padrão.">
               <label className={s.checkLinha}>
                 <input type="checkbox" checked={d.padrao} onChange={(e) => set({ padrao: e.target.checked })} /> Abrir as telas com esta empresa
               </label>

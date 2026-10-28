@@ -25,11 +25,11 @@ import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
 import { FORMAS_PAGAMENTO, type Parceiro } from '@/features/parceiros/types'
 import { bloqueioDeRegiao, descreverRegiao } from '@/features/parceiros/regiao'
 import { useEmpresaAtiva } from '@/features/camposOperacao/useEmpresaAtiva'
-import { useDadosOperacaoDaEmpresa } from '@/features/camposOperacao/api'
+import { useDadosOperacao } from '@/features/camposOperacao/api'
 import { BlocoDadosOperacao } from '@/features/camposOperacao/BlocoDadosOperacao'
 import { efeitoDe, efeitosDosCampos, numeroDe, type ValoresOperacao } from '@/features/camposOperacao/types'
 import { adValoremDosCampos } from '@/features/camposOperacao/advalorem'
-import { useFichasDaEmpresa } from '@/features/fichaTecnica/api'
+import { useFichas } from '@/features/fichaTecnica/api'
 import { calcularFicha } from '@/features/fichaTecnica/calculo'
 import { TIPOS_NUMERICOS } from '@/features/fichaTecnica/types'
 import base from './simulador.module.css'
@@ -57,14 +57,14 @@ export function PricingPage() {
   const { empresas, empresa, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
   useCustosFixosQuery()
   useTaxasQuery()
-  // Cada empresa tem os seus tipos de operação (Transporte, Armazenagem...) e cada tipo os seus campos.
-  const { tipos: tiposOperacao, camposDo, todosCampos } = useDadosOperacaoDaEmpresa(empresaId)
+  // Tipos de operação (Transporte, Armazenagem...) e os campos de cada um: valem para todas as empresas.
+  const { tipos: tiposOperacao, camposDo, todosCampos } = useDadosOperacao()
   const [tipoEscolhido, setTipoEscolhido] = useState('')
   const tipoOperacaoId = tiposOperacao.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (tiposOperacao[0]?.id ?? '')
   const tipoOperacao = tiposOperacao.find((t) => t.id === tipoOperacaoId)
   // Empresa do Simples (sem ICMS): o campo ICMS nem aparece no Pricing.
   const campos = camposDo(tipoOperacaoId).filter((c) => c.tipo !== 'icms' || !!empresa?.icmsAtivo)
-  const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichasDaEmpresa(empresaId)
+  const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichas()
   const { user } = useAuth()
   const ehGestor = temPoderDeGestor(user?.perfil)
   const perms = user?.permissoes ?? []
@@ -107,12 +107,8 @@ export function PricingPage() {
 
   const [empresaVista, setEmpresaVista] = useState(empresaId)
   if (empresaVista !== empresaId) {
-    // Trocou de empresa: tipos, campos e fichas são outros, então a operação recomeça.
+    // Trocou de empresa: dados da operação e fichas valem para todas e ficam; fator, comissão, lucro e preço são da empresa.
     setEmpresaVista(empresaId)
-    setTipoEscolhido('')
-    setValores({})
-    setLinhas([])
-    setAberta('')
     setComissaoEditada(null)
     setLucroEditado(null)
     setPrecoEditado(null)
@@ -397,7 +393,8 @@ export function PricingPage() {
     setTipoVisto(tipoDoItem)
     const v: ValoresOperacao = {}
     for (const d of it.dadosOperacao ?? []) {
-      const campo = todosCampos.find((c) => c.id === d.campoId)
+      // Pelo id; se o campo saiu (ex.: os Dados da Operação das empresas foram unificados), pelo nome dele.
+      const campo = todosCampos.find((c) => c.id === d.campoId) ?? todosCampos.find((c) => c.chave === d.chave && c.tipoOperacaoId === tipoDoItem)
       if (!campo) continue // campo removido depois: sai do item
       const atual = campo.tipo === 'cadastro' ? '' : undefined
       if (campo.tipo === 'cadastro') {
@@ -576,7 +573,7 @@ export function PricingPage() {
       <section className={base.card}>
         <div className={base.cardTitle}>
           <Receipt /> Dados da operação
-          <Link to="/cadastros/campos-operacao" className={s.linkConfig} title="Configurar os campos desta empresa"><Settings2 size={12} /> configurar campos</Link>
+          <Link to="/cadastros/campos-operacao" className={s.linkConfig} title="Configurar os campos (valem para todas as empresas)"><Settings2 size={12} /> configurar campos</Link>
         </div>
         <BlocoDadosOperacao
           empresaId={empresaId}
@@ -683,7 +680,7 @@ export function PricingPage() {
           {linhas.length === 0 && <span className={base.mutedNote}>Escolha um item (ex.: Funcionários › Porteiro Diurno) ou a ficha inteira, e a quantidade.</span>}
           {linhas.length > 0 && <span className={s.custosTotal}>Custo das fichas <b>{formatBRL(custoFichas)}</b></span>}
         </div>
-        {fichas.length === 0 && <div className={base.faltas}>Esta empresa ainda não tem itens nas fichas técnicas. Cadastre em <Link to="/cadastros/fichas-tecnicas">Parametrizações › Ficha Técnica</Link>.</div>}
+        {fichas.length === 0 && <div className={base.faltas}>Ainda não há itens nas fichas técnicas. Cadastre em <Link to="/cadastros/fichas-tecnicas">Parametrizações › Ficha Técnica</Link>.</div>}
       </section>
 
       {/* ── 3. Resultado ── */}

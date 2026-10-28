@@ -25,7 +25,7 @@ export const ARTIGOS: Artigo[] = [
     rotas: ['/simulador'],
     resumo: 'O Pricing junta os Dados da Operação, as fichas técnicas e o fator da empresa para chegar ao preço de venda.',
     passos: [
-      'Escolha a empresa no canto superior direito: o fator e os campos vêm dela.',
+      'Escolha a empresa no canto superior direito: o fator vem dela (os Dados da Operação e as fichas valem para todas).',
       'Preencha os Dados da operação (o primeiro bloco). Campos de quantidade multiplicam o preço; campos de valor somam ao custo.',
       'Em Custos da operação, escolha a ficha técnica e a quantidade de cada uma. O olho mostra a composição da ficha.',
       'Confira o Resultado: preço de venda, margem e desconto. Para usar um preço próprio, digite o valor e clique em "Usar este preço".',
@@ -39,9 +39,9 @@ export const ARTIGOS: Artigo[] = [
     titulo: 'Como montar a ficha técnica',
     tela: 'Ficha Técnica',
     rotas: ['/cadastros/fichas-tecnicas', '/simulador'],
-    resumo: 'Cada empresa monta as colunas do seu jeito, como numa planilha. Cada linha da ficha fecha num custo que o Pricing usa.',
+    resumo: 'As colunas são montadas do seu jeito, como numa planilha. Cada linha da ficha fecha num custo que o Pricing usa. A ficha vale para todas as empresas.',
     passos: [
-      'Escolha a empresa e crie as colunas: valor (R$), percentual sobre outra coluna, cálculo (fórmula), número, texto ou lista.',
+      'Crie as colunas: valor (R$), percentual sobre outra coluna, cálculo (fórmula), número, texto ou lista.',
       'Marque "entra no total" nas colunas que compõem o custo.',
       'Fórmulas usam o nome das colunas, por exemplo: salario_base * 20%.',
       'Cada linha é uma ficha (ex.: Porteiro diurno). Digite os valores direto no grid.',
@@ -54,7 +54,7 @@ export const ARTIGOS: Artigo[] = [
     titulo: 'Dados da Operação: o que cada tipo de campo faz',
     tela: 'Dados da Operação',
     rotas: ['/cadastros/campos-operacao', '/simulador'],
-    resumo: 'Os campos que aparecem no topo do Pricing são montados por empresa. Alguns só informam; outros mexem no preço.',
+    resumo: 'Os campos que aparecem no topo do Pricing valem para todas as empresas. Alguns só informam; outros mexem no preço.',
     passos: [
       'Texto, lista, data, número e cadastro só informam (aparecem na proposta).',
       'Quantidade multiplica o preço do item (ex.: número de postos).',

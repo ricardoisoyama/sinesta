@@ -10,7 +10,8 @@ using Elrond.Domain.Regras;
 namespace Elrond.Application.Services;
 
 /// <summary>
-/// Regras dos cadastros parametrizáveis. A tela manda a lista inteira da empresa (salvamento
+/// Regras dos cadastros parametrizáveis (Dados da Operação e Ficha Técnica, que valem para todas as
+/// empresas). A tela manda a lista inteira (salvamento
 /// automático); aqui ela é comparada com o banco: o que é novo entra, o que mudou é alterado,
 /// o que não mudou fica intocado e o que NÃO veio também fica (nada é apagado; remover é
 /// status = inativo). Assim duas pessoas editando ao mesmo tempo não apagam o trabalho uma da outra.
@@ -38,13 +39,12 @@ public class ParametrizacaoService : IParametrizacaoService
     private readonly ICrudRepository<FichaColuna> _colunas;
     private readonly ICrudRepository<FichaTecnica> _fichas;
     private readonly ICrudRepository<FichaValor> _valores;
-    private readonly ICrudRepository<Empresa> _empresas;
     private readonly IUnidadeTrabalho _uow;
     private readonly IAuditoriaService _auditoria;
 
     public ParametrizacaoService(ICrudRepository<CampoOperacao> campos, ICrudRepository<TipoOperacao> tipos, ICrudRepository<FichaGrupo> grupos,
         ICrudRepository<FichaColuna> colunas, ICrudRepository<FichaTecnica> fichas, ICrudRepository<FichaValor> valores,
-        ICrudRepository<Empresa> empresas, IUnidadeTrabalho uow, IAuditoriaService auditoria)
+        IUnidadeTrabalho uow, IAuditoriaService auditoria)
     {
         _campos = campos;
         _tipos = tipos;
@@ -52,7 +52,6 @@ public class ParametrizacaoService : IParametrizacaoService
         _colunas = colunas;
         _fichas = fichas;
         _valores = valores;
-        _empresas = empresas;
         _uow = uow;
         _auditoria = auditoria;
     }
@@ -62,28 +61,28 @@ public class ParametrizacaoService : IParametrizacaoService
     /// <summary>O que mudou numa gravação: registros novos, alterados (antes/depois) e o conjunto final.</summary>
     private sealed record Lote<T>(List<T> Novos, List<(T Antes, T Depois)> Alterados, List<T> Todos);
 
-    public async Task<DadosOperacaoDto> DadosOperacaoAsync(string empresaId) =>
-        new(await TiposAsync(empresaId), await CamposAsync(empresaId));
+    // Valem para todas as empresas (o Pricing de qualquer uma mostra os mesmos tipos e campos). O EmpresaId
+    // que ficou gravado nos de antes é só a origem: não filtra nada. Os novos ficam com ele vazio.
 
-    private async Task<List<TipoOperacao>> TiposAsync(string empresaId) =>
-        (await _tipos.ListarAsync(t => t.EmpresaId == empresaId)).OrderBy(t => t.Ordem).ToList();
+    public async Task<DadosOperacaoDto> DadosOperacaoAsync() => new(await TiposAsync(), await CamposAsync());
 
-    public async Task<List<CampoOperacao>> CamposAsync(string empresaId) =>
-        (await _campos.ListarAsync(c => c.EmpresaId == empresaId)).OrderBy(c => c.Ordem).ToList();
+    private async Task<List<TipoOperacao>> TiposAsync() =>
+        (await _tipos.GetAllAsync()).OrderBy(t => t.Ordem).ThenBy(t => t.CriadoEm).ToList();
 
-    public async Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(string empresaId, DadosOperacaoDto dto)
+    public async Task<List<CampoOperacao>> CamposAsync() =>
+        (await _campos.GetAllAsync()).OrderBy(c => c.Ordem).ThenBy(c => c.CriadoEm).ToList();
+
+    public async Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(DadosOperacaoDto dto)
     {
-        if (await _empresas.GetByIdAsync(empresaId) is not { } empresa)
-            return Result.Failure<DadosOperacaoDto>("Empresa não encontrada.");
         var brutosTipos = dto?.Tipos ?? new();
         var brutosCampos = dto?.Campos ?? new();
         if (brutosTipos.Count > MaxTipos)
-            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxTipos} tipos de operação por empresa.");
+            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxTipos} tipos de operação.");
         if (brutosCampos.Count > MaxItens)
-            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxItens} campos por empresa.");
+            return Result.Failure<DadosOperacaoDto>($"No máximo {MaxItens} campos.");
 
-        var tipos = await PrepararTiposAsync(empresaId, brutosTipos);
-        var campos = await PrepararCamposAsync(empresaId, brutosCampos, tipos.Todos);
+        var tipos = await PrepararTiposAsync(brutosTipos);
+        var campos = await PrepararCamposAsync(brutosCampos, tipos.Todos);
 
         await _uow.ExecutarAsync(async () =>
         {
@@ -91,21 +90,21 @@ public class ParametrizacaoService : IParametrizacaoService
             await _campos.SalvarLoteAsync(campos.Novos, campos.Alterados.Select(a => a.Depois).ToList());
         });
 
-        await AuditarAsync(empresa, "TipoOperacao", "Tipo de operação", tipos, t => t.Nome, t => t.Status);
-        await AuditarAsync(empresa, "CampoOperacao", "Campo", campos, c => c.Nome, c => c.Status);
-        return Result.Success(await DadosOperacaoAsync(empresaId));
+        await AuditarAsync("TipoOperacao", "Tipo de operação", tipos, t => t.Nome, t => t.Status);
+        await AuditarAsync("CampoOperacao", "Campo", campos, c => c.Nome, c => c.Status);
+        return Result.Success(await DadosOperacaoAsync());
     }
 
-    public async Task<Result<List<CampoOperacao>>> SalvarCamposAsync(string empresaId, List<CampoOperacao> campos)
+    public async Task<Result<List<CampoOperacao>>> SalvarCamposAsync(List<CampoOperacao> campos)
     {
-        var r = await SalvarDadosOperacaoAsync(empresaId, new DadosOperacaoDto(null, campos));
+        var r = await SalvarDadosOperacaoAsync(new DadosOperacaoDto(null, campos));
         return r.IsSuccess ? Result.Success(r.Value!.Campos ?? new()) : Result.Failure<List<CampoOperacao>>(r.Error!);
     }
 
     /// <summary>Tipos de operação: insere, renomeia, reordena e inativa. Os que não vieram ficam como estão.</summary>
-    private async Task<Lote<TipoOperacao>> PrepararTiposAsync(string empresaId, List<TipoOperacao> brutos)
+    private async Task<Lote<TipoOperacao>> PrepararTiposAsync(List<TipoOperacao> brutos)
     {
-        var existentes = (await _tipos.ListarAsync(t => t.EmpresaId == empresaId)).ToDictionary(t => t.Id);
+        var existentes = (await _tipos.GetAllAsync()).ToDictionary(t => t.Id);
         var novos = new List<TipoOperacao>();
         var alterados = new List<(TipoOperacao Antes, TipoOperacao Depois)>();
         var vistos = new HashSet<string>();
@@ -118,7 +117,7 @@ public class ParametrizacaoService : IParametrizacaoService
             var t = new TipoOperacao
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
-                EmpresaId = empresaId,
+                EmpresaId = antes?.EmpresaId ?? string.Empty,
                 Nome = Limitar(nome.Length > 0 ? nome : antes!.Nome, 80),
                 Ordem = ordem++,
                 Status = bruto.Status == "inativo" ? "inativo" : "ativo",
@@ -134,11 +133,11 @@ public class ParametrizacaoService : IParametrizacaoService
 
     /// <summary>
     /// Campos: normaliza tipo, efeito e chave (única entre os ativos do mesmo tipo de operação).
-    /// Campo sem tipo de operação válido vai para o primeiro tipo ativo da empresa.
+    /// Campo sem tipo de operação válido vai para o primeiro tipo ativo.
     /// </summary>
-    private async Task<Lote<CampoOperacao>> PrepararCamposAsync(string empresaId, List<CampoOperacao> brutos, List<TipoOperacao> tipos)
+    private async Task<Lote<CampoOperacao>> PrepararCamposAsync(List<CampoOperacao> brutos, List<TipoOperacao> tipos)
     {
-        var existentes = (await _campos.ListarAsync(c => c.EmpresaId == empresaId)).ToDictionary(c => c.Id);
+        var existentes = (await _campos.GetAllAsync()).ToDictionary(c => c.Id);
         var idsTipos = tipos.Select(t => t.Id).ToHashSet();
         var tipoPadrao = tipos.Where(t => t.Status == "ativo").OrderBy(t => t.Ordem).FirstOrDefault()?.Id ?? tipos.FirstOrDefault()?.Id ?? string.Empty;
         var chavesPorTipo = new Dictionary<string, HashSet<string>>();
@@ -161,7 +160,7 @@ public class ParametrizacaoService : IParametrizacaoService
             var c = new CampoOperacao
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
-                EmpresaId = empresaId,
+                EmpresaId = antes?.EmpresaId ?? string.Empty,
                 TipoOperacaoId = tipoOperacaoId,
                 Nome = Limitar(nome.Length > 0 ? nome : antes!.Nome, 120),
                 Tipo = tipo,
@@ -197,15 +196,15 @@ public class ParametrizacaoService : IParametrizacaoService
     }
 
     /// <summary>Trilha de auditoria de uma gravação: criar, editar, inativar ou reativar cada registro.</summary>
-    private async Task AuditarAsync<T>(Empresa empresa, string entidade, string rotulo, Lote<T> lote, Func<T, string> nome, Func<T, string> status)
+    private async Task AuditarAsync<T>(string entidade, string rotulo, Lote<T> lote, Func<T, string> nome, Func<T, string> status)
         where T : IEntity
     {
         foreach (var n in lote.Novos)
-            await _auditoria.RegistrarAsync("criar", entidade, n.Id, $"{rotulo} \"{nome(n)}\" criado em Dados da Operação de {empresa.Nome}");
+            await _auditoria.RegistrarAsync("criar", entidade, n.Id, $"{rotulo} \"{nome(n)}\" criado em Dados da Operação");
         foreach (var (a, d) in lote.Alterados)
         {
             var acao = status(a) != "inativo" && status(d) == "inativo" ? "inativar" : status(a) == "inativo" && status(d) != "inativo" ? "reativar" : "editar";
-            await _auditoria.RegistrarAsync(acao, entidade, d.Id, $"{rotulo} \"{nome(d)}\" de Dados da Operação ({empresa.Nome}): {acao}", a, d);
+            await _auditoria.RegistrarAsync(acao, entidade, d.Id, $"{rotulo} \"{nome(d)}\" de Dados da Operação: {acao}", a, d);
         }
     }
 
@@ -216,12 +215,15 @@ public class ParametrizacaoService : IParametrizacaoService
         || a.Seguro != b.Seguro || a.CampoBase != b.CampoBase || a.CampoOrigem != b.CampoOrigem || a.CampoDestino != b.CampoDestino;
 
     // ══════════════════════════ Ficha Técnica ══════════════════════════
+    // Vale para todas as empresas (o Pricing de qualquer uma usa as mesmas fichas). O EmpresaId que ficou
+    // gravado nas fichas de antes é só a origem: não filtra nada. As novas ficam com ele vazio.
 
-    public async Task<FichasEmpresaDto> FichasAsync(string empresaId)
+    public async Task<FichasEmpresaDto> FichasAsync()
     {
-        var grupos = (await _grupos.ListarAsync(g => g.EmpresaId == empresaId)).OrderBy(g => g.Ordem).ToList();
-        var colunas = (await _colunas.ListarAsync(c => c.EmpresaId == empresaId)).OrderBy(c => c.Ordem).ToList();
-        var fichas = (await _fichas.ListarAsync(f => f.EmpresaId == empresaId)).OrderBy(f => f.Ordem).ToList();
+        // Ordem empatada (fichas que eram de empresas diferentes): a mais antiga primeiro; o próximo salvar renumera.
+        var grupos = (await _grupos.GetAllAsync()).OrderBy(g => g.Ordem).ThenBy(g => g.CriadoEm).ToList();
+        var colunas = (await _colunas.GetAllAsync()).OrderBy(c => c.Ordem).ThenBy(c => c.CriadoEm).ToList();
+        var fichas = (await _fichas.GetAllAsync()).OrderBy(f => f.Ordem).ThenBy(f => f.CriadoEm).ToList();
         var ids = fichas.Select(f => f.Id).ToList();
         var valores = ids.Count == 0 ? new List<FichaValor>() : await _valores.ListarAsync(v => ids.Contains(v.FichaId));
         var tipoDa = colunas.ToDictionary(c => c.Id, c => c.Tipo);
@@ -241,15 +243,13 @@ public class ParametrizacaoService : IParametrizacaoService
         return new FichasEmpresaDto(grupos, colunas, saida);
     }
 
-    public async Task<Result<FichasEmpresaDto>> SalvarFichasAsync(string empresaId, SalvarFichasDto dto)
+    public async Task<Result<FichasEmpresaDto>> SalvarFichasAsync(SalvarFichasDto dto)
     {
-        if (await _empresas.GetByIdAsync(empresaId) is not { } empresa)
-            return Result.Failure<FichasEmpresaDto>("Empresa não encontrada.");
         if ((dto.Grupos?.Count ?? 0) > MaxItens || (dto.Colunas?.Count ?? 0) > MaxItens || (dto.Fichas?.Count ?? 0) > 2000)
             return Result.Failure<FichasEmpresaDto>("Grade grande demais para gravar de uma vez.");
 
         // ── 0. Fichas (pastas) ──
-        var grupoExistentes = (await _grupos.ListarAsync(g => g.EmpresaId == empresaId)).ToDictionary(g => g.Id);
+        var grupoExistentes = (await _grupos.GetAllAsync()).ToDictionary(g => g.Id);
         var grupoNovos = new List<FichaGrupo>();
         var grupoAlterados = new List<(FichaGrupo Antes, FichaGrupo Depois)>();
         var gruposValidos = new HashSet<string>(grupoExistentes.Keys);
@@ -261,7 +261,7 @@ public class ParametrizacaoService : IParametrizacaoService
             var g = new FichaGrupo
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
-                EmpresaId = empresaId,
+                EmpresaId = antes?.EmpresaId ?? string.Empty,
                 Nome = Limitar(nome.Length > 0 ? nome : antes?.Nome ?? "Nova ficha", 120),
                 Ordem = ordemG++,
                 FormulaTotal = Limitar((bruto.FormulaTotal ?? string.Empty).Trim(), 500),
@@ -274,12 +274,12 @@ public class ParametrizacaoService : IParametrizacaoService
         // Fórmula do total de cada ficha (a que veio agora ou a gravada).
         var formulaPorGrupo = grupoExistentes.Values.Concat(grupoNovos).Concat(grupoAlterados.Select(a => a.Depois))
             .GroupBy(g => g.Id).ToDictionary(g => g.Key, g => g.Last().FormulaTotal);
-        // Ficha pedida pela tela, se for desta empresa; senão a que já estava (ou nenhuma).
+        // Ficha pedida pela tela, se existir; senão a que já estava (ou nenhuma).
         string GrupoDe(string? pedido, string? atual) =>
             !string.IsNullOrWhiteSpace(pedido) && gruposValidos.Contains(pedido.Trim()) ? pedido.Trim() : atual ?? string.Empty;
 
         // ── 1. Colunas ──
-        var colExistentes = (await _colunas.ListarAsync(c => c.EmpresaId == empresaId)).ToDictionary(c => c.Id);
+        var colExistentes = (await _colunas.GetAllAsync()).ToDictionary(c => c.Id);
         var colNovas = new List<FichaColuna>();
         var colAlteradas = new List<(FichaColuna Antes, FichaColuna Depois)>();
         var colFinal = new Dictionary<string, FichaColuna>(colExistentes);
@@ -296,7 +296,7 @@ public class ParametrizacaoService : IParametrizacaoService
             var c = new FichaColuna
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
-                EmpresaId = empresaId,
+                EmpresaId = antes?.EmpresaId ?? string.Empty,
                 GrupoId = GrupoDe(bruto.GrupoId, antes?.GrupoId),
                 Nome = Limitar(nome.Length > 0 ? nome : antes!.Nome, 120),
                 Tipo = tipo,
@@ -315,7 +315,7 @@ public class ParametrizacaoService : IParametrizacaoService
         }
 
         // ── 2. Fichas ──
-        var fichaExistentes = (await _fichas.ListarAsync(f => f.EmpresaId == empresaId)).ToDictionary(f => f.Id);
+        var fichaExistentes = (await _fichas.GetAllAsync()).ToDictionary(f => f.Id);
         // Cópias: o total é recalculado em cima delas e comparado com o original.
         var fichaFinal = fichaExistentes.ToDictionary(k => k.Key, k => new FichaTecnica
         {
@@ -331,7 +331,7 @@ public class ParametrizacaoService : IParametrizacaoService
             var f = new FichaTecnica
             {
                 Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
-                EmpresaId = empresaId,
+                EmpresaId = antes?.EmpresaId ?? string.Empty,
                 GrupoId = GrupoDe(bruto.GrupoId, antes?.GrupoId),
                 Nome = Limitar(nome.Length > 0 ? nome : antes?.Nome ?? "Novo item", 160),
                 Total = antes?.Total ?? 0m,
@@ -401,19 +401,19 @@ public class ParametrizacaoService : IParametrizacaoService
             .GroupBy(g => g.Id).ToDictionary(g => g.Key, g => g.Last().Nome);
         string Onde(string grupoId) => nomeGrupo.TryGetValue(grupoId, out var n) ? $"ficha {n}" : "Ficha Técnica";
         foreach (var g in grupoNovos)
-            await _auditoria.RegistrarAsync("criar", "FichaGrupo", g.Id, $"Ficha \"{g.Nome}\" criada na Ficha Técnica de {empresa.Nome}");
+            await _auditoria.RegistrarAsync("criar", "FichaGrupo", g.Id, $"Ficha \"{g.Nome}\" criada na Ficha Técnica");
         foreach (var (a, d) in grupoAlterados)
-            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaGrupo", d.Id, $"Ficha \"{d.Nome}\" ({empresa.Nome}): {Acao(a.Status, d.Status)}", a, d);
+            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaGrupo", d.Id, $"Ficha \"{d.Nome}\": {Acao(a.Status, d.Status)}", a, d);
         foreach (var c in colNovas)
-            await _auditoria.RegistrarAsync("criar", "FichaColuna", c.Id, $"Coluna \"{c.Nome}\" criada na {Onde(c.GrupoId)} ({empresa.Nome})");
+            await _auditoria.RegistrarAsync("criar", "FichaColuna", c.Id, $"Coluna \"{c.Nome}\" criada na {Onde(c.GrupoId)}");
         foreach (var (a, d) in colAlteradas)
-            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaColuna", d.Id, $"Coluna \"{d.Nome}\" da {Onde(d.GrupoId)} ({empresa.Nome}): {Acao(a.Status, d.Status)}", a, d);
+            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaColuna", d.Id, $"Coluna \"{d.Nome}\" da {Onde(d.GrupoId)}: {Acao(a.Status, d.Status)}", a, d);
         foreach (var f in fichasNovasLista)
-            await _auditoria.RegistrarAsync("criar", "FichaTecnica", f.Id, $"Item \"{f.Nome}\" criado na {Onde(f.GrupoId)} ({empresa.Nome})");
+            await _auditoria.RegistrarAsync("criar", "FichaTecnica", f.Id, $"Item \"{f.Nome}\" criado na {Onde(f.GrupoId)}");
         foreach (var (a, d) in fichasAlteradas.Where(x => x.Antes.Nome != x.Depois.Nome || x.Antes.Status != x.Depois.Status || fichasComValorMudado.Contains(x.Depois.Id)))
-            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaTecnica", d.Id, $"Item \"{d.Nome}\" da {Onde(d.GrupoId)} ({empresa.Nome}): {Acao(a.Status, d.Status)}, total {d.Total:N2}", a, d);
+            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaTecnica", d.Id, $"Item \"{d.Nome}\" da {Onde(d.GrupoId)}: {Acao(a.Status, d.Status)}, total {d.Total:N2}", a, d);
 
-        return Result.Success(await FichasAsync(empresaId));
+        return Result.Success(await FichasAsync());
     }
 
     private static bool MudouColuna(FichaColuna a, FichaColuna b) =>

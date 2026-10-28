@@ -9,7 +9,6 @@ import { useSalvamentoAutomatico } from '@/features/common/useSalvamentoAutomati
 import { SituacaoSalvamento } from '@/features/common/SituacaoSalvamento'
 import { formatBRL, formatNumberBRL, formatPct } from '@/lib/format'
 import { chaveDe, trocarReferencia } from '@/lib/formula'
-import { useEmpresaAtiva } from '@/features/camposOperacao/useEmpresaAtiva'
 import camposCss from '@/features/camposOperacao/camposOperacao.module.css'
 import { chaveFichas, listFichas, salvarFichas } from './api'
 import { calcularFicha } from './calculo'
@@ -43,15 +42,15 @@ function chaveLivre(nome: string, outras: ColunaFicha[]): string {
  * Ficha Técnica: as fichas ficam à esquerda, como pastas (Funcionários, Tecnologia...). A
  * ficha escolhida abre num grid tipo planilha, com as colunas DELA (painel à direita) e os
  * itens (Porteiro diurno, Plano CRM...) cujo total vira o custo no Pricing.
+ * Vale para todas as empresas (é o único cadastro comum: o Pricing de qualquer empresa usa as mesmas fichas).
  * Grava sozinho um instante depois de cada alteração.
  */
 export function FichasTecnicasPage() {
-  const { empresas, empresaId, setEmpresaId, carregando } = useEmpresaAtiva()
   const auto = useSalvamentoAutomatico<GradeFichas>({
-    chave: chaveFichas(empresaId),
-    carregar: () => listFichas(empresaId),
-    salvar: (g) => salvarFichas(empresaId, g),
-    habilitado: !!empresaId,
+    chave: chaveFichas,
+    carregar: listFichas,
+    salvar: salvarFichas,
+    habilitado: true,
   })
   const grade = auto.dados ?? VAZIA
   const [painel, setPainel] = useState(false)
@@ -176,13 +175,7 @@ export function FichasTecnicasPage() {
     setColunaSel(id)
     setPainel(true)
   }
-  const trocarEmpresa = (id: string) => {
-    setEmpresaId(id)
-    setGrupoSel('')
-    setColunaSel('')
-    setAberta('')
-  }
-  const podeLancar = !!empresaId && (!!grupo || semFicha)
+  const podeLancar = !auto.carregando && (!!grupo || semFicha)
 
   // Prévia da fórmula usa a primeira ficha (ou zeros) para mostrar se a conta fecha.
   const amostra = visiveis[0]?.valores ?? {}
@@ -194,18 +187,10 @@ export function FichasTecnicasPage() {
       <PageHeader
         breadcrumb="Cadastros"
         title="Ficha Técnica"
-        subtitle="Cada ficha é uma pasta (Funcionários, Tecnologia...) com as suas colunas e os seus itens. O total de cada item é o custo que o Pricing usa."
+        subtitle="Cada ficha é uma pasta (Funcionários, Tecnologia...) com as suas colunas e os seus itens. O total de cada item é o custo que o Pricing usa. Vale para todas as empresas."
         action={
           <div className={camposCss.acoes}>
-            {empresaId && <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />}
-            <label className={camposCss.empresaSel}>
-              Empresa
-              <select value={empresaId} onChange={(e) => trocarEmpresa(e.target.value)} disabled={carregando}>
-                {empresas.map((e) => (
-                  <option key={e.id} value={e.id}>{e.nome}</option>
-                ))}
-              </select>
-            </label>
+            <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />
             <button type="button" className={`${ui.chip} ${painel ? ui.chipOn : ''}`} onClick={() => setPainel((p) => !p)} disabled={!podeLancar}>
               <Settings2 /> Colunas ({colunas.length})
             </button>
@@ -264,7 +249,7 @@ export function FichasTecnicasPage() {
             </button>
           </div>
         )}
-        <button type="button" className={css.novaPasta} onClick={adicionarGrupo} disabled={!empresaId}>
+        <button type="button" className={css.novaPasta} onClick={adicionarGrupo} disabled={auto.carregando}>
           <Plus size={15} /> Nova ficha
         </button>
         {gruposVisiveis.length === 0 && !temSemFicha && !auto.carregando && (

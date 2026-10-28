@@ -8,19 +8,19 @@ namespace Elrond.Application.Interfaces;
 public interface IParametrizacaoService
 {
     /// <summary>Tipos de operação e campos da empresa (ativos e inativos), na ordem da tela.</summary>
-    Task<DadosOperacaoDto> DadosOperacaoAsync(string empresaId);
+    Task<DadosOperacaoDto> DadosOperacaoAsync();
 
     /// <summary>Grava tipos e campos da empresa numa transação (insere, altera, inativa). Não apaga o que não veio.</summary>
-    Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(string empresaId, DadosOperacaoDto dto);
+    Task<Result<DadosOperacaoDto>> SalvarDadosOperacaoAsync(DadosOperacaoDto dto);
 
     /// <summary>Campos da empresa (ativos e inativos), na ordem da tela.</summary>
-    Task<List<CampoOperacao>> CamposAsync(string empresaId);
+    Task<List<CampoOperacao>> CamposAsync();
 
     /// <summary>Grava só os campos (os tipos ficam como estão).</summary>
-    Task<Result<List<CampoOperacao>>> SalvarCamposAsync(string empresaId, List<CampoOperacao> campos);
+    Task<Result<List<CampoOperacao>>> SalvarCamposAsync(List<CampoOperacao> campos);
 
-    Task<FichasEmpresaDto> FichasAsync(string empresaId);
+    Task<FichasEmpresaDto> FichasAsync();
 
     /// <summary>Grava colunas, fichas e valores da empresa numa transação e recalcula os totais.</summary>
-    Task<Result<FichasEmpresaDto>> SalvarFichasAsync(string empresaId, SalvarFichasDto dto);
+    Task<Result<FichasEmpresaDto>> SalvarFichasAsync(SalvarFichasDto dto);
 }
