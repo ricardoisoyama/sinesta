@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Copy, Folder, FolderOpen, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, CopyPlus, Folder, FolderInput, FolderOpen, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import sheet from '@/features/common/planilha.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
@@ -12,6 +12,8 @@ import { chaveDe, trocarReferencia } from '@/lib/formula'
 import camposCss from '@/features/camposOperacao/camposOperacao.module.css'
 import { chaveFichas, listFichas, salvarFichas } from './api'
 import { calcularFicha } from './calculo'
+import { duplicarFicha, type PlanoCopia } from './copiar'
+import { CopiarItensModal } from './CopiarItensModal'
 import { EditorFormula } from './EditorFormula'
 import { TIPOS_COLUNA, TIPOS_NUMERICOS, novaColuna, novaFicha, novoGrupo, type ColunaFicha, type FichaTecnica, type GradeFichas, type GrupoFicha, type TipoColunaFicha } from './types'
 import css from './fichaTecnica.module.css'
@@ -60,6 +62,9 @@ export function FichasTecnicasPage() {
   const [focoId, setFocoId] = useState('')
   const [grupoSel, setGrupoSel] = useState('')
   const [focoGrupo, setFocoGrupo] = useState('')
+  /** Janela "Copiar para outra ficha" aberta (com o id do item clicado; '' = nenhum marcado). */
+  const [copiarDe, setCopiarDe] = useState<string | null>(null)
+  const [copiado, setCopiado] = useState<{ texto: string; destinoId: string } | null>(null)
 
   // ── fichas (pastas) ──
   // Itens e colunas de antes das pastas (sem ficha) aparecem numa pasta "Sem ficha" até serem movidos.
@@ -110,6 +115,20 @@ export function FichasTecnicasPage() {
     setGrupoSel(id)
     setColunaSel('')
     setAberta('')
+    setCopiado(null)
+  }
+  /** Cópia da ficha aberta logo abaixo dela, já selecionada e com o nome pronto para trocar. */
+  const duplicarGrupo = (id: string) => {
+    const r = duplicarFicha(grade, id)
+    gravar(r.grade)
+    escolherGrupo(r.id)
+    setFocoGrupo(r.id)
+  }
+  const aoCopiar = (nova: GradeFichas, planos: PlanoCopia[], itens: number) => {
+    gravar(nova)
+    setCopiarDe(null)
+    const nomes = planos.map((p) => grade.grupos.find((g) => g.id === p.grupoId)?.nome || 'Sem nome')
+    setCopiado({ texto: `${itens === 1 ? '1 item copiado' : `${itens} itens copiados`} para ${nomes.join(', ')}.`, destinoId: planos.length === 1 ? planos[0].grupoId : '' })
   }
   const qtdItens = (gid: string) => grade.fichas.filter((x) => x.status === 'ativo' && (gid === '' ? !grade.grupos.some((g) => g.id === x.grupoId) : x.grupoId === gid)).length
 
@@ -225,13 +244,17 @@ export function FichasTecnicasPage() {
                     onFocus={(e) => focoGrupo === g.id && e.target.select()}
                     onChange={(e) => salvarGrupo({ ...g, nome: e.target.value })}
                     aria-label="Nome da ficha"
+                    title={g.nome}
                   />
+                  <button type="button" className={css.pastaAcao} title="Duplicar ficha (colunas, itens e valores)" onClick={() => duplicarGrupo(g.id)}>
+                    <CopyPlus size={14} />
+                  </button>
                   <button type="button" className={css.pastaAcao} title={g.status === 'ativo' ? 'Inativar a ficha (os itens saem do Pricing)' : 'Reativar a ficha'} onClick={() => salvarGrupo({ ...g, status: g.status === 'ativo' ? 'inativo' : 'ativo' })}>
                     <Power size={14} />
                   </button>
                 </>
               ) : (
-                <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(g.id)}>
+                <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(g.id)} title={g.nome}>
                   <Icone size={16} />
                   <span>{g.nome || 'Sem nome'}</span>
                   <small>{qtdItens(g.id)}</small>
@@ -259,6 +282,13 @@ export function FichasTecnicasPage() {
 
       <div className={`${sheet.split} ${painel ? '' : sheet.splitFechado}`}>
         <div className={ui.card}>
+          {copiado && (
+            <div className={css.copiado} role="status">
+              <span>{copiado.texto}</span>
+              {copiado.destinoId && <button type="button" onClick={() => escolherGrupo(copiado.destinoId)}>Abrir a ficha</button>}
+              <button type="button" className={ui.iconBtn} onClick={() => setCopiado(null)} aria-label="Fechar aviso"><X /></button>
+            </div>
+          )}
           <div className={sheet.wrap}>
             <table className={sheet.sheet}>
               <thead>
@@ -298,6 +328,7 @@ export function FichasTecnicasPage() {
                       onValor={(k, v) => setValor(f, k, v)}
                       onExpandir={() => setAberta(expandida ? '' : f.id)}
                       onDuplicar={() => duplicar(f)}
+                      onCopiar={() => setCopiarDe(f.id)}
                       onStatus={() => alternarStatus(f)}
                       onEnter={adicionarFicha}
                     />
@@ -333,7 +364,7 @@ export function FichasTecnicasPage() {
           <div className={camposCss.dica}>
             <Lightbulb />
             <span>
-              Grava sozinho a cada alteração. Clique no título de uma coluna para mudar tipo, fórmula ou se ela entra no total. Clique no total para ver a composição. <kbd>Enter</kbd> no nome cria o próximo item. Remover coluna ou inativar item ou ficha não apaga nada: as propostas feitas guardam a composição do dia.
+              Grava sozinho a cada alteração. Clique no título de uma coluna para mudar tipo, fórmula ou se ela entra no total. Clique no total para ver a composição. <kbd>Enter</kbd> no nome cria o próximo item. <FolderInput size={13} style={{ verticalAlign: -2 }} /> no item copia os custos para outra ficha. Remover coluna ou inativar item ou ficha não apaga nada: as propostas feitas guardam a composição do dia.
             </span>
           </div>
         </div>
@@ -446,6 +477,20 @@ export function FichasTecnicasPage() {
         )}
       </div>
       </div>
+
+      {copiarDe !== null && (
+        <CopiarItensModal
+          grade={grade}
+          origemId={grupoId}
+          origemNome={grupo?.nome || 'Sem ficha'}
+          colunas={colunas}
+          itens={visiveis.filter((f) => f.status === 'ativo')}
+          formulaTotal={formulaTotal}
+          marcado={copiarDe}
+          onClose={() => setCopiarDe(null)}
+          onCopiar={aoCopiar}
+        />
+      )}
     </>
   )
 }
@@ -464,11 +509,12 @@ interface LinhaProps {
   onValor: (colunaId: string, v: number | string) => void
   onExpandir: () => void
   onDuplicar: () => void
+  onCopiar: () => void
   onStatus: () => void
   onEnter: () => void
 }
 
-function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco, onNome, onValor, onExpandir, onDuplicar, onStatus, onEnter }: LinhaProps) {
+function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco, onNome, onValor, onExpandir, onDuplicar, onCopiar, onStatus, onEnter }: LinhaProps) {
   const inativa = f.status !== 'ativo'
   return (
     <>
@@ -526,6 +572,7 @@ function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco,
         <td>
           <div className={sheet.acoes}>
             <button type="button" title="Duplicar item" onClick={onDuplicar}><Copy /></button>
+            <button type="button" title="Copiar para outra ficha" onClick={onCopiar} disabled={inativa}><FolderInput /></button>
             <button type="button" className={inativa ? '' : sheet.perigo} title={inativa ? 'Reativar' : 'Inativar (fica no histórico)'} onClick={onStatus}><Power /></button>
           </div>
         </td>

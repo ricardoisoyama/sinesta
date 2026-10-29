@@ -1,7 +1,7 @@
 /* Fichas como pastas à esquerda; o grid da ficha escolhida à direita. */
 .layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 270px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
 }
@@ -118,6 +118,32 @@
 }
 .novaPasta:hover { border-color: var(--orange); background: #fffaf6; }
 .novaPasta:disabled { opacity: 0.5; cursor: default; }
+
+/* Janela "Copiar para outra ficha" */
+.copiar { display: flex; flex-direction: column; gap: 18px; }
+.copiarTitulo { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: #7a877f; margin-bottom: 6px; }
+.copiarTodos { background: none; border: 0; padding: 0; font: inherit; font-size: 12px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #b5651d; cursor: pointer; }
+.copiarTodos:hover { text-decoration: underline; }
+.copiarLista { display: flex; flex-direction: column; border: 1px solid #e6e3db; border-radius: 10px; max-height: 220px; overflow-y: auto; }
+.copiarLista .copiarOpcao + .copiarOpcao { border-top: 1px solid #f0eee7; }
+.copiarOpcao { display: flex; align-items: center; gap: 10px; padding: 9px 12px; font-size: 13px; color: #1f2a24; cursor: pointer; }
+.copiarLista .copiarOpcao:hover { background: #faf9f6; }
+.copiarOpcao input { width: 16px; height: 16px; accent-color: #e8702f; cursor: pointer; flex-shrink: 0; }
+.copiarOpcao span { flex: 1; min-width: 0; }
+.copiarOpcao small { font-size: 12px; color: #6b7b72; font-variant-numeric: tabular-nums; }
+.copiarNota { margin: 0; font-size: 13px; color: #6b7b72; }
+.copiarResumo { background: #fffaf6; border: 1px solid #f0d9c6; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.copiarResumo .copiarTitulo { color: #b5651d; margin-bottom: 0; }
+.copiarDestino { font-size: 13px; color: #33413a; }
+.copiarDestino ul { margin: 4px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; }
+.copiarAviso { color: #9a5b12; list-style: none; margin-left: -18px; display: flex; gap: 6px; align-items: flex-start; }
+.copiarAviso svg { flex-shrink: 0; margin-top: 2px; }
+
+/* Aviso depois de copiar, acima do grid */
+.copiado { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #eef6ef; border: 1px solid #cfe3d2; color: #1f4d26; border-radius: 10px; padding: 9px 12px; font-size: 13px; margin-bottom: 10px; }
+.copiado span { flex: 1; min-width: 0; }
+.copiado button { background: none; border: 0; padding: 0; font: inherit; font-weight: 600; color: #1a4d1e; cursor: pointer; }
+.copiado button:hover { text-decoration: underline; }
 
 @media (max-width: 900px) {
   .layout { grid-template-columns: minmax(0, 1fr); }
