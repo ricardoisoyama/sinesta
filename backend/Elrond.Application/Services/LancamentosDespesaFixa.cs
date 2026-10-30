@@ -6,8 +6,11 @@ using Elrond.Domain.Entities;
 
 namespace Elrond.Application.Services;
 
-/// <summary>O que aconteceu com os lançamentos da despesa (a tela mostra). Motivo: por que não gerou.</summary>
-public sealed record ResumoLancamentosDf(int Criados, int Atualizados, int Cancelados, int EmAberto, string Motivo);
+/// <summary>
+/// O que aconteceu com os lançamentos da despesa (a tela mostra). Motivo: por que não gerou. JaLancados: meses
+/// que não foram criados porque já havia lançamento equivalente feito à mão ("10/2026: nº 20 · André · R$ 2.000,00").
+/// </summary>
+public sealed record ResumoLancamentosDf(int Criados, int Atualizados, int Cancelados, int EmAberto, string Motivo, List<string>? JaLancados = null);
 
 /// <summary>
 /// Despesa fixa recorrente → lançamentos a pagar mensais nas Entradas e Saídas. Só gera com término de
@@ -94,7 +97,7 @@ public sealed class LancamentosDespesaFixa(
         if (motivo is not null)
             return Result.Success(new ResumoLancamentosDf(0, 0, cancelados, abertos.Count - cancelados, motivo));
 
-        var (parceiroId, parceiroNome, forma) = await ParceiroAsync(df);
+        var (parceiroId, parceiroNome, fantasia, forma) = await ParceiroAsync(df);
         Movimento Modelo(DateOnly venc) => new()
         {
             Tipo = "pagar",
@@ -115,11 +118,24 @@ public sealed class LancamentosDespesaFixa(
             OrigemId = df.Id,
         };
 
-        // Meses que faltam (o pago ou em aberto do mês já conta).
-        var jaTem = existentes.Select(m => m.Competencia).ToHashSet();
+        // Meses que faltam: o pago ou em aberto do mês já conta, e o cancelado que já venceu também (alguém
+        // decidiu que aquele mês não vale, ex. duplicado de um lançamento manual): não volta sozinho. O cancelado
+        // que ainda vai vencer (encurtou o término, inativou) volta se a despesa voltar a cobrir o mês.
+        var jaTem = existentes.Select(m => m.Competencia)
+            .Concat((await movimentos.ListarAsync(m => m.Origem == CustoFixo.OrigemLancamentos && m.OrigemId == df.Id && m.Cancelado))
+                .Where(m => string.CompareOrdinal(m.Vencimento, hojeIso) < 0).Select(m => m.Competencia))
+            .ToHashSet();
+        // Lançados à mão antes da despesa existir (ou fora dela): o mesmo pagamento não entra duas vezes.
+        var manuais = (await movimentos.ListarAsync(m => m.Tipo == "pagar" && !m.Cancelado && m.Origem != CustoFixo.OrigemLancamentos)).ToList();
+        var jaLancados = new List<string>();
         var criados = 0;
         foreach (var venc in meses.Where(v => !jaTem.Contains(v.ToString("yyyy-MM", CultureInfo.InvariantCulture))))
         {
+            if (Equivalente(manuais, df, parceiroId, [parceiroNome, fantasia], venc) is { } igual)
+            {
+                jaLancados.Add($"{venc:MM/yyyy}: nº {igual.Numero} · {igual.ParceiroNome} · {igual.Valor.ToString("C", new CultureInfo("pt-BR"))} (venc. {Dia(igual.Vencimento)})");
+                continue;
+            }
             var r = await financeiro.CriarAsync(new NovoMovimentoDto(Modelo(venc)), quem);
             if (!r.IsSuccess) return Result.Failure<ResumoLancamentosDf>($"Não foi possível criar o lançamento de {venc:MM/yyyy}: {r.Error}");
             criados++;
@@ -139,17 +155,46 @@ public sealed class LancamentosDespesaFixa(
             }
 
         var emAberto = await EmAbertoAsync(df.Id);
-        return Result.Success(new ResumoLancamentosDf(criados, atualizados, cancelados, emAberto, string.Empty));
+        return Result.Success(new ResumoLancamentosDf(criados, atualizados, cancelados, emAberto, string.Empty, jaLancados));
     }
 
+    /// <summary>
+    /// Lançamento manual que já é o pagamento deste mês da despesa: mesmo fornecedor/funcionário (pelo cadastro
+    /// ou pelo nome, razão social ou fantasia), mesmo plano de contas quando os dois têm, valor até 2% de
+    /// diferença e vencimento a até 10 dias. A empresa não precisa bater (o pagamento pode sair pela outra conta).
+    /// </summary>
+    public static Movimento? Equivalente(IEnumerable<Movimento> manuais, CustoFixo df, string parceiroId, IEnumerable<string> nomes, DateOnly venc)
+    {
+        var chaves = nomes.Select(PrimeiraPalavra).Where(p => p.Length > 0).ToHashSet();
+        return manuais
+            .Where(m => (parceiroId.Length > 0 && m.ParceiroId == parceiroId) || chaves.Contains(PrimeiraPalavra(m.ParceiroNome)))
+            .Where(m => string.IsNullOrEmpty(df.PlanoContaId) || string.IsNullOrEmpty(m.PlanoContaId) || m.PlanoContaId == df.PlanoContaId)
+            .Where(m => df.ValorMensal > 0 && Math.Abs(m.Valor - df.ValorMensal) <= df.ValorMensal * 0.02m)
+            .Select(m => (m, dias: DateOnly.TryParse(m.Vencimento.Length >= 10 ? m.Vencimento[..10] : m.Vencimento, CultureInfo.InvariantCulture, out var d) ? Math.Abs(d.DayNumber - venc.DayNumber) : int.MaxValue))
+            .Where(x => x.dias <= 10)
+            .OrderBy(x => x.dias)
+            .Select(x => x.m)
+            .FirstOrDefault();
+    }
+
+    /// <summary>Primeira palavra "forte" do nome, sem acento e em caixa alta ("Fretebras" = "FRETEBRAS INTERNET LTDA").</summary>
+    private static string PrimeiraPalavra(string? nome)
+    {
+        var limpo = new string((nome ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD)
+            .Where(c => CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark).ToArray()).ToUpperInvariant();
+        return limpo.Split((char[])[' ', '-', '.', ',', '&', '/'], StringSplitOptions.RemoveEmptyEntries).FirstOrDefault(p => p.Length >= 3) ?? string.Empty;
+    }
+
+    private static string Dia(string iso) => iso.Length >= 10 ? $"{iso[8..10]}/{iso[5..7]}" : iso;
+
     /// <summary>Quem recebe: o fornecedor ou o funcionário ("func-{id}") da despesa; sem nenhum, a própria despesa.</summary>
-    private async Task<(string Id, string Nome, string Forma)> ParceiroAsync(CustoFixo df)
+    private async Task<(string Id, string Nome, string Fantasia, string Forma)> ParceiroAsync(CustoFixo df)
     {
         if (df.FornecedorId.StartsWith(PrefixoFuncionario, StringComparison.Ordinal)
             && await usuarios.GetByIdAsync(df.FornecedorId[PrefixoFuncionario.Length..]) is { } u)
-            return (df.FornecedorId, u.Name, "Pix");
+            return (df.FornecedorId, u.Name, string.Empty, "Pix");
         if (df.FornecedorId.Length > 0 && await fornecedores.GetByIdAsync(df.FornecedorId) is { } f)
-            return (f.Id, f.Nome, string.Empty);
-        return (string.Empty, df.Descricao, string.Empty);
+            return (f.Id, f.Nome, f.NomeFantasia ?? string.Empty, string.Empty);
+        return (string.Empty, df.Descricao, string.Empty, string.Empty);
     }
 }

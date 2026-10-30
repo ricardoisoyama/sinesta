@@ -104,7 +104,11 @@ export function CustosFixosPage() {
       r.atualizados && `${r.atualizados} atualizado(s)`,
       r.cancelados && `${r.cancelados} cancelado(s)`,
     ].filter(Boolean)
-    if (feito.length) void avisar({ titulo: 'Lançamentos da despesa', mensagem: `${feito.join(' · ')}. Veja em Financeiro › Entradas e Saídas.` })
+    const jaLancados = r.jaLancados?.length
+      ? `\n\nNão criados porque já estavam lançados à mão (o mesmo pagamento não entra duas vezes):\n${r.jaLancados.map((j) => `• ${j}`).join('\n')}`
+      : ''
+    if (feito.length || jaLancados)
+      void avisar({ titulo: 'Lançamentos da despesa', mensagem: `${feito.length ? `${feito.join(' · ')}. Veja em Financeiro › Entradas e Saídas.` : 'Nenhum lançamento novo.'}${jaLancados}` })
     else if (r.motivo && !antes) void avisar({ titulo: 'Despesa salva', mensagem: r.motivo })
   }
 

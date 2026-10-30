@@ -44,6 +44,8 @@ export interface ResumoLancamentosDf {
   cancelados: number
   emAberto: number
   motivo: string
+  /** Meses não criados porque já havia lançamento feito à mão ("10/2026: nº 20 · André · R$ 2.000,00"). */
+  jaLancados?: string[]
 }
 export const lancamentosDaDespesa = (id: string) => apiFetch<{ emAberto: number; motivo: string }>(`/custos-fixos/${id}/lancamentos`)
 export const gerarLancamentosDaDespesa = (id: string, atualizarAbertos: boolean) =>

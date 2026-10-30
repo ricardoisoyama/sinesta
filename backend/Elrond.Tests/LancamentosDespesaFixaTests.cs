@@ -101,6 +101,31 @@ public class LancamentosDespesaFixaTests
         Assert.Contains("inativa", i.Value.Motivo);
     }
 
+    [Fact]
+    public async Task Mes_ja_lancado_a_mao_nao_duplica_e_cancelado_vencido_nao_volta()
+    {
+        var (svc, movs) = Montar();
+        // Aluguel de outubro lançado à mão antes da despesa (nome fantasia, outro dia, outra empresa) e já pago.
+        movs.Itens.Add(new Movimento
+        {
+            Id = "manual", Numero = 20, Tipo = "pagar", EmpresaId = "filial", ParceiroNome = "IMOBILIARIA SANTOS LTDA", PlanoContaId = "p-aluguel",
+            Valor = 2500, Vencimento = "2026-10-25", Competencia = "2026-09", PagoEm = "2026-10-25", ValorPago = 2500,
+        });
+        // Outro pagamento ao mesmo fornecedor, de outro plano (não é o aluguel).
+        movs.Itens.Add(new Movimento { Id = "outro", Numero = 21, Tipo = "pagar", ParceiroId = "f-1", ParceiroNome = "Imobiliária Santos", PlanoContaId = "p-multa", Valor = 2500, Vencimento = "2026-11-30" });
+
+        var r = await svc.SincronizarAsync(Aluguel(), false, Ana);
+        Assert.True(r.IsSuccess, r.Error);
+        Assert.Equal(2, r.Value!.Criados);
+        Assert.Single(r.Value.JaLancados!, j => j.StartsWith("10/2026: nº 20"));
+        Assert.DoesNotContain(movs.Itens, m => m.Origem == "custo-fixo" && m.Competencia == "2026-10");
+
+        // Cancelado que já venceu (duplicado resolvido à mão) não é recriado.
+        movs.Itens.RemoveAll(m => m.Id == "manual");
+        movs.Itens.Add(new Movimento { Id = "dup", Tipo = "pagar", Origem = "custo-fixo", OrigemId = "df-1", Competencia = "2026-10", Vencimento = "2026-10-20", Valor = 2500, Cancelado = true });
+        Assert.Equal(0, (await svc.SincronizarAsync(Aluguel(), false, Ana)).Value!.Criados);
+    }
+
     [Theory]
     [InlineData(0, "", "Informe o dia de pagamento")]
     [InlineData(10, "", "Informe a conta que paga")]
