@@ -215,14 +215,15 @@ public class PropostaService : IPropostaService
         // Quem não aprova não tira a proposta da fila de aprovação (nem para "enviada" ou "rascunho").
         if (p.Status == "pendente" && !quem.PodeAprovar)
             return Result.Failure<Proposta>("A proposta está aguardando aprovação; só um aprovador pode alterar o status.");
-        // Uma proposta aprovada não volta a pendente/rascunho pela mão de quem não aprova.
-        if (p.Status == "aprovada" && !quem.PodeAprovar)
-            return Result.Failure<Proposta>("A proposta já foi aprovada; só um aprovador pode alterar o status.");
-
+        // Aprovada pode voltar (o cliente pediu acréscimo ou cancelou): qualquer um tira, e as assinaturas
+        // são zeradas para a próxima aprovação valer de novo. Quem aprovou antes fica na auditoria.
         var de = p.Status;
+        var aprovadoresAntes = de == "aprovada" ? string.Join(", ", p.Aprovacoes.Select(a => a.Nome)) : string.Empty;
+        if (de == "aprovada") p.Aprovacoes.Clear();
         p.Status = status;
         await _propostas.UpdateAsync(id, p);
-        await _auditoria.RegistrarAsync("status", "Proposta", p.Id, $"Proposta {p.Numero}: status {de} → {status}",
+        await _auditoria.RegistrarAsync("status", "Proposta", p.Id,
+            $"Proposta {p.Numero}: status {de} → {status}" + (aprovadoresAntes.Length > 0 ? $" (tinha sido aprovada por {aprovadoresAntes})" : string.Empty),
             new { status = de }, new { status });
         return Result.Success(p);
     }

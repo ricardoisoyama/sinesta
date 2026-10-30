@@ -306,12 +306,15 @@ export function PropostasPage() {
               <select
                 className={s.statusSel}
                 value={detalhe.status}
-                // Pendente/aprovada só mudam pela mão de um aprovador (o servidor confere também).
-                disabled={(detalhe.status === 'pendente' || detalhe.status === 'aprovada') && !podeAprovar}
+                // Pendente só sai pela mão de um aprovador (o servidor confere também). Aprovada pode voltar:
+                // o cliente pediu acréscimo (Rascunho, edita e reaprova) ou cancelou (Recusada).
+                disabled={detalhe.status === 'pendente' && !podeAprovar}
                 title={
-                  (detalhe.status === 'pendente' || detalhe.status === 'aprovada') && !podeAprovar
+                  detalhe.status === 'pendente' && !podeAprovar
                     ? 'Só um aprovador altera o status desta proposta.'
-                    : undefined
+                    : detalhe.status === 'aprovada'
+                      ? 'Voltar para Rascunho para editar (acréscimo) ou Recusada se o cliente cancelou. A aprovação é refeita.'
+                      : undefined
                 }
                 onChange={(e) => mudarStatus(detalhe, e.target.value as StatusProposta)}
               >
