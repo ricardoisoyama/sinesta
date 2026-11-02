@@ -16,7 +16,36 @@ export interface ImpostoServico {
   limite: number
   /** true = entra no markup; false = só destacado na nota. */
   afetaPreco: boolean
+  /** Regime da empresa em que vale ('' = qualquer, cadastro de antes). */
+  regime: RegimeTabela | ''
+  /** Início da vigência (aaaa-mm-dd), definido pelo usuário; '' = desde sempre. */
+  vigenteDesde: string
 }
+
+/** Uma tabela de impostos por regime: o MEI usa a do Simples. */
+export type RegimeTabela = 'Simples Nacional' | 'Lucro Presumido' | 'Lucro Real'
+export const REGIMES_TABELA: RegimeTabela[] = ['Simples Nacional', 'Lucro Presumido', 'Lucro Real']
+export const regimeDaTabela = (regime: string): RegimeTabela =>
+  regime === 'MEI' ? 'Simples Nacional' : (REGIMES_TABELA.find((r) => r === regime) ?? 'Lucro Presumido')
+
+/** Datas de início das tabelas do regime, em ordem ('' = desde sempre vem antes). */
+export const vigenciasDoRegime = (impostos: ImpostoServico[], regime: RegimeTabela) =>
+  [...new Set(impostos.filter((i) => i.regime === regime).map((i) => i.vigenteDesde))].sort()
+
+/** A vigência em vigor na data (a mais recente que já começou); undefined = nenhuma começou. */
+export const vigenciaEmVigor = (vigencias: string[], hoje: string): string | undefined => vigencias.filter((v) => v <= hoje).pop()
+
+/** Espelha `Servico.ImpostosVigentes` do .NET: a tabela do regime (ou a sem regime) em vigor na data. */
+export function impostosVigentes(impostos: ImpostoServico[], regime: string, hoje: string): ImpostoServico[] {
+  const r = regimeDaTabela(regime)
+  let doRegime = impostos.filter((i) => i.regime === r)
+  if (!doRegime.length) doRegime = impostos.filter((i) => !i.regime)
+  const inicio = vigenciaEmVigor([...new Set(doRegime.map((i) => i.vigenteDesde))].sort(), hoje)
+  return inicio === undefined ? [] : doRegime.filter((i) => i.vigenteDesde === inicio)
+}
+
+export const hojeIso = () => new Date().toLocaleDateString('sv-SE')
+export const dataBr = (iso: string) => (iso ? iso.split('-').reverse().join('/') : '')
 
 export const TIPOS_IMPOSTO: { valor: TipoImposto; label: string; ajuda: string }[] = [
   { valor: 'irpj', label: 'IRPJ', ajuda: 'Lucro Presumido: 15% sobre a base presumida (8% no transporte de cargas; 32% em serviços como armazenagem).' },
@@ -36,7 +65,9 @@ export const TIPOS_IMPOSTO: { valor: TipoImposto; label: string; ajuda: string }
 export const rotuloImposto = (i: Pick<ImpostoServico, 'imposto' | 'nome'>) =>
   i.imposto === 'outro' ? i.nome || 'Outro' : (TIPOS_IMPOSTO.find((t) => t.valor === i.imposto)?.label ?? i.imposto)
 
-export const novoImposto = (imposto: TipoImposto = 'outro'): ImpostoServico => ({
+export const novoImposto = (imposto: TipoImposto = 'outro', regime: RegimeTabela | '' = '', vigenteDesde = ''): ImpostoServico => ({
+  regime,
+  vigenteDesde,
   id: crypto.randomUUID(),
   imposto,
   nome: '',
@@ -68,12 +99,19 @@ type Linha = Pick<ImpostoServico, 'imposto' | 'base' | 'aliquota' | 'limite'>
 const linha = (imposto: TipoImposto, base: number, aliquota: number, limite = 0): Linha => ({ imposto, base, aliquota, limite })
 
 /**
- * Modelos da planilha da contabilidade (ALIQUOTAS, quadros "com reforma tributária"), Lucro Presumido.
- * Ponto de partida: as alíquotas são editáveis e "no preço" vem marcado em todos.
+ * Modelos de partida: os da planilha da contabilidade (ALIQUOTAS, quadros "com reforma tributária") para o
+ * Lucro Presumido e o DAS para o Simples. As alíquotas são editáveis e "no preço" vem marcado em todos.
  */
-export const MODELOS_IMPOSTOS: { id: string; nome: string; linhas: Linha[] }[] = [
+export const MODELOS_IMPOSTOS: { id: string; nome: string; regime: RegimeTabela; linhas: Linha[] }[] = [
+  {
+    id: 'simples',
+    nome: 'Simples Nacional (DAS: informe a alíquota efetiva)',
+    regime: 'Simples Nacional',
+    linhas: [linha('das', 1, 0)],
+  },
   {
     id: 'transporte',
+    regime: 'Lucro Presumido',
     nome: 'Transporte (Lucro Presumido, com reforma)',
     linhas: [
       linha('irpj', 0.08, 0.15),
@@ -86,6 +124,7 @@ export const MODELOS_IMPOSTOS: { id: string; nome: string; linhas: Linha[] }[] =
   },
   {
     id: 'armazenagem',
+    regime: 'Lucro Presumido',
     nome: 'Armazenagem (Lucro Presumido, com reforma)',
     linhas: [
       linha('irpj', 0.32, 0.15),
@@ -97,5 +136,5 @@ export const MODELOS_IMPOSTOS: { id: string; nome: string; linhas: Linha[] }[] =
   },
 ]
 
-export const impostosDoModelo = (id: string): ImpostoServico[] =>
-  (MODELOS_IMPOSTOS.find((m) => m.id === id)?.linhas ?? []).map((l) => ({ ...l, id: crypto.randomUUID(), nome: '', afetaPreco: true }))
+export const impostosDoModelo = (id: string, regime: RegimeTabela | '' = '', vigenteDesde = ''): ImpostoServico[] =>
+  (MODELOS_IMPOSTOS.find((m) => m.id === id)?.linhas ?? []).map((l) => ({ ...l, id: crypto.randomUUID(), nome: '', afetaPreco: true, regime, vigenteDesde }))

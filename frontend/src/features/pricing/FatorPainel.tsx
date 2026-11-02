@@ -68,8 +68,8 @@ export function FatorPainel({ fator: f, carregando, comLinks = true }: Props) {
           'Impostos',
           f.impostos,
           f.impostosOrigem === 'servico'
-            ? `do serviço ${f.servicoNome}${(f.impostosDestacados ?? 0) > 0 ? ` · ${formatPct(f.impostosDestacados ?? 0)} só destacado` : ''}`
-            : f.impostos > 0 ? 'da empresa; o item com serviço usa os impostos do serviço' : 'nenhum informado',
+            ? `do serviço ${f.servicoNome} (${f.impostosNota})${(f.impostosDestacados ?? 0) > 0 ? ` · ${formatPct(f.impostosDestacados ?? 0)} só destacado` : ''}`
+            : f.impostosNota ? `da empresa: ${f.impostosNota}` : f.impostos > 0 ? 'da empresa; o item com serviço usa os impostos do serviço' : 'nenhum informado',
         )}
         {linha('Comissão', f.comissoes, f.comissoes !== f.comissoesPadrao ? `padrão ${formatPct(f.comissoesPadrao)}, ajustada nesta operação` : 'padrão; ajustável no Pricing')}
         {linha('Despesa financeira', f.despFinanceira)}

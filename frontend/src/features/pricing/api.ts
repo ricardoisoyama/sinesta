@@ -78,6 +78,8 @@ export interface FatorResultado {
   impostosDestacados?: number
   /** Nulo = o serviço não tem impostos (o ICMS segue a regra da empresa). */
   icms?: { incide: boolean; aliquota: number; afetaPreco: boolean } | null
+  /** Tabela do serviço que valeu (regime e vigência), ou por que caiu nos impostos da empresa. */
+  impostosNota?: string
 }
 
 export interface CalcularFatorRequest {

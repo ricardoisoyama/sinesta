@@ -864,7 +864,7 @@ export function PricingPage() {
                 <div className={base.memRow}><span className={base.memLabel}>× Fator (DF {formatPct(dfPct)} + DV {formatPct(dvSem)} + lucro {formatPct(lucro)})</span><span className={base.memVal}>{fator4(fatorVal)}</span></div>
                 <div className={base.memRow}>
                   <span className={base.memLabel}>
-                    na DV, impostos {fr.impostosOrigem === 'servico' ? `do serviço ${fr.servicoNome}` : 'da empresa'}
+                    na DV, impostos {fr.impostosOrigem === 'servico' ? `do serviço ${fr.servicoNome} (${fr.impostosNota})` : fr.impostosNota ? `da empresa (${fr.impostosNota})` : 'da empresa'}
                     {fr.impostosOrigem === 'servico' && (
                       <span className={base.memSub}> {(fr.impostosDetalhe ?? []).filter((i) => i.afetaPreco).map((i) => `${rotuloImposto({ imposto: i.imposto as TipoImposto, nome: i.nome })} ${formatPct(i.efetiva)}`).join(' · ')}</span>
                     )}

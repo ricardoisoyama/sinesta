@@ -18,16 +18,33 @@
 /* Impostos do serviço (Pricing): base × alíquota, e se entra no preço */
 .impostos { display: flex; flex-direction: column; gap: 10px; }
 .impostosBarra { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.regimes { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px; }
+.regime, .regimeAtivo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; border: 1px solid #e6e3db; background: #fff; color: #143d18; font-family: inherit; padding: 8px 12px; border-radius: 10px; cursor: pointer; }
+.regimeAtivo { background: #143d18; border-color: #143d18; color: #fff; }
+.regimeNome { font-size: 13px; font-weight: 700; }
+.regimeInfo { font-size: 11.5px; opacity: 0.75; }
+.vigencias { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-bottom: 2px; border-bottom: 1px solid #efede6; padding-bottom: 10px; }
+.vigenciasRotulo { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #8a978f; margin-right: 4px; }
+.vigencia, .vigenciaAtiva { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #e6e3db; background: #fff; color: #143d18; font-family: inherit; font-size: 12.5px; font-weight: 600; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.vigenciaAtiva { border-color: #143d18; box-shadow: inset 0 0 0 1px #143d18; background: #f2f6f1; }
+.vigencia small, .vigenciaAtiva small { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 1px 7px; }
+.vig_emvigor { background: #e8f5ec; color: #2e7d44; }
+.vig_futura { background: #e7eef8; color: #1c5a82; }
+.vig_encerrada { background: #f0eee7; color: #6b7b72; }
+.novaVigencia, .inicioTabela { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12.5px; color: #6b7b72; }
+.inicioTabela { margin-left: auto; }
+.novaVigencia input, .inicioTabela input { font-family: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #e6e3db; border-radius: 8px; background: #fff; color: #143d18; }
 .modelo { display: inline-flex; align-items: center; gap: 6px; color: #6b7b72; }
 .modelo select { font-family: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid #e6e3db; border-radius: 10px; background: #fff; color: #143d18; }
 .impostosTabela { display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
 .impostosTabela table td { padding: 8px 10px; vertical-align: top; }
 .impostosTabela table th { padding: 10px; }
+.impostosTabela table td:nth-child(2) > div, .impostosTabela table td:nth-child(3) > div { min-width: 96px; }
 .impostoNome { display: flex; align-items: center; gap: 6px; }
 .impostoNome select, .impostoNome input { font-family: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #e6e3db; border-radius: 8px; background: #fff; min-width: 0; }
 .impostoNome select { font-weight: 600; color: #143d18; }
 .ajuda { color: #8a978f; display: inline-flex; cursor: help; }
-.limite { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; color: #6b7b72; white-space: nowrap; }
+.limite { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; font-size: 12px; color: #6b7b72; }
 .limiteValor { display: inline-block; width: 150px; }
 .efetiva { font-variant-numeric: tabular-nums; font-weight: 700; color: #143d18; padding-top: 14px !important; }
 .efetiva small { display: block; font-weight: 500; font-size: 11px; color: #8a978f; }

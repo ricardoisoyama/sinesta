@@ -82,9 +82,15 @@ public class FatorService : IFatorService
         var semMeta = faturamentoMensal <= 0;
         var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
-        // Serviço com impostos: entram no markup só os que afetam o preço (o ICMS fica fora: entra
-        // por dentro, depois, pela alíquota da rota). Sem impostos no serviço, o total da empresa.
-        var doServico = servico is { Impostos.Count: > 0 } ? servico.Impostos : null;
+        // Serviço com impostos: a tabela do regime da empresa em vigor hoje. Entram no markup só os que
+        // afetam o preço (o ICMS fica fora: entra por dentro, depois, pela alíquota da rota).
+        // Sem tabela para o regime (ou nenhuma vigente), o total da empresa.
+        var vigentes = servico?.ImpostosVigentes(empresa.Regime, hoje) ?? new();
+        var doServico = vigentes.Count > 0 ? vigentes : null;
+        var regimeTabela = Servico.RegimeDaTabela(empresa.Regime);
+        var notaImpostos = doServico is not null
+            ? $"{regimeTabela}{(doServico[0].VigenteDesde.Length > 0 ? $", em vigor desde {DataBr(doServico[0].VigenteDesde)}" : string.Empty)}"
+            : servico is { Impostos.Count: > 0 } ? $"o serviço {servico.Nome} não tem impostos do {regimeTabela} em vigor" : string.Empty;
         var detalhe = doServico?
             .Where(i => i.Imposto != ImpostoServico.Icms)
             .Select(i => new ImpostoCalculadoDto(i.Imposto, i.Nome, i.Base, i.Aliquota, Math.Round(i.Efetiva(faturamentoMensal), 6), i.AfetaPreco))
@@ -138,8 +144,12 @@ public class FatorService : IFatorService
             ServicoNome: servico?.Nome ?? string.Empty,
             ImpostosDetalhe: detalhe,
             ImpostosDestacados: destacados,
-            Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, icmsDoServico?.Efetiva(faturamentoMensal) ?? 0m, icmsDoServico?.AfetaPreco ?? false));
+            Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, icmsDoServico?.Efetiva(faturamentoMensal) ?? 0m, icmsDoServico?.AfetaPreco ?? false),
+            ImpostosNota: notaImpostos);
     }
+
+    private static string DataBr(string iso) =>
+        DateOnly.TryParseExact(iso, "yyyy-MM-dd", out var d) ? d.ToString("dd/MM/yyyy") : iso;
 
     private static readonly string[] Meses =
         { "janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro" };

@@ -118,8 +118,9 @@ public sealed class EmissaoNfseFatura(
         // Retenções: a empresa diz quais são retidas (aba Impostos); só tomador pessoa jurídica retém.
         decimal Ret(ImpostoConfig i) => fiscal.DescontarImpostos && pj && i.Retido && i.Aliquota > 0 ? Math.Round(valor * i.Aliquota, 2, MidpointRounding.AwayFromZero) : 0m;
         var issRetido = pj && empresa.Iss.Retido;
-        // A alíquota do ISS é a do serviço (cada atividade tem a sua); sem ela, a da empresa.
-        var issAliquota = (servico.Impostos ?? []).FirstOrDefault(i => i.Imposto == "iss" && i.Aliquota > 0)?.Aliquota ?? empresa.Iss.Aliquota;
+        // A alíquota do ISS é a do serviço (a tabela do regime da empresa em vigor hoje); sem ela, a da empresa.
+        var issAliquota = servico.ImpostosVigentes(empresa.Regime, DateOnly.FromDateTime(DateTime.UtcNow))
+            .FirstOrDefault(i => i.Imposto == "iss" && i.Aliquota > 0)?.Aliquota ?? empresa.Iss.Aliquota;
         var retencoes = new RetencoesNfseDto(
             Inss: Ret(empresa.Inss), Ir: Ret(empresa.Ir), Pis: Ret(empresa.Pis), Cofins: Ret(empresa.Cofins), Csll: Ret(empresa.Csll),
             Iss: issRetido && fiscal.DescontarImpostos ? Math.Round(valor * issAliquota, 2, MidpointRounding.AwayFromZero) : 0m);

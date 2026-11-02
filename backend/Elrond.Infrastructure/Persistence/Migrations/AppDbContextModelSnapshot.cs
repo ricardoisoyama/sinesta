@@ -7205,6 +7205,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                             b1.Property<string>("Nome")
                                 .IsRequired();
 
+                            b1.Property<string>("Regime")
+                                .IsRequired();
+
+                            b1.Property<string>("VigenteDesde")
+                                .IsRequired();
+
                             b1.HasKey("ServicoId", "__synthesizedOrdinal");
 
                             b1.ToTable("servicos");

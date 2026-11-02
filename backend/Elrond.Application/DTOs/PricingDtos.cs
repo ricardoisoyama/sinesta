@@ -85,7 +85,9 @@ public record FatorResultado(
     /// <summary>Soma dos impostos só destacados (não entram no markup).</summary>
     decimal ImpostosDestacados = 0m,
     /// <summary>Nulo = o serviço não tem impostos (o ICMS segue a regra da empresa).</summary>
-    IcmsServicoDto? Icms = null);
+    IcmsServicoDto? Icms = null,
+    /// <summary>Qual tabela do serviço valeu (regime e vigência), ou por que o serviço caiu nos da empresa.</summary>
+    string ImpostosNota = "");
 
 /// <summary>Resultado da precificação + memória de cálculo (fonte da verdade = servidor).</summary>
 public record CalcularPrecoResponse(

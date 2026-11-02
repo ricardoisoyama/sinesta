@@ -12,6 +12,7 @@ import { DadosFiscaisServico } from './DadosFiscaisServico'
 import { ImpostosServicoEditor } from './ImpostosServicoEditor'
 import { empresaPadrao } from '@/features/unidades/types'
 import { useFatorEmpresa } from '@/features/pricing/usePreco'
+import { regimeDaTabela, type RegimeTabela } from './impostos'
 
 interface Props {
   open: boolean
@@ -46,8 +47,16 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
   const padrao = empresaPadrao(empresas)
   const fatorPadrao = useFatorEmpresa(open ? (padrao?.id ?? '') : '')
 
+  const regimePadrao = regimeDaTabela(padrao?.regime ?? 'Lucro Presumido')
+  const empresasPorRegime: Partial<Record<RegimeTabela, string[]>> = {}
+  for (const e of empresas) (empresasPorRegime[regimeDaTabela(e.regime)] ??= []).push(e.nome)
+
   useEffect(() => {
-    if (open) reset(initial ? { ...emptyServico, ...initial, fiscais: initial.fiscais ?? [], impostos: initial.impostos ?? [] } : emptyServico)
+    if (!open) return
+    // Impostos de antes (sem regime/vigência) passam a ser a tabela do regime da empresa padrão.
+    const impostos = (initial?.impostos ?? []).map((i) => ({ ...i, regime: i.regime || regimePadrao, vigenteDesde: i.vigenteDesde ?? '' }))
+    reset(initial ? { ...emptyServico, ...initial, fiscais: initial.fiscais ?? [], impostos } : emptyServico)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- o regime padrão só vale na abertura
   }, [open, initial, reset])
 
   const submit = handleSubmit((data) => onSave(data))
@@ -89,9 +98,12 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
 
         <section className={ui.fsection}>
           <div className={ui.fsectionTitle}>
-            Impostos <span className={ui.fsectionHint}>base de cálculo × alíquota; os que afetam o preço entram no markup do Pricing</span>
+            Impostos <span className={ui.fsectionHint}>uma tabela por regime e vigência; vale a do regime da empresa, em vigor no dia</span>
           </div>
           <ImpostosServicoEditor
+            key={`${open}-${regimePadrao}`}
+            regimePadrao={regimePadrao}
+            empresasPorRegime={empresasPorRegime}
             value={impostos}
             onChange={(v) => setValue('impostos', v, { shouldDirty: true })}
             faturamento={fatorPadrao?.receita ?? 0}

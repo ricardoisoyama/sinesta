@@ -15,9 +15,28 @@ public class Servico : Rastreavel, IEntity, IInativavel
     public List<ServicoFiscal> Fiscais { get; set; } = new();
     /// <summary>
     /// Impostos do serviço (base × alíquota), que o Pricing usa no lugar dos da empresa. Vazio = os da empresa.
-    /// Cada um diz se entra no preço (markup) ou se é só destacado.
+    /// Cada um diz se entra no preço (markup) ou se é só destacado. Uma tabela por regime e por vigência:
+    /// as linhas com o mesmo regime e a mesma data de início formam uma tabela.
     /// </summary>
     public List<ImpostoServico> Impostos { get; set; } = new();
+
+    /// <summary>A tabela do regime: o MEI usa a do Simples.</summary>
+    public static string RegimeDaTabela(string regime) => regime == "MEI" ? "Simples Nacional" : regime;
+
+    /// <summary>
+    /// Os impostos que valem para uma empresa do <paramref name="regime"/> na <paramref name="data"/>: a tabela
+    /// do regime (ou a sem regime, de antes) com a vigência mais recente que já começou. Vazia = os da empresa.
+    /// </summary>
+    public List<ImpostoServico> ImpostosVigentes(string regime, DateOnly data)
+    {
+        var r = RegimeDaTabela(regime);
+        var doRegime = Impostos.Where(i => i.Regime == r).ToList();
+        if (doRegime.Count == 0) doRegime = Impostos.Where(i => i.Regime.Length == 0).ToList();
+        var dia = data.ToString("yyyy-MM-dd");
+        var inicio = doRegime.Select(i => i.VigenteDesde).Where(v => string.CompareOrdinal(v, dia) <= 0)
+            .OrderByDescending(v => v, StringComparer.Ordinal).FirstOrDefault();
+        return inicio is null ? new() : doRegime.Where(i => i.VigenteDesde == inicio).ToList();
+    }
 }
 
 /// <summary>
@@ -41,6 +60,10 @@ public class ImpostoServico
     public decimal Limite { get; set; }
     /// <summary>true = entra no markup (no preço); false = só destacado na nota.</summary>
     public bool AfetaPreco { get; set; } = true;
+    /// <summary>Regime da empresa em que vale: Simples Nacional, Lucro Presumido ou Lucro Real. Vazio = qualquer (cadastro de antes).</summary>
+    public string Regime { get; set; } = string.Empty;
+    /// <summary>Início da vigência (aaaa-mm-dd), definido pelo usuário. Vazio = desde sempre.</summary>
+    public string VigenteDesde { get; set; } = string.Empty;
 
     /// <summary>
     /// Alíquota efetiva sobre a receita. O adicional depende do faturamento do mês (a meta):

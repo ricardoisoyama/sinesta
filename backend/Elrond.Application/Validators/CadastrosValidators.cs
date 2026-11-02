@@ -80,11 +80,16 @@ public class ServicoValidator : AbstractValidator<Servico>
             i.RuleFor(x => x.Base).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a base de cálculo fica entre 0% e 100%.");
             i.RuleFor(x => x.Aliquota).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a alíquota fica entre 0% e 100%.");
             i.RuleFor(x => x.Limite).GreaterThanOrEqualTo(0m).WithMessage("O limite do adicional não pode ser negativo.");
+            i.RuleFor(x => x.Regime).Must(r => r.Length == 0 || Regimes.Contains(r)).WithMessage("Regime inválido nos impostos.");
+            i.RuleFor(x => x.VigenteDesde).Must(v => v.Length == 0 || DateOnly.TryParseExact(v, "yyyy-MM-dd", out _))
+                .WithMessage("Início da vigência inválido nos impostos.");
         });
         RuleFor(s => s.Impostos)
-            .Must(l => l.Where(i => i.Imposto != "outro").GroupBy(i => i.Imposto).All(g => g.Count() == 1))
-            .WithMessage("Cada imposto aparece uma vez no serviço (use \"Outro\" para um a mais).");
+            .Must(l => l.Where(i => i.Imposto != "outro").GroupBy(i => (i.Regime, i.VigenteDesde, i.Imposto)).All(g => g.Count() == 1))
+            .WithMessage("Cada imposto aparece uma vez na mesma tabela (regime e vigência); use \"Outro\" para um a mais.");
     }
+
+    private static readonly string[] Regimes = ["Simples Nacional", "Lucro Presumido", "Lucro Real"];
 
     private static string Rotulo(ImpostoServico i) => i.Nome.Length > 0 ? i.Nome : i.Imposto.ToUpperInvariant();
 }

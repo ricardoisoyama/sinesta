@@ -115,6 +115,54 @@ public class ImpostosServicoTests
         Perto(0.001333m, adicional.Efetiva(300000m)); // D19
     }
 
+    private static ImpostoServico Tab(string regime, string desde, string tipo, decimal aliquota) =>
+        new() { Id = $"{regime}-{desde}-{tipo}", Imposto = tipo, Aliquota = aliquota, Regime = regime, VigenteDesde = desde };
+
+    /// <summary>Simples hoje, Presumido em duas vigências (a de 2027 sem PIS/COFINS, já cadastrada).</summary>
+    private static Servico ComTabelas() => new()
+    {
+        Id = "t", Nome = "TRANSPORTE",
+        Impostos =
+        [
+            Tab("Simples Nacional", "", "das", 0.1686m),
+            Tab("Lucro Presumido", "", "pis", 0.0065m),
+            Tab("Lucro Presumido", "", "cofins", 0.03m),
+            Tab("Lucro Presumido", "2027-01-01", "cbs", 0.088m),
+        ],
+    };
+
+    [Theory]
+    [InlineData("Simples Nacional", "2026-11-02", 0.1686)]
+    [InlineData("MEI", "2026-11-02", 0.1686)]
+    [InlineData("Lucro Presumido", "2026-12-31", 0.0365)]
+    [InlineData("Lucro Presumido", "2027-01-01", 0.088)]
+    [InlineData("Lucro Real", "2026-11-02", 0)]
+    public void Vale_a_tabela_do_regime_da_empresa_com_a_vigencia_que_ja_comecou(string regime, string data, double esperado)
+    {
+        var vigentes = ComTabelas().ImpostosVigentes(regime, DateOnly.Parse(data));
+        Assert.Equal((decimal)esperado, vigentes.Sum(i => i.Efetiva(0m)));
+    }
+
+    [Fact]
+    public void Sem_tabela_do_regime_o_fator_usa_os_da_empresa_e_avisa()
+    {
+        var empresa = Empresa();
+        empresa.Regime = "Lucro Real";
+        var r = FatorService.Calcular(empresa, "matriz", [], [Meta300Mil()], Hoje, 0m, servico: ComTabelas());
+
+        Assert.Equal(("empresa", 0.1686m), (r.ImpostosOrigem, r.Impostos));
+        Assert.Contains("não tem impostos do Lucro Real", r.ImpostosNota);
+        Assert.Null(r.Icms);
+    }
+
+    [Fact]
+    public void Cadastro_de_antes_sem_regime_vale_para_qualquer_regime()
+    {
+        var r = Fator(Armazenagem());
+        Assert.Equal("Lucro Presumido", r.ImpostosNota);
+        Perto(0.240133m, r.Impostos);
+    }
+
     [Theory]
     // Armazenagem (sem a linha de ICMS): o ICMS da rota não incide.
     [InlineData("arm", true, 0.12, false, 0, 0)]

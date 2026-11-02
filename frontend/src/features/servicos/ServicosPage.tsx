@@ -16,7 +16,7 @@ import { usePropostas } from '@/features/propostas/store'
 import { ServicoFormModal } from './ServicoFormModal'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import type { ServicoForm } from './servico-schema'
-import { cargaDoServico, rotuloImposto } from './impostos'
+import { cargaDoServico, hojeIso, impostosVigentes, regimeDaTabela, rotuloImposto } from './impostos'
 import { formatPct } from '@/lib/format'
 
 export function ServicosPage() {
@@ -40,6 +40,21 @@ export function ServicosPage() {
   const jaUsado = (id: string) => usados.has(id)
   const { data: empresasData } = useEmpresasQuery()
   const nomeEmpresa = (id: string) => (empresasData ?? []).find((e) => e.id === id)?.nome ?? id
+  // Impostos em vigor hoje para cada regime das empresas ativas (o que o Pricing usaria).
+  const regimesEmUso = [...new Set((empresasData ?? []).filter((e) => e.status === 'ativo').map((e) => regimeDaTabela(e.regime)))]
+  const impostosPorRegime = (sv: ServicoDto) => {
+    const hoje = hojeIso()
+    return (regimesEmUso.length ? regimesEmUso : ['Lucro Presumido' as const]).map((regime) => {
+      const lista = impostosVigentes(sv.impostos ?? [], regime, hoje)
+      const futura = (sv.impostos ?? []).some((i) => (i.regime === regime || !i.regime) && i.vigenteDesde > hoje)
+      const curto = regime === 'Simples Nacional' ? 'Simples' : regime.replace('Lucro ', '')
+      if (!lista.length) return { regime, curto, texto: 'da empresa', titulo: 'sem impostos no serviço: o Pricing usa os da empresa (aba Markup)' }
+      const carga = cargaDoServico(lista, 0)
+      const texto = `${formatPct(carga.noPreco)}${lista.some((i) => i.imposto === 'irpj-adicional') ? ' + adicional' : ''}${carga.icms ? ' + ICMS' : ''}`
+      const titulo = lista.map((i) => `${rotuloImposto(i)}${i.afetaPreco ? '' : ' (só destaca)'}`).join(' · ') + (futura ? ' — há vigência futura cadastrada' : '')
+      return { regime, curto, texto, titulo }
+    })
+  }
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ['servicos'] })
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -105,16 +120,19 @@ export function ServicosPage() {
     {
       header: 'Impostos no preço',
       largura: LARGURA.media,
-      valor: (s) => ((s.impostos ?? []).length ? formatPct(cargaDoServico(s.impostos ?? [], 0).noPreco) : 'Da empresa'),
+      valor: (s) => impostosPorRegime(s).map((r) => `${r.regime} ${r.texto}`).join(' · '),
       cell: (s) => {
-        const lista = s.impostos ?? []
-        if (!lista.length) return <span className={ui.cellMut} title="Sem impostos no serviço: o Pricing usa os da empresa (aba Markup).">Da empresa</span>
-        const carga = cargaDoServico(lista, 0)
-        const temAdicional = lista.some((i) => i.imposto === 'irpj-adicional')
+        const porRegime = impostosPorRegime(s)
+        const um = porRegime.length === 1
         return (
-          <span title={lista.map((i) => `${rotuloImposto(i)}${i.afetaPreco ? '' : ' (só destaca)'}`).join(' · ')}>
-            {formatPct(carga.noPreco)}{temAdicional ? ' + adicional' : ''}
-            {carga.icms && <span className={ui.cellMut}> · ICMS</span>}
+          <span className={s.impostos?.length ? undefined : ui.cellMut} title={porRegime.map((r) => `${r.regime}: ${r.titulo}`).join('\n')}>
+            {porRegime.map((r, i) => (
+              <span key={r.regime}>
+                {i > 0 && ' · '}
+                {!um && <span className={ui.cellMut}>{r.curto} </span>}
+                {r.texto}
+              </span>
+            ))}
           </span>
         )
       },
