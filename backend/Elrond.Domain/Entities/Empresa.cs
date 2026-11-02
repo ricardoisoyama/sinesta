@@ -138,27 +138,6 @@ public class Empresa : Rastreavel, IEntity, IInativavel
     /// </summary>
     public decimal MarkupMinimo { get; set; }
 
-    /// <summary>Alíquota efetiva de um imposto (já com a redução da base de cálculo).</summary>
-    private static decimal Efetiva(ImpostoConfig i) => i.Aliquota * (1m - i.ReducaoBase);
-
-    /// <summary>
-    /// Percentual de impostos sobre a receita, montado a partir do cadastro tributário:
-    /// Simples/MEI usam o DAS; os demais regimes somam os federais, o ISS e os da reforma.
-    /// O ICMS fica de fora porque entra depois, na camada fiscal (gross-up).
-    /// Devolve 0 quando nada foi cadastrado (aí vale o percentual informado na DV).
-    /// </summary>
-    public decimal ImpostosSobreReceita()
-    {
-        if (Regime is "Simples Nacional" or "MEI") return Das;
-
-        return Efetiva(Pis) + Efetiva(Cofins) + Efetiva(Ir) + Efetiva(Csll)
-             + Efetiva(Iss) + Efetiva(Inss)
-             + IbsMunicipal + IbsEstadual + Cbs;
-    }
-
-    /// <summary>
-    /// Impostos da empresa para a DV: valem quando o item do Pricing não tem serviço com impostos
-    /// (os impostos agora ficam no serviço). É o total da aba Markup; sem ele, a soma do cadastro antigo.
-    /// </summary>
-    public decimal ImpostosDaDv() => Dv.Impostos > 0 ? Dv.Impostos : ImpostosSobreReceita();
+    // Os impostos (e as retenções da NFS-e) ficam no cadastro do serviço. Os campos antigos de imposto desta
+    // classe (Das, Ir, Pis, ..., Dv.Impostos, IcmsAtivo) seguem no banco sem uso, para não perder o histórico.
 }

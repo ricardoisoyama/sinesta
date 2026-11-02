@@ -22,6 +22,21 @@ public class Carteira : Rastreavel, IEntity, IInativavel
     public string Status { get; set; } = "ativo";
 }
 
+/// <summary>
+/// Parte variável de um lançamento de despesa fixa (seguro cobrado por viagem, juros, mora...): o financeiro
+/// inclui à mão e o lançamento passa a valer a parte fixa + estes itens.
+/// </summary>
+public class ItemVariavelMovimento
+{
+    public const string Seguro = "seguro";
+    public static readonly string[] Tipos = [Seguro, "juros", "multa", "outro"];
+    public string Id { get; set; } = string.Empty;
+    /// <summary>seguro | juros | multa | outro (relatório de fixo × variável agrupa por aqui).</summary>
+    public string Tipo { get; set; } = "outro";
+    public string Descricao { get; set; } = string.Empty;
+    public decimal Valor { get; set; }
+}
+
 /// <summary>Assinatura de um aprovador no lançamento.</summary>
 public class AprovacaoMovimento
 {
@@ -88,6 +103,14 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }
+
+    // ── parte variável (só lançamento de despesa fixa) ──
+    /// <summary>Itens variáveis atrelados à despesa fixa (OrigemId). <see cref="Valor"/> = parte fixa + a soma deles.</summary>
+    public List<ItemVariavelMovimento> ItensVariaveis { get; set; } = new();
+    /// <summary>Soma dos itens variáveis, gravada em coluna para os relatórios (fixo = Valor − ValorVariavel).</summary>
+    public decimal ValorVariavel { get; set; }
+    /// <summary>A parte fixa do lançamento (o valor da despesa fixa, ou o que o financeiro acertou).</summary>
+    public decimal ValorFixo => Valor - ValorVariavel;
 
     // ── aprovação ──
     /// <summary>pendente | aprovado | reprovado.</summary>

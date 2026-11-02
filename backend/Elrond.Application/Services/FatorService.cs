@@ -59,8 +59,10 @@ public class FatorService : IFatorService
         }
 
         var servico = string.IsNullOrWhiteSpace(req.ServicoId) ? null : await _servicos.GetByIdAsync(req.ServicoId);
+        // Sem serviço (painéis da empresa: markup, dashboard, break-even): a média dos impostos dos serviços.
+        var servicos = servico is null && !req.Precificar ? await _servicos.ListarAsync(s => s.Status == "ativo") : [];
         var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
-        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro, servico));
+        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro, servico, req.Precificar, servicos));
     }
 
     /// <summary>
@@ -68,7 +70,8 @@ public class FatorService : IFatorService
     /// são os da operação (linha do Pricing); nulos = os padrões (vendedor/empresa).
     /// </summary>
     public static FatorResultado Calcular(Empresa empresa, string empresaId, IEnumerable<CustoFixo> custos, IEnumerable<Meta> metas,
-        DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null, Servico? servico = null)
+        DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null, Servico? servico = null,
+        bool precificar = false, IEnumerable<Servico>? servicos = null)
     {
         // DF da empresa = a parte dela em cada despesa (inteira se for só dela; o percentual se rateada).
         var naDf = custos.Where(c => c.EntraNaDf(hoje) && c.PercentualDa(empresaId) > 0).ToList();
@@ -82,21 +85,46 @@ public class FatorService : IFatorService
         var semMeta = faturamentoMensal <= 0;
         var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
-        // Serviço com impostos: a tabela do regime da empresa em vigor hoje. Entram no markup só os que
-        // afetam o preço (o ICMS fica fora: entra por dentro, depois, pela alíquota da rota).
-        // Sem tabela para o regime (ou nenhuma vigente), o total da empresa.
+        // Os impostos vêm do serviço: a tabela do regime da empresa em vigor hoje. Entram no markup só os que
+        // afetam o preço (o ICMS fica fora: entra por dentro, depois, pela alíquota da Tabela de ICMS da rota).
+        // Para precificar, o serviço com a tabela é obrigatório; nos painéis da empresa vale a média dos serviços.
+        var regimeTabela = Servico.RegimeDaTabela(empresa.Regime);
         var vigentes = servico?.ImpostosVigentes(empresa.Regime, hoje) ?? new();
         var doServico = vigentes.Count > 0 ? vigentes : null;
-        var regimeTabela = Servico.RegimeDaTabela(empresa.Regime);
-        var notaImpostos = doServico is not null
-            ? $"{regimeTabela}{(doServico[0].VigenteDesde.Length > 0 ? $", em vigor desde {DataBr(doServico[0].VigenteDesde)}" : string.Empty)}"
-            : servico is { Impostos.Count: > 0 } ? $"o serviço {servico.Nome} não tem impostos do {regimeTabela} em vigor" : string.Empty;
         var detalhe = doServico?
             .Where(i => i.Imposto != ImpostoServico.Icms)
-            .Select(i => new ImpostoCalculadoDto(i.Imposto, i.Nome, i.Base, i.Aliquota, Math.Round(i.Efetiva(faturamentoMensal), 6), i.AfetaPreco))
+            .Select(i => new ImpostoCalculadoDto(i.Imposto, i.Nome, i.Base, i.Aliquota, Math.Round(i.Efetiva, 6), i.AfetaPreco))
             .ToList();
         var icmsDoServico = doServico?.FirstOrDefault(i => i.Imposto == ImpostoServico.Icms);
-        var impostos = detalhe is null ? empresa.ImpostosDaDv() : detalhe.Where(i => i.AfetaPreco).Sum(i => i.Efetiva);
+        string origem, notaImpostos;
+        string? avisoImpostos = null;
+        decimal impostos;
+        if (detalhe is not null)
+        {
+            origem = "servico";
+            impostos = detalhe.Where(i => i.AfetaPreco).Sum(i => i.Efetiva);
+            notaImpostos = $"{regimeTabela}{(doServico![0].VigenteDesde.Length > 0 ? $", em vigor desde {DataBr(doServico[0].VigenteDesde)}" : string.Empty)}";
+        }
+        else if (servico is not null || precificar)
+        {
+            origem = "faltando";
+            impostos = 0m;
+            notaImpostos = servico is null ? "escolha o serviço" : $"o serviço {servico.Nome} não tem impostos do {regimeTabela} em vigor";
+            avisoImpostos = servico is null
+                ? "Escolha o serviço do item: os impostos vêm do cadastro do serviço."
+                : $"O serviço \"{servico.Nome}\" não tem impostos do {regimeTabela} em vigor: cadastre em Cadastros › Serviços.";
+        }
+        else
+        {
+            // Média simples das tabelas em vigor dos serviços ativos (o que entra no preço, sem o ICMS).
+            var tabelas = (servicos ?? []).Select(s => s.ImpostosVigentes(empresa.Regime, hoje)).Where(l => l.Count > 0).ToList();
+            origem = "media";
+            impostos = tabelas.Count == 0 ? 0m
+                : Math.Round(tabelas.Average(l => l.Where(i => i.AfetaPreco && i.Imposto != ImpostoServico.Icms).Sum(i => i.Efetiva)), 6);
+            notaImpostos = tabelas.Count == 0
+                ? $"nenhum serviço tem impostos do {regimeTabela}"
+                : $"média dos {tabelas.Count} serviço(s) com impostos do {regimeTabela}";
+        }
         var destacados = detalhe?.Where(i => !i.AfetaPreco).Sum(i => i.Efetiva) ?? 0m;
         var comissao = Math.Max(0m, comissoes ?? comissaoPadrao);
         var despFin = empresa.Dv.DespFinanceira;
@@ -113,7 +141,8 @@ public class FatorService : IFatorService
             ? avisoMeta ?? (meta is null
                 ? $"Cadastre a meta de faturamento de {hoje.Year} desta empresa em Comercial › Metas: ela compõe o fator."
                 : $"A meta \"{meta.Nome}\" está sem valor em {NomeDoMes(hoje.Month)} de {hoje.Year}. Preencha o mês em Comercial › Metas: ele compõe o fator.")
-            : !viavel ? "Despesas, impostos e lucro somam 100% ou mais da receita: não há preço que cubra. Revise os percentuais." : null;
+            : !viavel ? "Despesas, impostos e lucro somam 100% ou mais da receita: não há preço que cubra. Revise os percentuais."
+            : avisoImpostos;
 
         return new FatorResultado(
             EmpresaId: empresaId,
@@ -127,7 +156,7 @@ public class FatorService : IFatorService
             BasePreco: meta?.BasePreco ?? Meta.BaseMes,
             DfPct: dfPct,
             Impostos: impostos,
-            ImpostosDoCadastro: empresa.ImpostosSobreReceita() > 0,
+            ImpostosDoCadastro: false,
             Comissoes: comissao,
             ComissoesPadrao: comissaoPadrao,
             DespFinanceira: despFin,
@@ -138,13 +167,13 @@ public class FatorService : IFatorService
             Mes: hoje.Month,
             Markup: markup,
             Fator: fator,
-            Pronto: !semMeta && viavel,
+            Pronto: !semMeta && viavel && avisoImpostos is null,
             Aviso: aviso,
-            ImpostosOrigem: detalhe is null ? "empresa" : "servico",
+            ImpostosOrigem: origem,
             ServicoNome: servico?.Nome ?? string.Empty,
             ImpostosDetalhe: detalhe,
             ImpostosDestacados: destacados,
-            Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, icmsDoServico?.Efetiva(faturamentoMensal) ?? 0m, icmsDoServico?.AfetaPreco ?? false),
+            Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, 0m, icmsDoServico?.AfetaPreco ?? false),
             ImpostosNota: notaImpostos);
     }
 

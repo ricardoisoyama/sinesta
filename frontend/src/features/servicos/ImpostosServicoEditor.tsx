@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { CalendarPlus, FileSpreadsheet, Info, Plus, Trash2 } from 'lucide-react'
 import { PercentInput } from '@/features/common/PercentInput'
-import { MoneyInput } from '@/features/common/MoneyInput'
+import { Link } from 'react-router-dom'
 import { confirmar } from '@/features/common/dialogo/dialogo'
 import ui from '@/features/common/ui.module.css'
-import { formatBRL, formatPct } from '@/lib/format'
+import { formatPct } from '@/lib/format'
 import {
   MODELOS_IMPOSTOS, REGIMES_TABELA, TIPOS_IMPOSTO, cargaDoServico, dataBr, efetivaImposto, hojeIso, impostosDoModelo, novoImposto,
   rotuloImposto, vigenciaEmVigor, vigenciasDoRegime, type ImpostoServico, type RegimeTabela, type TipoImposto,
@@ -14,9 +14,6 @@ import s from './servicos.module.css'
 interface Props {
   value: ImpostoServico[]
   onChange: (v: ImpostoServico[]) => void
-  /** Faturamento do mês pela meta da empresa padrão (calcula o adicional do IRPJ); 0 = sem meta. */
-  faturamento: number
-  nomeEmpresa: string
   /** Regime da empresa padrão: a aba que abre primeiro. */
   regimePadrao: RegimeTabela
   /** Empresas ativas em cada regime (aparecem na aba). */
@@ -28,7 +25,7 @@ interface Props {
  * regime (o Pricing usa a do regime da empresa) e por vigência (o usuário cria a próxima com a data de início;
  * vale a mais recente que já começou). "Sim" entra no markup; "Não, só destaca" fica fora dele.
  */
-export function ImpostosServicoEditor({ value, onChange, faturamento, nomeEmpresa, regimePadrao, empresasPorRegime }: Props) {
+export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasPorRegime }: Props) {
   const hoje = hojeIso()
   const [regime, setRegime] = useState<RegimeTabela>(regimePadrao)
   const vigenciasSalvas = vigenciasDoRegime(value, regime)
@@ -79,7 +76,7 @@ export function ImpostosServicoEditor({ value, onChange, faturamento, nomeEmpres
   }
 
   const situacao = (v: string) => (v === emVigor ? 'em vigor' : v > hoje ? 'futura' : emVigor !== undefined && v < emVigor ? 'encerrada' : '')
-  const carga = cargaDoServico(linhas, faturamento)
+  const carga = cargaDoServico(linhas)
 
   return (
     <div className={s.impostos}>
@@ -162,7 +159,6 @@ export function ImpostosServicoEditor({ value, onChange, faturamento, nomeEmpres
             <tbody>
               {linhas.map((i) => {
                 const tipo = TIPOS_IMPOSTO.find((t) => t.valor === i.imposto)
-                const adicional = i.imposto === 'irpj-adicional'
                 const icms = i.imposto === 'icms'
                 return (
                   <tr key={i.id}>
@@ -176,18 +172,18 @@ export function ImpostosServicoEditor({ value, onChange, faturamento, nomeEmpres
                         {i.imposto === 'outro' && <input value={i.nome} onChange={(e) => mudar(i.id, { nome: e.target.value })} placeholder="Nome do imposto" aria-label="Nome do imposto" />}
                         <span className={s.ajuda} title={tipo?.ajuda}><Info size={13} /></span>
                       </div>
-                      {adicional && (
-                        <div className={s.limite}>
-                          sobre o que a base passar de <span className={s.limiteValor}><MoneyInput value={i.limite} onChange={(n) => mudar(i.id, { limite: n })} /></span> por mês
-                        </div>
-                      )}
                     </td>
-                    <td className={ui.right}><PercentInput value={i.base} onChange={(n) => mudar(i.id, { base: n })} /></td>
-                    <td className={ui.right}><PercentInput value={i.aliquota} onChange={(n) => mudar(i.id, { aliquota: n })} /></td>
-                    <td className={`${ui.right} ${s.efetiva}`}>
-                      {adicional && faturamento <= 0 ? <span className={ui.cellMut} title="Sem meta de faturamento na empresa: o adicional fica em zero.">sem meta</span> : formatPct(efetivaImposto(i, faturamento))}
-                      {icms && <small>ou a da rota</small>}
-                    </td>
+                    {icms ? (
+                      <td colSpan={3} className={s.icmsTabela}>
+                        alíquota da <Link to="/cadastros/icms">Tabela de ICMS</Link>, pela origem × destino da operação
+                      </td>
+                    ) : (
+                      <>
+                        <td className={ui.right}><PercentInput value={i.base} onChange={(n) => mudar(i.id, { base: n })} /></td>
+                        <td className={ui.right}><PercentInput value={i.aliquota} onChange={(n) => mudar(i.id, { aliquota: n })} /></td>
+                        <td className={`${ui.right} ${s.efetiva}`}>{formatPct(efetivaImposto(i))}</td>
+                      </>
+                    )}
                     <td>
                       <div className={s.radios} role="radiogroup" aria-label={`${rotuloImposto(i)} afeta o preço?`}>
                         <label><input type="radio" name={`afeta-${i.id}`} checked={i.afetaPreco} onChange={() => mudar(i.id, { afetaPreco: true })} /> Sim</label>
@@ -205,18 +201,8 @@ export function ImpostosServicoEditor({ value, onChange, faturamento, nomeEmpres
           <div className={s.impostosTotais}>
             <span>Entra no preço (markup) <b>{formatPct(carga.noPreco)}</b></span>
             {carga.destacados > 0 && <span>Só destacado <b>{formatPct(carga.destacados)}</b></span>}
-            {carga.icms && <span>ICMS {carga.icms.afetaPreco ? 'por dentro, no preço' : 'só destacado'}: alíquota da rota (padrão {formatPct(efetivaImposto(carga.icms, faturamento))})</span>}
+            {carga.icms && <span>ICMS {carga.icms.afetaPreco ? 'por dentro, no preço' : 'só destacado'}, pela Tabela de ICMS da rota</span>}
           </div>
-          {linhas.some((i) => i.imposto === 'irpj-adicional') && (
-            <div className={s.daEmpresa}>
-              <Info size={14} />
-              <span>
-                {faturamento > 0
-                  ? `O adicional do IRPJ é calculado com o faturamento da meta: ${formatBRL(faturamento)}/mês (${nomeEmpresa}). No Pricing vale a meta da empresa escolhida.`
-                  : `A ${nomeEmpresa} não tem meta de faturamento neste mês: o adicional do IRPJ fica em zero até cadastrar a meta.`}
-              </span>
-            </div>
-          )}
         </div>
       )}
     </div>

@@ -179,3 +179,15 @@
 .copiado { font-size: 11px; color: #2e7d44; font-weight: 600; }
 .comprovanteAcoes { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 14px; }
 @media (max-width: 640px) { .comprovante { grid-template-columns: 1fr; } }
+
+/* Parte variável do lançamento de despesa fixa */
+.variaveis { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding: 12px; border: 1px dashed #d7d3ca; border-radius: 12px; background: #fbfaf7; }
+.variaveisTitulo { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #143d18; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.variaveisTitulo span { font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #6b7b72; }
+.variavelLinha { display: grid; grid-template-columns: 170px 1fr 150px 32px; gap: 8px; align-items: center; }
+.variavelLinha select, .variavelLinha > input { font-family: inherit; font-size: 13px; padding: 8px 10px; border: 1px solid #d7d3ca; border-radius: 8px; background: #fff; min-width: 0; }
+.variaveisRodape { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.variaveisTotal { font-size: 13px; color: #3d4b43; font-variant-numeric: tabular-nums; }
+.variaveisTotal b { color: #143d18; }
+@media (max-width: 640px) { .variavelLinha { grid-template-columns: 1fr 1fr; } }
+.comVariavel { display: block; font-size: 10.5px; font-weight: 600; color: #b5651d; }

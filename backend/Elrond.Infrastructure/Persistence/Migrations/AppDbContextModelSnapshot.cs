@@ -3199,6 +3199,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<decimal>("ValorVariavel")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasDefaultValue(0m);
+
                     b.Property<string>("Vencimento")
                         .IsRequired()
                         .HasColumnType("text");
@@ -6859,7 +6865,39 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("MovimentoId");
                         });
 
+                    b.OwnsMany("Elrond.Domain.Entities.ItemVariavelMovimento", "ItensVariaveis", b1 =>
+                        {
+                            b1.Property<string>("MovimentoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<string>("Descricao")
+                                .IsRequired();
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Tipo")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Valor")
+                                .HasPrecision(18, 6);
+
+                            b1.HasKey("MovimentoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("movimentos");
+
+                            b1
+                                .ToJson("ItensVariaveis")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("MovimentoId");
+                        });
+
                     b.Navigation("Aprovacoes");
+
+                    b.Navigation("ItensVariaveis");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.Oportunidade", b =>
@@ -7263,11 +7301,28 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                             b1.Property<bool>("IssNoLiquido");
 
+                            b1.Property<bool>("IssRetido");
+
                             b1.Property<string>("ItemLc116")
                                 .IsRequired();
 
                             b1.Property<string>("Nbs")
                                 .IsRequired();
+
+                            b1.Property<decimal>("RetencaoCofins")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal>("RetencaoCsll")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal>("RetencaoInss")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal>("RetencaoIr")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal>("RetencaoPis")
+                                .HasPrecision(18, 6);
 
                             b1.Property<decimal>("TransparenciaAliquota")
                                 .HasPrecision(18, 6);

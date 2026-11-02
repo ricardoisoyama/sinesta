@@ -790,7 +790,10 @@ public class AppDbContext : DbContext
             e.Property(m => m.Aprovacao).IsRequired().HasMaxLength(12);
             e.Property(m => m.MotivoReprovacao).HasMaxLength(500);
             e.OwnsMany(m => m.Aprovacoes, b => b.ToJson());
+            e.OwnsMany(m => m.ItensVariaveis, b => b.ToJson());
+            e.Property(m => m.ValorVariavel).HasPrecision(18, 2).HasDefaultValue(0m);
             e.Ignore(m => m.Liquido);
+            e.Ignore(m => m.ValorFixo);
             e.HasIndex(m => m.Vencimento);
             e.HasIndex(m => m.GrupoId);
             e.HasIndex(m => m.Aprovacao);

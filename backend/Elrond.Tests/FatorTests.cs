@@ -13,8 +13,14 @@ public class FatorTests
         Id = "bm",
         Nome = "BM",
         Regime = "Lucro Presumido",
-        // Sem cadastro tributário: vale o percentual da DV (10,5% na linha 5 da planilha).
-        Dv = new DvEmpresa { Impostos = 0.105m, Comissoes = 0.005m, Lucro = 0.05m, DespFinanceira = 0.023m },
+        Dv = new DvEmpresa { Comissoes = 0.005m, Lucro = 0.05m, DespFinanceira = 0.023m },
+    };
+
+    /// <summary>Serviço com os impostos num total só (10,5% na linha 5 da planilha).</summary>
+    private static Servico ComImpostos(decimal total) => new()
+    {
+        Id = "srv", Nome = "Serviço",
+        Impostos = [new ImpostoServico { Id = "i", Imposto = "outro", Nome = "Impostos", Base = 1m, Aliquota = total, Regime = "Lucro Presumido" }],
     };
 
     private static Meta MetaMensal(decimal valor, string empresa = "bm", int ano = 2026) => new()
@@ -44,7 +50,7 @@ public class FatorTests
     [Fact]
     public void Reproduz_a_linha_5_da_planilha()
     {
-        var r = FatorService.Calcular(Empresa(), "bm", new[] { Fixo(73319.526m) }, new[] { MetaMensal(565000m) }, Hoje, 0.005m);
+        var r = FatorService.Calcular(Empresa(), "bm", new[] { Fixo(73319.526m) }, new[] { MetaMensal(565000m) }, Hoje, 0.005m, servico: ComImpostos(0.105m));
 
         Assert.True(r.Pronto);
         Perto(0.129769m, r.DfPct, 0.000001m);   // 73.319,53 ÷ 565.000
@@ -157,9 +163,8 @@ public class FatorTests
         var metas = new[] { MetaMensal(565000m) };
         // Linha 11 da PV_Matriz (BM): impostos 16,5%, comissão 1%, lucro 10%, desp. fin. 2,3% → fator 1,7475.
         var e = Empresa();
-        e.Dv.Impostos = 0.165m;
         e.Dv.Lucro = 0.07m;
-        var r = FatorService.Calcular(e, "bm", fixos, metas, Hoje, 0m, comissoes: 0.01m, lucro: 0.10m);
+        var r = FatorService.Calcular(e, "bm", fixos, metas, Hoje, 0m, comissoes: 0.01m, lucro: 0.10m, servico: ComImpostos(0.165m));
         Perto(0.10m, r.Lucro, 0m);
         Perto(0.07m, r.LucroPadrao, 0m);
         Perto(1.74754623m, r.Fator, 0.0000001m);

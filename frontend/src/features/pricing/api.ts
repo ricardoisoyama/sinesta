@@ -69,8 +69,8 @@ export interface FatorResultado {
   /** false = falta meta ou a soma passa de 100%: o Pricing bloqueia. */
   pronto: boolean
   aviso: string | null
-  /** 'servico' = impostos do cadastro do serviço; 'empresa' = o total da empresa (aba Markup). */
-  impostosOrigem?: 'servico' | 'empresa'
+  /** 'servico' = a tabela do serviço; 'faltando' = sem serviço ou sem tabela (não precifica); 'media' = média dos serviços (painéis da empresa). */
+  impostosOrigem?: 'servico' | 'faltando' | 'media'
   servicoNome?: string
   /** Os impostos do serviço, um a um (sem o ICMS, que vem em `icms`). */
   impostosDetalhe?: ImpostoCalculado[] | null
@@ -90,8 +90,10 @@ export interface CalcularFatorRequest {
   comissoes?: number | null
   /** Lucro da linha do Pricing (fração). Nulo = o da empresa. */
   lucro?: number | null
-  /** Serviço do item: com impostos cadastrados, eles substituem os da empresa. */
+  /** Serviço do item: os impostos vêm dele (a tabela do regime da empresa em vigor). */
   servicoId?: string | null
+  /** Precificação de item: sem serviço com impostos o fator não fica pronto (o Pricing bloqueia e diz por quê). */
+  precificar?: boolean
 }
 
 /** Resposta do motor no servidor (.NET) — fonte da verdade do preço. */

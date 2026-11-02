@@ -32,7 +32,7 @@ import { adValoremDosCampos } from '@/features/camposOperacao/advalorem'
 import { useFichas } from '@/features/fichaTecnica/api'
 import { calcularFicha } from '@/features/fichaTecnica/calculo'
 import { TIPOS_NUMERICOS } from '@/features/fichaTecnica/types'
-import { rotuloImposto, type TipoImposto } from '@/features/servicos/impostos'
+import { hojeIso, impostosVigentes, rotuloImposto, type TipoImposto } from '@/features/servicos/impostos'
 import base from './simulador.module.css'
 import s from './precificacaoNova.module.css'
 
@@ -65,8 +65,7 @@ export function PricingPage() {
   const [tipoEscolhido, setTipoEscolhido] = useState('')
   const tipoOperacaoId = tiposOperacao.some((t) => t.id === tipoEscolhido) ? tipoEscolhido : (tiposOperacao[0]?.id ?? '')
   const tipoOperacao = tiposOperacao.find((t) => t.id === tipoOperacaoId)
-  // Empresa do Simples (sem ICMS): o campo ICMS nem aparece no Pricing.
-  const campos = camposDo(tipoOperacaoId).filter((c) => c.tipo !== 'icms' || !!empresa?.icmsAtivo)
+  const camposDoTipo = camposDo(tipoOperacaoId)
   const { grupos, fichas, colunasDe, formulaDe, nomeGrupo } = useFichas()
   const { user } = useAuth()
   const ehGestor = temPoderDeGestor(user?.perfil)
@@ -125,11 +124,15 @@ export function PricingPage() {
   const { data: servicosData } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
   // Serviço do item: o campo "Serviço" dos Dados da operação, quando a empresa tem um; senão o seletor do
   // topo, que já sugere o serviço com o nome do tipo de operação. Os impostos dele entram no fator.
-  const campoServico = campos.find((c) => c.tipo === 'cadastro' && c.cadastro === 'servico')
+  const campoServico = camposDoTipo.find((c) => c.tipo === 'cadastro' && c.cadastro === 'servico')
   const servicosAtivos = (servicosData ?? []).filter((x) => x.status === 'ativo')
   const [servicoEscolhido, setServicoEscolhido] = useState<string | null>(null)
   const servicoSugerido = tipoOperacao ? (servicosAtivos.find((x) => normalizar(x.nome) === normalizar(tipoOperacao.nome))?.id ?? '') : ''
   const servicoId = campoServico ? String(valores[campoServico.chave] ?? '') : (servicoEscolhido ?? servicoSugerido)
+  // O campo ICMS só aparece quando a tabela do serviço (regime da empresa, em vigor) tem a linha de ICMS.
+  const servicoItem = servicosAtivos.find((x) => x.id === servicoId)
+  const icmsIncide = impostosVigentes(servicoItem?.impostos ?? [], empresa?.regime ?? '', hojeIso()).some((i) => i.imposto === 'icms')
+  const campos = camposDoTipo.filter((c) => c.tipo !== 'icms' || icmsIncide)
   const { data: veiculosData } = useQuery({ queryKey: ['veiculos'], queryFn: listVeiculos })
   const { data: vendedoresData } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores })
   const vendedores = (vendedoresData ?? []).filter((v) => v.status === 'ativo')
@@ -170,7 +173,7 @@ export function PricingPage() {
   const vendedorSel = vendedores.find((v) => v.id === vendedorId)
 
   // ── fator da empresa (motor do servidor) ──
-  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado, servicoId: servicoId || null }, !!empresaId)
+  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado, servicoId: servicoId || null, precificar: true }, !!empresaId)
   const fr = fatorEmpresa.fator
   const semFator = !!fr && !fr.pronto
   const dfPct = fr?.pronto ? fr.dfPct : 0
@@ -216,14 +219,14 @@ export function PricingPage() {
   const custoOperacao = round2((custoFichas + efeitos.custoExtra) * (1 + efeitos.pctCusto) * efeitos.multiplicador)
   const temCusto = custoOperacao > 0
 
-  // ── ICMS: o campo ICMS dos Dados da Operação (origem × destino), só em empresa contribuinte. Serviço com
-  // impostos decide: sem a linha de ICMS não incide; com ela, a rota (ou a alíquota do serviço) entra por
-  // dentro, ou fica só destacada. Mesma regra do servidor (PricingService). ──
+  // ── ICMS: o serviço decide (tabela do regime da empresa): sem a linha de ICMS não incide; com ela, a alíquota
+  // da Tabela de ICMS da rota (campo ICMS dos Dados da Operação) entra por dentro, ou fica só destacada.
+  // Mesma regra do servidor (PricingService). ──
   const campoIcms = campos.find((c) => c.tipo === 'icms')
   const aliqRota = campoIcms ? Math.min(0.5, Math.max(0, numeroDe(valores[campoIcms.chave]))) : 0
   const icmsServico = fr?.icms ?? null
   const aliqIcmsBruta = icmsServico
-    ? (icmsServico.incide && empresa?.icmsAtivo ? Math.min(0.5, aliqRota > 0 ? aliqRota : icmsServico.aliquota) : 0)
+    ? (icmsServico.incide ? aliqRota : 0)
     : aliqRota
   const icmsNoPreco = !icmsServico || icmsServico.afetaPreco
   const aliqIcms = icmsNoPreco ? aliqIcmsBruta : 0
@@ -569,10 +572,10 @@ export function PricingPage() {
               </select>
             </label>
             {!campoServico && (
-              <label className={s.empresaSel} title="Os impostos do serviço entram no fator; sem serviço (ou serviço sem impostos), valem os da empresa.">
+              <label className={s.empresaSel} title="Os impostos vêm do serviço: a tabela do regime da empresa em vigor hoje.">
                 Serviço
                 <select value={servicoId} onChange={(e) => setServicoEscolhido(e.target.value)}>
-                  <option value="">Sem serviço (impostos da empresa)</option>
+                  <option value="">Escolha o serviço</option>
                   {servicosAtivos.map((x) => (
                     <option key={x.id} value={x.id}>{x.nome}</option>
                   ))}
@@ -598,7 +601,8 @@ export function PricingPage() {
         <div className={base.alertaPiso} role="alert">
           <AlertTriangle size={16} />
           <span>
-            O Pricing desta empresa está bloqueado: {fr?.aviso} <Link to="/analises/metas">Abrir Metas</Link>
+            O Pricing está bloqueado: {fr?.aviso}{' '}
+            {fr?.impostosOrigem === 'faltando' ? (servicoId ? <Link to="/cadastros/servicos">Abrir Serviços</Link> : null) : <Link to="/analises/metas">Abrir Metas</Link>}
           </span>
         </div>
       )}

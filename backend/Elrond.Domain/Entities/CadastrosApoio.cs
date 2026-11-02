@@ -41,7 +41,7 @@ public class Servico : Rastreavel, IEntity, IInativavel
 
 /// <summary>
 /// Um imposto do serviço, como no quadro da contabilidade: base de cálculo (presunção) × alíquota.
-/// O adicional do IRPJ é a exceção: 10% do que a base presumida passar do limite do mês.
+/// O ICMS não tem alíquota aqui: vem da Tabela de ICMS (origem × destino); a linha diz que incide e se afeta o preço.
 /// </summary>
 public class ImpostoServico
 {
@@ -56,7 +56,7 @@ public class ImpostoServico
     /// <summary>Base de cálculo sobre a receita (fração): 1 = 100%; 0,08 = presunção de 8%.</summary>
     public decimal Base { get; set; } = 1m;
     public decimal Aliquota { get; set; }
-    /// <summary>Só no adicional do IRPJ: a base presumida do mês até este valor (R$) não paga o adicional.</summary>
+    /// <summary>Não usado (o usuário informa a alíquota efetiva do adicional); fica por compatibilidade.</summary>
     public decimal Limite { get; set; }
     /// <summary>true = entra no markup (no preço); false = só destacado na nota.</summary>
     public bool AfetaPreco { get; set; } = true;
@@ -65,16 +65,8 @@ public class ImpostoServico
     /// <summary>Início da vigência (aaaa-mm-dd), definido pelo usuário. Vazio = desde sempre.</summary>
     public string VigenteDesde { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Alíquota efetiva sobre a receita. O adicional depende do faturamento do mês (a meta):
-    /// (faturamento × base − limite) × alíquota ÷ faturamento, nunca negativo.
-    /// </summary>
-    public decimal Efetiva(decimal faturamentoMensal)
-    {
-        if (Imposto != AdicionalIrpj) return Base * Aliquota;
-        if (faturamentoMensal <= 0) return 0m;
-        return Math.Max(0m, faturamentoMensal * Base - Limite) * Aliquota / faturamentoMensal;
-    }
+    /// <summary>Alíquota efetiva sobre a receita: base × alíquota (o adicional do IRPJ também, com a alíquota que a contabilidade passa).</summary>
+    public decimal Efetiva => Base * Aliquota;
 }
 
 /// <summary>Como o serviço sai na NFS-e de uma empresa (tabelas oficiais: LC 116, NBS, cIndOp, cClassTrib).</summary>
@@ -93,8 +85,7 @@ public class ServicoFiscal
     public string Cnae { get; set; } = string.Empty;
     /// <summary>NBS ("1.0601.10.00").</summary>
     public string Nbs { get; set; } = string.Empty;
-    // A alíquota do ISS e as retenções (ISS, PIS, COFINS, CSLL, INSS, IR) NÃO ficam aqui: vêm da empresa
-    // (aba Impostos) na hora da emissão, para não haver duas fontes da mesma informação.
+    // A alíquota do ISS vem dos impostos do serviço (tabela do regime da empresa em vigor).
     /// <summary>NoMunicipio | ForaDoMunicipio | Exportacao | Isenta | Imune.</summary>
     public string TributacaoIss { get; set; } = "NoMunicipio";
     /// <summary>CST do PIS/COFINS (2 dígitos; vazio = o padrão do provedor).</summary>
@@ -107,8 +98,16 @@ public class ServicoFiscal
     /// <summary>CST do IBS/CBS (3 dígitos) e a classificação tributária (cClassTrib, 6 dígitos).</summary>
     public string CstIbsCbs { get; set; } = string.Empty;
     public string ClassificacaoTributaria { get; set; } = string.Empty;
-    /// <summary>As retenções da empresa (aba Impostos) saem descontadas do total da nota.</summary>
+    /// <summary>As retenções abaixo saem descontadas do total da nota.</summary>
     public bool DescontarImpostos { get; set; } = true;
+    /// <summary>Retenções na fonte pelo tomador pessoa jurídica (fração; 0 = não retém).</summary>
+    public decimal RetencaoIr { get; set; }
+    public decimal RetencaoPis { get; set; }
+    public decimal RetencaoCofins { get; set; }
+    public decimal RetencaoCsll { get; set; }
+    public decimal RetencaoInss { get; set; }
+    /// <summary>O tomador retém o ISS (pela alíquota do ISS do serviço).</summary>
+    public bool IssRetido { get; set; }
     /// <summary>O ISS (não retido) também é descontado do valor líquido.</summary>
     public bool IssNoLiquido { get; set; }
 }

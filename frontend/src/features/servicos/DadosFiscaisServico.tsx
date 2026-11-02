@@ -4,9 +4,8 @@ import { Field } from '@/features/common/Field'
 import { PercentInput } from '@/features/common/PercentInput'
 import { BuscaOpcoes } from '@/features/common/BuscaOpcoes'
 import ui from '@/features/common/ui.module.css'
-import { formatPct } from '@/lib/format'
 import type { Unidade } from '@/features/unidades/types'
-import { CSTS_PIS_COFINS, TRIBUTACOES_ISS, novoFiscal, opcoesFiscais, useTabelasFiscais, type ServicoFiscal } from './fiscal'
+import { CSTS_PIS_COFINS, RETENCOES, TRIBUTACOES_ISS, novoFiscal, opcoesFiscais, useTabelasFiscais, type ServicoFiscal } from './fiscal'
 import s from './servicos.module.css'
 
 interface Props {
@@ -17,7 +16,7 @@ interface Props {
 
 /**
  * Dados fiscais do serviço (NFS-e), um bloco por empresa emitente. As tabelas oficiais sugerem a NBS, o
- * indicador da operação e a classificação tributária pelo item da LC 116. A alíquota do ISS vem dos impostos do serviço; as retenções, da empresa.
+ * indicador da operação e a classificação tributária pelo item da LC 116. A alíquota do ISS vem dos impostos do serviço.
  */
 export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
   const { data: tabelas, isLoading } = useTabelasFiscais()
@@ -41,10 +40,6 @@ export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
   const escolherClassificacao = (codigo: string) =>
     mudar({ classificacaoTributaria: codigo, cstIbsCbs: codigo ? (tabelas?.cclasstrib.find((g) => g.itens.some((i) => i[0] === codigo))?.cst ?? codigo.slice(0, 3)) : '' })
 
-  const ret = (nome: string, i?: { aliquota: number; retido: boolean }) => (i?.retido ? `${nome}${i.aliquota > 0 ? ` ${formatPct(i.aliquota)}` : ''}` : '')
-  const daEmpresa = empresa
-    ? [ret('ISS', empresa.iss), ret('PIS', empresa.pis), ret('COFINS', empresa.cofins), ret('CSLL', empresa.csll), ret('INSS', empresa.inss), ret('IR', empresa.ir)].filter(Boolean).join(' · ')
-    : ''
 
   return (
     <div className={s.fiscal}>
@@ -74,7 +69,7 @@ export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
       ) : (
         <>
           <div className={s.daEmpresa}>
-            <Info size={14} /> <span>A alíquota do ISS vem dos impostos deste serviço (acima). Da empresa vêm as retenções (Empresa › Regime e retenções): {daEmpresa || 'nenhuma retenção marcada'}. Inscrição municipal e regime também.</span>
+            <Info size={14} /> <span>A alíquota do ISS vem dos impostos deste serviço (acima), pela tabela do regime da {empresa?.nome ?? 'empresa'}. Da empresa vêm só a inscrição municipal e o regime.</span>
           </div>
           <div className={ui.grid}>
             <Field className={ui.col4} label="Item do serviço (lista nacional / LC 116)" req hint="Tabela oficial da NFS-e Nacional. Escolher o item sugere a NBS, o indicador da operação e a classificação tributária.">
@@ -115,6 +110,22 @@ export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
             <Field className={ui.col2} label="CST / Classificação tributária (cClassTrib)" hint="Tabela oficial da Receita (Conformidade Fácil), agrupada por CST.">
               <BuscaOpcoes id={`class-${empresaId}`} value={atual.classificacaoTributaria} onChange={escolherClassificacao} opcoes={opcoes.cclass} sugeridos={sugestao?.[2]} vazio="Nenhuma" />
             </Field>
+          </div>
+
+          <div className={ui.fsectionTitle} style={{ marginTop: 14 }}>
+            Retenções na NFS-e <span className={ui.fsectionHint}>o cliente pessoa jurídica desconta do pagamento e recolhe no lugar da empresa; 0% = não retém</span>
+          </div>
+          <div className={s.retencoes}>
+            {RETENCOES.map((r) => (
+              <Field key={r.campo} label={`${r.nome} retido`} hint={`Ex.: ${r.exemplo}.`}>
+                <PercentInput value={atual[r.campo] ?? 0} onChange={(n) => mudar({ [r.campo]: n })} />
+              </Field>
+            ))}
+            <div className={s.marcas} title="A alíquota é a do ISS nos impostos do serviço.">
+              <label className={ui.checkItem}>
+                <input type="checkbox" checked={!!atual.issRetido} onChange={(e) => mudar({ issRetido: e.target.checked })} /> ISS retido pelo cliente
+              </label>
+            </div>
           </div>
 
           <div className={ui.fsectionTitle} style={{ marginTop: 14 }}>

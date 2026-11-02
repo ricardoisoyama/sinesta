@@ -23,13 +23,89 @@ public class LancamentosDespesaFixaTests
 
     private static (LancamentosDespesaFixa Svc, Mem<Movimento> Movs) Montar()
     {
+        var (svc, movs, _) = MontarComFinanceiro();
+        return (svc, movs);
+    }
+
+    private static (LancamentosDespesaFixa Svc, Mem<Movimento> Movs, FinanceiroService Financeiro) MontarComFinanceiro()
+    {
         var movs = new Mem<Movimento>();
         var carteiras = new Mem<Carteira>();
         carteiras.Itens.Add(new Carteira { Id = "cart", Nome = "Banco", EmpresaId = "matriz" });
         var fornecedores = new Mem<Fornecedor>();
         fornecedores.Itens.Add(new Fornecedor { Id = "f-1", Nome = "Imobiliária Santos" });
         var financeiro = new FinanceiroService(movs, carteiras, new Mem<RegraAprovacao>(), new Mem<ExtratoLinha>(), new SemTransacao(), new Auditoria(), new Sequencia());
-        return (new LancamentosDespesaFixa(movs, fornecedores, new SemUsuarios(), financeiro, Hoje), movs);
+        return (new LancamentosDespesaFixa(movs, fornecedores, new SemUsuarios(), financeiro, Hoje), movs, financeiro);
+    }
+
+    private static ItemVariavelMovimento Variavel(string tipo, string descricao, decimal valor) => new() { Tipo = tipo, Descricao = descricao, Valor = valor };
+
+    [Fact]
+    public async Task Financeiro_inclui_variaveis_no_lancamento_da_despesa_fixa_e_o_valor_vira_fixo_mais_variavel()
+    {
+        var (svc, movs, financeiro) = MontarComFinanceiro();
+        await svc.SincronizarAsync(Aluguel(), false, Ana);
+        var nov = movs.Itens.Single(m => m.Competencia == "2026-11");
+        nov.Aprovacao = "aprovado";
+
+        // Parte fixa 2.500 + seguro da viagem 180,50 + juros 12,30.
+        var dados = (await movs.GetByIdAsync(nov.Id))!;
+        dados.ItensVariaveis = [Variavel("seguro", "Seguro viagem 1234 (0,03% de R$ 600 mil)", 180.50m), Variavel("juros", "Juros de atraso", 12.30m)];
+        dados.Valor = 2500m + 192.80m;
+        var r = await financeiro.AtualizarAsync(nov.Id, dados);
+
+        Assert.True(r.IsSuccess, r.Error);
+        var gravado = movs.Itens.Single(m => m.Id == nov.Id);
+        Assert.Equal((2692.80m, 192.80m, 2500m), (gravado.Valor, gravado.ValorVariavel, gravado.ValorFixo));
+        Assert.Equal(["seguro", "juros"], gravado.ItensVariaveis.Select(i => i.Tipo));
+        // Mudou o valor: volta para aprovação, como qualquer alteração de valor.
+        Assert.Equal("pendente", gravado.Aprovacao);
+    }
+
+    [Fact]
+    public async Task Atualizar_a_despesa_fixa_mantem_os_variaveis_e_so_troca_a_parte_fixa()
+    {
+        var (svc, movs, financeiro) = MontarComFinanceiro();
+        await svc.SincronizarAsync(Aluguel(), false, Ana);
+        var nov = movs.Itens.Single(m => m.Competencia == "2026-11");
+        var dados = (await movs.GetByIdAsync(nov.Id))!;
+        dados.ItensVariaveis = [Variavel("seguro", "Seguro viagem 1234", 100m)];
+        dados.Valor = 2600m;
+        Assert.True((await financeiro.AtualizarAsync(nov.Id, dados)).IsSuccess);
+
+        var df = Aluguel();
+        df.ValorMensal = 2800;
+        await svc.SincronizarAsync(df, true, Ana);
+
+        var gravado = movs.Itens.Single(m => m.Id == nov.Id);
+        Assert.Equal((2900m, 100m, 2800m), (gravado.Valor, gravado.ValorVariavel, gravado.ValorFixo));
+        Assert.Single(gravado.ItensVariaveis);
+    }
+
+    [Fact]
+    public async Task Variavel_sem_valor_ou_parte_fixa_negativa_nao_grava_e_lancamento_manual_nao_tem_variavel()
+    {
+        var (svc, movs, financeiro) = MontarComFinanceiro();
+        await svc.SincronizarAsync(Aluguel(), false, Ana);
+        var nov = movs.Itens.Single(m => m.Competencia == "2026-11");
+
+        var semValor = (await movs.GetByIdAsync(nov.Id))!;
+        semValor.ItensVariaveis = [Variavel("outro", "Taxa", 0m)];
+        Assert.Contains("valor de cada item", (await financeiro.AtualizarAsync(nov.Id, semValor)).Error);
+
+        var negativo = (await movs.GetByIdAsync(nov.Id))!;
+        negativo.ItensVariaveis = [Variavel("seguro", "Seguro", 3000m)];
+        negativo.Valor = 2500m;
+        Assert.Contains("parte fixa não pode ficar negativa", (await financeiro.AtualizarAsync(nov.Id, negativo)).Error);
+
+        // Lançamento manual: os itens variáveis não se aplicam (são da despesa fixa).
+        var manual = (await movs.GetByIdAsync(nov.Id))!;
+        manual.Id = "manual-1"; manual.Origem = "manual"; manual.OrigemId = string.Empty;
+        await movs.AddAsync(manual);
+        var dados = (await movs.GetByIdAsync("manual-1"))!;
+        dados.ItensVariaveis = [Variavel("seguro", "Seguro", 50m)];
+        Assert.True((await financeiro.AtualizarAsync("manual-1", dados)).IsSuccess);
+        Assert.Equal(0m, movs.Itens.Single(m => m.Id == "manual-1").ValorVariavel);
     }
 
     [Fact]

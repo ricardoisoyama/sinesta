@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import type { OpcaoBusca } from '@/features/common/BuscaOpcoes'
 
 /**
- * Dados fiscais do serviço para a NFS-e, por empresa emitente. O que já está na empresa (ISS, retenções,
- * inscrição municipal, regime) NÃO fica aqui: a emissão lê da empresa.
+ * Dados fiscais do serviço para a NFS-e, por empresa emitente, com as retenções. A alíquota do ISS vem dos
+ * impostos do serviço; inscrição municipal e regime, da empresa.
  */
 export interface ServicoFiscal {
   empresaId: string
@@ -23,7 +23,23 @@ export interface ServicoFiscal {
   classificacaoTributaria: string
   descontarImpostos: boolean
   issNoLiquido: boolean
+  /** Retenções na fonte pelo tomador pessoa jurídica (fração; 0 = não retém). */
+  retencaoIr: number
+  retencaoPis: number
+  retencaoCofins: number
+  retencaoCsll: number
+  retencaoInss: number
+  /** O tomador retém o ISS (pela alíquota do ISS do serviço). */
+  issRetido: boolean
 }
+
+export const RETENCOES: { campo: 'retencaoIr' | 'retencaoPis' | 'retencaoCofins' | 'retencaoCsll' | 'retencaoInss'; nome: string; exemplo: string }[] = [
+  { campo: 'retencaoIr', nome: 'IR', exemplo: '1,5% (ou 1%)' },
+  { campo: 'retencaoPis', nome: 'PIS', exemplo: '0,65%' },
+  { campo: 'retencaoCofins', nome: 'COFINS', exemplo: '3%' },
+  { campo: 'retencaoCsll', nome: 'CSLL', exemplo: '1%' },
+  { campo: 'retencaoInss', nome: 'INSS', exemplo: '11% (cessão de mão de obra)' },
+]
 
 export const novoFiscal = (empresaId: string): ServicoFiscal => ({
   empresaId,
@@ -43,6 +59,12 @@ export const novoFiscal = (empresaId: string): ServicoFiscal => ({
   classificacaoTributaria: '',
   descontarImpostos: true,
   issNoLiquido: false,
+  retencaoIr: 0,
+  retencaoPis: 0,
+  retencaoCofins: 0,
+  retencaoCsll: 0,
+  retencaoInss: 0,
+  issRetido: false,
 })
 
 export const TRIBUTACOES_ISS: { valor: ServicoFiscal['tributacaoIss']; label: string }[] = [

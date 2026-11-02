@@ -16,8 +16,8 @@ public class ImpostosServicoTests
 {
     private static readonly DateOnly Hoje = new(2026, 11, 2);
 
-    private static ImpostoServico Imp(string tipo, decimal @base, decimal aliquota, bool afeta = true, decimal limite = 0m) =>
-        new() { Id = tipo, Imposto = tipo, Base = @base, Aliquota = aliquota, AfetaPreco = afeta, Limite = limite };
+    private static ImpostoServico Imp(string tipo, decimal @base, decimal aliquota, bool afeta = true) =>
+        new() { Id = tipo, Imposto = tipo, Base = @base, Aliquota = aliquota, AfetaPreco = afeta };
 
     private static Servico Armazenagem(bool cbsAfeta = true) => new()
     {
@@ -25,7 +25,8 @@ public class ImpostosServicoTests
         Impostos =
         [
             Imp("irpj", 0.32m, 0.15m),
-            Imp(ImpostoServico.AdicionalIrpj, 0.32m, 0.10m, limite: 20000m),
+            // O adicional: a alíquota efetiva que a contabilidade passa (D38: 2,5333% com R$ 300 mil/mês).
+            Imp(ImpostoServico.AdicionalIrpj, 1m, 0.025333m),
             Imp("csll", 0.32m, 0.09m),
             Imp("cbs", 1m, 0.088m, cbsAfeta),
             Imp("iss", 1m, 0.05m),
@@ -38,11 +39,11 @@ public class ImpostosServicoTests
         Impostos =
         [
             Imp("irpj", 0.08m, 0.15m),
-            Imp(ImpostoServico.AdicionalIrpj, 0.08m, 0.10m, limite: 20000m),
+            Imp(ImpostoServico.AdicionalIrpj, 1m, 0.001333m),
             Imp("csll", 0.12m, 0.09m),
             Imp("cbs", 1m, 0.088m),
             Imp("iss", 1m, 0.05m),
-            Imp(ImpostoServico.Icms, 1m, 0.18m, icmsAfeta),
+            Imp(ImpostoServico.Icms, 1m, 0m, icmsAfeta),
         ],
     };
 
@@ -58,7 +59,7 @@ public class ImpostosServicoTests
     };
 
     private static FatorResultado Fator(Servico? servico) =>
-        FatorService.Calcular(Empresa(), "matriz", [], [Meta300Mil()], Hoje, 0m, servico: servico);
+        FatorService.Calcular(Empresa(), "matriz", [], [Meta300Mil()], Hoje, 0m, servico: servico, precificar: true);
 
     private static void Perto(decimal esperado, decimal real) =>
         Assert.True(Math.Abs(esperado - real) <= 0.000001m, $"esperado {esperado}, veio {real}");
@@ -69,9 +70,9 @@ public class ImpostosServicoTests
         var r = Fator(Armazenagem());
 
         Assert.Equal("servico", r.ImpostosOrigem);
-        // D37..D41: 4,8% + 2,5333% (adicional sobre 96 mil − 20 mil) + 2,88% + 8,8% + 5% = 24,0133% (D42).
-        Perto(0.025333m, r.ImpostosDetalhe!.Single(i => i.Imposto == ImpostoServico.AdicionalIrpj).Efetiva);
+        // D37..D41: 4,8% + 2,5333% + 2,88% + 8,8% + 5% = 24,0133% (D42).
         Perto(0.240133m, r.Impostos);
+        Assert.True(r.Pronto);
         Assert.False(r.Icms!.Incide);
     }
 
@@ -94,25 +95,37 @@ public class ImpostosServicoTests
         // D18..D22 sem o ICMS (ele entra por dentro, depois): 1,2% + 0,1333% + 1,08% + 8,8% + 5%.
         Perto(0.162133m, r.Impostos);
         Assert.DoesNotContain(r.ImpostosDetalhe!, i => i.Imposto == ImpostoServico.Icms);
-        Assert.Equal(new IcmsServicoDto(true, 0.18m, true), r.Icms);
+        Assert.Equal(new IcmsServicoDto(true, 0m, true), r.Icms);
     }
 
     [Fact]
-    public void Servico_sem_impostos_ou_item_sem_servico_usam_os_da_empresa()
+    public void Para_precificar_o_servico_com_impostos_e_obrigatorio()
     {
-        Assert.Equal(("empresa", 0.1686m), (Fator(null).ImpostosOrigem, Fator(null).Impostos));
+        var sem = Fator(null);
+        Assert.False(sem.Pronto);
+        Assert.Equal(("faltando", 0m), (sem.ImpostosOrigem, sem.Impostos));
+        Assert.Contains("Escolha o serviço", sem.Aviso);
+
         var vazio = Fator(new Servico { Id = "x", Nome = "Consultoria" });
-        Assert.Equal(("empresa", 0.1686m), (vazio.ImpostosOrigem, vazio.Impostos));
-        Assert.Null(vazio.Icms);
+        Assert.False(vazio.Pronto);
+        Assert.Contains("\"Consultoria\" não tem impostos do Lucro Presumido", vazio.Aviso);
     }
 
     [Fact]
-    public void Adicional_do_irpj_so_aparece_acima_do_limite()
+    public void Paineis_da_empresa_usam_a_media_dos_servicos_do_regime()
     {
-        var adicional = Imp(ImpostoServico.AdicionalIrpj, 0.08m, 0.10m, limite: 20000m);
-        Assert.Equal(0m, adicional.Efetiva(200000m)); // 16 mil presumidos: abaixo dos 20 mil
-        Assert.Equal(0m, adicional.Efetiva(0m));
-        Perto(0.001333m, adicional.Efetiva(300000m)); // D19
+        var r = FatorService.Calcular(Empresa(), "matriz", [], [Meta300Mil()], Hoje, 0m, servicos: [Armazenagem(), Transporte(), new Servico { Id = "v", Nome = "Vazio" }]);
+        Assert.True(r.Pronto);
+        Assert.Equal("media", r.ImpostosOrigem);
+        Perto((0.240133m + 0.162133m) / 2, r.Impostos);
+        Assert.Contains("média dos 2 serviço(s)", r.ImpostosNota);
+    }
+
+    [Fact]
+    public void Adicional_do_irpj_e_base_vezes_aliquota_como_os_outros()
+    {
+        Assert.Equal(0.001333m, Imp(ImpostoServico.AdicionalIrpj, 1m, 0.001333m).Efetiva);
+        Assert.Equal(0.008m, Imp(ImpostoServico.AdicionalIrpj, 0.08m, 0.10m).Efetiva);
     }
 
     private static ImpostoServico Tab(string regime, string desde, string tipo, decimal aliquota) =>
@@ -140,18 +153,19 @@ public class ImpostosServicoTests
     public void Vale_a_tabela_do_regime_da_empresa_com_a_vigencia_que_ja_comecou(string regime, string data, double esperado)
     {
         var vigentes = ComTabelas().ImpostosVigentes(regime, DateOnly.Parse(data));
-        Assert.Equal((decimal)esperado, vigentes.Sum(i => i.Efetiva(0m)));
+        Assert.Equal((decimal)esperado, vigentes.Sum(i => i.Efetiva));
     }
 
     [Fact]
-    public void Sem_tabela_do_regime_o_fator_usa_os_da_empresa_e_avisa()
+    public void Sem_tabela_do_regime_o_pricing_bloqueia_e_diz_o_que_cadastrar()
     {
         var empresa = Empresa();
         empresa.Regime = "Lucro Real";
-        var r = FatorService.Calcular(empresa, "matriz", [], [Meta300Mil()], Hoje, 0m, servico: ComTabelas());
+        var r = FatorService.Calcular(empresa, "matriz", [], [Meta300Mil()], Hoje, 0m, servico: ComTabelas(), precificar: true);
 
-        Assert.Equal(("empresa", 0.1686m), (r.ImpostosOrigem, r.Impostos));
-        Assert.Contains("não tem impostos do Lucro Real", r.ImpostosNota);
+        Assert.False(r.Pronto);
+        Assert.Equal(("faltando", 0m), (r.ImpostosOrigem, r.Impostos));
+        Assert.Contains("não tem impostos do Lucro Real", r.Aviso);
         Assert.Null(r.Icms);
     }
 
@@ -166,9 +180,9 @@ public class ImpostosServicoTests
     [Theory]
     // Armazenagem (sem a linha de ICMS): o ICMS da rota não incide.
     [InlineData("arm", true, 0.12, false, 0, 0)]
-    // Transporte, ICMS no preço: a alíquota da rota entra por dentro; sem rota, a do serviço.
+    // Transporte, ICMS no preço: a alíquota da Tabela de ICMS (rota) entra por dentro; sem rota, nada.
     [InlineData("transp", true, 0.12, true, 0.12, 0)]
-    [InlineData("transp", true, 0, true, 0.18, 0)]
+    [InlineData("transp", true, 0, false, 0, 0)]
     // Transporte, ICMS só destacado: não soma ao preço.
     [InlineData("transp", false, 0.12, false, 0, 0.12)]
     public async Task Icms_segue_o_servico(string servicoId, bool icmsAfeta, double rota, bool aplica, double aliquota, double destacado)

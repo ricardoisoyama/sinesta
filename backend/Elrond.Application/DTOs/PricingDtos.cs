@@ -22,7 +22,7 @@ public record CalcularPrecoRequest(
     string? VendedorId = null,
     /// <summary>Alíquota do campo ICMS dos Dados da Operação (fração). Informada, substitui a busca por UfDestinoId.</summary>
     decimal? AliquotaIcms = null,
-    /// <summary>Serviço do item: com impostos cadastrados, eles substituem os da empresa (e decidem o ICMS).</summary>
+    /// <summary>Serviço do item: os impostos vêm dele (e decidem o ICMS). Obrigatório para precificar.</summary>
     string? ServicoId = null
 );
 
@@ -33,8 +33,10 @@ public record CalcularPrecoRequest(
 public record CalcularFatorRequest(string? EmpresaId, Empresa? Empresa = null, string? VendedorId = null, decimal? Comissoes = null,
     /// <summary>Lucro da linha do Pricing (fração). Nulo = o da empresa.</summary>
     decimal? Lucro = null,
-    /// <summary>Serviço do item do Pricing: com impostos cadastrados, eles substituem os da empresa.</summary>
-    string? ServicoId = null);
+    /// <summary>Serviço do item do Pricing: os impostos vêm dele (a tabela do regime da empresa em vigor).</summary>
+    string? ServicoId = null,
+    /// <summary>true = precificação de item: sem serviço com impostos o fator não fica pronto. false = painéis da empresa (média dos serviços).</summary>
+    bool Precificar = false);
 
 /// <summary>Um imposto do serviço já calculado (frações).</summary>
 public record ImpostoCalculadoDto(string Imposto, string Nome, decimal Base, decimal Aliquota, decimal Efetiva, bool AfetaPreco);
@@ -77,7 +79,7 @@ public record FatorResultado(
     /// <summary>false = falta meta ou a soma passa de 100%; o Pricing bloqueia.</summary>
     bool Pronto,
     string? Aviso,
-    /// <summary>"servico" = impostos do cadastro do serviço; "empresa" = o total da empresa (aba Markup).</summary>
+    /// <summary>"servico" = a tabela do serviço; "faltando" = sem serviço ou sem tabela (não precifica); "media" = média dos serviços (painéis da empresa).</summary>
     string ImpostosOrigem = "empresa",
     string ServicoNome = "",
     /// <summary>Os impostos do serviço, um a um (vazio quando vêm da empresa). O ICMS vai em <see cref="Icms"/>.</summary>

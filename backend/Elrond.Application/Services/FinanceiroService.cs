@@ -339,6 +339,16 @@ public class FinanceiroService : IFinanceiroService
         if (carteira is null) return Result.Failure<Movimento>("Carteira não encontrada.");
         if (CarteiraDeOutraEmpresa(carteira, dados.EmpresaId) is { } outra) return Result.Failure<Movimento>(outra);
 
+        // Parte variável: só no lançamento de despesa fixa (atrelada a ela). O valor = parte fixa + variáveis.
+        var itens = atual.Origem == CustoFixo.OrigemLancamentos
+            ? (dados.ItensVariaveis ?? []).Select(i => new ItemVariavelMovimento
+                { Id = i.Id.Length > 0 ? i.Id : Guid.NewGuid().ToString(), Tipo = ItemVariavelMovimento.Tipos.Contains(i.Tipo) ? i.Tipo : "outro", Descricao = i.Descricao.Trim(), Valor = Math.Round(i.Valor, 2) }).ToList()
+            : new List<ItemVariavelMovimento>();
+        if (itens.Any(i => i.Valor <= 0)) return Result.Failure<Movimento>("Informe o valor de cada item variável (ou tire o item).");
+        if (itens.Any(i => i.Descricao.Length == 0)) return Result.Failure<Movimento>("Descreva cada item variável (ex.: seguro da viagem 1234).");
+        var variavel = itens.Sum(i => i.Valor);
+        if (dados.Valor - variavel < 0) return Result.Failure<Movimento>("A parte fixa não pode ficar negativa: confira o valor e os itens variáveis.");
+
         // Mudou o que foi aprovado (valor, vencimento, quem recebe/paga): volta para aprovação.
         var mudouAprovado = atual.Valor != dados.Valor || atual.Vencimento != dados.Vencimento || atual.ParceiroNome != dados.ParceiroNome.Trim();
         var novo = new Movimento
@@ -348,6 +358,7 @@ public class FinanceiroService : IFinanceiroService
             Competencia = dados.Competencia, Vencimento = dados.Vencimento, Valor = dados.Valor, Desconto = dados.Desconto, Juros = dados.Juros, Multa = dados.Multa,
             CarteiraId = dados.CarteiraId, FormaPagamento = dados.FormaPagamento, Parcela = atual.Parcela, TotalParcelas = atual.TotalParcelas,
             GrupoId = atual.GrupoId, Origem = atual.Origem, OrigemId = atual.OrigemId, Observacao = dados.Observacao, BaixarAoAprovar = atual.BaixarAoAprovar,
+            ItensVariaveis = itens, ValorVariavel = variavel,
             Aprovacao = mudouAprovado ? "pendente" : atual.Aprovacao,
             RegraId = mudouAprovado ? string.Empty : atual.RegraId,
             Aprovacoes = mudouAprovado ? new() : atual.Aprovacoes,

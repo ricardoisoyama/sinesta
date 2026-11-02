@@ -115,14 +115,14 @@ public sealed class EmissaoNfseFatura(
 
         var valor = f.Total;
         var pj = DocumentoFiscal.Digitos(cliente.CpfCnpj).Length == 14;
-        // Retenções: a empresa diz quais são retidas (aba Impostos); só tomador pessoa jurídica retém.
-        decimal Ret(ImpostoConfig i) => fiscal.DescontarImpostos && pj && i.Retido && i.Aliquota > 0 ? Math.Round(valor * i.Aliquota, 2, MidpointRounding.AwayFromZero) : 0m;
-        var issRetido = pj && empresa.Iss.Retido;
-        // A alíquota do ISS é a do serviço (a tabela do regime da empresa em vigor hoje); sem ela, a da empresa.
+        // Retenções: os dados fiscais do serviço (desta empresa) dizem quais são retidas; só tomador pessoa jurídica retém.
+        decimal Ret(decimal aliquota) => fiscal.DescontarImpostos && pj && aliquota > 0 ? Math.Round(valor * aliquota, 2, MidpointRounding.AwayFromZero) : 0m;
+        var issRetido = pj && fiscal.IssRetido;
+        // A alíquota do ISS é a do serviço (a tabela do regime da empresa em vigor hoje).
         var issAliquota = servico.ImpostosVigentes(empresa.Regime, DateOnly.FromDateTime(DateTime.UtcNow))
-            .FirstOrDefault(i => i.Imposto == "iss" && i.Aliquota > 0)?.Aliquota ?? empresa.Iss.Aliquota;
+            .FirstOrDefault(i => i.Imposto == "iss" && i.Aliquota > 0)?.Aliquota ?? 0m;
         var retencoes = new RetencoesNfseDto(
-            Inss: Ret(empresa.Inss), Ir: Ret(empresa.Ir), Pis: Ret(empresa.Pis), Cofins: Ret(empresa.Cofins), Csll: Ret(empresa.Csll),
+            Inss: Ret(fiscal.RetencaoInss), Ir: Ret(fiscal.RetencaoIr), Pis: Ret(fiscal.RetencaoPis), Cofins: Ret(fiscal.RetencaoCofins), Csll: Ret(fiscal.RetencaoCsll),
             Iss: issRetido && fiscal.DescontarImpostos ? Math.Round(valor * issAliquota, 2, MidpointRounding.AwayFromZero) : 0m);
 
         var tributacao = Enum.TryParse<TributacaoIss>(fiscal.TributacaoIss, out var t) ? t : TributacaoIss.NoMunicipio;

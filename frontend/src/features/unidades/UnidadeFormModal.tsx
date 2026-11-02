@@ -7,10 +7,8 @@ import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { PercentInput } from '@/features/common/PercentInput'
 import ui from '@/features/common/ui.module.css'
 import { formatCnpj } from '@/lib/format'
-import { Link } from 'react-router-dom'
-import { Hint } from '@/features/common/Hint'
 import { mesclar } from '@/lib/mesclar'
-import { REGIMES, faturamentoVazio, type Unidade, type ImpostoConfig, type RegimeTributario, type TipoUnidade } from './types'
+import { REGIMES, faturamentoVazio, type Unidade, type RegimeTributario, type TipoUnidade } from './types'
 import { emptyUnidade, type UnidadeForm } from './unidade-schema'
 import { ContasEmpresa } from './ContasEmpresa'
 import { FaturamentoEmpresaCampos } from './FaturamentoEmpresaCampos'
@@ -26,17 +24,7 @@ import { FatorPainel } from '@/features/pricing/FatorPainel'
 import { CertificadoEmpresa } from './CertificadoEmpresa'
 import s from './empresa.module.css'
 
-type ImpostoKey = 'ir' | 'csll' | 'inss' | 'pis' | 'cofins' | 'iss'
-const IMPOSTOS: { key: ImpostoKey; nome: string }[] = [
-  { key: 'ir', nome: 'IR (IRPJ)' },
-  { key: 'csll', nome: 'CSLL' },
-  { key: 'inss', nome: 'INSS' },
-  { key: 'pis', nome: 'PIS' },
-  { key: 'cofins', nome: 'COFINS' },
-  { key: 'iss', nome: 'ISS' },
-]
-
-type Aba = 'empresa' | 'dv' | 'impostos' | 'icms' | 'proposta' | 'faturamento' | 'banco'
+type Aba = 'empresa' | 'dv' | 'proposta' | 'faturamento' | 'banco'
 
 interface Props {
   open: boolean
@@ -114,10 +102,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
     setD((p) => ({ ...p, enderecoCompleto: { ...p.enderecoCompleto, ...patch } }))
   const semPrefixo = (err: unknown) => getErrorMessage(err).replace(/^Não foi possível salvar \(\d+\)\. /, '')
 
-  // ── Impostos: as alíquotas ficam no cadastro de cada serviço (mudam por atividade). O total daqui é a
-  // rede de segurança do fator: vale para o item do Pricing sem serviço com impostos (Empresa.ImpostosDaDv).
-  const erroImpostos = d.dv.impostos > 0 ? '' : 'Informe os impostos da empresa (%): valem para o item do Pricing sem serviço com impostos.'
-  const [tentouSalvar, setTentouSalvar] = useState(false)
+  // Os impostos e as retenções da NFS-e ficam no cadastro de cada serviço (mudam por atividade e regime).
   const paraSalvar = (x: UnidadeForm): UnidadeForm => ({ ...x, simplesAnexo: '' })
   // Fator ao vivo: o motor do servidor calcula com o rascunho do formulário (antes de salvar),
   // somando custos fixos e meta gravados da empresa.
@@ -164,8 +149,6 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
       enderecoCompleto: { ...p.enderecoCompleto, cep: c.cep, logradouro: c.logradouro || p.enderecoCompleto.logradouro, bairro: c.bairro || p.enderecoCompleto.bairro },
     }))
 
-  const setImp = (key: ImpostoKey, patch: Partial<ImpostoConfig>) =>
-    setD((p) => ({ ...p, [key]: { ...p[key], ...patch } }))
   const setDv = (patch: Partial<UnidadeForm['dv']>) => setD((p) => ({ ...p, dv: { ...p.dv, ...patch } }))
 
   // ── Validades da proposta (aba Proposta) ──
@@ -204,12 +187,6 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
   }
   const submit = (e: FormEvent) => {
     e.preventDefault()
-    // Empresa ativa sem imposto deixa o fator errado: leva para a aba e mostra o que falta.
-    if (erroImpostos && d.status !== 'inativo') {
-      setTentouSalvar(true)
-      setTab('dv')
-      return
-    }
     onSave(paraSalvar(d))
   }
 
@@ -222,15 +199,13 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
   return (
     <form id="empresaForm" onSubmit={submit} noValidate>
       <div className={ui.topRow}>
-        <span className={ui.modalNote}>Estabelecimento, markup e retenções. Os impostos de cada atividade ficam no cadastro do serviço.</span>
+        <span className={ui.modalNote}>Estabelecimento e markup. Os impostos e as retenções da NFS-e ficam no cadastro de cada serviço.</span>
         <StatusToggle value={d.status !== 'inativo'} onChange={(v) => set({ status: v ? 'ativo' : 'inativo' })} />
       </div>
 
       <div className={s.tabs}>
         {aba('empresa', 'Empresa')}
         {aba('dv', 'Markup')}
-        {aba('impostos', 'Regime e retenções')}
-        {aba('icms', 'ICMS')}
         {aba('proposta', 'Proposta')}
         {aba('faturamento', 'Faturamento')}
         {aba('banco', 'Dados bancários')}
@@ -282,10 +257,19 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
             <Field className={ui.col2} label="Nome curto" req hint="Como a empresa aparece nos seletores das telas.">
               <input value={d.nome} onChange={(e) => set({ nome: e.target.value })} placeholder="Ex.: Matriz" />
             </Field>
-            <Field className={ui.col2} label="Tipo" req>
+            <Field label="Tipo" req>
               <select value={d.tipo} onChange={(e) => set({ tipo: e.target.value as TipoUnidade })}>
                 <option value="Matriz">Matriz</option>
                 <option value="Filial">Filial</option>
+              </select>
+            </Field>
+            <Field label="Regime tributário" req hint="Escolhe a tabela de impostos de cada serviço (Cadastros › Serviços) que vale para esta empresa no Pricing e na NFS-e.">
+              <select value={d.regime} onChange={(e) => set({ regime: e.target.value as RegimeTributario })}>
+                {REGIMES.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </Field>
 
@@ -357,15 +341,6 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
             <div>
               <div className={ui.grid}>
                 <Field
-                  className={ui.col4}
-                  label="Impostos da empresa (%)"
-                  req
-                  hint="Total de impostos sobre a receita. Vale só para o item do Pricing sem serviço com impostos cadastrados: os impostos de cada atividade (transporte, armazenagem...) ficam em Cadastros › Serviços."
-                >
-                  <PercentInput value={d.dv.impostos} onChange={(n) => setDv({ impostos: n })} invalid={tentouSalvar && !!erroImpostos} />
-                  {tentouSalvar && erroImpostos && <span className={ui.errMsg}>{erroImpostos}</span>}
-                </Field>
-                <Field
                   className={ui.col2}
                   label="Comissão padrão (%)"
                   hint="Vale quando o vendedor não tem regra de comissão própria. No Pricing dá para ajustar por operação, sem mexer no lucro."
@@ -429,7 +404,7 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
                 </div>
               </fieldset>
               <div className={s.dvNota}>
-                Os impostos de cada serviço ficam em <b>Cadastros › Serviços</b> (o fator ao lado usa o total da empresa); a despesa fixa vem de <b>Despesas Fixas</b> e da <b>Meta</b> da empresa. Tudo recalcula o fator ao lado.
+                Os impostos ficam em <b>Cadastros › Serviços</b>, uma tabela por regime: no Pricing vale a do serviço do item; o fator ao lado usa a média dos serviços. A despesa fixa vem de <b>Despesas Fixas</b> e da <b>Meta</b> da empresa.
               </div>
             </div>
             <FatorPainel fator={fatorAoVivo.fator} carregando={fatorAoVivo.carregando} />
@@ -437,74 +412,6 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
         </section>
       )}
 
-      {tab === 'impostos' && (
-        <section className={ui.fsection}>
-          <div className={ui.grid}>
-            <Field className={ui.col2} label="Regime tributário" req hint="Sai na NFS-e e decide se a nota exige IBS/CBS.">
-              <select value={d.regime} onChange={(e) => set({ regime: e.target.value as RegimeTributario })}>
-                {REGIMES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </Field>
-          </div>
-          <div className={s.avisoLegado}>
-            As alíquotas dos impostos (IRPJ, CSLL, PIS, COFINS, CBS, IBS, ISS, ICMS, DAS...) ficam no cadastro de cada serviço, em{' '}
-            <Link to="/cadastros/servicos">Cadastros › Serviços</Link>: mudam por atividade e cada uma diz se afeta o preço. Aqui ficam só as retenções da NFS-e.
-          </div>
-
-          <div className={s.blocoTitulo} style={{ marginTop: 14 }}>
-            Retenções na NFS-e
-            <span>o cliente pessoa jurídica desconta do pagamento e recolhe no lugar da empresa</span>
-          </div>
-          <div className={s.impHead}>
-            <span>Imposto</span>
-            <span>Alíquota retida</span>
-            <span>
-              Retido <Hint text="Marcado, a NFS-e sai com a retenção (ex.: ISS retido, INSS de 11% na cessão de mão de obra, IR de 1,5%). A alíquota do ISS retido é a do serviço." />
-            </span>
-            <span />
-          </div>
-          {IMPOSTOS.map(({ key, nome }) => {
-            const cfg = d[key]
-            return (
-              <div key={key} className={s.impRow}>
-                <span className={s.impLabel}>{nome}</span>
-                {key === 'iss' ? <span className={ui.cellMut}>a do serviço</span> : <PercentInput value={cfg.aliquota} onChange={(n) => setImp(key, { aliquota: n })} />}
-                <button type="button" className={`${s.sw} ${cfg.retido ? s.swOn : ''}`} onClick={() => setImp(key, { retido: !cfg.retido })} title="Retido">
-                  <span className={s.swDot} />
-                </button>
-                <span />
-              </div>
-            )
-          })}
-        </section>
-      )}
-
-      {tab === 'icms' && (
-        <section className={ui.fsection}>
-          <div className={ui.topRow} style={{ marginBottom: 12 }}>
-            <span className={ui.modalNote}>
-              <b>Contribuinte de ICMS</b>. Ligado, o campo ICMS dos Dados da Operação aparece no Pricing e entra por
-              dentro no frete; desligado (Simples), o ICMS não é calculado.
-            </span>
-            <button
-              type="button"
-              className={`${s.sw} ${d.icmsAtivo ? s.swOn : ''}`}
-              onClick={() => set({ icmsAtivo: !d.icmsAtivo })}
-              title="Contribuinte de ICMS"
-            >
-              <span className={s.swDot} />
-            </button>
-          </div>
-          <div className={ui.modalNote}>
-            A alíquota vem da <Link to="/cadastros/icms">Tabela de ICMS</Link> (UF de origem × destino), preenchida sozinha no Pricing pela origem e
-            pelo destino da operação. Para usar, crie um campo do tipo <b>ICMS</b> em <Link to="/cadastros/campos-operacao">Dados da Operação</Link>.
-          </div>
-        </section>
-      )}
 
       {tab === 'proposta' && (
         <section className={ui.fsection}>

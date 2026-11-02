@@ -148,6 +148,9 @@ public sealed class LancamentosDespesaFixa(
                 var venc = meses.First(v => v.ToString("yyyy-MM", CultureInfo.InvariantCulture) == m.Competencia);
                 var novo = Modelo(venc);
                 novo.Observacao = m.Observacao;
+                // A parte variável que o financeiro incluiu fica: muda só a parte fixa.
+                novo.ItensVariaveis = m.ItensVariaveis;
+                novo.Valor = df.ValorMensal + m.ValorVariavel;
                 var mudou = m.Valor != novo.Valor || m.Vencimento != novo.Vencimento || m.CarteiraId != novo.CarteiraId || m.PlanoContaId != novo.PlanoContaId
                     || m.CentroCustoId != novo.CentroCustoId || m.ParceiroNome != novo.ParceiroNome || m.Descricao != novo.Descricao;
                 if (!mudou) continue;

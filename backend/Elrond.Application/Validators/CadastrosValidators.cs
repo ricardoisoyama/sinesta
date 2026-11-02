@@ -55,11 +55,6 @@ public class EmpresaValidator : AbstractValidator<Empresa>
         RuleFor(e => e.Dv.ReceitaEstimadaMensal).GreaterThanOrEqualTo(0);
         RuleFor(e => e.MarkupMinimo).InclusiveBetween(0m, 1m).WithMessage("Markup mínimo deve ficar entre 0% e 100%.");
         RuleFor(e => e.Dv.Lucro).InclusiveBetween(0m, 1m).WithMessage("Markup praticado deve ficar entre 0% e 100%.");
-        // Rede de segurança do fator: vale para o item do Pricing sem serviço com impostos cadastrados.
-        RuleFor(e => e)
-            .Must(e => e.ImpostosDaDv() > 0)
-            .WithMessage("Informe os impostos da empresa (aba Markup): valem para o item sem serviço com impostos.")
-            .When(e => e.Status != "inativo");
         RuleFor(e => e.InscricaoMunicipal).MaximumLength(20).WithMessage("Inscrição Municipal: até 20 caracteres.");
         RuleFor(e => e.InscricaoEstadual).MaximumLength(20).WithMessage("Inscrição Estadual: até 20 caracteres.");
         RuleFor(e => e.EnderecoCompleto!.Cep)

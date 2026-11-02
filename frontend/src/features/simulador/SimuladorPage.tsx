@@ -223,7 +223,7 @@ export function SimuladorPage() {
   // Fator da empresa pelo motor do servidor (custos fixos, meta, impostos, DV e lucro, sempre
   // atualizados). A comissão é a do vendedor/empresa, ajustável nesta operação sem mexer no lucro.
   const [comissaoEditada, setComissaoEditada] = useState<number | null>(null)
-  const fatorEmpresa = useFator({ empresaId: unidadeId, vendedorId: vendedorId || null, comissoes: comissaoEditada, servicoId: servicoId || null }, !!unidadeId)
+  const fatorEmpresa = useFator({ empresaId: unidadeId, vendedorId: vendedorId || null, comissoes: comissaoEditada, servicoId: servicoId || null, precificar: true }, !!unidadeId)
   const fr = fatorEmpresa.fator
   const semFator = !!fr && !fr.pronto
   const base = fr?.pronto

@@ -9,7 +9,22 @@ export type TipoMovimento = 'receber' | 'pagar'
 export type StatusMovimento = 'aberto' | 'atrasado' | 'liquidado' | 'cancelado'
 
 /** De onde o movimento nasceu (para o rastro e para a automação futura). */
-export type OrigemMovimento = 'manual' | 'proposta' | 'despesa' | 'conciliacao' | 'transferencia'
+export type OrigemMovimento = 'manual' | 'proposta' | 'despesa' | 'conciliacao' | 'transferencia' | 'custo-fixo' | 'fatura'
+
+/** Parte variável de um lançamento de despesa fixa (seguro por viagem, juros, mora...), incluída pelo financeiro. */
+export interface ItemVariavelMovimento {
+  id: string
+  tipo: 'seguro' | 'juros' | 'multa' | 'outro'
+  descricao: string
+  valor: number
+}
+
+export const TIPOS_VARIAVEL: { valor: ItemVariavelMovimento['tipo']; label: string; exemplo: string }[] = [
+  { valor: 'seguro', label: 'Seguro por viagem', exemplo: 'Ex.: Viagem 1234 · 0,03% sobre NF de R$ 600 mil' },
+  { valor: 'juros', label: 'Juros', exemplo: 'Ex.: Juros de 3 dias de atraso' },
+  { valor: 'multa', label: 'Multa / mora', exemplo: 'Ex.: Multa de 2% por atraso' },
+  { valor: 'outro', label: 'Outro', exemplo: 'Descreva o que compõe a cobrança' },
+]
 
 /** Situação da aprovação: todo lançamento nasce pendente. */
 export type AprovacaoMovimento = 'pendente' | 'aprovado' | 'reprovado'
@@ -44,6 +59,8 @@ export const ORIGENS_MOVIMENTO: Record<OrigemMovimento, string> = {
   despesa: 'Despesa recorrente',
   conciliacao: 'Criado na conciliação',
   transferencia: 'Transferência entre contas',
+  'custo-fixo': 'Despesa fixa',
+  fatura: 'Fatura ao cliente',
 }
 
 export const PERIODICIDADES = [
@@ -126,6 +143,9 @@ export interface Movimento {
   pixData?: string
   observacao: string
   cancelado: boolean
+  /** Só no lançamento de despesa fixa: itens variáveis; valor = parte fixa + a soma deles (valorVariavel). */
+  itensVariaveis?: ItemVariavelMovimento[]
+  valorVariavel?: number
   /** Aprovação (regra do tipo movimento em Aprovadores e Regras). Ausente = pendente. */
   aprovacao?: AprovacaoMovimento
   /** Regra que cobre o lançamento; vazio = nenhuma regra cobre o valor. */

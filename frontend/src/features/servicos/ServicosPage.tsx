@@ -49,8 +49,8 @@ export function ServicosPage() {
       const futura = (sv.impostos ?? []).some((i) => (i.regime === regime || !i.regime) && i.vigenteDesde > hoje)
       const curto = regime === 'Simples Nacional' ? 'Simples' : regime.replace('Lucro ', '')
       if (!lista.length) return { regime, curto, texto: 'da empresa', titulo: 'sem impostos no serviço: o Pricing usa os da empresa (aba Markup)' }
-      const carga = cargaDoServico(lista, 0)
-      const texto = `${formatPct(carga.noPreco)}${lista.some((i) => i.imposto === 'irpj-adicional') ? ' + adicional' : ''}${carga.icms ? ' + ICMS' : ''}`
+      const carga = cargaDoServico(lista)
+      const texto = `${formatPct(carga.noPreco)}${carga.icms ? ' + ICMS' : ''}`
       const titulo = lista.map((i) => `${rotuloImposto(i)}${i.afetaPreco ? '' : ' (só destaca)'}`).join(' · ') + (futura ? ' — há vigência futura cadastrada' : '')
       return { regime, curto, texto, titulo }
     })

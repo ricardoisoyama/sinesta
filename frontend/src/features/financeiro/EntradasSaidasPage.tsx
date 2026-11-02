@@ -286,8 +286,12 @@ export function EntradasSaidasPage() {
       largura: LARGURA.valor,
       valor: (m) => liquidoDe(m),
       cell: (m) => (
-        <span className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}>
+        <span
+          className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}
+          title={(m.valorVariavel ?? 0) > 0 ? `Fixo ${formatBRL(m.valor - (m.valorVariavel ?? 0))} + variável ${formatBRL(m.valorVariavel ?? 0)}` : undefined}
+        >
           {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
+          {(m.valorVariavel ?? 0) > 0 && <small className={s.comVariavel}>+ variável</small>}
         </span>
       ),
     },

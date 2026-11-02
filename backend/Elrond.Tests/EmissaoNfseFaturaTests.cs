@@ -29,19 +29,16 @@ public class EmissaoNfseFaturaTests
                     EmpresaId = "filial", ItemLc116 = "11.04", CodigoNacional = "110401", CodigoMunicipal = "370407", Cnae = "5211701", Nbs = "1.0601.10.00",
                     Descricao = "Armazenamento, depósito, carga e descarga", TributacaoIss = "NoMunicipio", CstPisCofins = "01",
                     IndicadorOperacao = "050101", CstIbsCbs = "000", ClassificacaoTributaria = "000001", TransparenciaAliquota = 0.1345m, TransparenciaFonte = "IBPT",
+                    // Retenções desta empresa neste serviço (INSS não é retido).
+                    RetencaoIr = 0.015m, RetencaoPis = 0.0065m, RetencaoCofins = 0.03m, RetencaoCsll = 0.01m,
                 },
             ],
+            Impostos = [new ImpostoServico { Id = "iss", Imposto = "iss", Base = 1m, Aliquota = 0.027m, Regime = "Lucro Presumido" }],
         });
         var empresas = new Mem<Empresa>();
         empresas.Itens.Add(new Empresa
         {
             Id = "filial", Nome = "Mirai - Filial 02", Regime = "Lucro Presumido",
-            Iss = new ImpostoConfig { Aliquota = 0.027m, Retido = false },
-            Ir = new ImpostoConfig { Aliquota = 0.015m, Retido = true },
-            Pis = new ImpostoConfig { Aliquota = 0.0065m, Retido = true },
-            Cofins = new ImpostoConfig { Aliquota = 0.03m, Retido = true },
-            Csll = new ImpostoConfig { Aliquota = 0.01m, Retido = true },
-            Inss = new ImpostoConfig { Aliquota = 0.11m, Retido = false },
         });
         var clientes = new Mem<Cliente>();
         clientes.Itens.Add(new Cliente
@@ -54,7 +51,7 @@ public class EmissaoNfseFaturaTests
     }
 
     [Fact]
-    public async Task Monta_a_nota_com_o_servico_os_impostos_da_empresa_e_o_cliente()
+    public async Task Monta_a_nota_com_o_servico_seus_impostos_e_retencoes_e_o_cliente()
     {
         var (svc, _, _, _, fatura) = Montar();
         var r = await svc.MontarAsync(fatura);
@@ -64,7 +61,7 @@ public class EmissaoNfseFaturaTests
         Assert.Equal(("370407", "11.04", "1.0601.10.00", "5211701", "01"), (p.Servico.CodigoMunicipal, p.Servico.ItemLc116, p.Servico.Nbs, p.Servico.Cnae, p.Servico.CstPisCofins));
         Assert.Equal("Armazenamento, depósito, carga e descarga · set/2026 · Contêiner MNBU9228042", p.Servico.Descricao);
         Assert.Equal(("050101", "000001", "000"), (p.IbsCbs!.IndicadorOperacao, p.IbsCbs.ClassificacaoTributaria, p.IbsCbs.Cst));
-        // Empresa: ISS e retenções (só as marcadas como retidas; INSS não).
+        // Serviço: ISS da tabela do regime e as retenções dos dados fiscais (INSS não).
         Assert.Equal((0.027m, false), (p.Iss!.Aliquota, p.Iss.RetidoPeloTomador));
         Assert.Equal((150m, 65m, 300m, 100m, 0m, 0m), (p.Retencoes!.Ir, p.Retencoes.Pis, p.Retencoes.Cofins, p.Retencoes.Csll, p.Retencoes.Inss, p.Retencoes.Iss));
         // Cliente: tomador com o IBGE da cidade.

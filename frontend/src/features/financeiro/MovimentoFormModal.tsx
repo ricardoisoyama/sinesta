@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip, Receipt, X } from 'lucide-react'
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Paperclip, Plus, Receipt, Trash2, X } from 'lucide-react'
 import { TransferenciaCampos, type DadosTransferencia } from './TransferenciaCampos'
 import { ComprovantePix } from './ComprovantePix'
 import { Modal } from '@/features/common/Modal'
@@ -21,7 +21,7 @@ import { useUsuarios } from '@/features/usuarios/store'
 import { FORMAS_PAGAMENTO } from '@/features/parceiros/types'
 import { formatBRL } from '@/lib/format'
 import { gerarParcelas, hojeISO } from './calculos'
-import { carteiraDaEmpresa, movimentoVazio, PERIODICIDADES, type Carteira, type Movimento, type Periodicidade, type TipoMovimento } from './types'
+import { carteiraDaEmpresa, movimentoVazio, PERIODICIDADES, TIPOS_VARIAVEL, type Carteira, type ItemVariavelMovimento, type Movimento, type Periodicidade, type TipoMovimento } from './types'
 import { empresaPadrao } from '@/features/unidades/types'
 import s from './financeiro.module.css'
 
@@ -139,6 +139,20 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
 
   const preview = d.valor > 0 && d.vencimento && parcelas > 1 ? gerarParcelas(d, parcelas, periodicidade) : []
 
+  // ── Despesa fixa: o financeiro inclui a parte variável (seguro por viagem, juros, mora...) e o lançamento
+  // passa a valer a parte fixa + os itens. Ficam atrelados à despesa (relatório de fixo × variável). ──
+  const daDespesaFixa = !!initial && initial.origem === 'custo-fixo'
+  const variaveis = d.itensVariaveis ?? []
+  const centavos = (n: number) => Math.round(n * 100) / 100
+  const totalVariavel = centavos(variaveis.reduce((a, i) => a + (i.valor || 0), 0))
+  const parteFixa = centavos(d.valor - totalVariavel)
+  const mudarVariaveis = (lista: ItemVariavelMovimento[]) => {
+    const novoTotal = centavos(lista.reduce((a, i) => a + (i.valor || 0), 0))
+    set({ itensVariaveis: lista, valorVariavel: novoTotal, valor: centavos(parteFixa + novoTotal) })
+  }
+  const mudarVariavel = (id: string, p: Partial<ItemVariavelMovimento>) => mudarVariaveis(variaveis.map((i) => (i.id === id ? { ...i, ...p } : i)))
+  const despesaFixa = daDespesaFixa ? (custosFixos ?? []).find((c) => c.id === initial?.origemId) : undefined
+
   const [salvando, setSalvando] = useState(false)
   const nomeEmpresa = (id: string) => (empresas ?? []).find((e) => e.id === id)?.nome ?? ''
   const contasTransferencia = analiticas().filter((c) => c.status === 'ativo')
@@ -178,6 +192,8 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
     if (!d.descricao.trim()) e.descricao = 'Descreva o lançamento.'
     if (!d.vencimento) e.vencimento = 'Informe o vencimento.'
     if (!(d.valor > 0)) e.valor = 'Informe o valor.'
+    if (daDespesaFixa && parteFixa < 0) e.valor = 'A parte fixa não pode ficar negativa.'
+    if (variaveis.some((i) => !(i.valor > 0) || !i.descricao.trim())) e.variaveis = 'Descreva e informe o valor de cada item variável (ou tire o item).'
     if (!d.carteiraId) e.carteiraId = 'Escolha a carteira.'
     if (!d.parceiroNome.trim()) e.parceiroId = receber ? 'Escolha o cliente.' : 'Escolha o fornecedor ou funcionário.'
     setErros(e)
@@ -320,9 +336,15 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
           Valor e vencimento {!editando && <span className={ui.fsectionHint}>parcelas dividem o valor e avançam a data</span>}
         </div>
         <div className={ui.grid}>
-          <Field label="Valor (R$)" req error={erros.valor}>
-            <MoneyInput value={d.valor} onChange={(n) => set({ valor: n })} invalid={!!erros.valor} />
-          </Field>
+          {daDespesaFixa ? (
+            <Field label="Parte fixa (R$)" req error={erros.valor} hint={`O valor da despesa fixa${despesaFixa ? ` nº ${despesaFixa.numero} (${formatBRL(despesaFixa.valorMensal)}/mês)` : ''}. Os variáveis entram abaixo.`}>
+              <MoneyInput value={parteFixa} onChange={(n) => set({ valor: centavos(n + totalVariavel) })} invalid={!!erros.valor} />
+            </Field>
+          ) : (
+            <Field label="Valor (R$)" req error={erros.valor}>
+              <MoneyInput value={d.valor} onChange={(n) => set({ valor: n })} invalid={!!erros.valor} />
+            </Field>
+          )}
           <Field label="Vencimento" req error={erros.vencimento}>
             <input type="date" value={d.vencimento} onChange={(e) => set({ vencimento: e.target.value, competencia: d.competencia || e.target.value.slice(0, 7) })} />
           </Field>
@@ -366,6 +388,36 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
             <input value={d.observacao} onChange={(e) => set({ observacao: e.target.value })} placeholder="Opcional" />
           </Field>
         </div>
+        {daDespesaFixa && (
+          <div className={s.variaveis}>
+            <div className={s.variaveisTitulo}>
+              Variáveis desta despesa fixa
+              <span>cobranças que mudam a cada mês e entram neste pagamento; ficam atreladas à despesa fixa</span>
+            </div>
+            {variaveis.map((i) => (
+              <div key={i.id} className={s.variavelLinha}>
+                <select value={i.tipo} onChange={(e) => mudarVariavel(i.id, { tipo: e.target.value as ItemVariavelMovimento['tipo'] })} aria-label="Tipo do item variável">
+                  {TIPOS_VARIAVEL.map((t) => <option key={t.valor} value={t.valor}>{t.label}</option>)}
+                </select>
+                <input value={i.descricao} onChange={(e) => mudarVariavel(i.id, { descricao: e.target.value })} placeholder={TIPOS_VARIAVEL.find((t) => t.valor === i.tipo)?.exemplo} aria-label="Descrição do item variável" />
+                <MoneyInput value={i.valor} onChange={(n) => mudarVariavel(i.id, { valor: n })} />
+                <button type="button" className={ui.iconBtn} title="Tirar este item" onClick={() => mudarVariaveis(variaveis.filter((x) => x.id !== i.id))}><Trash2 size={14} /></button>
+              </div>
+            ))}
+            {erros.variaveis && <span className={ui.errMsg}>{erros.variaveis}</span>}
+            <div className={s.variaveisRodape}>
+              <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => mudarVariaveis([...variaveis, { id: crypto.randomUUID(), tipo: 'seguro', descricao: '', valor: 0 }])} disabled={liquidado || pixAndamento}>
+                <Plus /> Item variável
+              </button>
+              <span className={s.variaveisTotal}>
+                Fixo {formatBRL(parteFixa)} + variável {formatBRL(totalVariavel)} = <b>{formatBRL(d.valor)}</b>
+              </span>
+            </div>
+            {initial && d.valor !== initial.valor && initial.aprovacao === 'aprovado' && (
+              <span className={ui.cellMut}>O valor mudou: ao salvar, o lançamento volta para aprovação.</span>
+            )}
+          </div>
+        )}
         {preview.length > 0 && (
           <div className={s.parcelasPreview}>
             {preview.map((p) => (

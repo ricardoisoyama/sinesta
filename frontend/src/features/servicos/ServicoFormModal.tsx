@@ -11,7 +11,6 @@ import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { DadosFiscaisServico } from './DadosFiscaisServico'
 import { ImpostosServicoEditor } from './ImpostosServicoEditor'
 import { empresaPadrao } from '@/features/unidades/types'
-import { useFatorEmpresa } from '@/features/pricing/usePreco'
 import { regimeDaTabela, type RegimeTabela } from './impostos'
 
 interface Props {
@@ -43,9 +42,7 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
   const ativo = useWatch({ control, name: 'status' }) !== 'inativo'
   const fiscais = useWatch({ control, name: 'fiscais' }) ?? []
   const impostos = useWatch({ control, name: 'impostos' }) ?? []
-  // O adicional do IRPJ depende do faturamento: mostra com a meta da empresa padrão.
   const padrao = empresaPadrao(empresas)
-  const fatorPadrao = useFatorEmpresa(open ? (padrao?.id ?? '') : '')
 
   const regimePadrao = regimeDaTabela(padrao?.regime ?? 'Lucro Presumido')
   const empresasPorRegime: Partial<Record<RegimeTabela, string[]>> = {}
@@ -106,14 +103,12 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
             empresasPorRegime={empresasPorRegime}
             value={impostos}
             onChange={(v) => setValue('impostos', v, { shouldDirty: true })}
-            faturamento={fatorPadrao?.receita ?? 0}
-            nomeEmpresa={padrao?.nome ?? 'empresa'}
           />
         </section>
 
         <section className={ui.fsection}>
           <div className={ui.fsectionTitle}>
-            Dados fiscais (NFS-e) <span className={ui.fsectionHint}>um por empresa emitente; as retenções vêm da empresa</span>
+            Dados fiscais (NFS-e) <span className={ui.fsectionHint}>um por empresa emitente, com as retenções</span>
           </div>
           <DadosFiscaisServico value={fiscais} onChange={(v) => setValue('fiscais', v, { shouldDirty: true })} empresas={empresas} />
         </section>
