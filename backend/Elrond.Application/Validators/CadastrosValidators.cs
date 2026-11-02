@@ -55,12 +55,10 @@ public class EmpresaValidator : AbstractValidator<Empresa>
         RuleFor(e => e.Dv.ReceitaEstimadaMensal).GreaterThanOrEqualTo(0);
         RuleFor(e => e.MarkupMinimo).InclusiveBetween(0m, 1m).WithMessage("Markup mínimo deve ficar entre 0% e 100%.");
         RuleFor(e => e.Dv.Lucro).InclusiveBetween(0m, 1m).WithMessage("Markup praticado deve ficar entre 0% e 100%.");
-        // Sem imposto o fator sai errado: Simples/MEI pelo DAS, Presumido/Real pelas alíquotas (ou o total antigo).
+        // Rede de segurança do fator: vale para o item do Pricing sem serviço com impostos cadastrados.
         RuleFor(e => e)
             .Must(e => e.ImpostosDaDv() > 0)
-            .WithMessage(e => e.Regime is "Simples Nacional" or "MEI"
-                ? "Informe a alíquota do DAS (aba Impostos)."
-                : "Informe as alíquotas dos impostos (aba Impostos).")
+            .WithMessage("Informe os impostos da empresa (aba Markup): valem para o item sem serviço com impostos.")
             .When(e => e.Status != "inativo");
         RuleFor(e => e.InscricaoMunicipal).MaximumLength(20).WithMessage("Inscrição Municipal: até 20 caracteres.");
         RuleFor(e => e.InscricaoEstadual).MaximumLength(20).WithMessage("Inscrição Estadual: até 20 caracteres.");
@@ -72,7 +70,23 @@ public class EmpresaValidator : AbstractValidator<Empresa>
 
 public class ServicoValidator : AbstractValidator<Servico>
 {
-    public ServicoValidator() => RuleFor(s => s.Nome).NotEmpty().WithMessage("Informe o nome do serviço.");
+    public ServicoValidator()
+    {
+        RuleFor(s => s.Nome).NotEmpty().WithMessage("Informe o nome do serviço.");
+        RuleForEach(s => s.Impostos).ChildRules(i =>
+        {
+            i.RuleFor(x => x.Imposto).Must(t => ImpostoServico.Tipos.Contains(t)).WithMessage("Imposto inválido.");
+            i.RuleFor(x => x.Nome).NotEmpty().When(x => x.Imposto == "outro").WithMessage("Dê um nome ao imposto.");
+            i.RuleFor(x => x.Base).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a base de cálculo fica entre 0% e 100%.");
+            i.RuleFor(x => x.Aliquota).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a alíquota fica entre 0% e 100%.");
+            i.RuleFor(x => x.Limite).GreaterThanOrEqualTo(0m).WithMessage("O limite do adicional não pode ser negativo.");
+        });
+        RuleFor(s => s.Impostos)
+            .Must(l => l.Where(i => i.Imposto != "outro").GroupBy(i => i.Imposto).All(g => g.Count() == 1))
+            .WithMessage("Cada imposto aparece uma vez no serviço (use \"Outro\" para um a mais).");
+    }
+
+    private static string Rotulo(ImpostoServico i) => i.Nome.Length > 0 ? i.Nome : i.Imposto.ToUpperInvariant();
 }
 
 public class TipoCustoValidator : AbstractValidator<TipoCusto>

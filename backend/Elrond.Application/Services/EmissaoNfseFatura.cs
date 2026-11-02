@@ -15,7 +15,8 @@ public sealed record NfseDaFaturaDto(string FaturaId, NotaFiscalServicoDto? Nota
 /// Junta o que cada cadastro sabe, sem repetir informação:
 /// - Serviço do contrato (dados fiscais da empresa emitente): item LC 116, código da prefeitura, NBS,
 ///   CNAE, CSTs, cIndOp, cClassTrib, Lei da Transparência e onde o ISS é devido;
-/// - Empresa (aba Impostos): alíquota do ISS e as retenções (ISS, PIS, COFINS, CSLL, INSS, IR com "retido");
+/// - Serviço (impostos): a alíquota do ISS, quando o serviço tem a linha de ISS;
+/// - Empresa (aba Retenções): as retenções (ISS, PIS, COFINS, CSLL, INSS, IR com "retido") e, sem ISS no serviço, a alíquota dele;
 /// - Cliente: o tomador, com o endereço e o município (código do IBGE pela cidade do cadastro).
 /// Nota emitida → a fatura registra a NF sozinha ("NFS-e 123") e segue para o boleto.
 /// </summary>
@@ -117,9 +118,11 @@ public sealed class EmissaoNfseFatura(
         // Retenções: a empresa diz quais são retidas (aba Impostos); só tomador pessoa jurídica retém.
         decimal Ret(ImpostoConfig i) => fiscal.DescontarImpostos && pj && i.Retido && i.Aliquota > 0 ? Math.Round(valor * i.Aliquota, 2, MidpointRounding.AwayFromZero) : 0m;
         var issRetido = pj && empresa.Iss.Retido;
+        // A alíquota do ISS é a do serviço (cada atividade tem a sua); sem ela, a da empresa.
+        var issAliquota = (servico.Impostos ?? []).FirstOrDefault(i => i.Imposto == "iss" && i.Aliquota > 0)?.Aliquota ?? empresa.Iss.Aliquota;
         var retencoes = new RetencoesNfseDto(
             Inss: Ret(empresa.Inss), Ir: Ret(empresa.Ir), Pis: Ret(empresa.Pis), Cofins: Ret(empresa.Cofins), Csll: Ret(empresa.Csll),
-            Iss: issRetido && fiscal.DescontarImpostos ? Math.Round(valor * empresa.Iss.Aliquota, 2, MidpointRounding.AwayFromZero) : 0m);
+            Iss: issRetido && fiscal.DescontarImpostos ? Math.Round(valor * issAliquota, 2, MidpointRounding.AwayFromZero) : 0m);
 
         var tributacao = Enum.TryParse<TributacaoIss>(fiscal.TributacaoIss, out var t) ? t : TributacaoIss.NoMunicipio;
         var texto = string.Join(" · ", new[] { fiscal.Descricao.Trim(), f.Referencia, contrato.TextoAdicionalNota.Trim() }.Where(s => s.Length > 0));
@@ -133,7 +136,7 @@ public sealed class EmissaoNfseFatura(
             Servico: new ServicoNfseDto(fiscal.CodigoMunicipal, fiscal.ItemLc116, fiscal.Nbs, texto.Length > 2000 ? texto[..2000] : texto,
                 fiscal.Cnae.Length > 0 ? fiscal.Cnae : null, fiscal.CstPisCofins.Length > 0 ? fiscal.CstPisCofins : null),
             Valores: new ValoresNfseDto(valor),
-            Iss: new IssNfseDto(tributacao, empresa.Iss.Aliquota > 0 ? empresa.Iss.Aliquota : null, issRetido),
+            Iss: new IssNfseDto(tributacao, issAliquota > 0 ? issAliquota : null, issRetido),
             Retencoes: retencoes,
             IbsCbs: fiscal.IndicadorOperacao.Length == 6 && fiscal.ClassificacaoTributaria.Length == 6
                 ? new IbsCbsNfseDto(fiscal.IndicadorOperacao, fiscal.ClassificacaoTributaria, pj ? null : true, fiscal.CstIbsCbs.Length == 3 ? fiscal.CstIbsCbs : null)

@@ -9,10 +9,13 @@ import ui from '@/features/common/ui.module.css'
 import { servicoSchema, emptyServico, type ServicoForm } from './servico-schema'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { DadosFiscaisServico } from './DadosFiscaisServico'
+import { ImpostosServicoEditor } from './ImpostosServicoEditor'
+import { empresaPadrao } from '@/features/unidades/types'
+import { useFatorEmpresa } from '@/features/pricing/usePreco'
 
 interface Props {
   open: boolean
-  initial?: (Omit<ServicoForm, 'fiscais'> & { fiscais?: ServicoForm['fiscais'] }) | null
+  initial?: (Omit<ServicoForm, 'fiscais' | 'impostos'> & { fiscais?: ServicoForm['fiscais']; impostos?: ServicoForm['impostos'] }) | null
   error?: string | null
   busy?: boolean
   /** Já usado em proposta: o nome não muda (os dados fiscais sim). */
@@ -38,9 +41,13 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
 
   const ativo = useWatch({ control, name: 'status' }) !== 'inativo'
   const fiscais = useWatch({ control, name: 'fiscais' }) ?? []
+  const impostos = useWatch({ control, name: 'impostos' }) ?? []
+  // O adicional do IRPJ depende do faturamento: mostra com a meta da empresa padrão.
+  const padrao = empresaPadrao(empresas)
+  const fatorPadrao = useFatorEmpresa(open ? (padrao?.id ?? '') : '')
 
   useEffect(() => {
-    if (open) reset(initial ? { ...emptyServico, ...initial, fiscais: initial.fiscais ?? [] } : emptyServico)
+    if (open) reset(initial ? { ...emptyServico, ...initial, fiscais: initial.fiscais ?? [], impostos: initial.impostos ?? [] } : emptyServico)
   }, [open, initial, reset])
 
   const submit = handleSubmit((data) => onSave(data))
@@ -68,7 +75,7 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
     >
       <form id="servicoForm" onSubmit={submit} noValidate>
         <div className={ui.topRow}>
-          <span className={ui.modalNote}>Serviço oferecido que sai na proposta e na NFS-e.</span>
+          <span className={ui.modalNote}>Serviço oferecido que sai na proposta e na NFS-e, com os impostos que o Pricing usa.</span>
           <StatusToggle value={ativo} onChange={(v) => setValue('status', v ? 'ativo' : 'inativo')} />
         </div>
 
@@ -82,7 +89,19 @@ export function ServicoFormModal({ open, initial, error, busy, nomeTravado, onCl
 
         <section className={ui.fsection}>
           <div className={ui.fsectionTitle}>
-            Dados fiscais (NFS-e) <span className={ui.fsectionHint}>um por empresa emitente; ISS e retenções vêm da empresa</span>
+            Impostos <span className={ui.fsectionHint}>base de cálculo × alíquota; os que afetam o preço entram no markup do Pricing</span>
+          </div>
+          <ImpostosServicoEditor
+            value={impostos}
+            onChange={(v) => setValue('impostos', v, { shouldDirty: true })}
+            faturamento={fatorPadrao?.receita ?? 0}
+            nomeEmpresa={padrao?.nome ?? 'empresa'}
+          />
+        </section>
+
+        <section className={ui.fsection}>
+          <div className={ui.fsectionTitle}>
+            Dados fiscais (NFS-e) <span className={ui.fsectionHint}>um por empresa emitente; as retenções vêm da empresa</span>
           </div>
           <DadosFiscaisServico value={fiscais} onChange={(v) => setValue('fiscais', v, { shouldDirty: true })} empresas={empresas} />
         </section>

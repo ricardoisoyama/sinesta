@@ -13,6 +13,45 @@ public class Servico : Rastreavel, IEntity, IInativavel
     /// O que já está na empresa (ISS, retenções, inscrição municipal, regime) é lido de lá na emissão.
     /// </summary>
     public List<ServicoFiscal> Fiscais { get; set; } = new();
+    /// <summary>
+    /// Impostos do serviço (base × alíquota), que o Pricing usa no lugar dos da empresa. Vazio = os da empresa.
+    /// Cada um diz se entra no preço (markup) ou se é só destacado.
+    /// </summary>
+    public List<ImpostoServico> Impostos { get; set; } = new();
+}
+
+/// <summary>
+/// Um imposto do serviço, como no quadro da contabilidade: base de cálculo (presunção) × alíquota.
+/// O adicional do IRPJ é a exceção: 10% do que a base presumida passar do limite do mês.
+/// </summary>
+public class ImpostoServico
+{
+    public const string AdicionalIrpj = "irpj-adicional";
+    public const string Icms = "icms";
+    /// <summary>Tipos aceitos (o "outro" leva o nome livre).</summary>
+    public static readonly string[] Tipos = ["irpj", AdicionalIrpj, "csll", "pis", "cofins", "cbs", "ibs", "iss", Icms, "inss", "das", "outro"];
+
+    public string Id { get; set; } = string.Empty;
+    public string Imposto { get; set; } = "outro";
+    public string Nome { get; set; } = string.Empty;
+    /// <summary>Base de cálculo sobre a receita (fração): 1 = 100%; 0,08 = presunção de 8%.</summary>
+    public decimal Base { get; set; } = 1m;
+    public decimal Aliquota { get; set; }
+    /// <summary>Só no adicional do IRPJ: a base presumida do mês até este valor (R$) não paga o adicional.</summary>
+    public decimal Limite { get; set; }
+    /// <summary>true = entra no markup (no preço); false = só destacado na nota.</summary>
+    public bool AfetaPreco { get; set; } = true;
+
+    /// <summary>
+    /// Alíquota efetiva sobre a receita. O adicional depende do faturamento do mês (a meta):
+    /// (faturamento × base − limite) × alíquota ÷ faturamento, nunca negativo.
+    /// </summary>
+    public decimal Efetiva(decimal faturamentoMensal)
+    {
+        if (Imposto != AdicionalIrpj) return Base * Aliquota;
+        if (faturamentoMensal <= 0) return 0m;
+        return Math.Max(0m, faturamentoMensal * Base - Limite) * Aliquota / faturamentoMensal;
+    }
 }
 
 /// <summary>Como o serviço sai na NFS-e de uma empresa (tabelas oficiais: LC 116, NBS, cIndOp, cClassTrib).</summary>

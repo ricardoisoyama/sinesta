@@ -17,7 +17,7 @@ interface Props {
 
 /**
  * Dados fiscais do serviço (NFS-e), um bloco por empresa emitente. As tabelas oficiais sugerem a NBS, o
- * indicador da operação e a classificação tributária pelo item da LC 116. ISS e retenções vêm da empresa.
+ * indicador da operação e a classificação tributária pelo item da LC 116. A alíquota do ISS vem dos impostos do serviço; as retenções, da empresa.
  */
 export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
   const { data: tabelas, isLoading } = useTabelasFiscais()
@@ -41,9 +41,9 @@ export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
   const escolherClassificacao = (codigo: string) =>
     mudar({ classificacaoTributaria: codigo, cstIbsCbs: codigo ? (tabelas?.cclasstrib.find((g) => g.itens.some((i) => i[0] === codigo))?.cst ?? codigo.slice(0, 3)) : '' })
 
-  const imp = (nome: string, i?: { aliquota: number; retido: boolean }) => (i && i.aliquota > 0 ? `${nome} ${formatPct(i.aliquota)}${i.retido ? ' (retido)' : ''}` : '')
+  const ret = (nome: string, i?: { aliquota: number; retido: boolean }) => (i?.retido ? `${nome}${i.aliquota > 0 ? ` ${formatPct(i.aliquota)}` : ''}` : '')
   const daEmpresa = empresa
-    ? [imp('ISS', empresa.iss), imp('PIS', empresa.pis), imp('COFINS', empresa.cofins), imp('CSLL', empresa.csll), imp('INSS', empresa.inss), imp('IR', empresa.ir)].filter(Boolean).join(' · ')
+    ? [ret('ISS', empresa.iss), ret('PIS', empresa.pis), ret('COFINS', empresa.cofins), ret('CSLL', empresa.csll), ret('INSS', empresa.inss), ret('IR', empresa.ir)].filter(Boolean).join(' · ')
     : ''
 
   return (
@@ -74,7 +74,7 @@ export function DadosFiscaisServico({ value, onChange, empresas }: Props) {
       ) : (
         <>
           <div className={s.daEmpresa}>
-            <Info size={14} /> <span>Vêm da empresa na emissão (Empresa › Impostos): {daEmpresa || 'nenhuma alíquota cadastrada'}. Inscrição municipal e regime também.</span>
+            <Info size={14} /> <span>A alíquota do ISS vem dos impostos deste serviço (acima). Da empresa vêm as retenções (Empresa › Regime e retenções): {daEmpresa || 'nenhuma retenção marcada'}. Inscrição municipal e regime também.</span>
           </div>
           <div className={ui.grid}>
             <Field className={ui.col4} label="Item do serviço (lista nacional / LC 116)" req hint="Tabela oficial da NFS-e Nacional. Escolher o item sugere a NBS, o indicador da operação e a classificação tributária.">

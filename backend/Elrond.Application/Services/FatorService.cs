@@ -10,6 +10,8 @@ namespace Elrond.Application.Services;
 /// Motor do fator (markup) de uma empresa, a mesma conta da planilha "Matriz de Preço":
 ///   DF%    = custos fixos recorrentes ÷ base da meta (média mensal do ano ou meta do mês corrente)
 ///   Markup = DF% + impostos + comissão + despesa financeira + outras despesas + lucro
+/// Os impostos são os do serviço do item (base × alíquota, só os que afetam o preço); sem serviço
+/// com impostos, o total da empresa.
 ///   Fator  = 1 ÷ (1 − Markup)
 /// Com a base "mês", o preço muda mês a mês, como na planilha (linha do mês, G58:G69).
 /// Usado pela tela da empresa (ao vivo, com o rascunho do formulário) e pelo Pricing.
@@ -20,14 +22,16 @@ public class FatorService : IFatorService
     private readonly ICrudRepository<CustoFixo> _custos;
     private readonly ICrudRepository<Meta> _metas;
     private readonly ICrudRepository<RegraAprovacao> _regras;
+    private readonly ICrudRepository<Servico> _servicos;
 
     public FatorService(ICrudRepository<Empresa> empresas, ICrudRepository<CustoFixo> custos,
-        ICrudRepository<Meta> metas, ICrudRepository<RegraAprovacao> regras)
+        ICrudRepository<Meta> metas, ICrudRepository<RegraAprovacao> regras, ICrudRepository<Servico> servicos)
     {
         _empresas = empresas;
         _custos = custos;
         _metas = metas;
         _regras = regras;
+        _servicos = servicos;
     }
 
     public async Task<Result<FatorResultado>> CalcularAsync(CalcularFatorRequest req)
@@ -54,8 +58,9 @@ public class FatorService : IFatorService
             if (regra is not null) padrao = regra.ComissaoPercentual;
         }
 
+        var servico = string.IsNullOrWhiteSpace(req.ServicoId) ? null : await _servicos.GetByIdAsync(req.ServicoId);
         var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
-        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro));
+        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro, servico));
     }
 
     /// <summary>
@@ -63,7 +68,7 @@ public class FatorService : IFatorService
     /// são os da operação (linha do Pricing); nulos = os padrões (vendedor/empresa).
     /// </summary>
     public static FatorResultado Calcular(Empresa empresa, string empresaId, IEnumerable<CustoFixo> custos, IEnumerable<Meta> metas,
-        DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null)
+        DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null, Servico? servico = null)
     {
         // DF da empresa = a parte dela em cada despesa (inteira se for só dela; o percentual se rateada).
         var naDf = custos.Where(c => c.EntraNaDf(hoje) && c.PercentualDa(empresaId) > 0).ToList();
@@ -77,7 +82,16 @@ public class FatorService : IFatorService
         var semMeta = faturamentoMensal <= 0;
         var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
-        var impostos = empresa.ImpostosDaDv();
+        // Serviço com impostos: entram no markup só os que afetam o preço (o ICMS fica fora: entra
+        // por dentro, depois, pela alíquota da rota). Sem impostos no serviço, o total da empresa.
+        var doServico = servico is { Impostos.Count: > 0 } ? servico.Impostos : null;
+        var detalhe = doServico?
+            .Where(i => i.Imposto != ImpostoServico.Icms)
+            .Select(i => new ImpostoCalculadoDto(i.Imposto, i.Nome, i.Base, i.Aliquota, Math.Round(i.Efetiva(faturamentoMensal), 6), i.AfetaPreco))
+            .ToList();
+        var icmsDoServico = doServico?.FirstOrDefault(i => i.Imposto == ImpostoServico.Icms);
+        var impostos = detalhe is null ? empresa.ImpostosDaDv() : detalhe.Where(i => i.AfetaPreco).Sum(i => i.Efetiva);
+        var destacados = detalhe?.Where(i => !i.AfetaPreco).Sum(i => i.Efetiva) ?? 0m;
         var comissao = Math.Max(0m, comissoes ?? comissaoPadrao);
         var despFin = empresa.Dv.DespFinanceira;
         var outras = empresa.Dv.OutrasTotal;
@@ -119,7 +133,12 @@ public class FatorService : IFatorService
             Markup: markup,
             Fator: fator,
             Pronto: !semMeta && viavel,
-            Aviso: aviso);
+            Aviso: aviso,
+            ImpostosOrigem: detalhe is null ? "empresa" : "servico",
+            ServicoNome: servico?.Nome ?? string.Empty,
+            ImpostosDetalhe: detalhe,
+            ImpostosDestacados: destacados,
+            Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, icmsDoServico?.Efetiva(faturamentoMensal) ?? 0m, icmsDoServico?.AfetaPreco ?? false));
     }
 
     private static readonly string[] Meses =

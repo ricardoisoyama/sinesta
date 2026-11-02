@@ -32,10 +32,13 @@ import { adValoremDosCampos } from '@/features/camposOperacao/advalorem'
 import { useFichas } from '@/features/fichaTecnica/api'
 import { calcularFicha } from '@/features/fichaTecnica/calculo'
 import { TIPOS_NUMERICOS } from '@/features/fichaTecnica/types'
+import { rotuloImposto, type TipoImposto } from '@/features/servicos/impostos'
 import base from './simulador.module.css'
 import s from './precificacaoNova.module.css'
 
 const round2 = (n: number) => Math.round(n * 100) / 100
+/** Sem acento e sem caixa, para casar o nome do serviço com o do tipo de operação. */
+const normalizar = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase()
 const fator4 = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
 
 /** Uma linha de custo: item de uma ficha × quantidade (a quantidade é por custo). */
@@ -120,6 +123,13 @@ export function PricingPage() {
   const clientes = (clientesData ?? []).filter((c) => c.status === 'ativo')
   const { data: fornecedoresData } = useQuery({ queryKey: ['fornecedores'], queryFn: listFornecedores })
   const { data: servicosData } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  // Serviço do item: o campo "Serviço" dos Dados da operação, quando a empresa tem um; senão o seletor do
+  // topo, que já sugere o serviço com o nome do tipo de operação. Os impostos dele entram no fator.
+  const campoServico = campos.find((c) => c.tipo === 'cadastro' && c.cadastro === 'servico')
+  const servicosAtivos = (servicosData ?? []).filter((x) => x.status === 'ativo')
+  const [servicoEscolhido, setServicoEscolhido] = useState<string | null>(null)
+  const servicoSugerido = tipoOperacao ? (servicosAtivos.find((x) => normalizar(x.nome) === normalizar(tipoOperacao.nome))?.id ?? '') : ''
+  const servicoId = campoServico ? String(valores[campoServico.chave] ?? '') : (servicoEscolhido ?? servicoSugerido)
   const { data: veiculosData } = useQuery({ queryKey: ['veiculos'], queryFn: listVeiculos })
   const { data: vendedoresData } = useQuery({ queryKey: ['vendedores'], queryFn: listVendedores })
   const vendedores = (vendedoresData ?? []).filter((v) => v.status === 'ativo')
@@ -160,7 +170,7 @@ export function PricingPage() {
   const vendedorSel = vendedores.find((v) => v.id === vendedorId)
 
   // ── fator da empresa (motor do servidor) ──
-  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado }, !!empresaId)
+  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado, servicoId: servicoId || null }, !!empresaId)
   const fr = fatorEmpresa.fator
   const semFator = !!fr && !fr.pronto
   const dfPct = fr?.pronto ? fr.dfPct : 0
@@ -206,9 +216,18 @@ export function PricingPage() {
   const custoOperacao = round2((custoFichas + efeitos.custoExtra) * (1 + efeitos.pctCusto) * efeitos.multiplicador)
   const temCusto = custoOperacao > 0
 
-  // ── ICMS: o campo ICMS dos Dados da Operação (origem × destino), só em empresa contribuinte ──
+  // ── ICMS: o campo ICMS dos Dados da Operação (origem × destino), só em empresa contribuinte. Serviço com
+  // impostos decide: sem a linha de ICMS não incide; com ela, a rota (ou a alíquota do serviço) entra por
+  // dentro, ou fica só destacada. Mesma regra do servidor (PricingService). ──
   const campoIcms = campos.find((c) => c.tipo === 'icms')
-  const aliqIcms = campoIcms ? Math.min(0.5, Math.max(0, numeroDe(valores[campoIcms.chave]))) : 0
+  const aliqRota = campoIcms ? Math.min(0.5, Math.max(0, numeroDe(valores[campoIcms.chave]))) : 0
+  const icmsServico = fr?.icms ?? null
+  const aliqIcmsBruta = icmsServico
+    ? (icmsServico.incide && empresa?.icmsAtivo ? Math.min(0.5, aliqRota > 0 ? aliqRota : icmsServico.aliquota) : 0)
+    : aliqRota
+  const icmsNoPreco = !icmsServico || icmsServico.afetaPreco
+  const aliqIcms = icmsNoPreco ? aliqIcmsBruta : 0
+  const icmsDestacado = icmsNoPreco ? 0 : aliqIcmsBruta
   const aplicaIcmsEfetivo = aliqIcms > 0
 
   // ── preço: servidor é a fonte da verdade; o local só cobre o instante até responder ──
@@ -219,12 +238,13 @@ export function PricingPage() {
       lucroDesejado: lucroEditado,
       desconto,
       valorNf: 0,
-      aplicaIcms: aplicaIcmsEfetivo,
+      aplicaIcms: aliqRota > 0,
       ufDestinoId: null,
-      aliquotaIcms: aliqIcms,
+      aliquotaIcms: aliqRota,
       custoPercentualServico: 0,
       comissoes: comissaoEditada,
       vendedorId: vendedorId || null,
+      servicoId: servicoId || null,
     },
     temCusto && !!empresaId && !!fr?.pronto,
   )
@@ -246,6 +266,11 @@ export function PricingPage() {
   const temAdValorem = campos.some((c) => c.tipo === 'advalorem')
   const adValorem = adValoremDosCampos(campos, valores)
   const freteTotal = round2(precoFinal + adValorem.total)
+  // Impostos do serviço que não afetam o preço: ficam fora do markup, só destacados (sobre o preço final).
+  const destacados = [
+    ...(fr?.impostosDetalhe ?? []).filter((i) => !i.afetaPreco && i.efetiva > 0).map((i) => ({ nome: rotuloImposto({ imposto: i.imposto as TipoImposto, nome: i.nome }), pct: i.efetiva })),
+    ...(icmsDestacado > 0 ? [{ nome: 'ICMS', pct: icmsDestacado }] : []),
+  ]
 
   // ── retrato do item ──
   const nomeCadastro = (origem: string, id: string): string => {
@@ -302,9 +327,6 @@ export function PricingPage() {
         }
       })
 
-  // Serviço do item: o campo de cadastro "Serviço" dos Dados da operação, quando a empresa tem um.
-  const campoServico = campos.find((c) => c.tipo === 'cadastro' && c.cadastro === 'servico')
-  const servicoId = campoServico ? String(valores[campoServico.chave] ?? '') : ''
   const campoCliente = campos.find((c) => c.tipo === 'cadastro' && c.cadastro === 'cliente')
 
   // ── validação do item ──
@@ -411,6 +433,7 @@ export function PricingPage() {
       else v[campo.chave] = d.texto
     }
     setValores(v)
+    if (!campoServico) setServicoEscolhido(it.servicoId ?? '')
     setLinhas(it.fichas.map((f) => ({ id: crypto.randomUUID(), fichaId: f.fichaId, quantidade: f.quantidade })))
     setDesconto(it.desconto)
     setComissaoEditada(it.comissao ?? null)
@@ -545,6 +568,17 @@ export function PricingPage() {
                 ))}
               </select>
             </label>
+            {!campoServico && (
+              <label className={s.empresaSel} title="Os impostos do serviço entram no fator; sem serviço (ou serviço sem impostos), valem os da empresa.">
+                Serviço
+                <select value={servicoId} onChange={(e) => setServicoEscolhido(e.target.value)}>
+                  <option value="">Sem serviço (impostos da empresa)</option>
+                  {servicosAtivos.map((x) => (
+                    <option key={x.id} value={x.id}>{x.nome}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             {/* Só aparece quando a empresa tem mais de um tipo (com um só, não há o que escolher). */}
             {tiposOperacao.length > 1 && (
               <label className={s.empresaSel}>
@@ -740,6 +774,16 @@ export function PricingPage() {
                 <div className={base.reversoLinha}><span><b>= Frete total</b> (fora do markup)</span><b>{formatBRL(freteTotal)}</b></div>
               </div>
             )}
+            {destacados.length > 0 && precoFinal > 0 && (
+              <div className={base.reverso}>
+                {destacados.map((d) => (
+                  <div key={d.nome} className={base.reversoLinha}>
+                    <span>{d.nome} {formatPct(d.pct)} <span className={base.memSub}>só destacado, fora do preço</span></span>
+                    <b>{formatBRL(round2(precoFinal * d.pct))}</b>
+                  </div>
+                ))}
+              </div>
+            )}
             {abaixoDoMinimo && (
               <div className={`${base.alertaPiso} ${ehGestor ? base.alertaPisoGestor : ''}`} role="alert">
                 <AlertTriangle size={16} />
@@ -818,6 +862,15 @@ export function PricingPage() {
             {podeVerCalculo && fr?.pronto && (
               <>
                 <div className={base.memRow}><span className={base.memLabel}>× Fator (DF {formatPct(dfPct)} + DV {formatPct(dvSem)} + lucro {formatPct(lucro)})</span><span className={base.memVal}>{fator4(fatorVal)}</span></div>
+                <div className={base.memRow}>
+                  <span className={base.memLabel}>
+                    na DV, impostos {fr.impostosOrigem === 'servico' ? `do serviço ${fr.servicoNome}` : 'da empresa'}
+                    {fr.impostosOrigem === 'servico' && (
+                      <span className={base.memSub}> {(fr.impostosDetalhe ?? []).filter((i) => i.afetaPreco).map((i) => `${rotuloImposto({ imposto: i.imposto as TipoImposto, nome: i.nome })} ${formatPct(i.efetiva)}`).join(' · ')}</span>
+                    )}
+                  </span>
+                  <span className={base.memVal}>{formatPct(fr.impostos)}</span>
+                </div>
                 <div className={base.memRow}><span className={base.memLabel}>= Preço de venda</span><span className={base.memVal}>{formatBRL(pv)}</span></div>
                 {desconto > 0 && <div className={base.memRow}><span className={base.memLabel}>(−) Desconto {formatPct(desconto)}</span><span className={base.memVal}>{formatBRL(pv - pvComDesconto)}</span></div>}
                 {aplicaIcmsEfetivo && <div className={base.memRow}><span className={base.memLabel}>÷ (1 − ICMS {formatPct(aliqIcms)}) = frete com ICMS</span><span className={base.memVal}>{formatBRL(precoCalculado)}</span></div>}

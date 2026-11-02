@@ -51,12 +51,16 @@ public class EmpresaImpostosTests
     }
 
     [Fact]
-    public void Com_cadastro_tributario_o_cadastro_manda()
+    public void O_total_da_aba_markup_manda_e_o_cadastro_antigo_so_cobre_quando_falta()
     {
+        // Os campos detalhados da empresa agora são as retenções da NFS-e: não podem somar no fator.
         var e = new Empresa { Regime = "Lucro Presumido" };
         e.Dv.Impostos = 0.11m;
-        e.Iss.Aliquota = 0.05m;
+        e.Ir.Aliquota = 0.015m;
+        Assert.Equal(0.11m, e.ImpostosDaDv());
 
-        Assert.Equal(0.05m, e.ImpostosDaDv());
+        e.Dv.Impostos = 0m;
+        e.Iss.Aliquota = 0.05m;
+        Assert.Equal(0.065m, e.ImpostosDaDv());
     }
 }

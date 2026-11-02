@@ -20,6 +20,18 @@ export interface CalcularPrecoRequest {
   comissoes?: number | null
   /** Vendedor da operação: a regra de comissão dele é o padrão. */
   vendedorId?: string | null
+  /** Serviço do item: com impostos cadastrados, eles substituem os da empresa (e decidem o ICMS). */
+  servicoId?: string | null
+}
+
+/** Um imposto do serviço já calculado (frações). */
+export interface ImpostoCalculado {
+  imposto: string
+  nome: string
+  base: number
+  aliquota: number
+  efetiva: number
+  afetaPreco: boolean
 }
 
 /** Motor do fator: composição DF% + DV + lucro → fator (frações: 0,11 = 11%). */
@@ -57,6 +69,15 @@ export interface FatorResultado {
   /** false = falta meta ou a soma passa de 100%: o Pricing bloqueia. */
   pronto: boolean
   aviso: string | null
+  /** 'servico' = impostos do cadastro do serviço; 'empresa' = o total da empresa (aba Markup). */
+  impostosOrigem?: 'servico' | 'empresa'
+  servicoNome?: string
+  /** Os impostos do serviço, um a um (sem o ICMS, que vem em `icms`). */
+  impostosDetalhe?: ImpostoCalculado[] | null
+  /** Soma dos que só são destacados (fora do markup). */
+  impostosDestacados?: number
+  /** Nulo = o serviço não tem impostos (o ICMS segue a regra da empresa). */
+  icms?: { incide: boolean; aliquota: number; afetaPreco: boolean } | null
 }
 
 export interface CalcularFatorRequest {
@@ -67,6 +88,8 @@ export interface CalcularFatorRequest {
   comissoes?: number | null
   /** Lucro da linha do Pricing (fração). Nulo = o da empresa. */
   lucro?: number | null
+  /** Serviço do item: com impostos cadastrados, eles substituem os da empresa. */
+  servicoId?: string | null
 }
 
 /** Resposta do motor no servidor (.NET) — fonte da verdade do preço. */
@@ -96,6 +119,8 @@ export interface CalcularPrecoResponse {
   comissoes: number
   comissoesPadrao: number
   composicao: FatorResultado | null
+  /** ICMS do serviço só destacado (não somado ao preço), em fração. */
+  icmsDestacado?: number
 }
 
 export const calcularPreco = (req: CalcularPrecoRequest) =>

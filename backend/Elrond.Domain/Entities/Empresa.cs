@@ -156,10 +156,9 @@ public class Empresa : Rastreavel, IEntity, IInativavel
              + IbsMunicipal + IbsEstadual + Cbs;
     }
 
-    /// <summary>Percentual de impostos que vale para a DV (cadastro, com queda para o manual).</summary>
-    public decimal ImpostosDaDv()
-    {
-        var doCadastro = ImpostosSobreReceita();
-        return doCadastro > 0 ? doCadastro : Dv.Impostos;
-    }
+    /// <summary>
+    /// Impostos da empresa para a DV: valem quando o item do Pricing não tem serviço com impostos
+    /// (os impostos agora ficam no serviço). É o total da aba Markup; sem ele, a soma do cadastro antigo.
+    /// </summary>
+    public decimal ImpostosDaDv() => Dv.Impostos > 0 ? Dv.Impostos : ImpostosSobreReceita();
 }

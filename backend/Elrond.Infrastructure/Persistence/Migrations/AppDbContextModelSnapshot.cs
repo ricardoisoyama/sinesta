@@ -7179,6 +7179,44 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Elrond.Domain.Entities.Servico", b =>
                 {
+                    b.OwnsMany("Elrond.Domain.Entities.ImpostoServico", "Impostos", b1 =>
+                        {
+                            b1.Property<string>("ServicoId");
+
+                            b1.Property<int>("__synthesizedOrdinal")
+                                .ValueGeneratedOnAdd();
+
+                            b1.Property<bool>("AfetaPreco");
+
+                            b1.Property<decimal>("Aliquota")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal>("Base")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("Id");
+
+                            b1.Property<string>("Imposto")
+                                .IsRequired();
+
+                            b1.Property<decimal>("Limite")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<string>("Nome")
+                                .IsRequired();
+
+                            b1.HasKey("ServicoId", "__synthesizedOrdinal");
+
+                            b1.ToTable("servicos");
+
+                            b1
+                                .ToJson("Impostos")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ServicoId");
+                        });
+
                     b.OwnsMany("Elrond.Domain.Entities.ServicoFiscal", "Fiscais", b1 =>
                         {
                             b1.Property<string>("ServicoId");
@@ -7247,6 +7285,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         });
 
                     b.Navigation("Fiscais");
+
+                    b.Navigation("Impostos");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.User", b =>

@@ -64,7 +64,13 @@ export function FatorPainel({ fator: f, carregando, comLinks = true }: Props) {
               ? `${formatBRL(f.totalDf)} de fixos ÷ ${formatBRL(f.faturamentoMensal)} (média mensal da meta de ${f.ano}); igual o ano todo`
               : `${formatBRL(f.totalDf)} de fixos ÷ ${formatBRL(f.faturamentoMensal)} de meta de ${MESES[f.mes - 1]}/${f.ano}; muda a cada mês`,
         )}
-        {linha('Impostos', f.impostos, f.impostosDoCadastro ? 'detalhados na aba Impostos' : f.impostos > 0 ? 'total informado na aba Impostos' : 'nenhum informado na aba Impostos')}
+        {linha(
+          'Impostos',
+          f.impostos,
+          f.impostosOrigem === 'servico'
+            ? `do serviço ${f.servicoNome}${(f.impostosDestacados ?? 0) > 0 ? ` · ${formatPct(f.impostosDestacados ?? 0)} só destacado` : ''}`
+            : f.impostos > 0 ? 'da empresa; o item com serviço usa os impostos do serviço' : 'nenhum informado',
+        )}
         {linha('Comissão', f.comissoes, f.comissoes !== f.comissoesPadrao ? `padrão ${formatPct(f.comissoesPadrao)}, ajustada nesta operação` : 'padrão; ajustável no Pricing')}
         {linha('Despesa financeira', f.despFinanceira)}
         {f.outras > 0 && linha('Outras despesas', f.outras)}

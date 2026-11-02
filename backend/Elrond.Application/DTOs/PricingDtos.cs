@@ -21,7 +21,9 @@ public record CalcularPrecoRequest(
     /// <summary>Vendedor da operação: a regra de comissão dele é o padrão.</summary>
     string? VendedorId = null,
     /// <summary>Alíquota do campo ICMS dos Dados da Operação (fração). Informada, substitui a busca por UfDestinoId.</summary>
-    decimal? AliquotaIcms = null
+    decimal? AliquotaIcms = null,
+    /// <summary>Serviço do item: com impostos cadastrados, eles substituem os da empresa (e decidem o ICMS).</summary>
+    string? ServicoId = null
 );
 
 /// <summary>
@@ -30,7 +32,15 @@ public record CalcularPrecoRequest(
 /// </summary>
 public record CalcularFatorRequest(string? EmpresaId, Empresa? Empresa = null, string? VendedorId = null, decimal? Comissoes = null,
     /// <summary>Lucro da linha do Pricing (fração). Nulo = o da empresa.</summary>
-    decimal? Lucro = null);
+    decimal? Lucro = null,
+    /// <summary>Serviço do item do Pricing: com impostos cadastrados, eles substituem os da empresa.</summary>
+    string? ServicoId = null);
+
+/// <summary>Um imposto do serviço já calculado (frações).</summary>
+public record ImpostoCalculadoDto(string Imposto, string Nome, decimal Base, decimal Aliquota, decimal Efetiva, bool AfetaPreco);
+
+/// <summary>ICMS do serviço: se incide, a alíquota padrão (quando a operação não traz a da rota) e se entra no preço.</summary>
+public record IcmsServicoDto(bool Incide, decimal Aliquota, bool AfetaPreco);
 
 /// <summary>Fator da empresa e cada parcela que o compõe (frações: 0,11 = 11%).</summary>
 public record FatorResultado(
@@ -66,7 +76,16 @@ public record FatorResultado(
     decimal Fator,
     /// <summary>false = falta meta ou a soma passa de 100%; o Pricing bloqueia.</summary>
     bool Pronto,
-    string? Aviso);
+    string? Aviso,
+    /// <summary>"servico" = impostos do cadastro do serviço; "empresa" = o total da empresa (aba Markup).</summary>
+    string ImpostosOrigem = "empresa",
+    string ServicoNome = "",
+    /// <summary>Os impostos do serviço, um a um (vazio quando vêm da empresa). O ICMS vai em <see cref="Icms"/>.</summary>
+    List<ImpostoCalculadoDto>? ImpostosDetalhe = null,
+    /// <summary>Soma dos impostos só destacados (não entram no markup).</summary>
+    decimal ImpostosDestacados = 0m,
+    /// <summary>Nulo = o serviço não tem impostos (o ICMS segue a regra da empresa).</summary>
+    IcmsServicoDto? Icms = null);
 
 /// <summary>Resultado da precificação + memória de cálculo (fonte da verdade = servidor).</summary>
 public record CalcularPrecoResponse(
@@ -96,5 +115,7 @@ public record CalcularPrecoResponse(
     decimal Comissoes = 0m,
     decimal ComissoesPadrao = 0m,
     /// <summary>Composição do fator (mesma do motor da tela da empresa).</summary>
-    FatorResultado? Composicao = null
+    FatorResultado? Composicao = null,
+    /// <summary>ICMS do serviço só destacado (não somado ao preço), em fração.</summary>
+    decimal IcmsDestacado = 0m
 );

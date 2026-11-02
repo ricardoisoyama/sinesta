@@ -34,7 +34,7 @@ public class PricingService : IPricingService
         if (empresa is null)
             return Result.Failure<CalcularPrecoResponse>("Empresa não encontrada.");
 
-        var rf = await _fator.CalcularAsync(new CalcularFatorRequest(req.EmpresaId, null, req.VendedorId, req.Comissoes, req.LucroDesejado));
+        var rf = await _fator.CalcularAsync(new CalcularFatorRequest(req.EmpresaId, null, req.VendedorId, req.Comissoes, req.LucroDesejado, req.ServicoId));
         if (!rf.IsSuccess) return Result.Failure<CalcularPrecoResponse>(rf.Error!);
         var f = rf.Value!;
         // Sem meta (ou com despesas acima de 100%) não há fator: o Pricing bloqueia com o motivo.
@@ -82,6 +82,18 @@ public class PricingService : IPricingService
                 : 0m;
         }
 
+        // Serviço com impostos decide o ICMS: sem a linha de ICMS, não incide (ex.: armazenagem); com ela, vale
+        // a alíquota da rota (campo ICMS) ou, sem rota, a do serviço. "Não afeta o preço" = só destacado.
+        var icmsDestacado = 0m;
+        if (f.Icms is { } icmsServico)
+        {
+            var daRota = req.AliquotaIcms ?? 0m;
+            var aliquotaServico = !icmsServico.Incide || !empresa.IcmsAtivo ? 0m : Math.Clamp(daRota > 0 ? daRota : icmsServico.Aliquota, 0m, 0.5m);
+            aplicaIcms = aliquotaServico > 0 && icmsServico.AfetaPreco;
+            aliqIcms = aplicaIcms ? aliquotaServico : 0m;
+            icmsDestacado = aplicaIcms ? 0m : aliquotaServico;
+        }
+
         var fiscal = PricingEngine.CotacaoFiscal(pvComDesconto, seguro, aliqIcms, aplicaIcms);
         var precoFinal = Round2(fiscal.PrecoFinal);
 
@@ -106,6 +118,7 @@ public class PricingService : IPricingService
             AbaixoDoMinimo: abaixoDoMinimo,
             Comissoes: f.Comissoes,
             ComissoesPadrao: f.ComissoesPadrao,
-            Composicao: f));
+            Composicao: f,
+            IcmsDestacado: icmsDestacado));
     }
 }

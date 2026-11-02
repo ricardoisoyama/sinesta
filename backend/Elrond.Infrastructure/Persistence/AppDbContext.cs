@@ -418,6 +418,7 @@ public class AppDbContext : DbContext
             e.ToTable("servicos");
             e.HasKey(s => s.Id);
             e.OwnsMany(s => s.Fiscais, b => b.ToJson());
+            e.OwnsMany(s => s.Impostos, b => b.ToJson());
         });
 
         modelBuilder.Entity<TipoCusto>(e =>

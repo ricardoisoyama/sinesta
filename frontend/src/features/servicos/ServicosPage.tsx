@@ -16,6 +16,8 @@ import { usePropostas } from '@/features/propostas/store'
 import { ServicoFormModal } from './ServicoFormModal'
 import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import type { ServicoForm } from './servico-schema'
+import { cargaDoServico, rotuloImposto } from './impostos'
+import { formatPct } from '@/lib/format'
 
 export function ServicosPage() {
   const qc = useQueryClient()
@@ -99,6 +101,23 @@ export function ServicosPage() {
         ) : (
           <span className={ui.cellMut}>—</span>
         ),
+    },
+    {
+      header: 'Impostos no preço',
+      largura: LARGURA.media,
+      valor: (s) => ((s.impostos ?? []).length ? formatPct(cargaDoServico(s.impostos ?? [], 0).noPreco) : 'Da empresa'),
+      cell: (s) => {
+        const lista = s.impostos ?? []
+        if (!lista.length) return <span className={ui.cellMut} title="Sem impostos no serviço: o Pricing usa os da empresa (aba Markup).">Da empresa</span>
+        const carga = cargaDoServico(lista, 0)
+        const temAdicional = lista.some((i) => i.imposto === 'irpj-adicional')
+        return (
+          <span title={lista.map((i) => `${rotuloImposto(i)}${i.afetaPreco ? '' : ' (só destaca)'}`).join(' · ')}>
+            {formatPct(carga.noPreco)}{temAdicional ? ' + adicional' : ''}
+            {carga.icms && <span className={ui.cellMut}> · ICMS</span>}
+          </span>
+        )
+      },
     },
     {
       header: 'NFS-e',
