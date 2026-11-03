@@ -192,9 +192,13 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
                           <small className={s.emReais}>{formatBRL(exemplo * i.base)}</small>
                         </td>
                         <td className={ui.right}><PercentInput value={i.aliquota} onChange={(n) => mudar(i.id, { aliquota: n })} /></td>
-                        <td className={`${ui.right} ${s.efetiva}`}>
-                          {formatPct(efetivaImposto(i))}
-                          <small>{formatBRL(exemplo * efetivaImposto(i))}</small>
+                        <td className={ui.right}>
+                          {/* Digitar a efetiva (a que a contabilidade passa) recalcula a alíquota sobre a base. */}
+                          <PercentInput
+                            value={efetivaImposto(i)}
+                            onChange={(n) => (i.base > 0 ? mudar(i.id, { aliquota: n / i.base }) : mudar(i.id, { base: 1, aliquota: n }))}
+                          />
+                          <small className={s.emReais}>{formatBRL(exemplo * efetivaImposto(i))}</small>
                         </td>
                       </>
                     )}

@@ -31,6 +31,7 @@ import {
 } from './types'
 import { ligacoesSugeridas } from './advalorem'
 import { TIPOS_APOLICE } from '@/features/apolices/types'
+import { PercentInput } from '@/features/common/PercentInput'
 import s from './camposOperacao.module.css'
 
 const notaOpcoes = { padding: '0 10px', fontSize: 12 } as const
@@ -192,6 +193,12 @@ export function CamposOperacaoPage() {
                     <option key={t} value={t}>Apólice {t}</option>
                   ))}
                 </select>
+              )}
+              {c.tipo === 'advalorem' && (
+                <span className={s.fixo} title="O Pricing traz este % quando não há apólice ou rota que dê a taxa (ex.: armazenagem, seguro Outro). Dá para mudar na tela.">
+                  % fixo
+                  <PercentInput value={c.percentualFixo ?? 0} onChange={(n) => upd(c.id, { percentualFixo: n })} disabled={removido} />
+                </span>
               )}
               {(
                 [

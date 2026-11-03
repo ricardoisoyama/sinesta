@@ -8,6 +8,8 @@ export interface Cenario {
   id: string
   nome: string
   hipoteses: Hipotese[]
+  /** Variação do faturamento do cenário (fração); gravada com ele. */
+  sensibilidade?: number
   status: 'ativo' | 'inativo'
 }
 

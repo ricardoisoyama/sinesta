@@ -28,5 +28,7 @@ public class CenarioProjecao : Rastreavel, IEntity, IInativavel
     public string Id { get; set; } = string.Empty;
     public string Nome { get; set; } = string.Empty;
     public List<HipoteseProjecao> Hipoteses { get; set; } = new();
+    /// <summary>Variação do faturamento do cenário (fração, −0,3 a +0,3 na tela): fica gravada com ele.</summary>
+    public decimal Sensibilidade { get; set; }
     public string Status { get; set; } = "ativo";
 }

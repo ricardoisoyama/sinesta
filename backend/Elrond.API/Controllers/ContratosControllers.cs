@@ -46,12 +46,13 @@ public class ModelosContratoController(ICrudRepository<ModeloContrato> repo) : C
 [Route("api/cenarios-projecao")]
 public class CenariosProjecaoController(ICrudRepository<CenarioProjecao> repo) : CrudControllerBase<CenarioProjecao>(repo)
 {
-    private static readonly string[] Tipos = ["novo-custo", "reajuste-custos", "variacao-meta", "nova-receita", "cortar-custo"];
+    private static readonly string[] Tipos = ["novo-custo", "reajuste-custos", "variacao-meta", "nova-receita", "cortar-custo", "custo-variavel"];
 
     protected override Task<string?> AntesDeGravarAsync(CenarioProjecao c) => Task.FromResult(
         string.IsNullOrWhiteSpace(c.Nome) ? "Dê um nome ao cenário."
         : c.Hipoteses.Any(h => !Tipos.Contains(h.Tipo)) ? "Tipo de hipótese inválido."
         : c.Hipoteses.Any(h => h.Inicio.Length != 7 || (h.Fim.Length > 0 && string.CompareOrdinal(h.Fim, h.Inicio) < 0)) ? "Confira o período das hipóteses (aaaa-mm)."
+        : Math.Abs(c.Sensibilidade) > 0.5m ? "A sensibilidade vai de −50% a +50%."
         : null);
 }
 

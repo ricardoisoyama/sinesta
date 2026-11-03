@@ -373,6 +373,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<int>("Ordem")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("PercentualFixo")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 6)
+                        .HasColumnType("numeric(9,6)")
+                        .HasDefaultValue(0m);
+
                     b.Property<string>("Seguro")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -557,6 +563,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<decimal>("Sensibilidade")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 6)
+                        .HasColumnType("numeric(18,6)")
+                        .HasDefaultValue(0m);
 
                     b.Property<string>("Status")
                         .IsRequired()

@@ -78,8 +78,8 @@ export interface Carteira {
   nome: string
   /** Empresa (CNPJ) dona da conta. Vazio = carteira antiga, compartilhada por todas. */
   empresaId?: string
-  /** "banco" | "caixa" | "cartao". */
-  tipo: 'banco' | 'caixa' | 'cartao'
+  /** "banco" | "caixa" | "cartao" | "investimento" (aplicação e resgate por transferência; rendimento lançado como entrada). */
+  tipo: 'banco' | 'caixa' | 'cartao' | 'investimento'
   banco: string
   agencia: string
   conta: string

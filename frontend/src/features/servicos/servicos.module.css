@@ -40,7 +40,7 @@
 .impostosTabela { display: flex; flex-direction: column; gap: 10px; overflow-x: auto; }
 .impostosTabela table td { padding: 8px 10px; vertical-align: top; }
 .impostosTabela table th { padding: 10px; }
-.impostosTabela table td:nth-child(2) > div, .impostosTabela table td:nth-child(3) > div { min-width: 96px; }
+.impostosTabela table td:nth-child(2) > div, .impostosTabela table td:nth-child(3) > div, .impostosTabela table td:nth-child(4) > div { min-width: 96px; }
 .impostoNome { display: flex; align-items: center; gap: 6px; }
 .impostoNome select, .impostoNome input { font-family: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid #e6e3db; border-radius: 8px; background: #fff; min-width: 0; }
 .impostoNome select { font-weight: 600; color: #143d18; }

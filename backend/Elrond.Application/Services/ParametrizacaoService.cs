@@ -177,6 +177,7 @@ public class ParametrizacaoService : IParametrizacaoService
             {
                 c.Seguro = ApolicesSeguro.Tipos.Contains(bruto.Seguro) ? bruto.Seguro : "RCTR-C";
                 c.CampoBase = Formula.ChaveDe(bruto.CampoBase ?? string.Empty);
+                c.PercentualFixo = Math.Clamp(bruto.PercentualFixo, 0m, 1m);
             }
             // Ad valorem e ICMS buscam a taxa pela origem × destino.
             if (tipo is "advalorem" or "icms")
@@ -212,7 +213,7 @@ public class ParametrizacaoService : IParametrizacaoService
         a.Nome != b.Nome || a.Chave != b.Chave || a.Tipo != b.Tipo || a.Efeito != b.Efeito || a.Obrigatorio != b.Obrigatorio
         || a.Largura != b.Largura || a.Ordem != b.Ordem || a.Cadastro != b.Cadastro || a.Ajuda != b.Ajuda || a.Status != b.Status
         || a.TipoOperacaoId != b.TipoOperacaoId || !a.Opcoes.SequenceEqual(b.Opcoes)
-        || a.Seguro != b.Seguro || a.CampoBase != b.CampoBase || a.CampoOrigem != b.CampoOrigem || a.CampoDestino != b.CampoDestino;
+        || a.Seguro != b.Seguro || a.CampoBase != b.CampoBase || a.CampoOrigem != b.CampoOrigem || a.CampoDestino != b.CampoDestino || a.PercentualFixo != b.PercentualFixo;
 
     // ══════════════════════════ Ficha Técnica ══════════════════════════
     // Vale para todas as empresas (o Pricing de qualquer uma usa as mesmas fichas). O EmpresaId que ficou

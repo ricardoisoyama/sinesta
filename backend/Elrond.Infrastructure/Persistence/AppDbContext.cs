@@ -514,6 +514,7 @@ public class AppDbContext : DbContext
             e.ToTable("cenarios_projecao");
             e.HasKey(c => c.Id);
             e.OwnsMany(c => c.Hipoteses, b => b.ToJson());
+            e.Property(c => c.Sensibilidade).HasDefaultValue(0m);
         });
 
         modelBuilder.Entity<CobrancaBancaria>(e =>
@@ -710,6 +711,7 @@ public class AppDbContext : DbContext
             e.Property(c => c.Opcoes).HasColumnType("text[]");
             e.Property(c => c.TipoOperacaoId).HasMaxLength(80).HasDefaultValue(string.Empty);
             e.Property(c => c.Seguro).HasMaxLength(20).HasDefaultValue(string.Empty);
+            e.Property(c => c.PercentualFixo).HasPrecision(9, 6).HasDefaultValue(0m);
             e.Property(c => c.CampoBase).HasMaxLength(80).HasDefaultValue(string.Empty);
             e.Property(c => c.CampoOrigem).HasMaxLength(80).HasDefaultValue(string.Empty);
             e.Property(c => c.CampoDestino).HasMaxLength(80).HasDefaultValue(string.Empty);

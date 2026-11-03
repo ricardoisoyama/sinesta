@@ -130,8 +130,8 @@ public class ParametrizacaoTests
         var (svc, _, _, _, _, _, _) = Montar();
         var r = await svc.SalvarCamposAsync(new List<CampoOperacao>
         {
-            new() { Id = "a", Nome = "Ad valorem", Tipo = "advalorem", Efeito = "pct-custo", Seguro = "rcf-dc?", CampoBase = "Valor da NF", CampoOrigem = "uf_origem", CampoDestino = "uf_destino" },
-            new() { Id = "t", Nome = "Observação", Tipo = "texto", Seguro = "RCTR-C", CampoBase = "x" },
+            new() { Id = "a", Nome = "Ad valorem", Tipo = "advalorem", Efeito = "pct-custo", Seguro = "rcf-dc?", CampoBase = "Valor da NF", CampoOrigem = "uf_origem", CampoDestino = "uf_destino", PercentualFixo = 0.003m },
+            new() { Id = "t", Nome = "Observação", Tipo = "texto", Seguro = "RCTR-C", CampoBase = "x", PercentualFixo = 0.5m },
         });
         Assert.True(r.IsSuccess);
         var a = r.Value![0];
@@ -140,6 +140,8 @@ public class ParametrizacaoTests
         Assert.Equal(("valor_da_nf", "uf_origem", "uf_destino"), (a.CampoBase, a.CampoOrigem, a.CampoDestino));
         Assert.Equal(string.Empty, r.Value![1].Seguro); // ligações só valem para o ad valorem
         Assert.Equal(string.Empty, r.Value![1].CampoBase);
+        Assert.Equal(0.003m, a.PercentualFixo); // % que o Pricing traz sem apólice (armazenagem, seguro Outro)
+        Assert.Equal(0m, r.Value![1].PercentualFixo);
     }
 
     [Fact]

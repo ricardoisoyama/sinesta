@@ -17,7 +17,7 @@ interface Props {
   bancoAntigo?: DadosBancarios | null
 }
 
-const ROTULO_TIPO: Record<Carteira['tipo'], string> = { banco: 'Banco', caixa: 'Caixa', cartao: 'Cartão' }
+const ROTULO_TIPO: Record<Carteira['tipo'], string> = { banco: 'Banco', caixa: 'Caixa', cartao: 'Cartão', investimento: 'Investimento' }
 
 /**
  * Contas da empresa (aba Dados bancários): cada conta é a carteira que o Caixa, a Conciliação,

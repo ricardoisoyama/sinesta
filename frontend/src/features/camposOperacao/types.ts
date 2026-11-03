@@ -120,6 +120,8 @@ export interface CampoOperacao {
   seguro?: string
   /** Chave do campo com o valor da mercadoria. */
   campoBase?: string
+  /** % que o Pricing traz quando não há apólice/rota (fração; 0 = a pessoa digita). Ajustável na tela. */
+  percentualFixo?: number
   /** Chaves dos campos de origem e destino (UF ou cidade); também no ICMS. */
   campoOrigem?: string
   campoDestino?: string

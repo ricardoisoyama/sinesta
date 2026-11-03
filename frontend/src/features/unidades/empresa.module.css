@@ -229,3 +229,7 @@
 .contasLista b { font-size: 13.5px; color: #143d18; }
 .contasLista span { font-size: 12px; color: #6b7b72; }
 .contaInativa { opacity: 0.6; }
+/* Markup: o serviço escolhido define os impostos do fator ao lado */
+.fatorComServico { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.servicoMarkup { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: #3d4b43; }
+.servicoMarkup select { font: inherit; font-size: 13px; font-weight: 500; padding: 8px 10px; border: 1px solid #d7d3ca; border-radius: 8px; background: #fff; }

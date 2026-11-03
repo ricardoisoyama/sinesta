@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useQueries, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Bar, CartesianGrid, Cell, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { AlertTriangle, BadgeCheck, CalendarClock, Copy, Gauge, Layers, LineChart, Plus, Scale, Trash2, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, CalendarClock, Copy, Gauge, Layers, LineChart, Plus, Scale, Trash2, TrendingDown, TrendingUp, Wallet, Pencil } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { confirmar } from '@/features/common/dialogo/dialogo'
@@ -11,6 +11,7 @@ import { formatBRL, formatPct } from '@/lib/format'
 import { useCustosFixosQuery, useEmpresasQuery } from '@/features/cadastros/hooks'
 import { useMetas } from '@/features/metas/store'
 import { calcularFator, type FatorResultado } from '@/features/pricing/api'
+import { listServicos } from '@/features/cadastros/api'
 import { percentualDaEmpresa } from '@/features/custosFixos/regras'
 import { custoNoMes, dfDoMes, projetar, proximosMeses, receitaDoMes, resumir, ROTULO_HIPOTESE, type Hipotese, type LinhaMes, type Mes, type TipoHipotese } from './motor'
 import { useCenarios, type Cenario } from './api'
@@ -95,10 +96,14 @@ export function ProjecaoPage() {
   const { metas } = useMetas()
   const empresas = (empresasData ?? []).filter((e) => e.status === 'ativo')
   const custos = custosData ?? []
+  // Impostos do fator: os de um serviço (como no Pricing) ou, sem escolha, a média dos serviços da empresa.
+  const { data: servicosData } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const servicosAtivos = (servicosData ?? []).filter((x) => x.status === 'ativo').sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  const [servicoId, setServicoId] = useState('')
   const fatores = useQueries({
     queries: empresas.map((e) => ({
-      queryKey: ['fator', JSON.stringify({ empresaId: e.id })],
-      queryFn: () => calcularFator({ empresaId: e.id }),
+      queryKey: ['fator', JSON.stringify(servicoId ? { empresaId: e.id, servicoId } : { empresaId: e.id })],
+      queryFn: () => calcularFator(servicoId ? { empresaId: e.id, servicoId } : { empresaId: e.id }),
       staleTime: 60_000,
     })),
   })
@@ -107,7 +112,8 @@ export function ProjecaoPage() {
   const [escopo, setEscopo] = useState<string>('grupo')
   const { cenarios, alterar, novo, remover, erro: erroCenarios } = useCenarios()
   const [ativo, setAtivo] = useState<string>('base')
-  const [sensibilidade, setSensibilidade] = useState(0)
+  // Sensibilidade: no cenário fica gravada com ele (sozinha, como as hipóteses); na Base é só para olhar.
+  const [sensBase, setSensBase] = useState(0)
 
   const ids = escopo === 'grupo' ? empresas.map((e) => e.id) : [escopo]
   const nomeEscopo = escopo === 'grupo' ? 'Grupo (todas as empresas)' : empresas.find((e) => e.id === escopo)?.nome ?? ''
@@ -159,6 +165,8 @@ export function ProjecaoPage() {
   const rodar = (hipoteses: Hipotese[], sens = 0) => projetar({ meses, receita, df, valorDoCusto, parametros, hipoteses, sensibilidade: sens })
 
   const cenario = cenarios.find((c) => c.id === ativo)
+  const sensibilidade = cenario ? (cenario.sensibilidade ?? 0) : sensBase
+  const setSensibilidade = (v: number) => (cenario ? alterar({ ...cenario, sensibilidade: v }) : setSensBase(v))
   const linhasBase = rodar([])
   const linhas = rodar(cenario?.hipoteses ?? [], sensibilidade)
   const rBase = resumir(linhasBase)
@@ -170,7 +178,7 @@ export function ProjecaoPage() {
 
   const alterarHipoteses = (fn: (h: Hipotese[]) => Hipotese[]) => cenario && alterar({ ...cenario, hipoteses: fn(cenario.hipoteses) })
   const novoCenario = async (copiar?: Cenario) => {
-    const c = await novo({ nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: novoId('h') })) : [] })
+    const c = await novo({ nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: novoId('h') })) : [], sensibilidade: copiar?.sensibilidade ?? 0 })
     if (c) setAtivo(c.id)
   }
 
@@ -217,6 +225,10 @@ export function ProjecaoPage() {
             <input id="projecao-ate" type="month" aria-label="Período: até" value={ate} onChange={(e) => mudarAte(e.target.value)} />
           </div>
         )}
+        <select className={ui.filterSelect} value={servicoId} onChange={(e) => setServicoId(e.target.value)} aria-label="Serviço (impostos do fator)" title="Os impostos do fator vêm do serviço, como no Pricing">
+          <option value="">Impostos: média dos serviços</option>
+          {servicosAtivos.map((x) => <option key={x.id} value={x.id}>Impostos: {x.nome}</option>)}
+        </select>
         <select className={ui.filterSelect} value={fonteEfetiva === 'meta' ? fonte : fonteEfetiva} onChange={(e) => setFonte(e.target.value)} aria-label="Receita">
           <option value="metas">Receita: metas de cada ano</option>
           {metasDoEscopo.map((m) => <option key={m.id} value={`meta:${m.id}`}>Receita: {m.nome} ({nomeEmpresa(m.empresaId)}{m.ano ? ` · ${m.ano}` : ''})</option>)}
@@ -326,6 +338,7 @@ export function ProjecaoPage() {
             <div className={s.cartaoTitulo}><Gauge size={15} /> Sensibilidade do faturamento</div>
             <input className={s.slider} type="range" min={-30} max={30} step={1} value={Math.round(sensibilidade * 100)} onChange={(e) => setSensibilidade(Number(e.target.value) / 100)} aria-label="Variação do faturamento" />
             <div className={s.sliderEscala}><span>−30%</span><b>{sensibilidade > 0 ? '+' : ''}{Math.round(sensibilidade * 100)}%</b><span>+30%</span></div>
+            <p className={s.hipDica}>{cenario ? `Fica gravada no cenário "${cenario.nome}" sozinha, como as hipóteses.` : 'Na Base é só para conferir (não fica gravada). Num cenário, ela fica gravada com ele.'}</p>
             <div className={s.sensResposta}>
               Com o faturamento {sensibilidade === 0 ? 'como está' : `${sensibilidade > 0 ? '+' : ''}${Math.round(sensibilidade * 100)}%`}, o lucro em {rotuloPeriodo} é <b className={r.lucro < 0 ? s.ruim : s.bom}>{formatBRL(r.lucro)}</b>.
               {' '}
@@ -397,6 +410,8 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const vazio = { tipo: 'novo-custo' as TipoHipotese, nome: '', valor: 0, negativo: false, inicio: meses[1]?.chave ?? meses[0].chave, fim: '', custoId: '' }
   const [form, setForm] = useState(vazio)
   const [abrindo, setAbrindo] = useState(false)
+  /** Hipótese aberta para alterar (null = incluindo uma nova). */
+  const [editando, setEditando] = useState<string | null>(null)
   // Hipótese de fora do período mostra o mês do mesmo jeito ("nov/26"), não a chave.
   const rotulo = (chave: string) => meses.find((m) => m.chave === chave)?.rotulo ?? proximosMeses(dataDaChave(chave), 1)[0].rotulo
   // Datas livres (yyyy-MM): a hipótese pode começar ou terminar fora do período que está na tela (ex.: até 2028).
@@ -418,9 +433,20 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const adicionar = () => {
     const nomeAuto = form.tipo === 'cortar-custo' ? `Cortar: ${custos.find((c) => c.id === form.custoId)?.nome ?? ''}` : ROTULO_HIPOTESE[form.tipo]
     const sinal = comSinal && form.negativo ? -1 : 1
-    onAlterar((h) => [...h, { id: novoId('h'), tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: sinal * (porcento ? form.valor / 100 : form.valor), inicio, fim: fim || undefined, custoId: form.custoId || undefined, ativa: true }])
+    const dados = { tipo: form.tipo, nome: form.nome.trim() || nomeAuto, valor: sinal * (porcento ? form.valor / 100 : form.valor), inicio, fim: fim || undefined, custoId: form.custoId || undefined }
+    onAlterar((h) => (editando ? h.map((x) => (x.id === editando ? { ...x, ...dados } : x)) : [...h, { id: novoId('h'), ...dados, ativa: true }]))
+    fechar()
+  }
+  const fechar = () => {
     setForm(vazio)
+    setEditando(null)
     setAbrindo(false)
+  }
+  const abrirParaAlterar = (h: Hipotese) => {
+    const pct = PORCENTO.includes(h.tipo)
+    setForm({ tipo: h.tipo, nome: h.nome, valor: Math.abs(pct ? h.valor * 100 : h.valor), negativo: COM_SINAL.includes(h.tipo) && h.valor < 0, inicio: h.inicio, fim: h.fim ?? '', custoId: h.custoId ?? '' })
+    setEditando(h.id)
+    setAbrindo(true)
   }
 
   return (
@@ -446,7 +472,8 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
                 {h.tipo === 'cortar-custo' ? '' : ' · '}a partir de {rotulo(h.inicio)}{h.fim ? ` até ${rotulo(h.fim)}` : ''}
               </span>
             </div>
-            <button type="button" className={ui.iconBtn} title="Tirar a hipótese" onClick={() => onAlterar((l) => l.filter((x) => x.id !== h.id))}><Trash2 /></button>
+            <button type="button" className={ui.iconBtn} title="Alterar a hipótese" onClick={() => abrirParaAlterar(h)}><Pencil /></button>
+            <button type="button" className={ui.iconBtn} title="Tirar a hipótese" onClick={() => { if (editando === h.id) fechar(); onAlterar((l) => l.filter((x) => x.id !== h.id)) }}><Trash2 /></button>
           </li>
         ))}
       </ul>
@@ -515,8 +542,8 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
             )}
           </label>
           <div className={s.hipBotoes}>
-            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setAbrindo(false)}>Cancelar</button>
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!valido} onClick={adicionar}>Incluir</button>
+            <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={fechar}>Cancelar</button>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!valido} onClick={adicionar}>{editando ? 'Salvar' : 'Incluir'}</button>
           </div>
         </div>
       ) : (

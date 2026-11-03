@@ -16,7 +16,8 @@ import { bancoVazio, enderecoVazio } from '@/features/parceiros/types'
 import { useAuth } from '@/features/auth/auth-context'
 import { useFator } from '@/features/pricing/usePreco'
 import { useQuery } from '@tanstack/react-query'
-import { getNumeracaoEmpresa } from '@/features/cadastros/api'
+import { getNumeracaoEmpresa, listServicos } from '@/features/cadastros/api'
+import { hojeIso, impostosVigentes } from '@/features/servicos/impostos'
 import { getErrorMessage } from '@/lib/api'
 import { consultarCnpj, resumoCnpj, type CepConsulta } from '@/features/common/consultas'
 import { CampoCep } from '@/features/common/CampoCep'
@@ -106,7 +107,15 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
   const paraSalvar = (x: UnidadeForm): UnidadeForm => ({ ...x, simplesAnexo: '' })
   // Fator ao vivo: o motor do servidor calcula com o rascunho do formulário (antes de salvar),
   // somando custos fixos e meta gravados da empresa.
-  const fatorAoVivo = useFator({ empresaId: initial?.id ?? '', empresa: { ...(paraSalvar(d) as Unidade), id: initial?.id ?? '' } })
+  // O markup ao lado é o de um serviço (os impostos são dele): vem escolhido o primeiro com tabela em vigor no regime.
+  const { data: servicosData } = useQuery({ queryKey: ['servicos'], queryFn: listServicos })
+  const servicosAtivos = (servicosData ?? []).filter((x) => x.status === 'ativo').sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+  const comTabela = (id: string) => impostosVigentes(servicosAtivos.find((x) => x.id === id)?.impostos ?? [], d.regime, hojeIso()).length > 0
+  const [servicoMarkup, setServicoMarkup] = useState('')
+  const servicoDoMarkup = servicosAtivos.some((x) => x.id === servicoMarkup)
+    ? servicoMarkup
+    : (servicosAtivos.find((x) => comTabela(x.id)) ?? servicosAtivos[0])?.id ?? ''
+  const fatorAoVivo = useFator({ empresaId: initial?.id ?? '', empresa: { ...(paraSalvar(d) as Unidade), id: initial?.id ?? '' }, servicoId: servicoDoMarkup || null })
 
   // CNPJ → Receita (base aberta): ao sair do campo com os 14 números, preenche razão social,
   // fantasia, endereço e regime. Só busca quando o CNPJ mudou (passar pelo campo de uma
@@ -404,10 +413,21 @@ function EmpresaForm({ initial, onSave }: { initial: Unidade | null; onSave: (da
                 </div>
               </fieldset>
               <div className={s.dvNota}>
-                Os impostos ficam em <b>Cadastros › Serviços</b>, uma tabela por regime: no Pricing vale a do serviço do item; o fator ao lado usa a média dos serviços. A despesa fixa vem de <b>Despesas Fixas</b> e da <b>Meta</b> da empresa.
+                Os impostos ficam em <b>Cadastros › Serviços</b>, uma tabela por regime: o fator ao lado é o do serviço escolhido, igual ao do Pricing. A despesa fixa vem de <b>Despesas Fixas</b> e da <b>Meta</b> da empresa.
               </div>
             </div>
-            <FatorPainel fator={fatorAoVivo.fator} carregando={fatorAoVivo.carregando} />
+            <div className={s.fatorComServico}>
+              <label className={s.servicoMarkup}>
+                Serviço
+                <select id="markup-servico" value={servicoDoMarkup} onChange={(e) => setServicoMarkup(e.target.value)} aria-label="Serviço do markup">
+                  {servicosAtivos.length === 0 && <option value="">Nenhum serviço cadastrado</option>}
+                  {servicosAtivos.map((x) => (
+                    <option key={x.id} value={x.id}>{x.nome}{comTabela(x.id) ? '' : ' (sem impostos do regime)'}</option>
+                  ))}
+                </select>
+              </label>
+              <FatorPainel fator={fatorAoVivo.fator} carregando={fatorAoVivo.carregando} />
+            </div>
           </div>
         </section>
       )}

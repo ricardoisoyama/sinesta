@@ -172,6 +172,13 @@
   text-decoration: line-through;
 }
 
+/* Ad valorem do item: soma ao preço (não é preço antigo, então não vai riscado). */
+.precoAdValorem {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7b72;
+}
+
 .justificativaBox {
   display: flex;
   flex-direction: column;

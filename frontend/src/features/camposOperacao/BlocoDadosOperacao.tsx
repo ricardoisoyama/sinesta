@@ -1,5 +1,7 @@
+import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Field } from '@/features/common/Field'
+import { Hint } from '@/features/common/Hint'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
 import { listClientes, listFornecedores, listServicos, listVeiculos, listVendedores } from '@/features/cadastros/api'
@@ -9,10 +11,10 @@ import { CidadeAutocomplete } from '@/features/common/CidadeAutocomplete'
 import { UFS } from '@/lib/ufs'
 import { CadastroBusca, type OpcaoCadastro } from './CadastroBusca'
 import { EFEITOS, campoUfDaCidade, efeitoDe, numeroDe, textoCidade, type CampoOperacao, type ValoresOperacao } from './types'
-import { preencherAdValorem, taxaDaRota, ufDoValor } from './advalorem'
+import { preencherAdValorem, taxaDaRota, ufDoValor, valoresIniciaisAdValorem } from './advalorem'
 import { aliquotaDaRota, preencherIcms } from './icms'
 import { listAliquotasIcms } from '@/features/icms/api'
-import { useApolices } from './useApolices'
+import { useApolicesCarregadas } from './useApolices'
 import { formatBRL, formatPct } from '@/lib/format'
 import s from './camposOperacao.module.css'
 import money from '@/features/common/MoneyInput.module.css'
@@ -54,7 +56,14 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
   // ICMS: o mesmo gatilho, pela Tabela de ICMS.
   const temAdValorem = campos.some((c) => c.tipo === 'advalorem')
   const temIcms = campos.some((c) => c.tipo === 'icms')
-  const apoliceDe = useApolices(empresaId, temAdValorem)
+  const { apoliceDe, carregadas } = useApolicesCarregadas(empresaId, temAdValorem)
+  // Primeira carga: ad valorem vazio recebe o % da apólice (rota ou taxa padrão) ou o % fixo do campo.
+  // Depois disso vale o que a pessoa digitar (mudar origem/destino ainda recalcula pela apólice).
+  useEffect(() => {
+    if (!temAdValorem || !carregadas) return
+    const depois = valoresIniciaisAdValorem(campos, valores, (t) => apoliceDe(t)?.apolice)
+    for (const c of campos) if (c.tipo === 'advalorem' && depois[c.chave] !== valores[c.chave]) onChange(c.chave, depois[c.chave])
+  }, [temAdValorem, carregadas, campos]) // eslint-disable-line react-hooks/exhaustive-deps
   const { data: tabelaIcms } = useQuery({ queryKey: ['aliquotas-icms'], queryFn: listAliquotasIcms, enabled: temIcms })
   const mudar = (chave: string, valor: string | number) => {
     onChange(chave, valor)
@@ -79,7 +88,8 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
     const base = c.campoBase ? numeroDe(valores[c.campoBase]) : 0
     const emReais = pct > 0 && base > 0 ? `${formatBRL(pct * base)} sobre ${formatBRL(base)}` : ''
     const a = c.seguro ? apoliceDe(c.seguro) : undefined
-    if (!a) return [emReais, c.seguro ? `sem apólice ${c.seguro} vigente` : ''].filter(Boolean).join(' · ')
+    const fixo = (c.percentualFixo ?? 0) > 0 ? (Math.abs((c.percentualFixo ?? 0) - pct) < 1e-9 ? '% fixo do campo' : `ajustado (% fixo: ${formatPct(c.percentualFixo ?? 0)})`) : ''
+    if (!a) return [emReais, fixo || (c.seguro && c.seguro !== 'Outro' ? `sem apólice ${c.seguro} vigente` : '')].filter(Boolean).join(' · ')
     const taxa = taxaDaRota(a.apolice, valores[c.campoOrigem ?? ''], valores[c.campoDestino ?? ''])
     const fonte = !taxa ? '' : Math.abs(taxa.pct - pct) < 1e-9 ? `venda da apólice ${a.apolice.numero || a.apolice.tipo}` : `ajustado (venda da apólice: ${formatPct(taxa.pct)})`
     // O custo aparece para mostrar a margem; sem venda cadastrada, avisa que está cobrando o custo.
@@ -158,8 +168,11 @@ export function BlocoDadosOperacao({ empresaId, campos, valores, onChange, mostr
             )}
             {c.tipo === 'advalorem' && (
               <>
-                <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />
-                {notaAdValorem(c) && <span className={s.notaCampo}>{notaAdValorem(c)}</span>}
+                {/* De onde veio o % (apólice, fixo, ajustado) fica no balão, não embaixo do campo. */}
+                <div className={s.comBalao}>
+                  <PercentInput value={Number(v) || 0} onChange={(n) => onChange(c.chave, n)} />
+                  {notaAdValorem(c) && <Hint text={notaAdValorem(c)} />}
+                </div>
               </>
             )}
             {c.tipo === 'lista' && (

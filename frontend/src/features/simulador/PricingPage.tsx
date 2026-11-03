@@ -878,6 +878,13 @@ export function PricingPage() {
                 <div className={base.memRow}><span className={base.memLabel}>= Preço de venda</span><span className={base.memVal}>{formatBRL(pv)}</span></div>
                 {desconto > 0 && <div className={base.memRow}><span className={base.memLabel}>(−) Desconto {formatPct(desconto)}</span><span className={base.memVal}>{formatBRL(pv - pvComDesconto)}</span></div>}
                 {aplicaIcmsEfetivo && <div className={base.memRow}><span className={base.memLabel}>÷ (1 − ICMS {formatPct(aliqIcms)}) = frete com ICMS</span><span className={base.memVal}>{formatBRL(precoCalculado)}</span></div>}
+                {adValorem.linhas.map((l) => (
+                  <div key={l.nome} className={base.memRow}>
+                    <span className={base.memLabel}>+ {l.nome} <span className={base.memSub}>{formatPct(l.pct)} de {l.base > 0 ? formatBRL(l.base) : 'mercadoria não informada'}, fora do markup</span></span>
+                    <span className={base.memVal}>{formatBRL(l.valor)}</span>
+                  </div>
+                ))}
+                {adValorem.total > 0 && <div className={`${base.memRow} ${base.memTotal}`}><span className={base.memLabel}>= Frete total</span><span className={base.memVal}>{formatBRL(freteTotal)}</span></div>}
                 <div className={base.memRow}><span className={base.memLabel}>Margem líquida</span><span className={`${base.mlBadge} ${abaixoDoMinimo ? base.mlBadgeRuim : ''}`}>{formatPct(margemVigente.ml)}</span></div>
               </>
             )}
@@ -916,7 +923,7 @@ export function PricingPage() {
                   <td className={`${ui.right} ${ui.cellStrong}`}>
                     {formatBRL(it.precoFinal)}
                     {(it.precoCalculado ?? 0) > 0 && <div className={base.precoOriginal}>calculado {formatBRL(it.precoCalculado ?? 0)}</div>}
-                    {(it.adValorem ?? 0) > 0 && <div className={base.precoOriginal}>+ ad valorem {formatBRL(it.adValorem ?? 0)} = {formatBRL(it.precoFinal + (it.adValorem ?? 0))}</div>}
+                    {(it.adValorem ?? 0) > 0 && <div className={base.precoAdValorem}>+ ad valorem {formatBRL(it.adValorem ?? 0)} = {formatBRL(it.precoFinal + (it.adValorem ?? 0))}</div>}
                   </td>
                   {podeVerCalculo && <td className={ui.right}>{formatPct(it.ml)}</td>}
                   <td className={ui.colActions}>

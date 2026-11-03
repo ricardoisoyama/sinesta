@@ -35,7 +35,7 @@ const vazia = (): Carteira => ({
   status: 'ativo',
 })
 
-/** Conta bancária, caixa ou cartão por onde o dinheiro entra e sai. */
+/** Conta bancária, caixa, cartão ou investimento (aplicação: entra e sai por transferência; rendimento é entrada). */
 export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa }: Props) {
   const [d, setD] = useState<Carteira>(vazia())
   const [erro, setErro] = useState('')
@@ -74,7 +74,7 @@ export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa 
       open={open}
       onClose={onClose}
       title={initial?.id ? 'Editar conta' : 'Nova conta'}
-      subtitle="Conta bancária, caixa ou cartão"
+      subtitle="Conta bancária, caixa, cartão ou investimento"
       icon={<Landmark />}
       maxWidth={620}
       maximizavel={false}
@@ -103,20 +103,15 @@ export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa 
             </select>
           </Field>
           )}
-          <Field label="Tipo">
+          <Field className={ui.col2} label="Tipo">
             <select value={d.tipo} onChange={(e) => set({ tipo: e.target.value as Carteira['tipo'] })}>
               <option value="banco">Banco</option>
               <option value="caixa">Caixa</option>
               <option value="cartao">Cartão</option>
+              <option value="investimento">Investimento</option>
             </select>
           </Field>
-          <Field label="Situação">
-            <select value={d.status} onChange={(e) => set({ status: e.target.value as Carteira['status'] })}>
-              <option value="ativo">Ativa</option>
-              <option value="inativo">Inativa</option>
-            </select>
-          </Field>
-          {d.tipo === 'banco' && (
+          {(d.tipo === 'banco' || d.tipo === 'investimento') && (
             <>
               <Field className={ui.col2} label="Banco">
                 <input value={d.banco} onChange={(e) => set({ banco: e.target.value })} placeholder="Ex.: 341 · Itaú" />
@@ -129,10 +124,10 @@ export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa 
               </Field>
             </>
           )}
-          <Field label="Saldo inicial (R$)" hint="Saldo no dia em que a carteira começa a ser controlada aqui.">
+          <Field className={ui.col2} label="Saldo inicial (R$)" hint="Saldo no dia em que a carteira começa a ser controlada aqui.">
             <MoneyInput value={d.saldoInicial} onChange={(n) => set({ saldoInicial: n })} />
           </Field>
-          <Field label="Saldo em">
+          <Field className={ui.col2} label="Saldo em">
             <input type="date" value={d.saldoInicialEm} onChange={(e) => set({ saldoInicialEm: e.target.value })} />
           </Field>
           <Field className={ui.col2} label="Cor">
@@ -147,6 +142,12 @@ export function CarteiraFormModal({ open, initial, onClose, onSave, empresaFixa 
                 />
               ))}
             </div>
+          </Field>
+          <Field label="Situação">
+            <select value={d.status} onChange={(e) => set({ status: e.target.value as Carteira['status'] })}>
+              <option value="ativo">Ativa</option>
+              <option value="inativo">Inativa</option>
+            </select>
           </Field>
         </div>
       </section>

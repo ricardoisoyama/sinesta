@@ -41,6 +41,11 @@ public class CampoOperacao : Rastreavel, IEntity, IInativavel
     public string Seguro { get; set; } = string.Empty;
     /// <summary>Chave do campo com o valor da mercadoria (o ad valorem incide sobre ele).</summary>
     public string CampoBase { get; set; } = string.Empty;
+    /// <summary>
+    /// Percentual que o Pricing traz quando não há apólice que dê a taxa (seguro "Outro", armazenagem sem
+    /// origem e destino). Fração (0,003 = 0,3%); 0 = a pessoa digita. Sempre ajustável na tela.
+    /// </summary>
+    public decimal PercentualFixo { get; set; }
     /// <summary>Chaves dos campos de origem e destino (uf ou cidade).</summary>
     public string CampoOrigem { get; set; } = string.Empty;
     public string CampoDestino { get; set; } = string.Empty;

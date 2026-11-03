@@ -91,6 +91,29 @@ export function preencherAdValorem(
   return novos
 }
 
+/**
+ * Primeira carga: o campo de ad valorem ainda sem valor recebe o % da apólice (pela rota; sem origem e
+ * destino, a taxa padrão dela) ou, sem apólice, o % fixo do campo. Campo com valor (mesmo digitado) fica.
+ */
+export function valoresIniciaisAdValorem(
+  campos: CampoOperacao[],
+  valores: ValoresOperacao,
+  apoliceDe: (tipo: string) => Apolice | undefined,
+): ValoresOperacao {
+  let novos = valores
+  for (const c of campos) {
+    if (c.tipo !== 'advalorem') continue
+    const atual = valores[c.chave]
+    if (atual !== undefined && atual !== '') continue
+    const a = c.seguro ? apoliceDe(c.seguro) : undefined
+    const rota = a && taxaDaRota(a, valores[c.campoOrigem ?? ''], valores[c.campoDestino ?? ''])
+    const padrao = a && a.taxaPadrao > 0 ? ((a.taxaPadraoVenda ?? 0) > 0 ? a.taxaPadraoVenda! : a.taxaPadrao) : 0
+    const pct = rota ? rota.pct : padrao || (c.percentualFixo ?? 0)
+    if (pct > 0) novos = { ...novos, [c.chave]: pct }
+  }
+  return novos
+}
+
 /** Ad valorem em R$ de cada campo (percentual × valor da mercadoria) e o total. */
 export function adValoremDosCampos(campos: CampoOperacao[], valores: ValoresOperacao) {
   const linhas: { nome: string; pct: number; base: number; valor: number }[] = []
