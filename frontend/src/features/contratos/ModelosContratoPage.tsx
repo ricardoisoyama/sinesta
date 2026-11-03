@@ -1,24 +1,27 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Copy, LayoutTemplate, ListChecks, Plus, Receipt, Save, Trash2 } from 'lucide-react'
+import { Copy, LayoutTemplate, Plus, Receipt, Save, ScrollText } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { avisar, confirmar } from '@/features/common/dialogo/dialogo'
 import { listServicos } from '@/features/cadastros/api'
 import { getErrorMessage } from '@/lib/api'
-import { referencias } from '@/lib/formula'
 import { salvarModeloContrato, useContratos, useModelosContrato } from './api'
-import { AJUDA_REGRA, apelidoDe, CAMPOS_NUMERICOS, modeloVazio, ROTULO_REGRA, ROTULO_TIPO_CAMPO, type CampoModelo, type ComponenteModelo, type ModeloContrato, type TipoCampo } from './modelos'
-import type { RegraComponente } from './types'
+import { modeloVazio, type ModeloContrato } from './modelos'
+import type { CondicoesContrato } from './types'
 import s from './form.module.css'
 
-const CADASTROS = ['Veículos', 'Funcionários', 'Fornecedores', 'Serviços']
 const NOVO = '__novo__'
+const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
+const PADRAO: CondicoesContrato = {
+  faturarDesde: '', diaFaturamento: 1, referencia: 'mes-anterior', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: true,
+  avisoPrevioDias: 60, reajusteIndice: 'IPCA', reajusteMesBase: 1, multaRescisoria: '', carteiraId: '', formaCobranca: 'Boleto com Pix', prazoPagamentoDias: 15,
+  agrupamento: 'periodo', fechamento: 'mensal', semNotaFiscal: false, semBoleto: false,
+}
 
 /**
- * Modelos de Contrato (Parametrizações): o cliente monta os modelos do negócio dele.
- * Campos (características, com apelido) + componentes de cobrança (o que entra na fatura e a regra).
- * Mesma ideia da Ficha Técnica e dos Dados da Operação.
+ * Modelos de Contrato (Parametrizações): as cláusulas e as condições padrão que o contrato copia ao nascer.
+ * O que se cobra (itens, valores, como cada um é cobrado) vem da proposta aprovada, não do modelo.
  */
 export function ModelosContratoPage() {
   const qc = useQueryClient()
@@ -42,37 +45,20 @@ export function ModelosContratoPage() {
   const tipos = [...new Set(modelos.map((m) => m.tipoOperacao).filter(Boolean))]
   const usados = contratos.filter((c) => c.modeloId === rascunho?.id).length
   const mudou = !!rascunho && (atualId === NOVO || JSON.stringify(rascunho) !== JSON.stringify(original))
+  const cond = { ...PADRAO, ...rascunho?.condicoesPadrao }
 
   const set = (p: Partial<ModeloContrato>) => rascunho && setRascunho({ ...rascunho, ...p })
-  const setCampo = (id: string, p: Partial<CampoModelo>) => rascunho && set({ campos: rascunho.campos.map((c) => (c.id === id ? { ...c, ...p } : c)) })
-  const setComp = (id: string, p: Partial<ComponenteModelo>) => rascunho && set({ componentes: rascunho.componentes.map((c) => (c.id === id ? { ...c, ...p } : c)) })
-
-  // Fórmulas só podem usar apelidos que existem: componentes fixos, outras fórmulas, campos numéricos e "subtotal".
-  const conhecidos = new Set<string>(['subtotal'])
-  rascunho?.componentes.filter((c) => c.regra === 'fixo' || c.regra === 'formula').forEach((c) => conhecidos.add(c.apelido))
-  rascunho?.campos.filter((c) => CAMPOS_NUMERICOS.includes(c.tipo)).forEach((c) => conhecidos.add(c.apelido))
-  const erroFormula = (c: ComponenteModelo) => {
-    if (c.regra !== 'formula') return ''
-    if (!c.formula.trim()) return 'Escreva a fórmula'
-    const fora = referencias(c.formula).find((r) => !conhecidos.has(r))
-    return fora ? `Apelido desconhecido: ${fora}` : ''
-  }
-  const apelidosRepetidos = (() => {
-    if (!rascunho) return new Set<string>()
-    const todos = [...rascunho.campos.map((c) => c.apelido), ...rascunho.componentes.map((c) => c.apelido)]
-    return new Set(todos.filter((a, i) => todos.indexOf(a) !== i))
-  })()
-  const temErro = !!rascunho && (rascunho.componentes.some((c) => erroFormula(c)) || apelidosRepetidos.size > 0 || !rascunho.nome.trim())
+  const setCond = (p: Partial<CondicoesContrato>) => set({ condicoesPadrao: { ...cond, ...p } })
 
   const salvar = async () => {
-    if (!rascunho || temErro) return
+    if (!rascunho || !rascunho.nome.trim()) return
     setSalvando(true)
     try {
       const salvo = await salvarModeloContrato(rascunho)
       await qc.invalidateQueries({ queryKey: ['modelos-contrato'] })
       setSelecionado(salvo.id)
       setEditandoId('')
-      void avisar({ titulo: 'Modelo salvo', mensagem: `"${salvo.nome}" já aparece no cadastro de contrato. Contratos existentes continuam com o que têm; campos novos aparecem vazios na pasta.` })
+      void avisar({ titulo: 'Modelo salvo', mensagem: `"${salvo.nome}" já aparece no cadastro de contrato. Os contratos que já existem continuam com as cláusulas e condições que têm.` })
     } catch (err) {
       void avisar({ titulo: 'Não foi possível salvar', mensagem: getErrorMessage(err) })
     } finally {
@@ -88,25 +74,19 @@ export function ModelosContratoPage() {
     if (!rascunho) return
     setSelecionado(NOVO)
     setEditandoId(NOVO)
-    setRascunho({
-      ...rascunho,
-      id: '',
-      nome: `${rascunho.nome} (cópia)`,
-      campos: rascunho.campos.map((c) => ({ ...c, id: crypto.randomUUID() })),
-      componentes: rascunho.componentes.map((c) => ({ ...c, id: crypto.randomUUID() })),
-    })
+    setRascunho({ ...rascunho, id: '', nome: `${rascunho.nome} (cópia)`, campos: [], componentes: [] })
   }
 
   return (
     <div>
-      <PageHeader breadcrumb="Parametrizações" title="Modelos de Contrato" subtitle="Cada negócio monta os seus: os campos do contrato (com apelido) e o que entra na fatura, com a regra de cada componente." />
+      <PageHeader breadcrumb="Parametrizações" title="Modelos de Contrato" subtitle="As cláusulas e as condições padrão de cada tipo de contrato. O que se cobra vem da proposta aprovada; o modelo só traz o texto e os combinados de sempre." />
 
       <div className={s.modelosGrade}>
         <div className={s.listaModelos}>
           {modelos.map((m) => (
             <button key={m.id} type="button" className={`${s.cartaoModelo} ${m.id === atualId ? s.modeloOn : ''}`} onClick={() => void trocar(m.id)}>
               <b>{m.nome}{m.status === 'inativo' ? ' (inativo)' : ''}</b>
-              <span>{m.tipoOperacao || 'sem tipo de operação'} · {m.campos.length} campo(s) · {m.componentes.length} componente(s)</span>
+              <span>{m.tipoOperacao || 'qualquer operação'} · {m.clausulas?.trim() ? 'com cláusulas' : 'sem cláusulas'}</span>
               <span>{contratos.filter((c) => c.modeloId === m.id).length} contrato(s) usando</span>
             </button>
           ))}
@@ -121,17 +101,17 @@ export function ModelosContratoPage() {
               <div className={s.grade}>
                 <label className={s.campo}>
                   Nome
-                  <input value={rascunho.nome} onChange={(e) => set({ nome: e.target.value })} />
+                  <input id="modelo-nome" value={rascunho.nome} onChange={(e) => set({ nome: e.target.value })} />
                 </label>
                 <label className={s.campo}>
                   Tipo de operação
-                  <input list="tipos-op" value={rascunho.tipoOperacao} onChange={(e) => set({ tipoOperacao: e.target.value })} placeholder="Terceirização, Transporte, Tecnologia..." />
+                  <input id="modelo-tipo" list="tipos-op" value={rascunho.tipoOperacao} onChange={(e) => set({ tipoOperacao: e.target.value })} placeholder="Armazenagem, Transporte..." />
                   <datalist id="tipos-op">{tipos.map((t) => <option key={t} value={t} />)}</datalist>
                 </label>
                 <label className={s.campo}>
                   Serviço da nota (padrão)
                   <select value={rascunho.servicoId} onChange={(e) => set({ servicoId: e.target.value })}>
-                    <option value="">Escolher no contrato</option>
+                    <option value="">O da proposta</option>
                     {(servicos ?? []).filter((x) => x.status !== 'inativo').map((x) => <option key={x.id} value={x.id}>{x.nome}</option>)}
                   </select>
                 </label>
@@ -147,149 +127,95 @@ export function ModelosContratoPage() {
                   <input value={rascunho.descricao} onChange={(e) => set({ descricao: e.target.value })} />
                 </label>
               </div>
+            </section>
+
+            <section className={s.secao}>
+              <h2 className={s.secTitulo}><ScrollText size={15} /> Cláusulas</h2>
+              <p className={s.nota}>O texto entra no contrato novo, que pode ajustar o que for daquele cliente.</p>
+              <label className={s.campo}>
+                <textarea id="modelo-clausulas" rows={12} value={rascunho.clausulas ?? ''} onChange={(e) => set({ clausulas: e.target.value })} placeholder={'1. Do objeto\n2. Da vigência e renovação\n3. Do preço e do reajuste\n...'} aria-label="Cláusulas do modelo" />
+              </label>
+            </section>
+
+            <section className={s.secao}>
+              <h2 className={s.secTitulo}><Receipt size={15} /> Condições padrão</h2>
+              <p className={s.nota}>Vêm preenchidas no contrato novo; cada contrato pode mudar.</p>
+              <div className={s.grade}>
+                <label className={s.campo}>
+                  Dia do fechamento
+                  <input type="number" min={1} max={28} value={cond.diaFaturamento} onChange={(e) => setCond({ diaFaturamento: Number(e.target.value) })} />
+                </label>
+                <label className={s.campo}>
+                  O que a fatura cobra
+                  <select value={cond.referencia} onChange={(e) => setCond({ referencia: e.target.value as CondicoesContrato['referencia'] })}>
+                    <option value="mes-anterior">O serviço do mês anterior</option>
+                    <option value="mes-atual">O serviço do próprio mês</option>
+                  </select>
+                </label>
+                <label className={s.campo}>
+                  Dia do vencimento
+                  <input type="number" min={1} max={28} value={cond.diaVencimento} onChange={(e) => setCond({ diaVencimento: Number(e.target.value) })} />
+                </label>
+                <label className={s.campo}>
+                  Documentos por CT-e
+                  <select value={cond.agrupamento} onChange={(e) => setCond({ agrupamento: e.target.value as CondicoesContrato['agrupamento'] })}>
+                    <option value="periodo">Uma fatura juntando os do período</option>
+                    <option value="por-documento">Uma cobrança por CT-e</option>
+                  </select>
+                </label>
+                <label className={s.campo}>
+                  Fechamento dos documentos
+                  <select value={cond.fechamento} onChange={(e) => setCond({ fechamento: e.target.value as CondicoesContrato['fechamento'] })}>
+                    <option value="semanal">Semanal</option>
+                    <option value="quinzenal">Quinzenal</option>
+                    <option value="mensal">Mensal</option>
+                  </select>
+                </label>
+                <label className={s.campo}>
+                  Vence em (dias, spot e documentos)
+                  <input type="number" min={0} value={cond.prazoPagamentoDias} onChange={(e) => setCond({ prazoPagamentoDias: Number(e.target.value) })} />
+                </label>
+                <div className={`${s.campo} ${s.largo}`}>
+                  Documentos do fechamento
+                  <div className={s.documentos}>
+                    <label className={s.check}><input type="checkbox" checked disabled /> Fatura</label>
+                    <label className={s.check}><input type="checkbox" checked={!cond.semNotaFiscal} onChange={(e) => setCond({ semNotaFiscal: !e.target.checked })} /> Nota fiscal (NFS-e)</label>
+                    <label className={s.check}><input type="checkbox" checked={!cond.semBoleto} onChange={(e) => setCond({ semBoleto: !e.target.checked, formaCobranca: e.target.checked ? 'Boleto com Pix' : 'Pix' })} /> Boleto</label>
+                  </div>
+                </div>
+                <label className={s.check}>
+                  <input type="checkbox" checked={cond.renovacaoAutomatica} onChange={(e) => setCond({ renovacaoAutomatica: e.target.checked })} /> Renova automaticamente
+                </label>
+                <label className={s.campo}>
+                  Aviso prévio (dias)
+                  <input type="number" min={0} value={cond.avisoPrevioDias} onChange={(e) => setCond({ avisoPrevioDias: Number(e.target.value) })} />
+                </label>
+                <label className={s.campo}>
+                  Reajuste (aviso)
+                  <select value={cond.reajusteIndice} onChange={(e) => setCond({ reajusteIndice: e.target.value as CondicoesContrato['reajusteIndice'] })}>
+                    {['IPCA', 'IGP-M', 'INPC', 'Negociado'].map((x) => <option key={x} value={x}>{x}</option>)}
+                  </select>
+                </label>
+                <label className={s.campo}>
+                  Mês-base do reajuste
+                  <select value={cond.reajusteMesBase} onChange={(e) => setCond({ reajusteMesBase: Number(e.target.value) })}>
+                    {MESES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+                  </select>
+                </label>
+                <label className={`${s.campo} ${s.largo}`}>
+                  Multa rescisória
+                  <input value={cond.multaRescisoria} onChange={(e) => setCond({ multaRescisoria: e.target.value })} placeholder="Ex.: 3 mensalidades, proporcional ao tempo restante" />
+                </label>
+              </div>
               <div className={s.rodape} style={{ marginTop: 14 }}>
                 <span className={s.mut} style={{ marginRight: 'auto', alignSelf: 'center' }}>{rascunho.id ? `${usados} contrato(s) usando este modelo` : 'Modelo novo, ainda não salvo'}</span>
                 {rascunho.id && <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={duplicar}><Copy /> Duplicar</button>}
-                <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!mudou || temErro || salvando} onClick={() => void salvar()}><Save /> {salvando ? 'Salvando...' : 'Salvar modelo'}</button>
-              </div>
-            </section>
-
-            <section className={s.secao}>
-              <h2 className={s.secTitulo}><ListChecks size={15} /> Campos do contrato (características)</h2>
-              <p className={s.nota}>Aparecem no cadastro e na pasta. O apelido é o nome usado nas fórmulas (só letras, números e _).</p>
-              <div className={ui.tableScroll}>
-                <table className={`${ui.table} ${s.tabelaEdit}`}>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Apelido</th>
-                      <th>Tipo</th>
-                      <th>Opções</th>
-                      <th>Obrigatório</th>
-                      <th>Ajuda</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rascunho.campos.map((c) => (
-                      <tr key={c.id}>
-                        <td><input value={c.nome} onChange={(e) => setCampo(c.id, { nome: e.target.value, apelido: c.apelido === apelidoDe(c.nome) || !c.apelido ? apelidoDe(e.target.value) : c.apelido })} /></td>
-                        <td>
-                          <input className={s.apelidoInput} value={c.apelido} onChange={(e) => setCampo(c.id, { apelido: apelidoDe(e.target.value) })} />
-                          {apelidosRepetidos.has(c.apelido) && <div className={s.erroLinha}>Apelido repetido</div>}
-                        </td>
-                        <td>
-                          <select value={c.tipo} onChange={(e) => setCampo(c.id, { tipo: e.target.value as TipoCampo, opcoes: e.target.value === 'cadastro' ? [CADASTROS[0]] : c.opcoes })}>
-                            {(Object.keys(ROTULO_TIPO_CAMPO) as TipoCampo[]).map((t) => <option key={t} value={t}>{ROTULO_TIPO_CAMPO[t]}</option>)}
-                          </select>
-                        </td>
-                        <td>
-                          {c.tipo === 'lista' ? (
-                            <input value={c.opcoes.join(', ')} onChange={(e) => setCampo(c.id, { opcoes: e.target.value.split(',').map((x) => x.trim()).filter(Boolean) })} placeholder="separadas por vírgula" />
-                          ) : c.tipo === 'cadastro' ? (
-                            <select value={c.opcoes[0] ?? ''} onChange={(e) => setCampo(c.id, { opcoes: [e.target.value] })}>
-                              {CADASTROS.map((x) => <option key={x} value={x}>{x}</option>)}
-                            </select>
-                          ) : (
-                            <span className={s.mut}>—</span>
-                          )}
-                        </td>
-                        <td><input type="checkbox" checked={c.obrigatorio} onChange={(e) => setCampo(c.id, { obrigatorio: e.target.checked })} style={{ width: 16 }} /></td>
-                        <td><input value={c.ajuda} onChange={(e) => setCampo(c.id, { ajuda: e.target.value })} placeholder="dica no cadastro" /></td>
-                        <td><button type="button" className={ui.iconBtn} title="Tirar o campo" onClick={() => set({ campos: rascunho.campos.filter((x) => x.id !== c.id) })}><Trash2 /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ campos: [...rascunho.campos, { id: crypto.randomUUID(), apelido: `campo_${rascunho.campos.length + 1}`, nome: '', tipo: 'texto', opcoes: [], obrigatorio: false, ajuda: '' }] })}>
-                <Plus /> Incluir campo
-              </button>
-            </section>
-
-            <section className={s.secao}>
-              <h2 className={s.secTitulo}><Receipt size={15} /> Componentes de cobrança</h2>
-              <p className={s.nota}>O que entra na fatura e como se calcula. "Opcional" = cada contrato liga ou desliga.</p>
-              <div className={ui.tableScroll}>
-                <table className={`${ui.table} ${s.tabelaEdit}`}>
-                  <thead>
-                    <tr>
-                      <th>Nome</th>
-                      <th>Apelido</th>
-                      <th>Regra</th>
-                      <th>Cálculo</th>
-                      <th>Opcional</th>
-                      <th />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rascunho.componentes.map((c) => (
-                      <tr key={c.id}>
-                        <td><input value={c.nome} onChange={(e) => setComp(c.id, { nome: e.target.value, apelido: c.apelido === apelidoDe(c.nome) || !c.apelido ? apelidoDe(e.target.value) : c.apelido })} /></td>
-                        <td>
-                          <input className={s.apelidoInput} value={c.apelido} onChange={(e) => setComp(c.id, { apelido: apelidoDe(e.target.value) })} />
-                          {apelidosRepetidos.has(c.apelido) && <div className={s.erroLinha}>Apelido repetido</div>}
-                        </td>
-                        <td style={{ minWidth: 210 }}>
-                          <select value={c.regra} onChange={(e) => setComp(c.id, { regra: e.target.value as RegraComponente })}>
-                            {(Object.keys(ROTULO_REGRA) as RegraComponente[]).map((r) => <option key={r} value={r}>{ROTULO_REGRA[r]}</option>)}
-                          </select>
-                          <div className={s.ajudaRegra}>{AJUDA_REGRA[c.regra]}</div>
-                        </td>
-                        <td style={{ minWidth: 200 }}>
-                          {c.regra === 'formula' ? (
-                            <>
-                              <input className={s.apelidoInput} value={c.formula} onChange={(e) => setComp(c.id, { formula: e.target.value })} placeholder="posto * 20%" />
-                              {erroFormula(c) && <div className={s.erroLinha}>{erroFormula(c)}</div>}
-                            </>
-                          ) : c.regra === 'documento' ? (
-                            <select value={c.documento} onChange={(e) => setComp(c.id, { documento: e.target.value })}>
-                              {['CT-e', 'NF-e', 'OS', 'Medição'].map((x) => <option key={x} value={x}>{x}</option>)}
-                            </select>
-                          ) : (
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <input value={c.unidade} onChange={(e) => setComp(c.id, { unidade: e.target.value })} placeholder="unidade" style={{ width: 90 }} />
-                              <input type="number" step="0.01" value={c.valorPadrao} onChange={(e) => setComp(c.id, { valorPadrao: Number(e.target.value) })} title="Preço padrão (o contrato pode mudar)" />
-                            </div>
-                          )}
-                        </td>
-                        <td><input type="checkbox" checked={c.opcional} onChange={(e) => setComp(c.id, { opcional: e.target.checked })} style={{ width: 16 }} /></td>
-                        <td><button type="button" className={ui.iconBtn} title="Tirar o componente" onClick={() => set({ componentes: rascunho.componentes.filter((x) => x.id !== c.id) })}><Trash2 /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <button type="button" className={`${ui.btn} ${ui.btnGhost} ${s.btnLinha}`} onClick={() => set({ componentes: [...rascunho.componentes, { id: crypto.randomUUID(), apelido: `componente_${rascunho.componentes.length + 1}`, nome: '', regra: 'lancamento', unidade: '', valorPadrao: 0, formula: '', documento: 'CT-e', opcional: true }] })}>
-                <Plus /> Incluir componente
-              </button>
-
-              {rascunho.componentes.some((c) => c.regra === 'documento') && (
-                <div className={s.grade} style={{ marginTop: 14 }}>
-                  <label className={s.campo}>
-                    Documentos: como fatura (padrão)
-                    <select value={rascunho.agrupamento} onChange={(e) => set({ agrupamento: e.target.value as ModeloContrato['agrupamento'] })}>
-                      <option value="periodo">Uma fatura juntando os documentos do período</option>
-                      <option value="por-documento">Uma cobrança por documento</option>
-                    </select>
-                  </label>
-                  <label className={s.campo}>
-                    Fechamento (padrão)
-                    <select value={rascunho.fechamento} onChange={(e) => set({ fechamento: e.target.value as ModeloContrato['fechamento'] })}>
-                      <option value="semanal">Semanal</option>
-                      <option value="quinzenal">Quinzenal</option>
-                      <option value="mensal">Mensal</option>
-                    </select>
-                  </label>
-                </div>
-              )}
-              <div className={s.exemploNota}>
-                <b>Exemplo:</b> duas terceirizadas usam o mesmo modelo; uma cobra adicional X e a outra não. Crie o componente <code>adicional_x</code> com a regra Fórmula (<code>posto * 15%</code>) e marque <b>Opcional</b>: cada contrato liga ou desliga. Se a outra empresa nem tem esse conceito, ela usa um modelo próprio, duplicado deste.
+                <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!mudou || !rascunho.nome.trim() || salvando} onClick={() => void salvar()}><Save /> {salvando ? 'Salvando...' : 'Salvar modelo'}</button>
               </div>
             </section>
           </div>
         ) : (
-          <div className={s.secao}>{isLoading ? 'Carregando...' : 'Escolha um modelo ou crie um novo.'}</div>
+          <div className={s.carregando}>Carregando...</div>
         )}
       </div>
     </div>

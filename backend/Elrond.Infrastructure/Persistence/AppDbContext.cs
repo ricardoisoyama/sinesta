@@ -386,6 +386,10 @@ public class AppDbContext : DbContext
                 b.OwnsMany(i => i.Fichas, f => f.OwnsMany(x => x.Composicao));
             });
             e.OwnsMany(p => p.Aprovacoes, b => b.ToJson());
+            // Aditivo: as propostas de antes são avulsas.
+            e.Property(p => p.Modalidade).IsRequired().HasMaxLength(12).HasDefaultValue(ModalidadeProposta.Avulso);
+            e.Property(p => p.VigenciaInicio).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
+            e.Property(p => p.VigenciaFim).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
             // O número nunca repete (prefixos diferentes por empresa + contador atômico; o índice é a garantia final).
             e.Property(p => p.Numero).HasMaxLength(40);
             e.HasIndex(p => p.Numero).IsUnique();
@@ -474,6 +478,8 @@ public class AppDbContext : DbContext
             e.HasKey(m => m.Id);
             e.OwnsMany(m => m.Campos, b => b.ToJson());
             e.OwnsMany(m => m.Componentes, b => b.ToJson());
+            e.Property(m => m.Clausulas).IsRequired().HasDefaultValue(string.Empty);
+            e.OwnsOne(m => m.CondicoesPadrao, b => b.ToJson());
         });
 
         modelBuilder.HasSequence<long>("contratos_numero_seq");
@@ -490,6 +496,7 @@ public class AppDbContext : DbContext
                 b.OwnsMany(v => v.Itens);
             });
             e.OwnsOne(c => c.Condicoes, b => b.ToJson());
+            e.Property(c => c.Clausulas).IsRequired().HasDefaultValue(string.Empty);
             e.OwnsMany(c => c.Caracteristicas, b => b.ToJson());
             e.OwnsMany(c => c.Componentes, b => b.ToJson());
             e.OwnsMany(c => c.Extras, b =>

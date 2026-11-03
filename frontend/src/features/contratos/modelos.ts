@@ -1,5 +1,5 @@
-import { avaliar, chaveDe, referencias } from '@/lib/formula'
-import type { ComponenteContrato, ItemEscopo, LinhaComposicao, RegraComponente } from './types'
+import { avaliar, referencias } from '@/lib/formula'
+import type { ComponenteContrato, CondicoesContrato, ItemEscopo, LinhaComposicao, RegraComponente } from './types'
 
 /**
  * Modelos de Contrato (espelho de ModeloContrato no servidor). O sistema não sabe o que é
@@ -46,13 +46,16 @@ export interface ModeloContrato {
   /** Padrão para documentos vinculados (o contrato pode trocar). */
   agrupamento: 'periodo' | 'por-documento'
   fechamento: 'mensal' | 'quinzenal' | 'semanal'
+  /** Cláusulas padrão que o contrato copia ao nascer. */
+  clausulas: string
+  /** Condições padrão (fechamento, documentos, reajuste, renovação). Nulo = as do sistema. */
+  condicoesPadrao: CondicoesContrato | null
   status: 'ativo' | 'inativo'
 }
 
 export const ROTULO_TIPO_CAMPO: Record<TipoCampo, string> = {
   texto: 'Texto', numero: 'Número', valor: 'Valor (R$)', percentual: 'Percentual', lista: 'Lista', data: 'Data', cadastro: 'Cadastro',
 }
-export const CAMPOS_NUMERICOS: TipoCampo[] = ['numero', 'valor', 'percentual']
 
 export const ROTULO_REGRA: Record<RegraComponente, string> = {
   fixo: 'Fixo por período',
@@ -62,15 +65,7 @@ export const ROTULO_REGRA: Record<RegraComponente, string> = {
   unico: 'Cobrança única',
 }
 
-export const AJUDA_REGRA: Record<RegraComponente, string> = {
-  fixo: 'Entra todo período: quantidade × valor (o posto, a licença, a posição-pallet).',
-  lancamento: 'Entra quando alguém lança na pasta do contrato: hora extra, diária, pallet excedente.',
-  documento: 'Soma os documentos vinculados do período: os CT-es dos fretes, as OS atendidas.',
-  formula: 'Calculado a partir de outros apelidos: posto * 20%, subtotal * 5%.',
-  unico: 'Cobrado uma vez, na primeira fatura: implantação, setup, mobilização.',
-}
-
-/** Modelo novo, em branco, com uma mensalidade para começar. */
+/** Modelo novo, em branco: as cláusulas e as condições padrão (a cobrança vem da proposta). */
 export const modeloVazio = (): ModeloContrato => ({
   id: '',
   nome: 'Novo modelo',
@@ -78,27 +73,12 @@ export const modeloVazio = (): ModeloContrato => ({
   descricao: '',
   servicoId: '',
   campos: [],
-  componentes: [{ id: crypto.randomUUID(), apelido: 'mensalidade', nome: 'Mensalidade', regra: 'fixo', unidade: 'mês', valorPadrao: 0, formula: '', documento: '', opcional: false }],
+  componentes: [],
   agrupamento: 'periodo',
   fechamento: 'mensal',
+  clausulas: '',
+  condicoesPadrao: null,
   status: 'ativo',
-})
-
-/** Apelido válido a partir do nome ("Adicional noturno" → "adicional_noturno"). */
-export const apelidoDe = (nome: string) => chaveDe(nome) || 'campo'
-
-/** Componente do contrato a partir do componente do modelo. */
-export const componenteDoModelo = (m: ComponenteModelo): ComponenteContrato => ({
-  id: crypto.randomUUID(),
-  apelido: m.apelido,
-  nome: m.nome,
-  regra: m.regra,
-  unidade: m.unidade,
-  valorUnitario: m.valorPadrao,
-  quantidade: m.regra === 'unico' ? 1 : 0,
-  formula: m.formula,
-  documento: m.documento,
-  ativo: !m.opcional,
 })
 
 const r2 = (v: number) => Math.round(v * 100) / 100

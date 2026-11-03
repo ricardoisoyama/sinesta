@@ -81,8 +81,9 @@ public sealed class FaturamentoService(
             "conferir" => Conferir(f, d),
             "devolver" => Devolver(f, d.Motivo),
             "reenviar" => f.Situacao == SituacaoFatura.Devolvida ? Mudar(f, SituacaoFatura.AConferir, () => f.Motivo = string.Empty) : "Só a fatura devolvida volta para a conferência.",
-            "nf" => RegistrarNf(f, d.Numero),
-            "boleto" => f.Situacao == SituacaoFatura.NfEmitida ? Mudar(f, SituacaoFatura.BoletoEmitido, () => f.Boleto = (d.Numero ?? string.Empty).Trim()) : "O boleto vem depois da nota fiscal registrada.",
+            "nf" => RegistrarNf(f, d.Numero, c.Condicoes.SemNotaFiscal),
+            "boleto" => c.Condicoes.SemBoleto ? $"O contrato {c.Numero} não emite boleto (recebe por {c.Condicoes.FormaCobranca}): registre o recebimento."
+                : f.Situacao == SituacaoFatura.NfEmitida ? Mudar(f, SituacaoFatura.BoletoEmitido, () => f.Boleto = (d.Numero ?? string.Empty).Trim()) : "O boleto vem depois da nota fiscal registrada.",
             "recebimento" => RegistrarRecebimento(f, d.Data),
             _ => "Etapa desconhecida.",
         };
@@ -93,7 +94,7 @@ public sealed class FaturamentoService(
             "conferir" => "Conferência aprovada",
             "devolver" => $"Devolvida na conferência: {f.Motivo}",
             "reenviar" => "Atualizada a partir do contrato e reenviada para conferência",
-            "nf" => $"Nota registrada: {f.Nf}",
+            "nf" => c.Condicoes.SemNotaFiscal ? $"Fatura emitida sem nota fiscal: {f.Nf}" : $"Nota registrada: {f.Nf}",
             "boleto" => f.Boleto.Length > 0 ? $"Boleto registrado: {f.Boleto}" : "Boleto registrado",
             _ => $"Recebida em {DateOnly.Parse(f.RecebidaEm, CultureInfo.InvariantCulture):dd/MM/yyyy}",
         };
@@ -161,10 +162,14 @@ public sealed class FaturamentoService(
         return Mudar(f, SituacaoFatura.Devolvida, () => f.Motivo = motivo.Trim());
     }
 
-    /// <summary>Com CT-e (frete), a cobrança usa o documento da própria viagem: o número vem dele.</summary>
-    private static string? RegistrarNf(Fatura f, string? numero)
+    /// <summary>
+    /// Com CT-e (frete), a cobrança usa o documento da própria viagem: o número vem dele. Contrato sem nota fiscal
+    /// (locação, reembolso): é a emissão da fatura, e o número é opcional.
+    /// </summary>
+    private static string? RegistrarNf(Fatura f, string? numero, bool semNotaFiscal = false)
     {
         if (f.Situacao != SituacaoFatura.Conferida) return "Confira a fatura antes de registrar a nota.";
+        if (semNotaFiscal) return Mudar(f, SituacaoFatura.NfEmitida, () => f.Nf = (numero ?? string.Empty).Trim() is { Length: > 0 } n ? n : "sem nota fiscal");
         var ctes = f.Documentos.Where(d => d.Tipo == "CT-e").Select(d => d.Numero).ToList();
         var nf = (numero ?? string.Empty).Trim();
         if (nf.Length == 0 && ctes.Count > 0) nf = ctes.Count == 1 ? $"CT-e {ctes[0]}" : $"CT-e {ctes[0]} a {ctes[^1]}";

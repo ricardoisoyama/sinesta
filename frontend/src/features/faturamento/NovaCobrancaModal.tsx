@@ -40,7 +40,7 @@ export function NovaCobrancaModal({ onClose, onCriado }: { onClose: () => void; 
         condicoes: {
           faturarDesde: f.data.slice(0, 7), diaFaturamento: 1, referencia: 'mes-atual', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: false, avisoPrevioDias: 0,
           reajusteIndice: 'IPCA', reajusteMesBase: 1, multaRescisoria: '', carteiraId: f.carteiraId, formaCobranca: 'Boleto com Pix', prazoPagamentoDias: f.prazo,
-          agrupamento: 'periodo', fechamento: 'mensal',
+          agrupamento: 'periodo', fechamento: 'mensal', semNotaFiscal: false, semBoleto: false,
         },
         itens: [{ id: crypto.randomUUID(), apelido: '', tabela: false, servico: 'Cobrança avulsa', descricao: f.descricao.trim(), quantidade: 1, unidade: 'serviço', valorUnitario: f.valor, custoUnitario: 0 }],
         contato: '', localServico: '', servicoId: f.servicoId, textoAdicionalNota: '', caracteristicas: {},

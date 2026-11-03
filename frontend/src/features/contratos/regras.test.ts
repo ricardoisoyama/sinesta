@@ -6,12 +6,12 @@ const item = (quantidade: number, valorUnitario: number, custoUnitario = 0) => (
 
 const contrato: Contrato = {
   id: 'c1', numero: 'MIR-0001', empresaId: 'e', clienteId: 'cl', clienteNome: 'Cliente', clienteDocumento: '', contato: '', modeloId: 'm', tipoOperacao: 'Terceirização',
-  modalidade: 'recorrente', situacao: 'vigente', inicio: '2026-06-01', fim: '2030-01-31', localServico: '', propostaId: '', propostaNumero: '', servicoId: '', textoAdicionalNota: '',
+  modalidade: 'recorrente', situacao: 'vigente', inicio: '2026-06-01', fim: '2030-01-31', localServico: '', propostaId: '', propostaNumero: '', servicoId: '', textoAdicionalNota: '', clausulas: '',
   escopo: [
     { versao: 1, vigenteDesde: '2026-06-01', motivo: '', itens: [item(2, 7250)] },
     { versao: 2, vigenteDesde: '2026-10-01', motivo: 'Aditivo', itens: [item(3, 7250)] },
   ],
-  condicoes: { faturarDesde: '2026-10', diaFaturamento: 1, referencia: 'mes-anterior', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: false, avisoPrevioDias: 60, reajusteIndice: 'IPCA', reajusteMesBase: 6, multaRescisoria: '', carteiraId: '', formaCobranca: 'Boleto com Pix', prazoPagamentoDias: 15, agrupamento: 'periodo', fechamento: 'mensal' },
+  condicoes: { faturarDesde: '2026-10', diaFaturamento: 1, referencia: 'mes-anterior', diaVencimento: 10, anteciparFimDeSemana: true, renovacaoAutomatica: false, avisoPrevioDias: 60, reajusteIndice: 'IPCA', reajusteMesBase: 6, multaRescisoria: '', carteiraId: '', formaCobranca: 'Boleto com Pix', prazoPagamentoDias: 15, agrupamento: 'periodo', fechamento: 'mensal', semNotaFiscal: false, semBoleto: false },
   caracteristicas: {}, componentes: [], documentos: [], eventos: [], criadoEm: '', criadoPor: '',
   extras: [{ id: 'x', data: '2026-10-05', tipo: 'hora-extra', descricao: 'Cobertura', quantidade: 6, valorUnitario: 38, cobranca: 'proxima-fatura', faturadoEm: '', lancadoPor: '' }],
 }

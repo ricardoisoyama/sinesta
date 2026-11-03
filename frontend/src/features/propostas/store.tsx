@@ -29,6 +29,10 @@ export interface NovaProposta {
   precoOriginal?: number
   /** Preenchida = a proposta nasce pendente de aprovação. */
   justificativa?: string
+  /** Recorrente vira contrato com a vigência; avulso é um serviço só. */
+  modalidade?: 'avulso' | 'recorrente'
+  vigenciaInicio?: string
+  vigenciaFim?: string
 }
 
 /** Mantido por compatibilidade (o estado agora vem do react-query). */

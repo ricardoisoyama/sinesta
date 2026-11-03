@@ -8,7 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Elrond.API.Controllers;
 
-/// <summary>Modelos de Contrato (Parametrizações): campos com apelido e componentes de cobrança.</summary>
+/// <summary>
+/// Modelos de Contrato (Parametrizações): as cláusulas e as condições padrão que o contrato copia ao nascer. Campos e
+/// componentes antigos continuam válidos nos modelos de antes; a cobrança agora vem da proposta.
+/// </summary>
 [Route("api/modelos-contrato")]
 public class ModelosContratoController(ICrudRepository<ModeloContrato> repo) : CrudControllerBase<ModeloContrato>(repo)
 {
@@ -36,6 +39,9 @@ public class ModelosContratoController(ICrudRepository<ModeloContrato> repo) : C
         }
         if (m.Agrupamento is not ("periodo" or "por-documento") || m.Fechamento is not ("mensal" or "quinzenal" or "semanal"))
             return Pronto("Agrupamento ou fechamento inválido.");
+        m.Clausulas = (m.Clausulas ?? string.Empty).Trim();
+        if (m.CondicoesPadrao is { } k && (k.DiaFaturamento is < 1 or > 28 || k.DiaVencimento is < 1 or > 28))
+            return Pronto("Dia do faturamento e do vencimento vão de 1 a 28.");
         return Pronto(null);
     }
 
@@ -72,6 +78,14 @@ public class ContratosController(IContratoService servico) : ControllerBase
 
     [HttpPost]
     public async Task<IActionResult> Criar([FromBody] SalvarContratoDto dto) => Resposta(await servico.CriarAsync(dto));
+
+    /// <summary>O que a proposta aprovada leva ao contrato (a tela mostra travado antes de criar).</summary>
+    [HttpGet("da-proposta/{propostaId}")]
+    public async Task<IActionResult> DaProposta(string propostaId)
+    {
+        var r = await servico.DaPropostaAsync(propostaId);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
 
     [HttpPut("{id}")]
     public async Task<IActionResult> Atualizar(string id, [FromBody] SalvarContratoDto dto) => Resposta(await servico.AtualizarAsync(id, dto));

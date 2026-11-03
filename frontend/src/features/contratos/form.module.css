@@ -95,3 +95,19 @@
 @media (prefers-reduced-motion: reduce) { .chave span, .chave span::after { transition: none; } }
 
 .carregando { padding: 48px 24px; text-align: center; color: #6b7b72; font-size: 13px; }
+
+/* Contrato da proposta: o que veio dela fica travado */
+.invalido { border-color: #e0a59a !important; box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.08); }
+.cheio { grid-column: 1 / -1; }
+.campo textarea { font: inherit; font-size: 13px; line-height: 1.5; color: #1f2a24; border: 1px solid #e6e3db; border-radius: 9px; padding: 9px 11px; background: #fff; resize: vertical; min-height: 110px; }
+.campo textarea:focus { outline: none; border-color: #e8702f; box-shadow: 0 0 0 3px rgba(232, 112, 47, 0.12); }
+.origemAtual { font-size: 13px; color: #1f2a24; }
+.travado { margin-top: 14px; border: 1px solid #e6e3db; border-radius: 12px; padding: 12px 14px; background: #fbfaf7; }
+.travadoTopo { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: #6b7b72; margin-bottom: 8px; }
+.travadoTopo span:first-child { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: #143d18; }
+.daProposta { margin-top: 10px; font-size: 12.5px; color: #1f2a24; }
+.daProposta summary { cursor: pointer; font-weight: 600; color: #1a4d1e; }
+.daPropostaItem { display: grid; gap: 2px; padding: 8px 0; border-bottom: 1px dashed #e6e3db; }
+.documentos { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.documentos .check { padding-top: 4px; }
+.aditivo select { font: inherit; font-size: 13px; border: 1px solid #c9dbe9; border-radius: 8px; padding: 5px 9px; background: #fff; }

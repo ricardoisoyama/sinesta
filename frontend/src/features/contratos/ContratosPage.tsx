@@ -8,7 +8,7 @@ import type { Column } from '@/features/common/DataTable'
 import { LARGURA } from '@/features/common/grid'
 import { formatBRL } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
-import { useContratos, useModelosContrato } from './api'
+import { useContratos } from './api'
 import { useNomes } from './faturas'
 import { alertasDoContrato, dataBR, diasParaFim, emAndamento, hojeISO, mesAnoNum, porDocumento, progressoVigencia, proximaFatura, situacaoDe, valorContrato } from './regras'
 import type { Contrato, Modalidade } from './types'
@@ -30,7 +30,6 @@ export function ContratosPage() {
   const [modalidade, setModalidade] = useState<'todas' | Modalidade>('todas')
   const [situacao, setSituacao] = useState<FiltroSituacao>('ativos')
   const { data, isLoading } = useContratos()
-  const { data: modelos } = useModelosContrato()
   const contratos = data?.contratos ?? []
   const faturas = data?.faturas ?? []
   const sit = (c: Contrato) => situacaoDe(c, faturas)
@@ -146,7 +145,6 @@ export function ContratosPage() {
     )
   }
 
-  const semModelo = modelos !== undefined && modelos.every((m) => m.status !== 'ativo')
 
   return (
     <div>
@@ -159,17 +157,12 @@ export function ContratosPage() {
             <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => navigate('/cadastros/modelos-contrato')}>
               <LayoutTemplate /> Modelos de contrato
             </button>
-            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/contratos/novo')} disabled={semModelo} title={semModelo ? 'Crie um modelo de contrato primeiro' : undefined}>
+            <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} onClick={() => navigate('/contratos/novo')} title="O contrato nasce de uma proposta aprovada">
               <FilePlus2 /> Novo contrato
             </button>
           </div>
         }
       />
-      {semModelo && (
-        <div className={s.dica}>
-          <LayoutTemplate size={15} /> O contrato nasce de um modelo (os campos e a cobrança do seu negócio). Crie o primeiro em <button type="button" className={s.linkBtn} onClick={() => navigate('/cadastros/modelos-contrato')}>Parametrizações › Modelos de Contrato</button>.
-        </div>
-      )}
       <CrudList
         id="contratos"
         query={busca}
@@ -181,7 +174,7 @@ export function ContratosPage() {
         rotulo={['contrato', 'contratos']}
         onRowClick={(c) => navigate(`/contratos/${c.id}`)}
         resumo={resumo}
-        empty={isLoading ? 'Carregando...' : contratos.length === 0 ? 'Nenhum contrato ainda. Crie o primeiro em "Novo contrato" ou pelo botão "Gerar contrato" de uma proposta aprovada.' : 'Nenhum contrato com esses filtros.'}
+        empty={isLoading ? 'Carregando...' : contratos.length === 0 ? 'Nenhum contrato ainda. Ele nasce de uma proposta aprovada: "Gerar contrato" na lista de propostas ou "Novo contrato" aqui.' : 'Nenhum contrato com esses filtros.'}
         filters={
           <>
             <select className={ui.filterSelect} value={empresa} onChange={(e) => setEmpresa(e.target.value)} aria-label="Empresa">

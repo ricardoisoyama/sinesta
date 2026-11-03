@@ -108,6 +108,17 @@ export function PropostasPage() {
     { header: 'Cliente', valor: (p) => p.cliente, cell: (p) => <span className={ui.cellStrong}>{p.cliente}</span> },
     { header: 'Data', largura: LARGURA.data, cell: (p) => <span className={ui.cellMut}>{p.data}</span> },
     { header: 'Itens', largura: LARGURA.numero, cell: (p) => <span className={ui.cellMut}>{p.itens.length}</span> },
+    {
+      header: 'Modalidade',
+      largura: LARGURA.situacao,
+      valor: (p) => (p.modalidade === 'recorrente' ? 'Recorrente' : 'Avulso'),
+      cell: (p) =>
+        p.modalidade === 'recorrente' ? (
+          <span className={ui.cellMut} title={p.vigenciaInicio ? `Vigência ${p.vigenciaInicio.split('-').reverse().join('/')} a ${(p.vigenciaFim ?? '').split('-').reverse().join('/')}` : undefined}>Recorrente</span>
+        ) : (
+          <span className={ui.cellMut}>Avulso</span>
+        ),
+    },
     { header: 'Total', largura: LARGURA.valor, className: ui.right, cell: (p) => <span className={ui.cellStrong}>{formatBRL(p.total)}</span> },
     {
       header: 'Status',

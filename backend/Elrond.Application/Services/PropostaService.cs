@@ -68,6 +68,23 @@ public class PropostaService : IPropostaService
         if (string.IsNullOrWhiteSpace(dto.ModeloId))
             return Result.Failure<Proposta>("Escolha o modelo da proposta (Configurações > Modelos de Proposta).");
 
+        // Avulso ou recorrente: o recorrente vira contrato com a vigência combinada e cada item diz como é cobrado.
+        var modalidade = dto.Modalidade == ModalidadeProposta.Recorrente ? ModalidadeProposta.Recorrente : ModalidadeProposta.Avulso;
+        var recorrente = modalidade == ModalidadeProposta.Recorrente;
+        if (recorrente)
+        {
+            static bool Dia(string? s) => DateOnly.TryParseExact(s ?? string.Empty, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _);
+            if (!Dia(dto.VigenciaInicio) || !Dia(dto.VigenciaFim))
+                return Result.Failure<Proposta>("Proposta recorrente: informe o início e o fim da vigência.");
+            if (string.CompareOrdinal(dto.VigenciaFim, dto.VigenciaInicio) <= 0)
+                return Result.Failure<Proposta>("O fim da vigência precisa ser depois do início.");
+        }
+        foreach (var item in dto.Itens)
+        {
+            item.Cobranca = recorrente ? (CobrancaItem.Todas.Contains(item.Cobranca ?? string.Empty) ? item.Cobranca : CobrancaItem.Mensal) : null;
+            item.Unidade = item.Cobranca == CobrancaItem.PorOcorrencia && item.Unidade?.Trim() is { Length: > 0 } u ? u : null;
+        }
+
         // Região do vendedor (lista de exclusão): conferida aqui, com a cidade do cadastro do cliente.
         // O cliente precisa vir do cadastro quando há vendedor; só o nome permitiria driblar o bloqueio.
         if (!string.IsNullOrEmpty(dto.VendedorId))
@@ -127,6 +144,9 @@ public class PropostaService : IPropostaService
             Validade = dto.Validade,
             FormaPagamento = dto.FormaPagamento ?? string.Empty,
             PrazoPagamentoDias = Math.Max(0, dto.PrazoPagamentoDias),
+            Modalidade = modalidade,
+            VigenciaInicio = recorrente ? dto.VigenciaInicio! : string.Empty,
+            VigenciaFim = recorrente ? dto.VigenciaFim! : string.Empty,
             Itens = dto.Itens,
             PrecoOriginal = dto.PrecoOriginal,
             Justificativa = dto.Justificativa?.Trim() ?? string.Empty,

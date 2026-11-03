@@ -58,6 +58,28 @@ public class FichaItemProposta
     public List<FichaComposicaoItem>? Composicao { get; set; }
 }
 
+/// <summary>Avulso (um serviço, uma cobrança) ou recorrente (contrato com vigência).</summary>
+public static class ModalidadeProposta
+{
+    public const string Avulso = "avulso";
+    public const string Recorrente = "recorrente";
+}
+
+/// <summary>Como o item recorrente é cobrado no contrato que nasce da proposta.</summary>
+public static class CobrancaItem
+{
+    /// <summary>Todo mês, o preço do item (o posto, a posição-pallet).</summary>
+    public const string Mensal = "fixo";
+    /// <summary>Preço por ocorrência, conforme lançado na pasta (hora extra, diária).</summary>
+    public const string PorOcorrencia = "lancamento";
+    /// <summary>Preço por documento da operação (o frete de cada CT-e).</summary>
+    public const string PorDocumento = "documento";
+    /// <summary>Uma vez, na primeira fatura (implantação).</summary>
+    public const string Unica = "unico";
+
+    public static readonly IReadOnlyList<string> Todas = [Mensal, PorOcorrencia, PorDocumento, Unica];
+}
+
 /// <summary>Item de uma proposta (uma linha de precificação já calculada).</summary>
 public class ItemProposta
 {
@@ -94,6 +116,13 @@ public class ItemProposta
     public bool AbaixoMinimo { get; set; }
     /// <summary>Ad valorem (R$) somado ao frete peso: fora do markup. Frete total = PrecoFinal + AdValorem.</summary>
     public decimal AdValorem { get; set; }
+    /// <summary>Proposta recorrente: como o item entra no contrato (<see cref="CobrancaItem"/>). Nulo no avulso e nos itens antigos.</summary>
+    public string? Cobranca { get; set; }
+    /// <summary>Unidade do preço por ocorrência ("hora", "diária"). Nulo quando não se aplica.</summary>
+    public string? Unidade { get; set; }
+
+    /// <summary>Preço do item com o ad valorem (o que o cliente paga).</summary>
+    public decimal PrecoComAdValorem => PrecoFinal + AdValorem;
 }
 
 /// <summary>Contador de propostas da empresa que tem prefixo próprio (último número emitido).</summary>
@@ -137,6 +166,11 @@ public class Proposta : Rastreavel, IEntity
     public string FormaPagamento { get; set; } = string.Empty;
     /// <summary>Prazo de pagamento em dias (vem do cadastro do cliente). 0 = à vista.</summary>
     public int PrazoPagamentoDias { get; set; }
+    /// <summary>Avulso ou recorrente (<see cref="ModalidadeProposta"/>). É o que o contrato gerado usa.</summary>
+    public string Modalidade { get; set; } = ModalidadeProposta.Avulso;
+    /// <summary>Recorrente: vigência combinada (yyyy-MM-dd), que vai para o contrato.</summary>
+    public string VigenciaInicio { get; set; } = string.Empty;
+    public string VigenciaFim { get; set; } = string.Empty;
     public List<ItemProposta> Itens { get; set; } = new();
 
     // ── Alçada (preço editado ou margem abaixo do mínimo) ───────────────────

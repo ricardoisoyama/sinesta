@@ -20,7 +20,10 @@ public record CriarPropostaDto(
     string? ClienteId = null,
     string? VendedorId = null,
     string? VendedorNome = null,
-    int PrazoPagamentoDias = 0
+    int PrazoPagamentoDias = 0,
+    string? Modalidade = null,
+    string? VigenciaInicio = null,
+    string? VigenciaFim = null
 );
 
 public record StatusPropostaDto(string Status);

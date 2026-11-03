@@ -1314,6 +1314,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Clausulas")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
+
                     b.Property<string>("ClienteDocumento")
                         .IsRequired()
                         .HasColumnType("text");
@@ -2976,6 +2982,12 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Clausulas")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("");
+
                     b.Property<string>("CriadoEm")
                         .IsRequired()
                         .HasColumnType("text");
@@ -4076,6 +4088,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Modalidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasDefaultValue("avulso");
+
                     b.Property<string>("ModeloId")
                         .HasColumnType("text");
 
@@ -4122,6 +4141,20 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("VendedorNome")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("VigenciaFim")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("VigenciaInicio")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
 
                     b.HasKey("Id");
 
@@ -5356,6 +5389,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                             b1.Property<bool>("RenovacaoAutomatica");
 
+                            b1.Property<bool>("SemBoleto");
+
+                            b1.Property<bool>("SemNotaFiscal");
+
                             b1.HasKey("ContratoId");
 
                             b1.ToTable("contratos");
@@ -5499,6 +5536,10 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                             b1.Property<string>("Motivo")
                                 .IsRequired();
+
+                            b1.Property<string>("PropostaId");
+
+                            b1.Property<string>("PropostaNumero");
 
                             b1.Property<int>("Versao");
 
@@ -6913,9 +6954,69 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                                 .HasForeignKey("ModeloContratoId");
                         });
 
+                    b.OwnsOne("Elrond.Domain.Entities.CondicoesContrato", "CondicoesPadrao", b1 =>
+                        {
+                            b1.Property<string>("ModeloContratoId");
+
+                            b1.Property<string>("Agrupamento")
+                                .IsRequired();
+
+                            b1.Property<bool>("AnteciparFimDeSemana");
+
+                            b1.Property<int>("AvisoPrevioDias");
+
+                            b1.Property<string>("CarteiraId")
+                                .IsRequired();
+
+                            b1.Property<int>("DiaFaturamento");
+
+                            b1.Property<int>("DiaVencimento");
+
+                            b1.Property<string>("FaturarDesde")
+                                .IsRequired();
+
+                            b1.Property<string>("Fechamento")
+                                .IsRequired();
+
+                            b1.Property<string>("FormaCobranca")
+                                .IsRequired();
+
+                            b1.Property<string>("MultaRescisoria")
+                                .IsRequired();
+
+                            b1.Property<int>("PrazoPagamentoDias");
+
+                            b1.Property<string>("ReajusteIndice")
+                                .IsRequired();
+
+                            b1.Property<int>("ReajusteMesBase");
+
+                            b1.Property<string>("Referencia")
+                                .IsRequired();
+
+                            b1.Property<bool>("RenovacaoAutomatica");
+
+                            b1.Property<bool>("SemBoleto");
+
+                            b1.Property<bool>("SemNotaFiscal");
+
+                            b1.HasKey("ModeloContratoId");
+
+                            b1.ToTable("modelos_contrato");
+
+                            b1
+                                .ToJson("CondicoesPadrao")
+                                .HasColumnType("jsonb");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ModeloContratoId");
+                        });
+
                     b.Navigation("Campos");
 
                     b.Navigation("Componentes");
+
+                    b.Navigation("CondicoesPadrao");
                 });
 
             modelBuilder.Entity("Elrond.Domain.Entities.ModeloProposta", b =>
@@ -7216,6 +7317,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                             b1.Property<decimal>("AdValorem")
                                 .HasPrecision(18, 6);
 
+                            b1.Property<string>("Cobranca");
+
                             b1.Property<decimal>("Comissao")
                                 .HasPrecision(18, 6);
 
@@ -7263,6 +7366,8 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                             b1.Property<string>("TipoOperacao");
 
                             b1.Property<string>("TipoOperacaoId");
+
+                            b1.Property<string>("Unidade");
 
                             b1.HasKey("PropostaId", "__synthesizedOrdinal");
 

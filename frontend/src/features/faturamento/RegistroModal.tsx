@@ -56,9 +56,11 @@ export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar, onEmitir
   const [numero, setNumero] = useState('')
   const [data, setData] = useState(hojeISO())
   const [enviando, setEnviando] = useState(false)
-  const t = TEXTO[etapa]
+  // Contrato sem nota fiscal (locação, reembolso): o passo é emitir só a fatura, e o número é opcional.
+  const semNota = etapa === 'nf' && f.semNotaFiscal
+  const t = semNota ? { titulo: 'Emitir a fatura (sem nota fiscal)', icone: TEXTO.nf.icone, botao: 'Emitir a fatura' } : TEXTO[etapa]
   const ctePronto = etapa === 'nf' && f.documentoDaOperacao
-  const valido = etapa === 'recebimento' ? !!data && data <= hojeISO() : etapa === 'nf' ? ctePronto || !!numero.trim() : true
+  const valido = etapa === 'recebimento' ? !!data && data <= hojeISO() : etapa === 'nf' ? semNota || ctePronto || !!numero.trim() : true
 
   const confirmar = async () => {
     setEnviando(true)
@@ -86,7 +88,16 @@ export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar, onEmitir
         </>
       }
     >
-      {etapa === 'nf' && !ctePronto && onEmitirNfse && (
+      {semNota && (
+        <>
+          <p className={s.confNota}>O contrato {f.numero} fatura sem nota fiscal (condições do contrato). Emitida, a fatura trava (não recalcula mais) e os extras dela ficam faturados.</p>
+          <label className={s.campoModal}>
+            Referência (opcional)
+            <input autoFocus value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex.: fatura de locação 11/2026" />
+          </label>
+        </>
+      )}
+      {etapa === 'nf' && !semNota && !ctePronto && onEmitirNfse && (
         <div className={s.emitirNfse}>
           <div>
             <b>Emitir a NFS-e pelo ELROND</b>
@@ -110,7 +121,7 @@ export function RegistroModal({ fatura: f, etapa, onClose, onConfirmar, onEmitir
           </button>
         </div>
       )}
-      {etapa === 'nf' && (
+      {etapa === 'nf' && !semNota && (
         <>
           {!ctePronto && onEmitirNfse && <p className={s.ouManual}>ou registre o número de uma nota emitida fora do ELROND:</p>}
           <p className={s.confNota}>

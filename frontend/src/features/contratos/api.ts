@@ -41,7 +41,29 @@ export interface SalvarContrato {
   componentes: ComponenteContrato[]
   aditivoDesde?: string
   aditivoMotivo?: string
+  clausulas?: string
+  /** Aditivo: outra proposta aprovada do mesmo cliente traz o escopo novo. */
+  aditivoPropostaId?: string
 }
+
+/** O que a proposta aprovada leva ao contrato (vem do servidor; a tela mostra travado). */
+export interface ContratoDaProposta {
+  propostaId: string
+  propostaNumero: string
+  clienteId: string
+  cliente: string
+  modalidade: Modalidade
+  empresaId: string
+  servicoId: string
+  tipoOperacao: string
+  inicio: string
+  fim: string
+  itens: ItemEscopo[]
+  componentes: ComponenteContrato[]
+  /** Número do contrato que já usa a proposta (vazio = livre). */
+  contratoExistente: string
+}
+export const daProposta = (propostaId: string) => apiFetch<ContratoDaProposta>(`/contratos/da-proposta/${encodeURIComponent(propostaId)}`)
 
 const salvarCorpo = (d: SalvarContrato) => J({ ...d, caracteristicas: paraApi(d.caracteristicas) })
 

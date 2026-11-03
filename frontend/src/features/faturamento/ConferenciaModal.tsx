@@ -95,9 +95,9 @@ export function ConferenciaModal({ fatura: f, onClose, onAbrirPasta, onAprovar, 
             <>
               <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setDevolvendo(true)}><Undo2 /> Devolver</button>
               <button type="button" className={`${ui.btn} ${ui.btnGhost}`} disabled={enviando} onClick={() => void executar(() => onAprovar(f, dados, null))}>Aprovar conferência</button>
-              <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={enviando || (!f.documentoDaOperacao && !nf.trim())} title={!f.documentoDaOperacao && !nf.trim() ? 'Informe o número da NF emitida (na seção Nota fiscal)' : undefined}
+              <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={enviando || (!f.documentoDaOperacao && !f.semNotaFiscal && !nf.trim())} title={!f.documentoDaOperacao && !f.semNotaFiscal && !nf.trim() ? 'Informe o número da NF emitida (na seção Nota fiscal)' : undefined}
                 onClick={() => void executar(() => onAprovar(f, dados, nf.trim()))}>
-                <CheckCircle2 /> Aprovar e {f.documentoDaOperacao ? 'liberar a cobrança' : 'registrar a NF'}
+                <CheckCircle2 /> Aprovar e {f.documentoDaOperacao ? 'liberar a cobrança' : f.semNotaFiscal ? 'emitir a fatura' : 'registrar a NF'}
               </button>
             </>
           )}

@@ -48,7 +48,8 @@ const ultimoDiaDoMes = (comp: string) => {
 const proximoPasso = (f: FaturaCentral): Registro | 'conferir' | null =>
   f.situacao === 'prevista' || f.situacao === 'a-conferir' ? 'conferir'
     : f.situacao === 'conferida' ? 'nf'
-      : f.situacao === 'nf-emitida' ? 'boleto'
+      // Contrato sem boleto (Pix, transferência): da fatura emitida vai direto ao recebimento.
+      : f.situacao === 'nf-emitida' ? (f.semBoleto ? 'recebimento' : 'boleto')
         : f.situacao === 'boleto-emitido' || f.situacao === 'atrasada' ? 'recebimento' : null
 const ROTULO_PASSO: Record<Registro, string> = { nf: 'Registrar a NF', boleto: 'Registrar o boleto', recebimento: 'Registrar o recebimento' }
 const ICONE_PASSO: Record<Registro, typeof Landmark> = { nf: FileCheck2, boleto: Landmark, recebimento: HandCoins }
@@ -207,7 +208,7 @@ export function CentralFaturamentoPage() {
               <ClipboardCheck />
             </button>
             {passo && passo !== 'conferir' && Icone && (
-              <button type="button" className={ui.iconBtn} title={ROTULO_PASSO[passo]} onClick={(e) => { e.stopPropagation(); setRegistro({ id: f.id, etapa: passo }) }}>
+              <button type="button" className={ui.iconBtn} title={passo === 'nf' && f.semNotaFiscal ? 'Emitir a fatura (sem nota fiscal)' : ROTULO_PASSO[passo]} onClick={(e) => { e.stopPropagation(); setRegistro({ id: f.id, etapa: passo }) }}>
                 <Icone />
               </button>
             )}

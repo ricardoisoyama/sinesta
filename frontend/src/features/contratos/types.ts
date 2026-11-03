@@ -38,6 +38,9 @@ export interface VersaoEscopo {
   vigenteDesde: string
   motivo: string
   itens: ItemEscopo[]
+  /** Proposta aprovada de onde veio a versão (a do contrato ou a do aditivo). */
+  propostaId?: string | null
+  propostaNumero?: string | null
 }
 
 export interface CondicoesContrato {
@@ -61,6 +64,9 @@ export interface CondicoesContrato {
   /** Documentos vinculados (fretes com CT-e): uma fatura com os do período ou uma por documento. */
   agrupamento: 'periodo' | 'por-documento'
   fechamento: 'mensal' | 'quinzenal' | 'semanal'
+  /** Documentos do fechamento: a fatura sai sempre; sem nota fiscal (locação, reembolso) e/ou sem boleto (Pix, transferência). */
+  semNotaFiscal: boolean
+  semBoleto: boolean
 }
 
 /** Componente de cobrança do contrato que não é a mensalidade fixa (essa mora no escopo). */
@@ -141,6 +147,8 @@ export interface Contrato {
   /** Serviço do cadastro de serviços: é ele que sai na nota. */
   servicoId: string
   textoAdicionalNota: string
+  /** Cláusulas do contrato (do modelo, ajustáveis). */
+  clausulas: string
   escopo: VersaoEscopo[]
   condicoes: CondicoesContrato
   /** Valores das características do modelo, por apelido. */

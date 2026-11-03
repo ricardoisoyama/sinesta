@@ -67,6 +67,10 @@ public class ModeloContrato : Rastreavel, IEntity, IInativavel
     public string Agrupamento { get; set; } = "periodo";
     /// <summary>mensal | quinzenal | semanal.</summary>
     public string Fechamento { get; set; } = "mensal";
+    /// <summary>Cláusulas padrão (texto) que o contrato copia ao nascer.</summary>
+    public string Clausulas { get; set; } = string.Empty;
+    /// <summary>Condições padrão (fechamento, documentos, reajuste, renovação) que o contrato copia ao nascer. Nulo = as do sistema.</summary>
+    public CondicoesContrato? CondicoesPadrao { get; set; }
     public string Status { get; set; } = "ativo";
 }
 
@@ -103,6 +107,9 @@ public class VersaoEscopo
     /// <summary>yyyy-MM-dd.</summary>
     public string VigenteDesde { get; set; } = string.Empty;
     public string Motivo { get; set; } = string.Empty;
+    /// <summary>Proposta aprovada de onde veio esta versão (a do contrato ou a do aditivo). Nulo nas antigas.</summary>
+    public string? PropostaId { get; set; }
+    public string? PropostaNumero { get; set; }
     public List<ItemEscopo> Itens { get; set; } = new();
 }
 
@@ -130,6 +137,9 @@ public class CondicoesContrato
     public string Agrupamento { get; set; } = "periodo";
     /// <summary>mensal | quinzenal | semanal.</summary>
     public string Fechamento { get; set; } = "mensal";
+    /// <summary>Documentos do fechamento: a fatura sai sempre; sem nota fiscal (locação, reembolso) e/ou sem boleto (Pix, transferência).</summary>
+    public bool SemNotaFiscal { get; set; }
+    public bool SemBoleto { get; set; }
 }
 
 /// <summary>Valor de uma característica do modelo, por apelido (número guardado com ponto).</summary>
@@ -229,6 +239,8 @@ public class Contrato : Rastreavel, IEntity
     /// <summary>Serviço que sai na nota (os parâmetros fiscais vêm do cadastro de serviços).</summary>
     public string ServicoId { get; set; } = string.Empty;
     public string TextoAdicionalNota { get; set; } = string.Empty;
+    /// <summary>Cláusulas do contrato (do modelo, ajustáveis).</summary>
+    public string Clausulas { get; set; } = string.Empty;
     public List<VersaoEscopo> Escopo { get; set; } = new();
     public CondicoesContrato Condicoes { get; set; } = new();
     public List<CaracteristicaContrato> Caracteristicas { get; set; } = new();
@@ -238,6 +250,8 @@ public class Contrato : Rastreavel, IEntity
     public List<EventoContrato> Eventos { get; set; } = new();
 
     public bool Spot => Modalidade == Entities.Modalidade.Spot;
+    /// <summary>Nasceu de proposta aprovada: o que foi precificado fica travado (muda só por aditivo com nova proposta).</summary>
+    public bool DaProposta => PropostaId.Length > 0;
     /// <summary>Fatura pelos documentos vinculados (tem componente "documento" ligado).</summary>
     public bool PorDocumento => Componentes.Any(c => c.Regra == RegraComponente.Documento && c.Ativo);
 

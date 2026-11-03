@@ -8,15 +8,23 @@ using Elrond.Domain.Regras;
 namespace Elrond.Application.Services;
 
 /// <summary>
-/// Cadastro ou alteração do contrato. Empresa, modelo e modalidade só valem na criação. Itens = o
-/// escopo que vale a partir de agora: se mudou, vira uma versão nova a partir de <see cref="AditivoDesde"/>.
+/// Cadastro ou alteração do contrato. O contrato nasce de uma proposta aprovada (<see cref="PropostaId"/>): empresa,
+/// cliente, modalidade, escopo e componentes vêm dela e ficam travados; o que vier nesses campos é ignorado. Mudar
+/// o escopo é aditivo com outra proposta aprovada do mesmo cliente (<see cref="AditivoPropostaId"/>), a partir de
+/// <see cref="AditivoDesde"/>. A exceção é a cobrança avulsa da Central (spot sem modelo nem proposta).
 /// </summary>
 public sealed record SalvarContratoDto(
     string EmpresaId, string ClienteId, string ModeloId, string Modalidade, string Inicio, string? Fim,
     CondicoesContrato Condicoes, List<ItemEscopo> Itens,
     string? Contato = null, string? Situacao = null, string? LocalServico = null, string? PropostaId = null,
     string? ServicoId = null, string? TextoAdicionalNota = null, List<CaracteristicaContrato>? Caracteristicas = null,
-    List<ComponenteContrato>? Componentes = null, string? AditivoDesde = null, string? AditivoMotivo = null);
+    List<ComponenteContrato>? Componentes = null, string? AditivoDesde = null, string? AditivoMotivo = null,
+    string? Clausulas = null, string? AditivoPropostaId = null);
+
+/// <summary>Prévia do que a proposta leva ao contrato (a tela mostra travado e calcula a primeira fatura).</summary>
+public sealed record ContratoDaPropostaDto(
+    string PropostaId, string PropostaNumero, string ClienteId, string Cliente, string Modalidade, string EmpresaId, string ServicoId,
+    string TipoOperacao, string Inicio, string Fim, List<ItemEscopo> Itens, List<ComponenteContrato> Componentes, string ContratoExistente);
 
 public interface IContratoService
 {
@@ -29,6 +37,8 @@ public interface IContratoService
     Task<Result<Contrato>> AlternarComponenteAsync(string id, string componenteId);
     /// <summary>Inclui ou atualiza um documento da operação (frete com CT-e) vinculado ao contrato.</summary>
     Task<Result<Contrato>> SalvarDocumentoAsync(string id, DocumentoVinculado doc);
+    /// <summary>O que a proposta aprovada leva ao contrato (para a tela mostrar antes de criar).</summary>
+    Task<Result<ContratoDaPropostaDto>> DaPropostaAsync(string propostaId);
 }
 
 /// <summary>
@@ -67,33 +77,84 @@ public sealed class ContratoService(
     public async Task<ContratosEFaturas?> ObterAsync(string id) =>
         await contratos.GetByIdAsync(id) is { } c ? new ContratosEFaturas([c], await faturamento.SincronizarAsync([c])) : null;
 
+    public async Task<Result<ContratoDaPropostaDto>> DaPropostaAsync(string propostaId)
+    {
+        if (await propostas.GetByIdAsync(propostaId) is not { } p) return Result.Failure<ContratoDaPropostaDto>("Proposta não encontrada.");
+        if (p.Status != "aprovada") return Result.Failure<ContratoDaPropostaDto>($"A proposta {p.Numero} não está aprovada.");
+        var (m, erro) = ContratoDaProposta.Montar(p);
+        if (m is null) return Result.Failure<ContratoDaPropostaDto>(erro!);
+        var usada = await ContratoDaPropostaAsync(p.Id, null);
+        return Result.Success(new ContratoDaPropostaDto(p.Id, p.Numero, p.ClienteId, p.Cliente, m.Modalidade, m.EmpresaId, m.ServicoId, m.TipoOperacao,
+            m.Inicio, m.Fim, m.Itens, m.Componentes, usada?.Numero ?? string.Empty));
+    }
+
+    /// <summary>O contrato que já usa a proposta (no cadastro ou num aditivo), fora o informado.</summary>
+    private async Task<Contrato?> ContratoDaPropostaAsync(string propostaId, string? excetoId) =>
+        (await contratos.GetAllAsync()).FirstOrDefault(c => c.Id != excetoId && (c.PropostaId == propostaId || c.Escopo.Any(v => v.PropostaId == propostaId)));
+
+    /// <summary>A proposta pronta para virar contrato (ou aditivo): aprovada, de cliente do cadastro e ainda não usada.</summary>
+    private async Task<(Proposta? P, MontagemContrato? M, string? Erro)> PropostaParaContratoAsync(string propostaId, string? contratoId)
+    {
+        if (await propostas.GetByIdAsync(propostaId) is not { } p) return (null, null, "Proposta não encontrada.");
+        if (p.Status != "aprovada") return (null, null, $"A proposta {p.Numero} não está aprovada.");
+        if (p.ClienteId.Length == 0) return (null, null, $"A proposta {p.Numero} não tem o cliente do cadastro: refaça pelo Pricing escolhendo o cliente.");
+        if (await ContratoDaPropostaAsync(p.Id, contratoId) is { } outro) return (null, null, $"A proposta {p.Numero} já está no contrato {outro.Numero}.");
+        var (m, erro) = ContratoDaProposta.Montar(p);
+        return (p, m, erro);
+    }
+
     public async Task<Result<Contrato>> CriarAsync(SalvarContratoDto dto)
     {
+        var modelo = string.IsNullOrEmpty(dto.ModeloId) ? null : await modelos.GetByIdAsync(dto.ModeloId);
+        if (!string.IsNullOrEmpty(dto.ModeloId) && modelo is not { Status: "ativo" }) return Result.Failure<Contrato>("Escolha um modelo de contrato ativo.");
+        Proposta? proposta = null;
+        MontagemContrato? montagem = null;
+        if (dto.PropostaId is { Length: > 0 } pid)
+        {
+            var (p, m, erroP) = await PropostaParaContratoAsync(pid, null);
+            if (erroP is not null) return Result.Failure<Contrato>(erroP);
+            (proposta, montagem) = (p, m);
+            // O que foi precificado vem da proposta e fica travado (o que a tela mandar nesses campos não vale).
+            dto = dto with
+            {
+                EmpresaId = m!.EmpresaId, ClienteId = p!.ClienteId, Modalidade = m.Modalidade, Itens = m.Itens, Componentes = m.Componentes,
+                Inicio = Data(dto.Inicio) ? dto.Inicio : m.Inicio, Fim = m.Modalidade == Modalidade.Spot ? dto.Inicio : Data(dto.Fim) ? dto.Fim : m.Fim,
+                ServicoId = dto.ServicoId is { Length: > 0 } s ? s : m.ServicoId, Caracteristicas = [],
+            };
+        }
+        // Sem proposta, só a cobrança avulsa da Central (reembolso, multa contratual): spot sem modelo, para nenhuma fatura existir solta.
+        else if (dto.Modalidade != Modalidade.Spot || modelo is not null)
+            return Result.Failure<Contrato>("O contrato nasce de uma proposta aprovada: escolha a proposta (ou use \"Gerar contrato\" na lista de propostas).");
         if (await empresas.GetByIdAsync(dto.EmpresaId) is null) return Result.Failure<Contrato>("Escolha a empresa que presta o serviço.");
         if (dto.Modalidade is not (Modalidade.Recorrente or Modalidade.Spot)) return Result.Failure<Contrato>("Modalidade inválida: recorrente ou spot.");
-        // Cobrança avulsa (reembolso, multa contratual) é um spot sem modelo: nenhuma fatura existe solta, sem pasta.
-        var modelo = string.IsNullOrEmpty(dto.ModeloId) ? null : await modelos.GetByIdAsync(dto.ModeloId);
-        if (modelo is not { Status: "ativo" } && (dto.Modalidade != Modalidade.Spot || modelo is not null))
-            return Result.Failure<Contrato>("Escolha um modelo de contrato ativo.");
 
         var c = new Contrato
         {
             Id = Guid.NewGuid().ToString(),
             EmpresaId = dto.EmpresaId,
             ModeloId = modelo?.Id ?? string.Empty,
-            TipoOperacao = modelo?.TipoOperacao ?? "Cobrança avulsa",
+            TipoOperacao = montagem?.TipoOperacao is { Length: > 0 } tipo ? tipo : modelo?.TipoOperacao is { Length: > 0 } tm ? tm : proposta is null ? "Cobrança avulsa" : "Serviço",
             Modalidade = dto.Modalidade,
             ServicoId = modelo?.ServicoId ?? string.Empty,
-            // Sem componentes enviados: os do modelo (os fixos viram linhas do escopo).
-            Componentes = modelo?.Componentes.Where(x => x.Regra != RegraComponente.Fixo).Select(Copiar).ToList() ?? [],
+            Clausulas = dto.Clausulas ?? modelo?.Clausulas ?? string.Empty,
+            Componentes = dto.Componentes ?? [],
         };
-        if (await AplicarAsync(c, dto, modelo) is { } erro) return Result.Failure<Contrato>(erro);
+        if (await AplicarAsync(c, dto, null) is { } erro) return Result.Failure<Contrato>(erro);
+        if (proposta is not null)
+        {
+            c.PropostaId = proposta.Id;
+            c.PropostaNumero = proposta.Numero;
+        }
         if (string.IsNullOrEmpty(c.Condicoes.FaturarDesde)) c.Condicoes.FaturarDesde = Hoje[..7];
 
-        var proposta = c.PropostaNumero.Length > 0 ? $" a partir da proposta {c.PropostaNumero}" : string.Empty;
-        c.Escopo = [new VersaoEscopo { Versao = 1, VigenteDesde = c.Inicio, Motivo = proposta.Length > 0 ? $"Proposta {c.PropostaNumero} aprovada" : "Cadastro do contrato", Itens = dto.Itens }];
+        var daProposta = c.PropostaNumero.Length > 0 ? $" a partir da proposta {c.PropostaNumero}" : string.Empty;
+        c.Escopo = [new VersaoEscopo
+        {
+            Versao = 1, VigenteDesde = c.Inicio, Motivo = daProposta.Length > 0 ? $"Proposta {c.PropostaNumero} aprovada" : "Cadastro do contrato", Itens = dto.Itens,
+            PropostaId = proposta?.Id, PropostaNumero = proposta?.Numero,
+        }];
         c.Numero = await numerador.ProximoAsync(c.EmpresaId);
-        c.Eventos.Add(await EventoAsync("assinatura", c.Spot ? $"Spot cadastrado{proposta}" : $"Contrato cadastrado{proposta}"));
+        c.Eventos.Add(await EventoAsync("assinatura", c.Spot ? $"Spot cadastrado{daProposta}" : $"Contrato cadastrado{daProposta}"));
         await contratos.AddAsync(c);
         await faturamento.SincronizarAsync([c]);
         return Result.Success(c);
@@ -102,19 +163,36 @@ public sealed class ContratoService(
     public async Task<Result<Contrato>> AtualizarAsync(string id, SalvarContratoDto dto)
     {
         if (await contratos.GetByIdAsync(id) is not { } c) return Result.Failure<Contrato>("Contrato não encontrado.");
-        var modelo = await modelos.GetByIdAsync(c.ModeloId);
+        var modelo = c.DaProposta ? null : await modelos.GetByIdAsync(c.ModeloId);
         var situacaoAntes = c.Situacao;
-        if (await AplicarAsync(c, dto, modelo) is { } erro) return Result.Failure<Contrato>(erro);
-
         var vigente = c.EscopoEm(Hoje);
+        Proposta? aditivo = null;
+        if (dto.AditivoPropostaId is { Length: > 0 } apid)
+        {
+            // Aditivo: a outra proposta aprovada do mesmo cliente traz o escopo e os componentes novos.
+            var (p, m, erroP) = await PropostaParaContratoAsync(apid, c.Id);
+            if (erroP is not null) return Result.Failure<Contrato>(erroP);
+            if (p!.ClienteId != c.ClienteId) return Result.Failure<Contrato>($"A proposta {p.Numero} é de outro cliente.");
+            if (m!.EmpresaId != c.EmpresaId) return Result.Failure<Contrato>($"A proposta {p.Numero} é de outra empresa.");
+            aditivo = p;
+            dto = dto with { Itens = m.Itens, Componentes = m.Componentes, AditivoMotivo = dto.AditivoMotivo is { Length: > 0 } mo ? mo : $"Aditivo pela proposta {p.Numero}" };
+        }
+        else if (c.DaProposta)
+            // Travado: o que veio da proposta só muda por aditivo (os componentes ligam e desligam pela pasta).
+            dto = dto with { Itens = vigente?.Itens ?? [], Componentes = c.Componentes };
+        if (c.DaProposta || aditivo is not null)
+            dto = dto with { EmpresaId = c.EmpresaId, ClienteId = c.ClienteId, Caracteristicas = c.Caracteristicas };
+        if (await AplicarAsync(c, dto, modelo) is { } erro) return Result.Failure<Contrato>(erro);
+        if (dto.Clausulas is not null) c.Clausulas = dto.Clausulas.Trim();
+
         var eventosAntes = c.Eventos.Count;
-        if (vigente is null || JsonSerializer.Serialize(vigente.Itens) != JsonSerializer.Serialize(dto.Itens))
+        if (aditivo is not null || vigente is null || JsonSerializer.Serialize(vigente.Itens) != JsonSerializer.Serialize(dto.Itens))
         {
             if (!Data(dto.AditivoDesde) || string.CompareOrdinal(dto.AditivoDesde, c.Inicio) < 0)
                 return Result.Failure<Contrato>("O escopo mudou: informe a data a partir de quando vale (não antes do início do contrato).");
             var versao = c.Escopo.Count == 0 ? 1 : c.Escopo.Max(v => v.Versao) + 1;
             var motivo = string.IsNullOrWhiteSpace(dto.AditivoMotivo) ? "Alteração do escopo" : dto.AditivoMotivo.Trim();
-            c.Escopo.Add(new VersaoEscopo { Versao = versao, VigenteDesde = dto.AditivoDesde!, Motivo = motivo, Itens = dto.Itens });
+            c.Escopo.Add(new VersaoEscopo { Versao = versao, VigenteDesde = dto.AditivoDesde!, Motivo = motivo, Itens = dto.Itens, PropostaId = aditivo?.Id, PropostaNumero = aditivo?.Numero });
             c.Eventos.Add(await EventoAsync("aditivo", $"{motivo}: versão {versao} do escopo a partir de {Br(dto.AditivoDesde!)}"));
         }
         if (situacaoAntes != c.Situacao)
@@ -197,27 +275,14 @@ public sealed class ContratoService(
     private async Task<EventoContrato> EventoAsync(string tipo, string texto) =>
         new() { Em = Agora, Tipo = tipo, Texto = texto, Quem = await QuemAsync() };
 
-    private static ComponenteContrato Copiar(ComponenteModelo m) => new()
-    {
-        Id = Guid.NewGuid().ToString(),
-        Apelido = m.Apelido,
-        Nome = m.Nome,
-        Regra = m.Regra,
-        Unidade = m.Unidade,
-        ValorUnitario = m.ValorPadrao,
-        Quantidade = m.Regra == RegraComponente.Unico ? 1 : 0,
-        Formula = m.Formula,
-        Documento = m.Documento,
-        Ativo = !m.Opcional,
-    };
-
     /// <summary>Confere e aplica o que pode mudar no contrato. Devolve o problema ou null.</summary>
     private async Task<string?> AplicarAsync(Contrato c, SalvarContratoDto d, ModeloContrato? modelo)
     {
         if (await clientes.GetByIdAsync(d.ClienteId) is not { } cliente) return "Escolha o cliente no cadastro.";
         if (!Data(d.Inicio)) return c.Spot ? "Informe a data do serviço." : "Informe o início da vigência.";
         if (!c.Spot && (!Data(d.Fim) || string.CompareOrdinal(d.Fim, d.Inicio) <= 0)) return "O fim da vigência precisa ser depois do início.";
-        if (d.Itens.Count == 0) return "Inclua pelo menos uma linha no escopo.";
+        var componentes = d.Componentes ?? c.Componentes;
+        if (d.Itens.Count == 0 && componentes.Count == 0) return "Inclua pelo menos uma linha no escopo.";
         if (d.Itens.Any(i => i.Quantidade < 0 || i.ValorUnitario < 0 || i.CustoUnitario < 0)) return "Quantidade, preço e custo não podem ser negativos.";
         var k = d.Condicoes;
         if (k.DiaFaturamento is < 1 or > 28 || k.DiaVencimento is < 1 or > 28) return "Dia do faturamento e do vencimento vão de 1 a 28.";
@@ -228,16 +293,9 @@ public sealed class ContratoService(
         var caracteristicas = (d.Caracteristicas ?? c.Caracteristicas).Where(x => x.Valor.Trim().Length > 0).ToList();
         var faltando = modelo?.Campos.Where(f => f.Obrigatorio && caracteristicas.All(x => x.Apelido != f.Apelido)).Select(f => f.Nome).ToList() ?? [];
         if (faltando.Count > 0) return $"Preencha: {string.Join(", ", faltando)}.";
-        var componentes = d.Componentes ?? c.Componentes;
         var previa = FaturamentoContrato.Calcular(d.Itens, componentes, caracteristicas, primeiraFatura: true);
         if (previa.Linhas.FirstOrDefault(l => l.Erro.Length > 0) is { } ruim) return $"Fórmula de \"{ruim.Nome}\": {ruim.Erro}";
 
-        if (d.PropostaId is { Length: > 0 } pid && pid != c.PropostaId)
-        {
-            if (await propostas.GetByIdAsync(pid) is not { Status: "aprovada" } p) return "A proposta escolhida não está aprovada.";
-            c.PropostaId = p.Id;
-            c.PropostaNumero = p.Numero;
-        }
         c.ClienteId = cliente.Id;
         c.ClienteNome = cliente.Nome;
         c.ClienteDocumento = cliente.CpfCnpj;

@@ -97,6 +97,7 @@ public sealed class EmissaoNfseFatura(
     public async Task<Result<PedidoNfseDto>> MontarAsync(Fatura f, CancellationToken ct = default)
     {
         if (await contratos.GetByIdAsync(f.ContratoId) is not { } contrato) return Result.Failure<PedidoNfseDto>("O contrato desta fatura não existe mais.");
+        if (contrato.Condicoes.SemNotaFiscal) return Result.Failure<PedidoNfseDto>($"O contrato {contrato.Numero} fatura sem nota fiscal (condições do contrato).");
         if (contrato.ServicoId.Length == 0 || await servicos.GetByIdAsync(contrato.ServicoId) is not { } servico)
             return Result.Failure<PedidoNfseDto>($"O contrato {contrato.Numero} não tem serviço: escolha o serviço que sai na nota (pasta do contrato).");
         if (await empresas.GetByIdAsync(f.EmpresaId) is not { } empresa) return Result.Failure<PedidoNfseDto>("Empresa emissora não encontrada.");

@@ -57,6 +57,20 @@ export interface ItemProposta {
   fichas?: FichaItemProposta[] | null
   /** Ad valorem (R$) somado ao frete peso, fora do markup: frete total = precoFinal + adValorem. */
   adValorem?: number
+  /** Proposta recorrente: como o item entra no contrato. Nulo no avulso e nos itens antigos. */
+  cobranca?: CobrancaItem | null
+  /** Unidade do preço por ocorrência ("hora", "diária"). */
+  unidade?: string | null
+}
+
+export type ModalidadeProposta = 'avulso' | 'recorrente'
+/** fixo = todo mês; lancamento = por ocorrência lançada; documento = por CT-e/documento; unico = uma vez. */
+export type CobrancaItem = 'fixo' | 'lancamento' | 'documento' | 'unico'
+export const ROTULO_COBRANCA_ITEM: Record<CobrancaItem, string> = {
+  fixo: 'Todo mês',
+  lancamento: 'Por ocorrência',
+  documento: 'Por documento (CT-e)',
+  unico: 'Uma vez (1ª fatura)',
 }
 
 export interface DadoOperacaoItem {
@@ -117,6 +131,11 @@ export interface Proposta {
   formaPagamento?: string
   /** Prazo de pagamento em dias (do cadastro do cliente). */
   prazoPagamentoDias?: number
+  /** Avulso (um serviço) ou recorrente (vira contrato com vigência). Ausente nas antigas = avulso. */
+  modalidade?: ModalidadeProposta
+  /** Recorrente: vigência combinada (yyyy-MM-dd). */
+  vigenciaInicio?: string
+  vigenciaFim?: string
 
   // ── Alçada (preço editado ou margem abaixo do mínimo) ──────────────────
   /** Soma dos preços calculados pelo motor, antes da edição. 0 = sem edição. */

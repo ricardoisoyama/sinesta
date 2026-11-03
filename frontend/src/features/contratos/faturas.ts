@@ -20,6 +20,9 @@ export interface FaturaCentral extends Fatura {
   documentoDaOperacao: boolean
   /** NF registrada: não recalcula mais. */
   travada: boolean
+  /** Documentos do contrato: sem nota fiscal (só a fatura) e/ou sem boleto (Pix, transferência). */
+  semNotaFiscal: boolean
+  semBoleto: boolean
 }
 
 /** Nomes dos cadastros que a fatura e o contrato só guardam pelo id. */
@@ -55,6 +58,8 @@ export function paraCentral(f: Fatura, c: Contrato, nomes: Nomes): FaturaCentral
     formaCobranca: c.condicoes.formaCobranca,
     documentoDaOperacao: f.documentos.some((d) => d.tipo === 'CT-e'),
     travada: travada(f),
+    semNotaFiscal: !!c.condicoes.semNotaFiscal,
+    semBoleto: !!c.condicoes.semBoleto,
   }
 }
 

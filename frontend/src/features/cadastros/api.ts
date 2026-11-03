@@ -105,6 +105,9 @@ export interface CriarPropostaPayload {
   prazoPagamentoDias?: number
   precoOriginal?: number
   justificativa?: string
+  modalidade?: 'avulso' | 'recorrente'
+  vigenciaInicio?: string
+  vigenciaFim?: string
 }
 export const criarPropostaApi = (p: CriarPropostaPayload) =>
   apiFetch<Proposta>('/propostas', {
@@ -123,6 +126,9 @@ export const criarPropostaApi = (p: CriarPropostaPayload) =>
       prazoPagamentoDias: p.prazoPagamentoDias ?? 0,
       precoOriginal: p.precoOriginal ?? 0,
       justificativa: p.justificativa ?? '',
+      modalidade: p.modalidade ?? 'avulso',
+      vigenciaInicio: p.vigenciaInicio ?? '',
+      vigenciaFim: p.vigenciaFim ?? '',
     }),
   })
 /** Substitui os itens da proposta (usado para lançar o custo realizado). */

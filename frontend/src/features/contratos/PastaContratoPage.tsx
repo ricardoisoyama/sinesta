@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { listPropostas } from '@/features/cadastros/api'
+import type { Proposta } from '@/features/propostas/types'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   ArrowLeft, Banknote, CalendarRange, CircleDollarSign, Clock, FileSignature, FileText, FolderOpen, History, Landmark, ListChecks, Lock, MapPin,
@@ -17,11 +20,12 @@ import {
 } from './regras'
 import { faturasCentrais, useNomes, type FaturaCentral, type Nomes } from './faturas'
 import { ROTULO_REGRA, ROTULO_TIPO_CAMPO, type ModeloContrato } from './modelos'
+import { ROTULO_COBRANCA_ITEM } from '@/features/propostas/types'
 import type { CobrancaExtra, ComponenteContrato, Contrato, DocumentoVinculado, ExtraContrato, TipoEvento, TipoExtra } from './types'
 import { Alertas, BadgeFatura, BadgeModalidade, BadgeSituacao } from './componentes'
 import s from './contratos.module.css'
 
-type Aba = 'resumo' | 'caracteristicas' | 'escopo' | 'condicoes' | 'fretes' | 'faturas' | 'extras' | 'documentos' | 'historico'
+type Aba = 'resumo' | 'caracteristicas' | 'proposta' | 'escopo' | 'condicoes' | 'fretes' | 'faturas' | 'extras' | 'documentos' | 'historico'
 
 const ROTULO_EXTRA: Record<TipoExtra, string> = { 'hora-extra': 'Hora extra', 'custo-extra': 'Custo extra', ocorrencia: 'Ocorrência' }
 const ROTULO_COBRANCA: Record<CobrancaExtra, string> = { 'proxima-fatura': 'Na próxima fatura', separado: 'Faturar separado', 'nao-cobrar': 'Não cobrar' }
@@ -38,6 +42,7 @@ export function PastaContratoPage() {
   const nomes = useNomes()
   const { data, isLoading, isError } = useContrato(id)
   const { data: modelos } = useModelosContrato()
+  const { data: propostasData } = useQuery({ queryKey: ['propostas'], queryFn: listPropostas })
   const [aba, setAba] = useState<Aba>('resumo')
   const hoje = hojeISO()
   const c = data?.contratos[0]
@@ -60,6 +65,9 @@ export function PastaContratoPage() {
   const docsDoMes = c.documentos.filter((d) => d.data.slice(0, 7) === hoje.slice(0, 7) && d.situacao !== 'cancelado')
   const alertas = alertasDoContrato(c, data!.faturas, hoje)
   const prox = proximaFatura(c, data!.faturas)
+  // As propostas do contrato (a dele e as dos aditivos): o que foi precificado, com os dados da operação e as fichas.
+  const numerosProposta = new Set([c.propostaId, ...c.escopo.map((v) => v.propostaId ?? '')].filter(Boolean))
+  const propostas = (propostasData ?? []).filter((p) => numerosProposta.has(p.id))
 
   /** Toda ação da pasta: chama o servidor, recarrega e mostra o erro, se houver. */
   const acao = async (fn: () => Promise<unknown>) => {
@@ -73,7 +81,8 @@ export function PastaContratoPage() {
 
   const abas: { id: Aba; rotulo: string; icone: typeof Clock; n?: number }[] = [
     { id: 'resumo', rotulo: 'Resumo', icone: Sparkles },
-    ...(modelo?.campos.length ? [{ id: 'caracteristicas' as const, rotulo: 'Características', icone: ListChecks }] : []),
+    ...(propostas.length ? [{ id: 'proposta' as const, rotulo: 'Da proposta', icone: Lock }] : []),
+    ...(!c.propostaId && modelo?.campos.length ? [{ id: 'caracteristicas' as const, rotulo: 'Características', icone: ListChecks }] : []),
     { id: 'escopo', rotulo: porDocumento ? 'Tabela e cobrança' : 'Escopo e cobrança', icone: ScrollText },
     { id: 'condicoes', rotulo: 'Condições', icone: Settings2 },
     ...(porDocumento || spot ? [{ id: 'fretes' as const, rotulo: porDocumento ? 'Fretes' : 'Documentos da operação', icone: Truck, n: c.documentos.length }] : []),
@@ -158,6 +167,7 @@ export function PastaContratoPage() {
       </div>
       <section className={s.folha}>
         {aba === 'resumo' && <AbaResumo c={c} hoje={hoje} faturas={faturas} irPara={setAba} abrirCentral={() => navigate(`/financeiro/faturamento?contrato=${c.id}&mes=${(prox ?? faturas[faturas.length - 1])?.competencia ?? hoje.slice(0, 7)}`)} />}
+        {aba === 'proposta' && <AbaProposta propostas={propostas} />}
         {aba === 'caracteristicas' && modelo && <AbaCaracteristicas c={c} modelo={modelo} onEditar={() => navigate(`/contratos/${c.id}/editar`)} />}
         {aba === 'escopo' && <AbaEscopo c={c} hoje={hoje} onAlternar={(comp) => void acao(() => alternarComponente(c.id, comp.id))} onAditivo={() => navigate(`/contratos/${c.id}/editar`)} />}
         {aba === 'condicoes' && <AbaCondicoes c={c} hoje={hoje} nomes={nomes} />}
@@ -327,6 +337,42 @@ function AbaResumo({ c, hoje, faturas, irPara, abrirCentral }: { c: Contrato; ho
   )
 }
 
+/** O que veio das propostas (a do contrato e as dos aditivos): travado, só para consulta. */
+function AbaProposta({ propostas }: { propostas: Proposta[] }) {
+  return (
+    <div className={s.daProposta}>
+      <div className={s.numSub}><Lock size={12} /> Veio da proposta aprovada e não muda aqui. Para mudar o que é cobrado, faça um aditivo com outra proposta aprovada (Editar › aditivo).</div>
+      {propostas.map((p) => (
+        <div key={p.id} className={s.cartao}>
+          <h3 className={s.secTitulo}><FileSignature size={15} /> Proposta {p.numero} · {p.data}{p.modalidade === 'recorrente' && p.vigenciaInicio ? ` · vigência ${dataBR(p.vigenciaInicio)} a ${dataBR(p.vigenciaFim ?? '')}` : ''}</h3>
+          {p.itens.map((i) => (
+            <div key={i.id} className={s.propItem}>
+              <div className={s.propItemTopo}>
+                <b>{i.descricao}</b>
+                <span>{formatBRL(i.precoFinal + (i.adValorem ?? 0))}{i.cobranca ? ` · ${ROTULO_COBRANCA_ITEM[i.cobranca]}${i.cobranca === 'lancamento' && i.unidade ? ` (por ${i.unidade})` : ''}` : ''}</span>
+              </div>
+              {(i.dadosOperacao ?? []).length > 0 && (
+                <dl className={s.propDados}>
+                  {(i.dadosOperacao ?? []).map((x) => (
+                    <div key={x.campoId || x.chave}><dt>{x.nome}</dt><dd>{x.texto || String(x.numero)}</dd></div>
+                  ))}
+                </dl>
+              )}
+              {(i.fichas ?? []).length > 0 && (
+                <div className={s.propFichas}>
+                  {(i.fichas ?? []).map((f) => (
+                    <span key={f.fichaId}>{f.grupo ? `${f.grupo} › ` : ''}{f.nome} × {f.quantidade} = {formatBRL(f.total)}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function AbaCaracteristicas({ c, modelo, onEditar }: { c: Contrato; modelo: ModeloContrato; onEditar: () => void }) {
   const mostrar = (k: string, tipo: string) => {
     const x = c.caracteristicas[k]
@@ -374,9 +420,9 @@ function AbaEscopo({ c, hoje, onAlternar, onAditivo }: { c: Contrato; hoje: stri
           ))}
         </div>
         <div className={s.escopoNota}>
-          <b>{v.motivo}</b> · desde {dataBR(v.vigenteDesde)}. {tabela ? 'Tabela de preços: cada frete (CT-e) sai com o preço da rota.' : 'Retrato do que foi precificado; um aditivo cria a versão seguinte.'}
+          <b>{v.motivo}</b> · desde {dataBR(v.vigenteDesde)}.{v.propostaNumero ? <> <Lock size={11} /> Da proposta {v.propostaNumero}.</> : ''} {tabela ? 'Tabela de preços: cada frete (CT-e) sai com o preço da rota.' : 'Retrato do que foi precificado; um aditivo cria a versão seguinte.'}
         </div>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onAditivo} title="No cadastro, mudar o escopo pede a data do aditivo e cria a versão seguinte">
+        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onAditivo} title="O aditivo usa outra proposta aprovada do mesmo cliente e vale a partir de uma data">
           <ScrollText /> Registrar aditivo
         </button>
       </div>
@@ -501,7 +547,8 @@ function AbaCondicoes({ c, hoje, nomes }: { c: Contrato; hoje: string; nomes: No
       )}
       <Bloco titulo="Vencimento e cobrança" icone={CircleDollarSign}>
         <Def k="Vencimento" v={spot || porDocumento ? `${k.prazoPagamentoDias} dias após o ${spot ? 'serviço' : 'fechamento'}` : `dia ${k.diaVencimento}`} />
-        <Def k="Fim de semana" v={k.anteciparFimDeSemana ? 'antecipa para sexta' : 'adia para segunda'} />
+        <Def k="Dia não útil" v={k.anteciparFimDeSemana ? 'antecipa para o dia útil anterior' : 'adia para o próximo dia útil'} />
+        <Def k="Documentos" v={['Fatura', ...(k.semNotaFiscal ? [] : ['nota fiscal']), ...(k.semBoleto ? [] : ['boleto'])].join(', ')} />
         <Def k="Forma" v={k.formaCobranca} />
         <Def k="Conta que recebe" v={nomes.carteira(k.carteiraId)} />
       </Bloco>
@@ -524,9 +571,21 @@ function AbaCondicoes({ c, hoje, nomes }: { c: Contrato; hoje: string; nomes: No
         icone={FileText}
         nota={<span className={s.travado}><Lock size={12} /> Código municipal, alíquota e retenção ficam com o serviço (entram com a emissão de NFS-e pela Central); o contrato só escolhe o serviço e o texto adicional.</span>}
       >
-        <Def k="Serviço" v={nomes.servico(c.servicoId)} />
-        <Def k="Texto adicional" v={c.textoAdicionalNota || '—'} />
+        {k.semNotaFiscal ? (
+          <Def k="Nota fiscal" v="não emite (só a fatura)" />
+        ) : (
+          <>
+            <Def k="Serviço" v={nomes.servico(c.servicoId)} />
+            <Def k="Texto adicional" v={c.textoAdicionalNota || '—'} />
+          </>
+        )}
       </Bloco>
+      {c.clausulas?.trim() && (
+        <div className={`${s.cartao} ${s.clausulasCartao}`}>
+          <h3 className={s.secTitulo}><ScrollText size={15} /> Cláusulas</h3>
+          <div className={s.clausulas}>{c.clausulas}</div>
+        </div>
+      )}
       {!spot && k.multaRescisoria && (
         <Bloco titulo="Rescisão" icone={ScrollText}>
           <Def k="Multa" v={k.multaRescisoria} />

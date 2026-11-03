@@ -21,7 +21,7 @@ import { temPoderDeGestor } from '@/features/usuarios/types'
 import { useUsuarios } from '@/features/usuarios/store'
 import { usePropostas } from '@/features/propostas/store'
 import { useModelosProposta } from '@/features/modelosProposta/store'
-import type { CustoItemProposta, DadoOperacaoItem, FichaItemProposta, ItemProposta } from '@/features/propostas/types'
+import { ROTULO_COBRANCA_ITEM, type CobrancaItem, type CustoItemProposta, type DadoOperacaoItem, type FichaItemProposta, type ItemProposta, type ModalidadeProposta } from '@/features/propostas/types'
 import { ClienteAutocomplete } from '@/features/parceiros/ClienteAutocomplete'
 import { FORMAS_PAGAMENTO, type Parceiro } from '@/features/parceiros/types'
 import { bloqueioDeRegiao, descreverRegiao } from '@/features/parceiros/regiao'
@@ -95,6 +95,9 @@ export function PricingPage() {
   /** Validade escolhida (o texto, ex.: "15 dias"); vazio = a padrão da empresa. */
   const [validade, setValidade] = useState('')
   const [modeloId, setModeloId] = useState('')
+  // Avulso (um serviço) ou recorrente (vira contrato com a vigência; cada item diz como é cobrado).
+  const [modalidade, setModalidade] = useState<ModalidadeProposta>('avulso')
+  const [vigencia, setVigencia] = useState({ inicio: '', fim: '' })
   const [gerando, setGerando] = useState(false)
   const [tentouGerar, setTentouGerar] = useState(false)
   const [propostaEditandoId, setPropostaEditandoId] = useState('')
@@ -411,6 +414,7 @@ export function PricingPage() {
     limparOperacao()
   }
   const rmItem = (id: string) => setItens((l) => l.filter((i) => i.id !== id))
+  const mudarCobranca = (id: string, p: Partial<ItemProposta>) => setItens((l) => l.map((i) => (i.id === id ? { ...i, ...p } : i)))
 
   /** Devolve o item para o cálculo: campos, custos, desconto, comissão e preço voltam para a tela. */
   const editarItem = (it: ItemProposta) => {
@@ -467,11 +471,14 @@ export function PricingPage() {
   const faltaValidade = !validadeSel
   const faltaModelo = !modeloSel
   const faltaJustificativa = precisaAprovacao && !justificativa.trim()
+  const recorrente = modalidade === 'recorrente'
+  const faltaVigencia = recorrente && (!vigencia.inicio || !vigencia.fim || vigencia.fim <= vigencia.inicio)
   const faltasProposta = [
     faltaCliente && (clienteTexto.trim() ? 'escolha o cliente na lista (ou cadastre-o)' : 'informe o cliente'),
     faltaValidade && 'escolha a validade',
     faltaModelo && 'escolha o modelo da proposta',
     faltaJustificativa && 'escreva a justificativa para pedir a aprovação',
+    faltaVigencia && (vigencia.inicio && vigencia.fim ? 'o fim da vigência precisa ser depois do início' : 'informe o início e o fim da vigência'),
     bloqueioRegiao && `o vendedor ${vendedorSel?.nome} não atende a região do cliente (${descreverRegiao(bloqueioRegiao)})`,
   ].filter((f): f is string => !!f)
 
@@ -501,6 +508,8 @@ export function PricingPage() {
     if (p.modeloId) setModeloId(p.modeloId)
     if (p.formaPagamento || p.prazoPagamentoDias) setPagamentoEditado({ forma: p.formaPagamento ?? '', prazo: p.prazoPagamentoDias ?? 0 })
     setJustificativa(p.justificativa ?? '')
+    setModalidade(p.modalidade === 'recorrente' ? 'recorrente' : 'avulso')
+    setVigencia({ inicio: p.vigenciaInicio ?? '', fim: p.vigenciaFim ?? '' })
     /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propostaParam, propostas, clientes.length])
@@ -519,7 +528,6 @@ export function PricingPage() {
         clienteId: clienteAtual.id,
         vendedorId,
         vendedorNome: vendedorSel?.nome ?? '',
-        itens,
         total: round2(totalItens),
         modeloId: modeloSel || null,
         prazoEntrega: prazoEntrega.trim(),
@@ -528,6 +536,10 @@ export function PricingPage() {
         prazoPagamentoDias: prazoPagamento,
         precoOriginal: temPrecoEditado ? round2(totalCalculado) : 0,
         justificativa: precisaAprovacao ? justificativa.trim() : '',
+        modalidade,
+        vigenciaInicio: recorrente ? vigencia.inicio : '',
+        vigenciaFim: recorrente ? vigencia.fim : '',
+        itens: itens.map((i) => (recorrente ? { ...i, cobranca: i.cobranca ?? 'fixo', unidade: i.cobranca === 'lancamento' ? (i.unidade ?? '').trim() || null : null } : { ...i, cobranca: null, unidade: null })),
       }
       if (propostaEditandoId) await atualizarProposta(propostaEditandoId, dados)
       else await criarProposta(dados)
@@ -543,6 +555,8 @@ export function PricingPage() {
     setJustificativa('')
     setPagamentoEditado(null)
     setPropostaEditandoId('')
+    setModalidade('avulso')
+    setVigencia({ inicio: '', fim: '' })
     navigate('/propostas')
   }
   const propostaEditando = propostaEditandoId ? propostas.find((p) => p.id === propostaEditandoId) : undefined
@@ -927,6 +941,7 @@ export function PricingPage() {
                 <th className={ui.right}>Desconto</th>
                 <th className={ui.right}>Preço final</th>
                 {podeVerCalculo && <th className={ui.right}>ML</th>}
+                {recorrente && <th>Cobrança no contrato <Hint text="Como o item entra no contrato: todo mês (a mensalidade), por ocorrência lançada na pasta (hora extra, diária), por documento (o frete de cada CT-e) ou uma vez, na primeira fatura (implantação)." /></th>}
                 <th className={ui.colActions} />
               </tr>
             </thead>
@@ -947,6 +962,16 @@ export function PricingPage() {
                     {(it.adValorem ?? 0) > 0 && <div className={base.precoAdValorem}>+ ad valorem {formatBRL(it.adValorem ?? 0)} = {formatBRL(it.precoFinal + (it.adValorem ?? 0))}</div>}
                   </td>
                   {podeVerCalculo && <td className={ui.right}>{formatPct(it.ml)}</td>}
+                  {recorrente && (
+                    <td>
+                      <div className={base.cobrancaItem}>
+                        <select className={base.select} value={it.cobranca ?? 'fixo'} onChange={(e) => mudarCobranca(it.id, { cobranca: e.target.value as CobrancaItem })} aria-label="Como o item é cobrado">
+                          {(Object.keys(ROTULO_COBRANCA_ITEM) as CobrancaItem[]).map((c) => <option key={c} value={c}>{ROTULO_COBRANCA_ITEM[c]}</option>)}
+                        </select>
+                        {it.cobranca === 'lancamento' && <input className={base.select} value={it.unidade ?? ''} onChange={(e) => mudarCobranca(it.id, { unidade: e.target.value })} placeholder="por... (hora)" aria-label="Unidade do preço" />}
+                      </div>
+                    </td>
+                  )}
                   <td className={ui.colActions}>
                     <button
                       type="button"
@@ -963,6 +988,26 @@ export function PricingPage() {
               ))}
             </tbody>
           </table>
+
+          <div className={base.modalidadeLinha}>
+            <span className={base.inputLabel}>Modalidade <Hint text="Avulso: um serviço, uma cobrança. Recorrente: vira contrato com a vigência combinada, faturado todo período." /></span>
+            <div className={base.segmento} role="radiogroup" aria-label="Modalidade da proposta">
+              <button type="button" role="radio" aria-checked={!recorrente} className={!recorrente ? base.segOn : ''} onClick={() => setModalidade('avulso')}>Avulso</button>
+              <button type="button" role="radio" aria-checked={recorrente} className={recorrente ? base.segOn : ''} onClick={() => setModalidade('recorrente')}>Recorrente</button>
+            </div>
+            {recorrente && (
+              <>
+                <label className={base.vigencia}>
+                  <span>Início da vigência <span className={base.obrig}>*</span></span>
+                  <input type="date" className={`${base.select} ${tentouGerar && faltaVigencia ? base.campoErro : ''}`} value={vigencia.inicio} onChange={(e) => setVigencia({ ...vigencia, inicio: e.target.value })} />
+                </label>
+                <label className={base.vigencia}>
+                  <span>Fim da vigência <span className={base.obrig}>*</span></span>
+                  <input type="date" className={`${base.select} ${tentouGerar && faltaVigencia ? base.campoErro : ''}`} value={vigencia.fim} onChange={(e) => setVigencia({ ...vigencia, fim: e.target.value })} />
+                </label>
+              </>
+            )}
+          </div>
 
           <div className={base.gerarGrid}>
             <div className={base.gerarCampo}>
