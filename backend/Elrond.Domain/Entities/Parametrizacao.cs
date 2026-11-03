@@ -82,6 +82,24 @@ public class FichaGrupo : Rastreavel, IEntity, IInativavel
     /// preenchido = esta fórmula (ex.: valor_hora * horas).
     /// </summary>
     public string FormulaTotal { get; set; } = string.Empty;
+    /// <summary>Pasta em que a ficha está (<see cref="FichaPasta"/>); vazio = na raiz.</summary>
+    public string PastaId { get; set; } = string.Empty;
+    /// <summary>Largura da coluna Item desta ficha, em px (0 = padrão). Quem ajusta, vale para todos.</summary>
+    public int LarguraItem { get; set; }
+    public string Status { get; set; } = "ativo";
+}
+
+/// <summary>
+/// Pasta da Ficha Técnica: guarda subpastas e fichas (ex.: COBRECOM › Operação Santos › fichas). Genérica:
+/// quem nomeia é o usuário. Inativar a pasta não mexe nas fichas (a tela sobe o que estava nela).
+/// </summary>
+public class FichaPasta : Rastreavel, IEntity, IInativavel
+{
+    public string Id { get; set; } = string.Empty;
+    public string Nome { get; set; } = string.Empty;
+    /// <summary>Pasta de cima; vazio = na raiz.</summary>
+    public string PaiId { get; set; } = string.Empty;
+    public int Ordem { get; set; }
     public string Status { get; set; } = "ativo";
 }
 
@@ -107,6 +125,8 @@ public class FichaColuna : Rastreavel, IEntity, IInativavel
     /// <summary>Expressão quando Tipo = calculo, ex.: (salario_base + adicional_noturno) * 70%.</summary>
     public string Formula { get; set; } = string.Empty;
     public List<string> Opcoes { get; set; } = new();
+    /// <summary>Largura da coluna no grid, em px (0 = padrão). Quem ajusta, vale para todos.</summary>
+    public int Largura { get; set; }
     public int Ordem { get; set; }
     public string Status { get; set; } = "ativo";
 }

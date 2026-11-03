@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
-import type { ColunaFicha, FichaTecnica, GradeFichas, GrupoFicha } from './types'
+import { caminhoPasta, type ColunaFicha, type FichaTecnica, type GradeFichas, type GrupoFicha, type PastaFicha } from './types'
 
 /** Ficha Técnica (fichas, colunas e itens, ativos e inativos), na ordem da tela. Vale para todas as empresas. */
 export const listFichas = async (): Promise<GradeFichas> => {
@@ -9,6 +9,7 @@ export const listFichas = async (): Promise<GradeFichas> => {
     grupos: (g.grupos ?? []).map((x) => ({ ...x, formulaTotal: x.formulaTotal ?? '', status: x.status ?? 'ativo' })),
     colunas: g.colunas.map((c) => ({ ...c, grupoId: c.grupoId ?? '', base: c.base ?? '', formula: c.formula ?? '', opcoes: c.opcoes ?? [], status: c.status ?? 'ativo' })),
     fichas: g.fichas.map((f) => ({ ...f, grupoId: f.grupoId ?? '', valores: f.valores ?? {} })),
+    pastas: (g.pastas ?? []).map((p) => ({ ...p, paiId: p.paiId ?? '', status: p.status ?? 'ativo' })),
   }
 }
 
@@ -20,6 +21,7 @@ export const salvarFichas = (g: GradeFichas) =>
       grupos: g.grupos,
       colunas: g.colunas,
       fichas: g.fichas.map((f: FichaTecnica) => ({ id: f.id, grupoId: f.grupoId, nome: f.nome, status: f.status, valores: f.valores })),
+      pastas: g.pastas ?? [],
     }),
   })
 
@@ -35,7 +37,14 @@ export function useFichas() {
   const fichas: FichaTecnica[] = (q.data?.fichas ?? []).filter((f) => f.status === 'ativo' && (ativos.has(f.grupoId) || !f.grupoId))
   /** Colunas que valem para o item: as da ficha dele. */
   const colunasDe = (item: FichaTecnica | undefined): ColunaFicha[] => (item ? colunas.filter((c) => c.grupoId === item.grupoId) : [])
-  const nomeGrupo = (grupoId: string) => grupos.find((g) => g.id === grupoId)?.nome ?? ''
+  const pastas: PastaFicha[] = (q.data?.pastas ?? []).filter((p) => p.status === 'ativo')
+  /** Nome da ficha com o caminho das pastas: "COBRECOM › Operação Santos › Funcionários". */
+  const nomeGrupo = (grupoId: string) => {
+    const g = grupos.find((x) => x.id === grupoId)
+    if (!g) return ''
+    const caminho = caminhoPasta(pastas, g.pastaId)
+    return caminho ? `${caminho} › ${g.nome}` : g.nome
+  }
   /** Fórmula do total da ficha do item ('' = soma das colunas marcadas). */
   const formulaDe = (item: FichaTecnica | undefined): string => (item ? (grupos.find((g) => g.id === item.grupoId)?.formulaTotal ?? '') : '')
   return { grupos, colunas, fichas, colunasDe, formulaDe, nomeGrupo, carregando: q.isLoading }

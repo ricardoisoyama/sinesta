@@ -384,6 +384,36 @@ public class ParametrizacaoTests
     private static FichaColuna Col(string id, string nome, string tipo, string formula = "", string baseK = "", bool compoe = true) =>
         new() { Id = id, Nome = nome, Chave = Formula.ChaveDe(nome), Tipo = tipo, Formula = formula, Base = baseK, CompoeTotal = compoe && FichaCalculo.TiposNumericos.Contains(tipo) };
 
+    [Fact]
+    public async Task Pastas_em_niveis_guardam_fichas_e_corrigem_pai_invalido_ou_ciclo()
+    {
+        var pastas = new MemRepo<FichaPasta>();
+        var grupos = new MemRepo<FichaGrupo>();
+        var svc = new ParametrizacaoService(new MemRepo<CampoOperacao>(), new MemRepo<TipoOperacao>(), grupos, new MemRepo<FichaColuna>(), new MemRepo<FichaTecnica>(),
+            new MemRepo<FichaValor>(), new SemTransacao(), new FakeAuditoria(), pastas);
+        var r = await svc.SalvarFichasAsync(new SalvarFichasDto(
+            [
+                new FichaGrupo { Id = "g1", Nome = "Funcionários", PastaId = "op", LarguraItem = 320 },
+                new FichaGrupo { Id = "g2", Nome = "Solta", PastaId = "nao-existe" },
+            ],
+            [new FichaColuna { Id = "c1", GrupoId = "g1", Nome = "Salário", Tipo = "valor", Largura = 5000 }],
+            null,
+            [
+                new FichaPasta { Id = "cli", Nome = "COBRECOM" },
+                new FichaPasta { Id = "op", Nome = "Operação Santos", PaiId = "cli" },
+                new FichaPasta { Id = "a", Nome = "A", PaiId = "b" },
+                new FichaPasta { Id = "b", Nome = "B", PaiId = "a" },
+            ]));
+        Assert.True(r.IsSuccess, r.Error);
+        var dto = r.Value!;
+        Assert.Equal(("cli", ""), (dto.Pastas!.Single(x => x.Id == "op").PaiId, dto.Pastas!.Single(x => x.Id == "cli").PaiId));
+        // Ciclo A ↔ B: uma delas sobe para a raiz.
+        Assert.Contains(dto.Pastas!, x => (x.Id == "a" || x.Id == "b") && x.PaiId == "");
+        Assert.Equal(("op", 320), (dto.Grupos.Single(g => g.Id == "g1").PastaId, dto.Grupos.Single(g => g.Id == "g1").LarguraItem));
+        Assert.Equal("", dto.Grupos.Single(g => g.Id == "g2").PastaId); // pasta inexistente = raiz
+        Assert.Equal(900, dto.Colunas.Single().Largura); // largura com teto
+    }
+
     /// <summary>Repositório de tipos de operação do último Montar().</summary>
     private static MemRepo<TipoOperacao> Tipos = new();
 

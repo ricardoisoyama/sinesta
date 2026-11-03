@@ -150,3 +150,26 @@
   .pastas { position: static; flex-direction: row; flex-wrap: wrap; }
   .pastasTitulo { width: 100%; }
 }
+
+/* Pastas em níveis (pasta > subpasta > fichas) */
+.ramo { display: flex; flex-direction: column; gap: 2px; }
+.pastaMae { display: flex; align-items: center; gap: 2px; border-radius: 8px; color: #143d18; }
+.pastaMae:hover { background: #f6f5f1; }
+.chevron { flex-shrink: 0; width: 22px; height: 28px; display: grid; place-items: center; border: 0; background: none; color: #7a877f; cursor: pointer; border-radius: 6px; }
+.pastaMaeNome { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; border: 0; background: none; padding: 7px 4px; font: inherit; font-size: 13px; font-weight: 700; color: inherit; text-align: left; cursor: pointer; }
+.pastaMaeNome > svg { flex-shrink: 0; color: #b5651d; }
+.pastaMaeNome span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pastaMaeNome small { font-size: 11px; font-weight: 500; color: #7a877f; background: #f0eee7; border-radius: 999px; padding: 1px 7px; }
+.pastaMaeAcoes { display: none; align-items: center; }
+.pastaMae:hover .pastaMaeAcoes, .pastaMae:focus-within .pastaMaeAcoes { display: inline-flex; }
+.pastaMaeAcoes .pastaAcao { width: 24px; height: 24px; margin-right: 0; }
+.ficha { min-height: 34px; }
+.fichaAberta { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; padding: 2px 0 6px; }
+.fichaAbertaTopo { display: flex; align-items: center; gap: 6px; }
+.fichaAbertaTopo > svg { flex-shrink: 0; color: var(--orange); margin-left: 8px; }
+.mover { margin: 0 6px 0 8px; height: 28px; border: 1px solid #ecd3bf; border-radius: 6px; background: #fff; font: inherit; font-size: 12px; color: #6b3a17; min-width: 0; }
+.novos { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+/* Arrastar a borda do título para alargar a coluna */
+.redim { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 3; }
+.redim:hover, .redim:active { background: rgba(232, 112, 47, 0.35); }

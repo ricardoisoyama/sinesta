@@ -14,10 +14,10 @@ public record FichaSaidaDto(string Id, string GrupoId, string Nome, string Statu
     string CriadoEm, string CriadoPor, string AlteradoEm, string AlteradoPor);
 
 /// <summary>Fichas (pastas), colunas e itens de uma empresa (a Ficha Técnica inteira da tela).</summary>
-public record FichasEmpresaDto(List<FichaGrupo> Grupos, List<FichaColuna> Colunas, List<FichaSaidaDto> Fichas);
+public record FichasEmpresaDto(List<FichaGrupo> Grupos, List<FichaColuna> Colunas, List<FichaSaidaDto> Fichas, List<FichaPasta>? Pastas = null);
 
 /// <summary>Um item enviado pela tela. Valores por Id da coluna; o Total é recalculado no servidor.</summary>
 public record FichaEntradaDto(string Id, string? GrupoId, string Nome, string Status, Dictionary<string, JsonElement>? Valores);
 
 /// <summary>Grava a Ficha Técnica da empresa: fichas, colunas e itens. O que não vier não é apagado (exclusão é status = inativo).</summary>
-public record SalvarFichasDto(List<FichaGrupo>? Grupos, List<FichaColuna>? Colunas, List<FichaEntradaDto>? Fichas);
+public record SalvarFichasDto(List<FichaGrupo>? Grupos, List<FichaColuna>? Colunas, List<FichaEntradaDto>? Fichas, List<FichaPasta>? Pastas = null);

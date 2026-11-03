@@ -30,7 +30,37 @@ export interface GrupoFicha {
   nome: string
   /** Como sai o total do item: vazio = soma das colunas marcadas; preenchido = esta fórmula. */
   formulaTotal?: string
+  /** Pasta em que a ficha está ('' = na raiz). */
+  pastaId?: string
+  /** Largura da coluna Item desta ficha, em px (0 = padrão); vale para todos. */
+  larguraItem?: number
   status: Status
+}
+
+/** Pasta da Ficha Técnica: guarda subpastas e fichas (ex.: COBRECOM › Operação Santos). */
+export interface PastaFicha {
+  id: string
+  nome: string
+  /** Pasta de cima ('' = na raiz). */
+  paiId: string
+  status: Status
+}
+
+export const novaPasta = (paiId = '', nome = 'Nova pasta'): PastaFicha => ({ id: crypto.randomUUID(), nome, paiId, status: 'ativo' })
+
+/** Caminho da pasta até a raiz: "COBRECOM › Operação Santos". */
+export function caminhoPasta(pastas: PastaFicha[], pastaId: string | undefined): string {
+  const nomes: string[] = []
+  const vistos = new Set<string>()
+  let id = pastaId ?? ''
+  while (id && !vistos.has(id)) {
+    vistos.add(id)
+    const p = pastas.find((x) => x.id === id)
+    if (!p) break
+    nomes.unshift(p.nome || 'Sem nome')
+    id = p.paiId
+  }
+  return nomes.join(' › ')
 }
 
 export interface ColunaFicha {
@@ -49,6 +79,8 @@ export interface ColunaFicha {
   formula: string
   /** Opções quando tipo = lista. */
   opcoes: string[]
+  /** Largura no grid, em px (0 = padrão); vale para todos. */
+  largura?: number
   status: Status
 }
 
@@ -69,6 +101,8 @@ export interface GradeFichas {
   grupos: GrupoFicha[]
   colunas: ColunaFicha[]
   fichas: FichaTecnica[]
+  /** Pastas (níveis acima das fichas). */
+  pastas?: PastaFicha[]
 }
 
 export const novoGrupo = (nome = 'Nova ficha'): GrupoFicha => ({ id: crypto.randomUUID(), nome, status: 'ativo' })

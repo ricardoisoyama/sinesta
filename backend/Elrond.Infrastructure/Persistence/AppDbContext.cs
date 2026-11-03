@@ -42,6 +42,7 @@ public class AppDbContext : DbContext
     public DbSet<CampoOperacao> CamposOperacao => Set<CampoOperacao>();
     public DbSet<TipoOperacao> TiposOperacao => Set<TipoOperacao>();
     public DbSet<FichaGrupo> FichaGrupos => Set<FichaGrupo>();
+    public DbSet<FichaPasta> FichaPastas => Set<FichaPasta>();
     public DbSet<FichaColuna> FichaColunas => Set<FichaColuna>();
     public DbSet<FichaTecnica> FichasTecnicas => Set<FichaTecnica>();
     public DbSet<FichaValor> FichaValores => Set<FichaValor>();
@@ -738,10 +739,20 @@ public class AppDbContext : DbContext
             e.HasIndex(t => new { t.EmpresaId, t.Ordem });
         });
 
+        modelBuilder.Entity<FichaPasta>(e =>
+        {
+            e.ToTable("ficha_pastas");
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Nome).IsRequired().HasMaxLength(120);
+            e.Property(p => p.PaiId).IsRequired().HasMaxLength(80).HasDefaultValue(string.Empty);
+        });
+
         modelBuilder.Entity<FichaGrupo>(e =>
         {
             e.ToTable("ficha_grupos");
             e.HasKey(g => g.Id);
+            e.Property(g => g.PastaId).IsRequired().HasMaxLength(80).HasDefaultValue(string.Empty);
+            e.Property(g => g.LarguraItem).HasDefaultValue(0);
             e.Property(g => g.EmpresaId).IsRequired().HasMaxLength(80);
             e.Property(g => g.Nome).IsRequired().HasMaxLength(120);
             e.HasIndex(g => new { g.EmpresaId, g.Ordem });
@@ -751,6 +762,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("ficha_colunas");
             e.HasKey(c => c.Id);
+            e.Property(c => c.Largura).HasDefaultValue(0);
             e.Property(c => c.EmpresaId).IsRequired().HasMaxLength(80);
             e.Property(c => c.GrupoId).IsRequired().HasMaxLength(80).HasDefaultValue(string.Empty);
             e.Property(c => c.Nome).IsRequired().HasMaxLength(120);

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronUp, Copy, CopyPlus, Folder, FolderInput, FolderOpen, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
+import { ChevronDown, ChevronUp, Copy, FolderInput, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import sheet from '@/features/common/planilha.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
@@ -14,6 +14,7 @@ import { chaveFichas, listFichas, salvarFichas } from './api'
 import { calcularFicha } from './calculo'
 import { duplicarFicha, type PlanoCopia } from './copiar'
 import { CopiarItensModal } from './CopiarItensModal'
+import { ArvoreFichas } from './ArvoreFichas'
 import { EditorFormula } from './EditorFormula'
 import { TIPOS_COLUNA, TIPOS_NUMERICOS, novaColuna, novaFicha, novoGrupo, type ColunaFicha, type FichaTecnica, type GradeFichas, type GrupoFicha, type TipoColunaFicha } from './types'
 import css from './fichaTecnica.module.css'
@@ -27,9 +28,11 @@ const TAG: Record<TipoColunaFicha, { label: string; cls: string }> = {
   lista: { label: 'lista', cls: 'tagInfo' },
 }
 
-const VAZIA: GradeFichas = { grupos: [], colunas: [], fichas: [] }
+const VAZIA: GradeFichas = { grupos: [], colunas: [], fichas: [], pastas: [] }
 /** Seleção da pasta virtual com o que ficou de antes das fichas. */
 const SEM_FICHA = '__sem_ficha__'
+/** Id da coluna Item (a do nome) na largura das colunas. */
+const ITEM = '__item__'
 
 /** Chave nova para a coluna (a partir do nome), sem repetir as das outras colunas ativas. */
 function chaveLivre(nome: string, outras: ColunaFicha[]): string {
@@ -103,8 +106,8 @@ export function FichasTecnicasPage() {
   }
 
   const salvarGrupo = (g: GrupoFicha) => gravar({ grupos: grade.grupos.map((x) => (x.id === g.id ? g : x)) })
-  const adicionarGrupo = () => {
-    const g = novoGrupo()
+  const adicionarGrupo = (pastaId = '') => {
+    const g = { ...novoGrupo(), pastaId }
     gravar({ grupos: [...grade.grupos, g] })
     setGrupoSel(g.id)
     setFocoGrupo(g.id)
@@ -196,6 +199,34 @@ export function FichasTecnicasPage() {
   }
   const podeLancar = !auto.carregando && (!!grupo || semFicha)
 
+  // ── largura das colunas: arrastar a borda do título (como no Excel); quem ajusta, vale para todos ──
+  const [arrastando, setArrastando] = useState<{ id: string; largura: number } | null>(null)
+  const larguraDe = (id: string, padrao: number) =>
+    arrastando?.id === id ? arrastando.largura : (id === ITEM ? grupo?.larguraItem : colunas.find((c) => c.id === id)?.largura) || padrao
+  const redimensionar = (id: string) => (e: React.MouseEvent<HTMLSpanElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const th = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+    const x0 = e.clientX
+    let largura = Math.round(th.width)
+    const mover = (ev: MouseEvent) => {
+      largura = Math.max(70, Math.min(900, Math.round(th.width + ev.clientX - x0)))
+      setArrastando({ id, largura })
+    }
+    const soltar = () => {
+      window.removeEventListener('mousemove', mover)
+      window.removeEventListener('mouseup', soltar)
+      setArrastando(null)
+      if (id === ITEM) { if (grupo) salvarGrupo({ ...grupo, larguraItem: largura }) }
+      else gravar({ colunas: grade.colunas.map((c) => (c.id === id ? { ...c, largura } : c)) })
+    }
+    window.addEventListener('mousemove', mover)
+    window.addEventListener('mouseup', soltar)
+  }
+  const alca = (id: string) => (
+    <span className={css.redim} onMouseDown={redimensionar(id)} onDoubleClick={() => (id === ITEM ? grupo && salvarGrupo({ ...grupo, larguraItem: 0 }) : gravar({ colunas: grade.colunas.map((c) => (c.id === id ? { ...c, largura: 0 } : c)) }))} title="Arraste para alargar (duplo clique volta ao padrão)" aria-hidden />
+  )
+
   // Prévia da fórmula usa a primeira ficha (ou zeros) para mostrar se a conta fecha.
   const amostra = visiveis[0]?.valores ?? {}
   const calcAmostra = calcularFicha(colunas, amostra, formulaTotal)
@@ -206,7 +237,7 @@ export function FichasTecnicasPage() {
       <PageHeader
         breadcrumb="Cadastros"
         title="Ficha Técnica"
-        subtitle="Cada ficha é uma pasta (Funcionários, Tecnologia...) com as suas colunas e os seus itens. O total de cada item é o custo que o Pricing usa. Vale para todas as empresas."
+        subtitle="Cada ficha (Funcionários, Tecnologia...) tem as suas colunas e os seus itens, e pode ficar numa pasta com subpastas (ex.: COBRECOM › Operação Santos). O total de cada item é o custo que o Pricing usa. Vale para todas as empresas."
         action={
           <div className={camposCss.acoes}>
             <SituacaoSalvamento situacao={auto.situacao} erro={auto.erro} onTentar={auto.tentarDeNovo} />
@@ -227,58 +258,20 @@ export function FichasTecnicasPage() {
       {auto.erroCarga && <div className={camposCss.blocoVazio}>{auto.erroCarga}</div>}
 
       <div className={css.layout}>
-      <nav className={css.pastas} aria-label="Fichas">
-        <div className={css.pastasTitulo}>Fichas</div>
-        {gruposVisiveis.map((g) => {
-          const on = g.id === grupoAtual
-          const Icone = on ? FolderOpen : Folder
-          return (
-            <div key={g.id} className={`${css.pasta} ${on ? css.pastaOn : ''} ${g.status !== 'ativo' ? css.pastaOff : ''}`}>
-              {on ? (
-                <>
-                  <Icone size={16} />
-                  <input
-                    className={css.pastaNome}
-                    value={g.nome}
-                    autoFocus={focoGrupo === g.id}
-                    onFocus={(e) => focoGrupo === g.id && e.target.select()}
-                    onChange={(e) => salvarGrupo({ ...g, nome: e.target.value })}
-                    aria-label="Nome da ficha"
-                    title={g.nome}
-                  />
-                  <button type="button" className={css.pastaAcao} title="Duplicar ficha (colunas, itens e valores)" onClick={() => duplicarGrupo(g.id)}>
-                    <CopyPlus size={14} />
-                  </button>
-                  <button type="button" className={css.pastaAcao} title={g.status === 'ativo' ? 'Inativar a ficha (os itens saem do Pricing)' : 'Reativar a ficha'} onClick={() => salvarGrupo({ ...g, status: g.status === 'ativo' ? 'inativo' : 'ativo' })}>
-                    <Power size={14} />
-                  </button>
-                </>
-              ) : (
-                <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(g.id)} title={g.nome}>
-                  <Icone size={16} />
-                  <span>{g.nome || 'Sem nome'}</span>
-                  <small>{qtdItens(g.id)}</small>
-                </button>
-              )}
-            </div>
-          )
-        })}
-        {temSemFicha && (
-          <div className={`${css.pasta} ${semFicha ? css.pastaOn : ''}`}>
-            <button type="button" className={css.pastaBtn} onClick={() => escolherGrupo(SEM_FICHA)}>
-              <Folder size={16} />
-              <span>Sem ficha</span>
-              <small>{qtdItens('')}</small>
-            </button>
-          </div>
-        )}
-        <button type="button" className={css.novaPasta} onClick={adicionarGrupo} disabled={auto.carregando}>
-          <Plus size={15} /> Nova ficha
-        </button>
-        {gruposVisiveis.length === 0 && !temSemFicha && !auto.carregando && (
-          <p className={css.pastasDica}>Crie a primeira ficha, por exemplo <b>Funcionários</b> ou <b>Tecnologia</b>. Cada uma tem as suas colunas.</p>
-        )}
-      </nav>
+      <ArvoreFichas
+        grade={grade}
+        mostrarInativas={mostrarInativas}
+        grupoAtual={grupoAtual}
+        focoGrupo={focoGrupo}
+        carregando={auto.carregando}
+        qtdItens={qtdItens}
+        onEscolher={escolherGrupo}
+        onSalvarGrupo={salvarGrupo}
+        onDuplicar={duplicarGrupo}
+        onNovaFicha={adicionarGrupo}
+        onGravar={gravar}
+        semFicha={temSemFicha ? { ativo: semFicha, qtd: qtdItens(''), onEscolher: () => escolherGrupo(SEM_FICHA) } : undefined}
+      />
 
       <div className={`${sheet.split} ${painel ? '' : sheet.splitFechado}`}>
         <div className={ui.card}>
@@ -293,13 +286,14 @@ export function FichasTecnicasPage() {
             <table className={sheet.sheet}>
               <thead>
                 <tr>
-                  <th className={sheet.fixa} style={{ minWidth: 220 }}>Item</th>
+                  <th className={sheet.fixa} style={{ width: larguraDe(ITEM, 220), minWidth: larguraDe(ITEM, 220), maxWidth: larguraDe(ITEM, 220) }}>Item{grupo && alca(ITEM)}</th>
                   {colunas.map((c) => (
-                    <th key={c.id} style={{ minWidth: c.tipo === 'texto' ? 160 : 120 }} className={TIPOS_NUMERICOS.includes(c.tipo) ? sheet.num : ''}>
+                    <th key={c.id} style={{ position: 'relative', width: larguraDe(c.id, c.tipo === 'texto' ? 160 : 120), minWidth: larguraDe(c.id, c.tipo === 'texto' ? 160 : 120), maxWidth: larguraDe(c.id, c.tipo === 'texto' ? 160 : 120) }} className={TIPOS_NUMERICOS.includes(c.tipo) ? sheet.num : ''}>
                       <button type="button" className={`${sheet.colHead} ${colunaSel === c.id && painel ? sheet.colHeadOn : ''}`} onClick={() => abrirColuna(c.id)} title="Configurar coluna">
                         {c.nome || 'Sem nome'}
                         <span className={`${sheet.tag} ${sheet[TAG[c.tipo].cls]}`}>{TAG[c.tipo].label}</span>
                       </button>
+                      {alca(c.id)}
                     </th>
                   ))}
                   <th className={sheet.num} style={{ minWidth: 130 }}>Total (custo)</th>

@@ -41,11 +41,13 @@ public class ParametrizacaoService : IParametrizacaoService
     private readonly ICrudRepository<FichaValor> _valores;
     private readonly IUnidadeTrabalho _uow;
     private readonly IAuditoriaService _auditoria;
+    private readonly ICrudRepository<FichaPasta>? _pastas;
 
     public ParametrizacaoService(ICrudRepository<CampoOperacao> campos, ICrudRepository<TipoOperacao> tipos, ICrudRepository<FichaGrupo> grupos,
         ICrudRepository<FichaColuna> colunas, ICrudRepository<FichaTecnica> fichas, ICrudRepository<FichaValor> valores,
-        IUnidadeTrabalho uow, IAuditoriaService auditoria)
+        IUnidadeTrabalho uow, IAuditoriaService auditoria, ICrudRepository<FichaPasta>? pastas = null)
     {
+        _pastas = pastas;
         _campos = campos;
         _tipos = tipos;
         _grupos = grupos;
@@ -241,13 +243,62 @@ public class ParametrizacaoService : IParametrizacaoService
             }
             return new FichaSaidaDto(f.Id, f.GrupoId, f.Nome, f.Status, f.Ordem, f.Total, dic, f.CriadoEm, f.CriadoPor, f.AlteradoEm, f.AlteradoPor);
         }).ToList();
-        return new FichasEmpresaDto(grupos, colunas, saida);
+        var pastas = _pastas is null ? new List<FichaPasta>() : (await _pastas.GetAllAsync()).OrderBy(p => p.Ordem).ThenBy(p => p.CriadoEm).ToList();
+        return new FichasEmpresaDto(grupos, colunas, saida, pastas);
+    }
+
+    /// <summary>
+    /// Pastas da Ficha Técnica: grava as que vieram (o que não vier fica). Pasta de cima que não existe,
+    /// é ela mesma ou faria um ciclo (A dentro de B dentro de A) vai para a raiz.
+    /// </summary>
+    private async Task<(List<FichaPasta> Novas, List<FichaPasta> Alteradas, List<(FichaPasta Antes, FichaPasta Depois)> Mudancas, HashSet<string> Ativas)> PrepararPastasAsync(List<FichaPasta>? brutas)
+    {
+        var existentes = _pastas is null ? new Dictionary<string, FichaPasta>() : (await _pastas.GetAllAsync()).ToDictionary(p => p.Id);
+        var final = existentes.ToDictionary(k => k.Key, k => new FichaPasta { Id = k.Value.Id, Nome = k.Value.Nome, PaiId = k.Value.PaiId, Ordem = k.Value.Ordem, Status = k.Value.Status });
+        var novasIds = new HashSet<string>();
+        if (brutas is not null)
+        {
+            var ordem = 0;
+            foreach (var bruto in brutas)
+            {
+                existentes.TryGetValue(bruto.Id ?? string.Empty, out var antes);
+                var nome = (bruto.Nome ?? string.Empty).Trim();
+                var p = new FichaPasta
+                {
+                    Id = antes?.Id ?? (string.IsNullOrWhiteSpace(bruto.Id) ? Guid.NewGuid().ToString() : bruto.Id.Trim()),
+                    Nome = Limitar(nome.Length > 0 ? nome : antes?.Nome ?? "Nova pasta", 120),
+                    PaiId = (bruto.PaiId ?? string.Empty).Trim(),
+                    Ordem = ordem++,
+                    Status = bruto.Status == "inativo" ? "inativo" : "ativo",
+                };
+                final[p.Id] = p;
+                if (antes is null) novasIds.Add(p.Id);
+            }
+        }
+        // Pai inválido ou ciclo: sobe para a raiz.
+        foreach (var p in final.Values)
+        {
+            var visto = new HashSet<string> { p.Id };
+            var pai = p.PaiId;
+            while (pai.Length > 0)
+            {
+                if (!final.ContainsKey(pai) || !visto.Add(pai)) { p.PaiId = string.Empty; break; }
+                pai = final[pai].PaiId;
+            }
+        }
+        var novas = final.Values.Where(p => novasIds.Contains(p.Id)).ToList();
+        var mudancas = final.Values.Where(p => existentes.TryGetValue(p.Id, out var a) && (a.Nome != p.Nome || a.PaiId != p.PaiId || a.Ordem != p.Ordem || a.Status != p.Status))
+            .Select(p => (existentes[p.Id], p)).ToList();
+        return (novas, mudancas.Select(m => m.p).ToList(), mudancas, final.Values.Where(p => p.Status == "ativo").Select(p => p.Id).ToHashSet());
     }
 
     public async Task<Result<FichasEmpresaDto>> SalvarFichasAsync(SalvarFichasDto dto)
     {
         if ((dto.Grupos?.Count ?? 0) > MaxItens || (dto.Colunas?.Count ?? 0) > MaxItens || (dto.Fichas?.Count ?? 0) > 2000)
             return Result.Failure<FichasEmpresaDto>("Grade grande demais para gravar de uma vez.");
+
+        // ── 0a. Pastas (níveis acima das fichas) ──
+        var (pastaNovas, pastaAlteradas, pastaMudancas, pastasAtivas) = await PrepararPastasAsync(dto.Pastas);
 
         // ── 0. Fichas (pastas) ──
         var grupoExistentes = (await _grupos.GetAllAsync()).ToDictionary(g => g.Id);
@@ -266,11 +317,15 @@ public class ParametrizacaoService : IParametrizacaoService
                 Nome = Limitar(nome.Length > 0 ? nome : antes?.Nome ?? "Nova ficha", 120),
                 Ordem = ordemG++,
                 FormulaTotal = Limitar((bruto.FormulaTotal ?? string.Empty).Trim(), 500),
+                // Pasta que não existe (ou inativa) = a ficha fica na raiz.
+                PastaId = pastasAtivas.Contains((bruto.PastaId ?? string.Empty).Trim()) ? bruto.PastaId!.Trim() : string.Empty,
+                LarguraItem = Math.Clamp(bruto.LarguraItem, 0, 900),
                 Status = bruto.Status == "inativo" ? "inativo" : "ativo",
             };
             gruposValidos.Add(g.Id);
             if (antes is null) grupoNovos.Add(g);
-            else if (antes.Nome != g.Nome || antes.Ordem != g.Ordem || antes.Status != g.Status || antes.FormulaTotal != g.FormulaTotal) grupoAlterados.Add((antes, g));
+            else if (antes.Nome != g.Nome || antes.Ordem != g.Ordem || antes.Status != g.Status || antes.FormulaTotal != g.FormulaTotal
+                     || antes.PastaId != g.PastaId || antes.LarguraItem != g.LarguraItem) grupoAlterados.Add((antes, g));
         }
         // Fórmula do total de cada ficha (a que veio agora ou a gravada).
         var formulaPorGrupo = grupoExistentes.Values.Concat(grupoNovos).Concat(grupoAlterados.Select(a => a.Depois))
@@ -305,6 +360,7 @@ public class ParametrizacaoService : IParametrizacaoService
                 Base = tipo == "percentual" ? Formula.ChaveDe(bruto.Base ?? string.Empty) : string.Empty,
                 Formula = tipo == "calculo" ? Limitar((bruto.Formula ?? string.Empty).Trim(), 500) : string.Empty,
                 Opcoes = tipo == "lista" ? Opcoes(bruto.Opcoes) : new(),
+                Largura = Math.Clamp(bruto.Largura, 0, 900),
                 Ordem = ordem++,
                 Status = status,
             };
@@ -392,6 +448,7 @@ public class ParametrizacaoService : IParametrizacaoService
 
         await _uow.ExecutarAsync(async () =>
         {
+            if (_pastas is not null) await _pastas.SalvarLoteAsync(pastaNovas, pastaAlteradas);
             await _grupos.SalvarLoteAsync(grupoNovos, grupoAlterados.Select(a => a.Depois).ToList());
             await _colunas.SalvarLoteAsync(colNovas, colAlteradas.Select(a => a.Depois).ToList());
             await _fichas.SalvarLoteAsync(fichasNovasLista, fichasAlteradas.Select(a => a.Depois).ToList());
@@ -401,6 +458,10 @@ public class ParametrizacaoService : IParametrizacaoService
         var nomeGrupo = grupoExistentes.Values.Concat(grupoNovos).Concat(grupoAlterados.Select(a => a.Depois))
             .GroupBy(g => g.Id).ToDictionary(g => g.Key, g => g.Last().Nome);
         string Onde(string grupoId) => nomeGrupo.TryGetValue(grupoId, out var n) ? $"ficha {n}" : "Ficha Técnica";
+        foreach (var p in pastaNovas)
+            await _auditoria.RegistrarAsync("criar", "FichaPasta", p.Id, $"Pasta \"{p.Nome}\" criada na Ficha Técnica");
+        foreach (var (a, d) in pastaMudancas)
+            await _auditoria.RegistrarAsync(Acao(a.Status, d.Status), "FichaPasta", d.Id, $"Pasta \"{d.Nome}\": {Acao(a.Status, d.Status)}", a, d);
         foreach (var g in grupoNovos)
             await _auditoria.RegistrarAsync("criar", "FichaGrupo", g.Id, $"Ficha \"{g.Nome}\" criada na Ficha Técnica");
         foreach (var (a, d) in grupoAlterados)
@@ -419,7 +480,7 @@ public class ParametrizacaoService : IParametrizacaoService
 
     private static bool MudouColuna(FichaColuna a, FichaColuna b) =>
         a.Nome != b.Nome || a.GrupoId != b.GrupoId || a.Chave != b.Chave || a.Tipo != b.Tipo || a.CompoeTotal != b.CompoeTotal || a.Base != b.Base
-        || a.Formula != b.Formula || a.Ordem != b.Ordem || a.Status != b.Status || !a.Opcoes.SequenceEqual(b.Opcoes);
+        || a.Formula != b.Formula || a.Ordem != b.Ordem || a.Status != b.Status || !a.Opcoes.SequenceEqual(b.Opcoes) || a.Largura != b.Largura;
 
     // ══════════════════════════ auxiliares ══════════════════════════
 
