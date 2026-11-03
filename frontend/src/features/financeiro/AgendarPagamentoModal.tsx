@@ -6,7 +6,7 @@ import { formatBRL } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { hojeISO } from './calculos'
 import { lerCodigoBoleto } from './codigoBoleto'
-import { lerArquivoBoleto } from './lerBoleto'
+import { lerArquivoBoleto, lerBoletoDosAnexos } from './lerBoleto'
 import { LerOutroDispositivo } from './LerOutroDispositivo'
 import { agendarPagamentos, prepararPagamentos, rotuloPagamento, type PreparoPagamento, type ResultadoAgendamento } from './pagamentos'
 import s from './financeiro.module.css'
@@ -39,6 +39,8 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
   const [lendoArquivo, setLendoArquivo] = useState('')
   const [erroArquivo, setErroArquivo] = useState<Record<string, string>>({})
   const [noCelular, setNoCelular] = useState<PreparoPagamento | null>(null)
+  /** De qual anexo veio o código (o boleto que o financeiro anexou no lançamento). */
+  const [doAnexo, setDoAnexo] = useState<Record<string, string>>({})
   const usarArquivo = async (id: string, arquivo: File | undefined) => {
     if (!arquivo) return
     setLendoArquivo(id)
@@ -59,6 +61,19 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
         // Sem chave Pix no cadastro, o mais provável é ter chegado um boleto.
         setFormas(Object.fromEntries(l.map((p) => [p.movimentoId, p.chaveSugerida ? 'pix' : 'boleto'])))
         setVencimentos(Object.fromEntries(l.map((p) => [p.movimentoId, p.vencimento])))
+        // Boleto anexado ao lançamento: já preenche a linha digitável (e escolhe Boleto) sem ninguém digitar.
+        for (const p of l.filter((x) => !x.problema)) {
+          setLendoArquivo((atual) => atual || p.movimentoId)
+          void lerBoletoDosAnexos(p.movimentoId)
+            .then((achado) => {
+              if (!vivo || !achado) return
+              setCodigos((x) => (x[p.movimentoId] ? x : { ...x, [p.movimentoId]: achado.codigo }))
+              setFormas((x) => ({ ...x, [p.movimentoId]: 'boleto' }))
+              setDoAnexo((x) => ({ ...x, [p.movimentoId]: achado.arquivo }))
+            })
+            .catch(() => undefined)
+            .finally(() => vivo && setLendoArquivo((atual) => (atual === p.movimentoId ? '' : atual)))
+        }
       })
       .catch((e) => vivo && setErro(getErrorMessage(e)))
     return () => {
@@ -238,6 +253,7 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
                             </button>
                           </div>
                           {erroArquivo[p.movimentoId] && <div className={s.pagProblema}><AlertTriangle size={12} /> {erroArquivo[p.movimentoId]}</div>}
+                          {doAnexo[p.movimentoId] && codigos[p.movimentoId] && <div className={ui.cellMut}>Lido do anexo {doAnexo[p.movimentoId]}</div>}
                           {l?.codigo && !l.problema && (
                             <div className={s.pagLido}>
                               <CheckCircle2 size={12} /> {l.codigo.valor ? formatBRL(l.codigo.valor) : 'valor do lançamento'}

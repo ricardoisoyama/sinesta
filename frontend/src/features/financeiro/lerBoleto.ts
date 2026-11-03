@@ -109,6 +109,26 @@ async function lerPdf(arquivo: File): Promise<LeituraArquivo> {
   return { erro: 'Não achei a linha digitável nem o código de barras neste PDF. Cole a linha digitável ou leia com o celular.' }
 }
 
+/**
+ * Boleto já anexado ao lançamento (o financeiro anexa o PDF do boleto junto com a nota): lê os PDFs e fotos
+ * anexados, primeiro os que parecem boleto pelo nome, e devolve o primeiro código que confere.
+ */
+export async function lerBoletoDosAnexos(movimentoId: string): Promise<{ codigo: string; arquivo: string } | null> {
+  const { listAnexos, baixarAnexo } = await import('@/features/anexos/api')
+  const anexos = (await listAnexos('movimento', movimentoId)).filter((a) => /\.(pdf|jpe?g|png)$/i.test(a.nome))
+  const pareceBoleto = (nome: string) => (/bol|boleto|guia|cobran|fatura|pagamento/i.test(nome) ? 0 : /nf|nota|dacte|danfe/i.test(nome) ? 2 : 1)
+  for (const a of anexos.sort((x, y) => pareceBoleto(x.nome) - pareceBoleto(y.nome)).slice(0, 5)) {
+    try {
+      const blob = await baixarAnexo(a.id)
+      const r = await lerArquivoBoleto(new File([blob], a.nome, { type: a.tipo || blob.type }))
+      if ('codigo' in r) return { codigo: r.codigo, arquivo: a.nome }
+    } catch {
+      // anexo que não abre: tenta o próximo
+    }
+  }
+  return null
+}
+
 export async function lerArquivoBoleto(arquivo: File): Promise<LeituraArquivo> {
   try {
     if (arquivo.type === 'application/pdf' || /\.pdf$/i.test(arquivo.name)) return await lerPdf(arquivo)
