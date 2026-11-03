@@ -1,0 +1,30 @@
+/* Monitor de pagamentos (pagamentos assistidos) */
+.filtros { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.filtro, .filtroOn { border: 1px solid #d7d3ca; background: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 13px; font-weight: 600; color: #3d4b43; cursor: pointer; }
+.filtroOn { background: #143d18; border-color: #143d18; color: #fff; }
+.vazio { display: flex; align-items: center; gap: 8px; padding: 18px; border: 1px dashed #d7d3ca; border-radius: 12px; color: #6b7b72; font-size: 13.5px; background: #fff; }
+.lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 14px; }
+.card { background: #fff; border: 1px solid #e6e3db; border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.cardRepresado { border-color: #f0c9a8; box-shadow: inset 4px 0 0 #e8702f; }
+.topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.favorecido { font-size: 15px; font-weight: 700; color: #143d18; }
+.sub { font-size: 12px; color: #6b7b72; margin-top: 2px; }
+.valor { font-size: 20px; font-weight: 800; color: #143d18; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dados { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin: 0; }
+.dados div { min-width: 0; }
+.dados dt { font-size: 10.5px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #8a968f; }
+.dados dd { margin: 2px 0 0; font-size: 13px; color: #1f2a24; overflow-wrap: anywhere; }
+.largo { grid-column: 1 / -1; }
+.codigo { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.conferencias { list-style: none; margin: 0; padding: 10px 12px; border-radius: 10px; background: #faf9f6; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.conferencias li { display: flex; align-items: flex-start; gap: 6px; line-height: 1.4; }
+.conferencias li svg { flex-shrink: 0; margin-top: 1px; }
+.ok { color: #2e7d44; }
+.aviso { color: #a8590f; font-weight: 600; }
+.erro { color: #b3261e; font-weight: 700; }
+.acoes { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+.pago { display: inline-flex; align-items: center; gap: 6px; color: #2e7d44; font-weight: 700; font-size: 13px; }
+.girando { animation: girar 0.9s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
+@media (max-width: 560px) { .dados { grid-template-columns: 1fr; } }

@@ -49,7 +49,7 @@ public class FinanceiroService : IFinanceiroService
         var set = ids.ToHashSet();
         if (set.Count == 0) return new();
         return (await _pagamentos.ListarAsync(p => set.Contains(p.MovimentoId)))
-            .Where(p => p.EmAberto).GroupBy(p => p.MovimentoId)
+            .Where(p => p.TravaLancamento).GroupBy(p => p.MovimentoId)
             .ToDictionary(g => g.Key, g => g.OrderByDescending(p => p.CriadoEm).First());
     }
 

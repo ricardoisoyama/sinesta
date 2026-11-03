@@ -18,6 +18,13 @@ public sealed record ItemAgendamentoDto(string MovimentoId, string Chave, string
 public sealed record AgendarPagamentosDto(List<ItemAgendamentoDto> Itens, string Data);
 public sealed record ResultadoAgendamentoDto(string MovimentoId, bool Ok, string Mensagem, PagamentoBancario? Pagamento);
 
+/// <summary>Uma conferência do Monitor: nivel = ok | aviso | erro.</summary>
+public sealed record ConferenciaDto(string Nivel, string Texto);
+
+/// <summary>Linha do Monitor de pagamentos: o pagamento, o lançamento como está agora e as conferências.</summary>
+public sealed record ItemMonitorDto(PagamentoBancario Pagamento, string Empresa, string Conta, decimal ValorLancamento, string VencimentoLancamento,
+    string Aprovacao, string DescricaoLancamento, List<ConferenciaDto> Conferencias);
+
 /// <summary>Comprovante do Pix pago pelo ELROND (o banco devolve dados, não PDF): o que mostrar e imprimir no lançamento.</summary>
 public sealed record ComprovantePixDto(
     string MovimentoId, long Numero, string Descricao, decimal Valor, string EfetivadoEm,
@@ -134,14 +141,13 @@ public sealed class PagamentoService(
         var chavePix = ChavePix.Normalizar(item.Chave);
         if (!chavePix.Ok) return new(m.Id, false, chavePix.Erro, null);
         var chave = chavePix.Chave;
-        var modulo = bancos.Modulo(integ!.Banco)!.Pagamento!;
         var (nome, mail, _) = await FavorecidoAsync(m);
 
         var p = new PagamentoBancario
         {
             Id = Guid.NewGuid().ToString(),
             EmpresaId = m.EmpresaId,
-            IntegracaoId = integ.Id,
+            IntegracaoId = integ!.Id,
             Banco = integ.Banco,
             Ambiente = integ.Ambiente,
             MovimentoId = m.Id,
@@ -154,8 +160,15 @@ public sealed class PagamentoService(
             Descricao = Descricao(m),
             Situacao = PagamentoBancario.Pendente,
         };
+        if (integ.RepresarPagamentos) return await RepresarAsync(p, m, quem);
         // Grava antes de chamar o banco: queda no meio não perde o rastro (e o id reenviado não paga duas vezes).
         await pagamentos.AddAsync(p);
+        return await EnviarPixAsync(p, m, integ, quem, ct);
+    }
+
+    private async Task<ResultadoAgendamentoDto> EnviarPixAsync(PagamentoBancario p, Movimento m, IntegracaoBancaria integ, UsuarioAtual quem, CancellationToken ct)
+    {
+        var modulo = bancos.Modulo(integ.Banco)!.Pagamento!;
         var envio = await modulo.PagarPixAsync(cofre.Abrir(integ), new PedidoPix(p.Id, p.Valor, p.Data, p.Descricao, p.Chave), ct);
         p.IdBanco = envio.IdBanco;
         p.Mensagem = envio.Mensagem;
@@ -193,7 +206,6 @@ public sealed class PagamentoService(
             return new(m.Id, false, $"O boleto é de {codigo.Valor.ToString("C", PtBr)} e o lançamento, de {m.Liquido.ToString("C", PtBr)}: ajuste o lançamento (ou confira se é o boleto certo).", null);
         var mesmo = (await pagamentos.ListarAsync(p => p.CodigoBarras == codigo.CodigoBarras)).FirstOrDefault(p => p.Vigente);
         if (mesmo is not null) return new(m.Id, false, $"Este boleto já foi mandado ao banco pelo lançamento {mesmo.MovimentoNumero} ({Rotulo(mesmo.Situacao)}).", mesmo);
-        var modulo = bancos.Modulo(integ.Banco)!.Pagamento!;
         var (nome, mail, _) = await FavorecidoAsync(m);
 
         var p = new PagamentoBancario
@@ -215,8 +227,15 @@ public sealed class PagamentoService(
             Descricao = Descricao(m),
             Situacao = PagamentoBancario.Pendente,
         };
+        if (integ.RepresarPagamentos) return await RepresarAsync(p, m, quem);
         // Grava antes de chamar o banco: queda no meio não perde o rastro e o mesmo código não vai de novo.
         await pagamentos.AddAsync(p);
+        return await EnviarBoletoAsync(p, m, integ, quem, ct);
+    }
+
+    private async Task<ResultadoAgendamentoDto> EnviarBoletoAsync(PagamentoBancario p, Movimento m, IntegracaoBancaria integ, UsuarioAtual quem, CancellationToken ct)
+    {
+        var modulo = bancos.Modulo(integ.Banco)!.Pagamento!;
         var envio = await modulo.PagarBoletoAsync(cofre.Abrir(integ), new PedidoBoleto(p.Id, p.CodigoBarras, p.Valor, p.Data, p.VencimentoBoleto), ct);
         p.IdBanco = envio.IdBanco;
         p.Mensagem = envio.Mensagem;
@@ -234,6 +253,123 @@ public sealed class PagamentoService(
         if (envio.Desfecho == DesfechoPagamento.Processado) p = await AtualizarAsync(p, "envio", ct) ?? p;
         var ok = p.Situacao is not (PagamentoBancario.Recusado or PagamentoBancario.Falha or PagamentoBancario.Cancelado);
         return new(m.Id, ok, ok ? Rotulo(p.Situacao) : $"O banco não aceitou: {p.Mensagem}", p);
+    }
+
+    /// <summary>
+    /// Monitor dos pagamentos assistidos: cada pagamento com o lançamento ao lado e a conferência de cada um
+    /// (o que bate, o que avisa e o que impede liberar). Os represados primeiro, depois os em andamento.
+    /// </summary>
+    public async Task<List<ItemMonitorDto>> MonitorAsync(int dias = 30)
+    {
+        var desde = relogio.GetUtcNow().AddDays(-dias).ToString("o", CultureInfo.InvariantCulture);
+        var lista = (await pagamentos.GetAllAsync()).Where(p => p.Situacao == PagamentoBancario.Represado || p.EmAberto || string.CompareOrdinal(p.CriadoEm, desde) >= 0).ToList();
+        var ids = lista.Select(p => p.MovimentoId).ToHashSet();
+        var movs = (await movimentos.ListarAsync(m => ids.Contains(m.Id))).ToDictionary(m => m.Id);
+        var nomesEmpresa = (await empresas.GetAllAsync()).ToDictionary(e => e.Id, e => e.Nome);
+        var integs = (await integracoes.GetAllAsync()).ToDictionary(i => i.Id);
+        var contas = (await carteiras.GetAllAsync()).ToDictionary(c => c.Id, c => c.Nome);
+        var hoje = DateOnly.FromDateTime(relogio.GetLocalNow().DateTime);
+        int Ordem(PagamentoBancario p) => p.Situacao == PagamentoBancario.Represado ? 0 : p.EmAberto ? 1 : 2;
+        return lista.OrderBy(Ordem).ThenByDescending(p => p.CriadoEm).Select(p =>
+        {
+            movs.TryGetValue(p.MovimentoId, out var m);
+            integs.TryGetValue(p.IntegracaoId, out var integ);
+            var conta = integ is not null && contas.TryGetValue(integ.CarteiraId, out var nc) ? nc : string.Empty;
+            return new ItemMonitorDto(p, nomesEmpresa.GetValueOrDefault(p.EmpresaId, string.Empty), conta,
+                m?.Liquido ?? 0m, m?.Vencimento ?? string.Empty, m?.Aprovacao ?? string.Empty, m?.Descricao ?? string.Empty,
+                Conferencias(p, m, hoje, lista));
+        }).ToList();
+    }
+
+    /// <summary>O que conferir antes de liberar: ok (bate), aviso (olhar com atenção) ou erro (não libera).</summary>
+    public static List<ConferenciaDto> Conferencias(PagamentoBancario p, Movimento? m, DateOnly hoje, IEnumerable<PagamentoBancario> todos)
+    {
+        var l = new List<ConferenciaDto>();
+        void Add(string nivel, string texto) => l.Add(new ConferenciaDto(nivel, texto));
+        if (m is null) { Add("erro", "O lançamento não existe mais."); return l; }
+        if (m.Cancelado) Add("erro", "Lançamento cancelado.");
+        if (m.PagoEm.Length > 0 && p.Situacao == PagamentoBancario.Represado) Add("erro", "Lançamento já liquidado (pago de outro jeito?).");
+        Add(m.Aprovacao == "aprovado" ? "ok" : "erro", m.Aprovacao == "aprovado" ? "Lançamento aprovado." : "Lançamento não está aprovado.");
+        Add(m.Liquido == p.Valor ? "ok" : "erro", m.Liquido == p.Valor ? $"Valor igual ao do lançamento ({p.Valor.ToString("C", PtBr)})." : $"Valor diferente: lançamento {m.Liquido.ToString("C", PtBr)}, pagamento {p.Valor.ToString("C", PtBr)}.");
+        if (p.Forma == PagamentoBancario.FormaBoleto)
+        {
+            var (c, erro) = CodigoBoleto.Ler(p.CodigoBarras, hoje);
+            if (c is null) { Add("erro", $"Código do boleto: {erro}"); return l; }
+            Add("ok", $"Código do boleto confere ({(c.Arrecadacao ? "conta de consumo/tributo" : "boleto bancário")}).");
+            if (c.Valor > 0) Add(c.Valor == p.Valor ? "ok" : "aviso", c.Valor == p.Valor ? "Valor impresso no código igual ao pagamento." : $"O código diz {c.Valor.ToString("C", PtBr)} e o pagamento é de {p.Valor.ToString("C", PtBr)} (juros/multa?).");
+            if (DateOnly.TryParseExact(p.VencimentoBoleto, "yyyy-MM-dd", out var venc))
+            {
+                var limite = DiasUteis.ProximoUtil(venc);
+                var pagar = DateOnly.TryParseExact(p.Data, "yyyy-MM-dd", out var d) ? (d < hoje ? hoje : d) : hoje;
+                if (pagar > limite)
+                    Add("aviso", $"Boleto vencido em {venc:dd/MM/yyyy}: quem recebe pode cobrar juros e multa, e o banco pode recusar pelo valor original. Se houver encargos, inclua no lançamento (item variável) e mande de novo.");
+                else if (limite != venc)
+                    Add("ok", $"Vence em {venc:dd/MM/yyyy}, dia não útil: pagando até {limite:dd/MM/yyyy} não tem encargo.");
+                else Add("ok", $"Dentro do vencimento ({venc:dd/MM/yyyy}).");
+            }
+            if (todos.Any(x => x.Id != p.Id && x.CodigoBarras == p.CodigoBarras && x.Vigente)) Add("erro", "Este boleto tem outro pagamento em andamento.");
+        }
+        else
+        {
+            var chave = ChavePix.Normalizar(p.Chave);
+            Add(chave.Ok ? "ok" : "erro", chave.Ok ? $"Chave Pix válida ({chave.Tipo})." : $"Chave Pix: {chave.Erro}");
+        }
+        if (p.FavorecidoEmail.Length == 0) Add("aviso", "Favorecido sem e-mail no cadastro: o comprovante não vai por e-mail.");
+        return l;
+    }
+
+    /// <summary>Grava o pagamento PARADO (não vai ao banco): espera a conferência e a liberação no Monitor.</summary>
+    private async Task<ResultadoAgendamentoDto> RepresarAsync(PagamentoBancario p, Movimento m, UsuarioAtual quem)
+    {
+        p.Situacao = PagamentoBancario.Represado;
+        p.Mensagem = "Represado: confira no Monitor de pagamentos e libere para o banco.";
+        await pagamentos.AddAsync(p);
+        await auditoria.RegistrarAsync("represar", "PagamentoBancario", p.Id,
+            $"{quem.Nome} preparou {(p.Forma == PagamentoBancario.FormaBoleto ? "o boleto" : "o Pix")} de {p.Valor.ToString("C", PtBr)} para {p.FavorecidoNome} (lançamento {m.Numero}): represado, não foi ao banco");
+        return new(m.Id, true, Rotulo(p.Situacao), p);
+    }
+
+    /// <summary>
+    /// Libera o represado para o banco, depois de conferir de novo o lançamento (pode ter mudado desde que foi
+    /// represado): segue aprovado, em aberto e com o mesmo valor. Data que já passou vira hoje.
+    /// </summary>
+    public async Task<Result<PagamentoBancario>> LiberarAsync(string id, UsuarioAtual quem, CancellationToken ct = default)
+    {
+        var p = await pagamentos.GetByIdAsync(id);
+        if (p is null) return Result.Failure<PagamentoBancario>("Pagamento não encontrado.");
+        if (p.Situacao != PagamentoBancario.Represado) return Result.Failure<PagamentoBancario>($"Este pagamento não está represado ({Rotulo(p.Situacao)}).");
+        var m = await movimentos.GetByIdAsync(p.MovimentoId);
+        var integ = await integracoes.GetByIdAsync(p.IntegracaoId);
+        if (m is null) return Result.Failure<PagamentoBancario>("O lançamento deste pagamento não existe mais.");
+        var problema = m.Tipo != "pagar" ? "Só lançamento a pagar." : m.Cancelado ? "O lançamento foi cancelado." : m.PagoEm.Length > 0 ? "O lançamento já foi liquidado."
+            : m.Aprovacao != "aprovado" ? "O lançamento não está mais aprovado." : m.Liquido != p.Valor ? $"O lançamento mudou de valor ({m.Liquido.ToString("C", PtBr)}; o represado é de {p.Valor.ToString("C", PtBr)}): cancele o represado e mande de novo."
+            : integ is null || !integ.Libera(IntegracaoBancaria.RecursoPagamento) || bancos.Modulo(integ.Banco)?.Pagamento is null ? "A integração do banco está desligada."
+            : !cofre.Configurado ? "A chave de cifra das credenciais não está configurada neste ambiente." : string.Empty;
+        if (problema.Length > 0) return Result.Failure<PagamentoBancario>(problema);
+        var hoje = DateOnly.FromDateTime(relogio.GetLocalNow().DateTime).ToString("yyyy-MM-dd");
+        if (string.CompareOrdinal(p.Data, hoje) < 0) p.Data = hoje;
+        p.Situacao = PagamentoBancario.Pendente;
+        p.Mensagem = string.Empty;
+        p.LiberadoPor = quem.Nome;
+        p.LiberadoEm = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
+        await pagamentos.UpdateAsync(p.Id, p);
+        await auditoria.RegistrarAsync("liberar", "PagamentoBancario", p.Id,
+            $"{quem.Nome} conferiu e liberou para o banco {(p.Forma == PagamentoBancario.FormaBoleto ? "o boleto" : "o Pix")} de {p.Valor.ToString("C", PtBr)} para {p.FavorecidoNome} (lançamento {m.Numero}, pagar em {p.Data})");
+        var r = p.Forma == PagamentoBancario.FormaBoleto ? await EnviarBoletoAsync(p, m, integ!, quem, ct) : await EnviarPixAsync(p, m, integ!, quem, ct);
+        return r.Pagamento is { } final ? Result.Success(final) : Result.Failure<PagamentoBancario>(r.Mensagem);
+    }
+
+    /// <summary>Desiste do represado (nada foi ao banco): o lançamento pode ser mandado de novo.</summary>
+    public async Task<Result<PagamentoBancario>> CancelarRepresadoAsync(string id, UsuarioAtual quem)
+    {
+        var p = await pagamentos.GetByIdAsync(id);
+        if (p is null) return Result.Failure<PagamentoBancario>("Pagamento não encontrado.");
+        if (p.Situacao != PagamentoBancario.Represado) return Result.Failure<PagamentoBancario>("Só o pagamento represado (que não foi ao banco) é cancelado aqui.");
+        p.Situacao = PagamentoBancario.Cancelado;
+        p.Mensagem = $"Represado cancelado por {quem.Nome}: não foi ao banco.";
+        await pagamentos.UpdateAsync(p.Id, p);
+        await auditoria.RegistrarAsync("cancelar", "PagamentoBancario", p.Id, $"{quem.Nome} cancelou o represado de {p.Valor.ToString("C", PtBr)} para {p.FavorecidoNome} (lançamento {p.MovimentoNumero}): não foi ao banco");
+        return Result.Success(p);
     }
 
     /// <summary>
@@ -318,6 +454,8 @@ public sealed class PagamentoService(
     /// <summary>Consulta e aplica a situação do banco; pago → baixa no lançamento e e-mail ao favorecido.</summary>
     private async Task<PagamentoBancario?> AtualizarAsync(PagamentoBancario p, string origem, CancellationToken ct)
     {
+        // Represado não foi ao banco: consultar não pode mandar (o Pix sem código seria reenviado).
+        if (p.Situacao == PagamentoBancario.Represado) return p;
         var integ = await integracoes.GetByIdAsync(p.IntegracaoId);
         if (integ is null || bancos.Modulo(integ.Banco)?.Pagamento is not { } modulo || !cofre.Configurado) return null;
         var credencial = cofre.Abrir(integ);
@@ -466,6 +604,7 @@ public sealed class PagamentoService(
     public static string Rotulo(string situacao) => situacao switch
     {
         PagamentoBancario.Pendente => "enviando ao banco",
+        PagamentoBancario.Represado => "represado: aguarda liberação no Monitor de pagamentos",
         PagamentoBancario.AguardandoAprovacao => "aguardando aprovação no app do banco",
         PagamentoBancario.Agendado => "agendado no banco",
         PagamentoBancario.Processando => "em processamento no banco",

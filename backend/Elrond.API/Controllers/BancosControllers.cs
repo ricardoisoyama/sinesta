@@ -159,6 +159,26 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
 
+    /// <summary>Monitor dos pagamentos assistidos: represados, em andamento e os dos últimos dias, com as conferências.</summary>
+    [HttpGet("monitor")]
+    public async Task<IActionResult> Monitor() => Ok(await pagamentos.MonitorAsync());
+
+    /// <summary>Libera o represado para o banco (confere o lançamento de novo antes de mandar).</summary>
+    [HttpPost("{id}/liberar")]
+    public async Task<IActionResult> Liberar(string id, CancellationToken ct)
+    {
+        var r = await pagamentos.LiberarAsync(id, await usuario.QuemAsync(), ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
+    /// <summary>Desiste do represado (não foi ao banco).</summary>
+    [HttpPost("{id}/cancelar-represado")]
+    public async Task<IActionResult> CancelarRepresado(string id)
+    {
+        var r = await pagamentos.CancelarRepresadoAsync(id, await usuario.QuemAsync());
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
+
     /// <summary>"Ler boleto em outro dispositivo": abre a sessão (10 min) que o QR da tela leva para o celular.</summary>
     [HttpPost("leitura")]
     public async Task<IActionResult> AbrirLeitura([FromServices] LeituraBoletoService leituras)

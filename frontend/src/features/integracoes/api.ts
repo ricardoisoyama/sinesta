@@ -55,6 +55,8 @@ export interface Integracao {
   alteradoPor: string
   /** Quando o aviso de pagamento (webhook) foi cadastrado no banco; vazio = ainda não. */
   avisoRegistradoEm: string
+  /** Pagamentos assistidos: o que for mandado ao banco para no Monitor até ser liberado. */
+  represarPagamentos?: boolean
 }
 
 export interface BancoDisponivel {
@@ -76,6 +78,8 @@ export interface ConfigurarIntegracao {
   ativa: boolean
   carteiraId: string
   boleto: RegrasBoleto
+  /** Pagamentos assistidos: o que for mandado ao banco para no Monitor até ser liberado. */
+  represarPagamentos?: boolean
 }
 
 const base = '/integracoes-bancarias'

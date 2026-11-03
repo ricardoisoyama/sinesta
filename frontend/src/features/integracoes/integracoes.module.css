@@ -60,3 +60,8 @@
   .previa { position: static; }
   .par { grid-template-columns: 1fr 1fr; }
 }
+
+.represar { display: flex; align-items: flex-start; gap: 8px; margin-top: 10px; padding: 10px 12px; border: 1px solid #f0c9a8; background: #fffaf6; border-radius: 10px; font-size: 13px; color: #3d4b43; cursor: pointer; }
+.represar input { margin-top: 3px; accent-color: #e8702f; }
+.represar span { display: flex; flex-direction: column; gap: 2px; }
+.represar small { color: #6b7b72; font-size: 12px; line-height: 1.4; }

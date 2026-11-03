@@ -2821,6 +2821,11 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text[]");
 
+                    b.Property<bool>("RepresarPagamentos")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<byte[]>("SegredoCifrado")
                         .IsRequired()
                         .HasColumnType("bytea");
@@ -3852,6 +3857,20 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("IntegracaoId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("LiberadoEm")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("LiberadoPor")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("Mensagem")
                         .IsRequired()

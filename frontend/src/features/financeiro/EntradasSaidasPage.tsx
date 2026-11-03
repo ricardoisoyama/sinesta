@@ -42,6 +42,7 @@ const rotuloPix = (m: Movimento) => {
 
 /** Situação curta do Pix em andamento, na coluna Situação. */
 const PIX_SITUACAO: Record<string, string> = {
+  represado: 'Represado (Monitor)',
   'aguardando-aprovacao': 'Aprovação no app',
   agendado: 'Pix agendado',
   processando: 'Pix processando',

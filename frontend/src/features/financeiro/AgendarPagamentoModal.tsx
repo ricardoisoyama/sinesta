@@ -6,6 +6,7 @@ import { formatBRL } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { hojeISO } from './calculos'
 import { lerCodigoBoleto } from './codigoBoleto'
+import { proximoDiaUtil } from './diasUteis'
 import { lerArquivoBoleto, lerBoletoDosAnexos } from './lerBoleto'
 import { LerOutroDispositivo } from './LerOutroDispositivo'
 import { agendarPagamentos, prepararPagamentos, rotuloPagamento, type PreparoPagamento, type ResultadoAgendamento } from './pagamentos'
@@ -161,7 +162,11 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
             )
           })}
           {/* A nota segue o que o banco respondeu: só fala em aprovar no app quando há pagamento esperando aprovação. */}
-          {resultados.some((r) => r.pagamento?.situacao === 'aguardando-aprovacao') ? (
+          {resultados.some((r) => r.pagamento?.situacao === 'represado') ? (
+            <li className={s.pagNota}>
+              Represado: nada foi ao banco ainda. Confira em Financeiro › Monitor de pagamentos e clique em "Conferi, mandar ao banco".
+            </li>
+          ) : resultados.some((r) => r.pagamento?.situacao === 'aguardando-aprovacao') ? (
             <li className={s.pagNota}>
               Aguardando aprovação: aprove no app do banco. Quando o banco efetivar, o ELROND dá a baixa no lançamento e manda o e-mail ao favorecido sozinho.
             </li>
@@ -261,7 +266,10 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
                               {l.codigo.arrecadacao ? ' · conta de consumo/tributo' : ''}
                             </div>
                           )}
-                          {l?.codigo?.vencimento && !l.problema && l.codigo.vencimento !== p.vencimento && (
+                          {l?.codigo?.vencimento && !l.problema && proximoDiaUtil(l.codigo.vencimento) < (data < hoje ? hoje : data) && (
+                            <div className={s.pagProblema}><AlertTriangle size={12} /> Boleto vencido em {dataBR(l.codigo.vencimento)}: quem recebe pode cobrar juros e multa, e o banco pode recusar pelo valor original.</div>
+                          )}
+                          {l?.codigo?.vencimento && !l.problema && l.codigo.vencimento !== p.vencimento && proximoDiaUtil(l.codigo.vencimento) !== p.vencimento && (
                             <div className={s.pagProblema}><AlertTriangle size={12} /> O lançamento vence em {dataBR(p.vencimento)}: confira se é o boleto certo.</div>
                           )}
                           {l?.codigo?.arrecadacao && (

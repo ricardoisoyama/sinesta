@@ -43,6 +43,12 @@ public class IntegracaoBancaria : Rastreavel, IEntity, IInativavel
     /// <summary>Quando o aviso foi cadastrado no banco (vazio = ainda não). ISO 8601.</summary>
     public string AvisoRegistradoEm { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Pagamentos represados: o que for mandado ao banco fica gravado e parado no Monitor de pagamentos até
+    /// alguém conferir e liberar (pagamentos assistidos). Nasce ligado.
+    /// </summary>
+    public bool RepresarPagamentos { get; set; } = true;
+
     public bool Libera(string recurso) => Ativa && Status == "ativo" && Recursos.Contains(recurso);
 
     public RegrasBoleto RegrasDoBoleto => Boleto ?? new RegrasBoleto();
@@ -159,6 +165,8 @@ public class CobrancaBancaria : Rastreavel, IEntity
 public class PagamentoBancario : Rastreavel, IEntity
 {
     public const string Pendente = "pendente";
+    /// <summary>Gravado e parado: não foi ao banco; espera a liberação no Monitor de pagamentos.</summary>
+    public const string Represado = "represado";
     public const string AguardandoAprovacao = "aguardando-aprovacao";
     public const string Agendado = "agendado";
     public const string Processando = "processando";
@@ -212,6 +220,11 @@ public class PagamentoBancario : Rastreavel, IEntity
 
     /// <summary>Ainda vale (não terminou recusado/cancelado/falha): o lançamento não pode ganhar outro.</summary>
     public bool Vigente => Situacao is not (Recusado or Cancelado or Falha);
-    /// <summary>Ainda espera o banco (a conferência acompanha).</summary>
+    /// <summary>Ainda espera o banco (a conferência acompanha). Represado não: ele nem foi ao banco.</summary>
     public bool EmAberto => Situacao is Pendente or AguardandoAprovacao or Agendado or Processando or Incerto;
+    /// <summary>Trava o lançamento (baixa, edição, cancelamento): no banco ou represado para ir.</summary>
+    public bool TravaLancamento => EmAberto || Situacao == Represado;
+    /// <summary>Quem liberou o represado para o banco e quando (UTC, ISO).</summary>
+    public string LiberadoPor { get; set; } = string.Empty;
+    public string LiberadoEm { get; set; } = string.Empty;
 }

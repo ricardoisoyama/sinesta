@@ -88,3 +88,17 @@ export function lerCodigoBoleto(texto: string, hoje: string): { codigo?: CodigoB
   if (dvBancario(barras.slice(0, 4) + barras.slice(5)) !== Number(barras[4])) return { erro: 'O código de barras não confere.' }
   return { codigo: { barras, arrecadacao: false, valor: Number(barras.slice(9, 19)) / 100, vencimento: dataDoFator(Number(barras.slice(5, 9)), hoje) } }
 }
+
+/** Linha digitável como vem impressa no boleto, a partir do código de barras (44 dígitos), para conferir de olho. */
+export function linhaDigitavel(barras: string): string {
+  const b = barras.replace(/\D/g, '')
+  if (b.length !== 44) return barras
+  if (b[0] === '8') {
+    const mod10 = b[2] === '6' || b[2] === '7'
+    return [0, 1, 2, 3].map((i) => { const bl = b.slice(i * 11, i * 11 + 11); return `${bl}-${mod10 ? dv10(bl) : dvArrecadacao11(bl)}` }).join(' ')
+  }
+  const c1 = b.slice(0, 4) + b.slice(19, 24)
+  const c2 = b.slice(24, 34)
+  const c3 = b.slice(34, 44)
+  return `${c1.slice(0, 5)}.${c1.slice(5)}${dv10(c1)} ${c2.slice(0, 5)}.${c2.slice(5)}${dv10(c2)} ${c3.slice(0, 5)}.${c3.slice(5)}${dv10(c3)} ${b[4]} ${b.slice(5, 19)}`
+}

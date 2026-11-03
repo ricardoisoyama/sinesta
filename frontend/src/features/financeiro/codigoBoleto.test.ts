@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dataDoFator, lerCodigoBoleto } from './codigoBoleto'
+import { dataDoFator, lerCodigoBoleto, linhaDigitavel } from './codigoBoleto'
 
 // Exemplos do sandbox do Inter.
 const BANCARIO = '03395988500000666539201493990000372830030102'
@@ -33,5 +33,10 @@ describe('lerCodigoBoleto', () => {
   it('fator usa a base nova depois de fev/2025', () => {
     expect(dataDoFator(1000, hoje)).toBe('2025-02-22')
     expect(dataDoFator(0, hoje)).toBe('')
+  })
+
+  it('monta a linha digitável do código de barras', () => {
+    expect(linhaDigitavel(BANCARIO)).toBe('03399.20142 93990.000379 28300.301026 5 98850000066653')
+    expect(linhaDigitavel(CONVENIO)).toBe('82670000000-1 65330160202-1 31231060000-1 00002830894-8')
   })
 })

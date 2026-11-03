@@ -58,6 +58,7 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
   const [ambiente, setAmbiente] = useState<'sandbox' | 'producao'>(integracao?.ambiente ?? 'sandbox')
   const [ativa, setAtiva] = useState(integracao?.ativa ?? false)
   const [recursos, setRecursos] = useState<Recurso[]>(integracao?.recursos ?? ['cobranca'])
+  const [represar, setRepresar] = useState(integracao?.represarPagamentos ?? true)
   const [clientId, setClientId] = useState(integracao?.clientId ?? '')
   const [clientSecret, setClientSecret] = useState('')
   const [certificado, setCertificado] = useState<{ nome: string; pem: string } | null>(null)
@@ -130,6 +131,7 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
       ativa,
       carteiraId,
       boleto: { ...regras, instrucoes: regras.instrucoes.map((l) => l.trim()).filter(Boolean) },
+      represarPagamentos: represar,
     }
     setSalvando(true)
     try {
@@ -260,6 +262,15 @@ export function IntegracaoModal({ empresa, integracao, bancos, carteiras, onClos
                 )
               })}
             </div>
+            {recursos.includes('pagamento') && (
+              <label className={s.represar}>
+                <input type="checkbox" checked={represar} onChange={(e) => setRepresar(e.target.checked)} />
+                <span>
+                  <b>Represar os pagamentos (pagamentos assistidos)</b>
+                  <small>Pix e boletos mandados pelas Entradas e Saídas param no Monitor de pagamentos e só vão ao banco depois de conferidos e liberados.</small>
+                </span>
+              </label>
+            )}
           </div>
         </div>
       </section>

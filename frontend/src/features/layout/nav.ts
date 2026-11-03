@@ -48,6 +48,7 @@ import {
   Hash,
   type LucideIcon,
   CalendarOff,
+  MonitorCheck,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -124,6 +125,7 @@ export const navGroups: NavGroup[] = [
       // Protótipo (dados de exemplo): só com a permissão especial "Ver protótipos".
       { label: 'Faturamento', path: '/financeiro/faturamento', icon: ReceiptText },
       { label: 'Entradas e Saídas', path: '/financeiro/entradas-saidas', icon: ArrowLeftRight },
+      { label: 'Monitor de pagamentos', path: '/financeiro/pagamento-banco', icon: MonitorCheck },
       { label: 'Caixa', path: '/financeiro/caixa', icon: PiggyBank },
       { label: 'Conciliação', path: '/financeiro/conciliacao', icon: Link2 },
       { label: 'Despesas Fixas (DF)', path: '/cadastros/custos-fixos', icon: Wallet },

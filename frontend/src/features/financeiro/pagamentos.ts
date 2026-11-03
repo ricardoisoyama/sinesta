@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
 
 /** Pagamento pelo banco (piloto: Pix), espelho de PagamentoBancario. */
-export type SituacaoPagamento = 'pendente' | 'aguardando-aprovacao' | 'agendado' | 'processando' | 'pago' | 'recusado' | 'cancelado' | 'falha' | 'incerto'
+export type SituacaoPagamento = 'represado' | 'pendente' | 'aguardando-aprovacao' | 'agendado' | 'processando' | 'pago' | 'recusado' | 'cancelado' | 'falha' | 'incerto'
 
 export interface PagamentoBancario {
   id: string
@@ -19,6 +19,9 @@ export interface PagamentoBancario {
   codigoBarras?: string
   vencimentoBoleto?: string
   beneficiario?: string
+  /** Quem liberou o represado para o banco e quando. */
+  liberadoPor?: string
+  liberadoEm?: string
   valor: number
   data: string
   descricao: string
@@ -60,6 +63,7 @@ export interface ResultadoAgendamento {
 }
 
 export const ROTULO_PAGAMENTO: Record<SituacaoPagamento, string> = {
+  represado: 'Represado: aguarda liberação no Monitor',
   pendente: 'Enviando ao banco',
   'aguardando-aprovacao': 'Pix aguardando aprovação no app',
   agendado: 'Pix agendado no banco',
@@ -92,6 +96,24 @@ export interface ItemAgendamento {
 }
 export const agendarPagamentos = (itens: ItemAgendamento[], data: string) =>
   apiFetch<ResultadoAgendamento[]>(`${base}/agendar`, { method: 'POST', body: JSON.stringify({ itens, data }) })
+/** Monitor dos pagamentos assistidos. */
+export interface ConferenciaMonitor {
+  nivel: 'ok' | 'aviso' | 'erro'
+  texto: string
+}
+export interface ItemMonitor {
+  pagamento: PagamentoBancario
+  empresa: string
+  conta: string
+  valorLancamento: number
+  vencimentoLancamento: string
+  aprovacao: string
+  descricaoLancamento: string
+  conferencias: ConferenciaMonitor[]
+}
+export const listarMonitor = () => apiFetch<ItemMonitor[]>(`${base}/monitor`)
+export const liberarPagamento = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/liberar`, { method: 'POST' })
+export const cancelarRepresado = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/cancelar-represado`, { method: 'POST' })
 export const descartarPagamento = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/descartar`, { method: 'POST' })
 export const atualizarPagamento = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/atualizar`, { method: 'POST' })
 

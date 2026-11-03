@@ -102,6 +102,9 @@ public class AppDbContext : DbContext
             e.Property(p => p.CodigoBarras).IsRequired().HasMaxLength(48).HasDefaultValue(string.Empty);
             e.Property(p => p.VencimentoBoleto).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
             e.Property(p => p.Beneficiario).IsRequired().HasMaxLength(200).HasDefaultValue(string.Empty);
+            e.Property(p => p.LiberadoPor).IsRequired().HasMaxLength(120).HasDefaultValue(string.Empty);
+            e.Property(p => p.LiberadoEm).IsRequired().HasMaxLength(40).HasDefaultValue(string.Empty);
+            e.Ignore(p => p.TravaLancamento);
             e.Property(p => p.Descricao).HasMaxLength(140);
             e.Property(p => p.Mensagem).HasMaxLength(500);
             e.Ignore(p => p.Vigente);
@@ -448,6 +451,8 @@ public class AppDbContext : DbContext
         {
             e.ToTable("integracoes_bancarias");
             e.HasKey(i => i.Id);
+            // Aditivo: as integrações que já existem passam a represar (pagamentos assistidos).
+            e.Property(i => i.RepresarPagamentos).HasDefaultValue(true);
             e.Property(i => i.EmpresaId).IsRequired().HasMaxLength(80);
             e.Property(i => i.Banco).IsRequired().HasMaxLength(30);
             e.Property(i => i.Ambiente).HasMaxLength(20);

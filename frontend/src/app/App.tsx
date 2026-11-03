@@ -52,6 +52,7 @@ import { PricingPage } from '@/features/simulador/PricingPage'
 import { ApolicesPage } from '@/features/apolices/ApolicesPage'
 import { TabelaIcmsPage } from '@/features/icms/TabelaIcmsPage'
 import { FeriadosPage } from '@/features/feriados/FeriadosPage'
+import { MonitorPagamentosPage } from '@/features/financeiro/MonitorPagamentosPage'
 
 export function App() {
   return (
@@ -115,6 +116,7 @@ export function App() {
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/icms" element={<TabelaIcmsPage />} />
           <Route path="/cadastros/feriados" element={<FeriadosPage />} />
+          <Route path="/financeiro/pagamento-banco" element={<MonitorPagamentosPage />} />
           <Route path="/cadastros/apolices" element={<ApolicesPage />} />
           <Route path="/cadastros/fichas-tecnicas" element={<FichasTecnicasPage />} />
 

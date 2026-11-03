@@ -128,13 +128,15 @@ public class PagamentoBoletoTests
         Vencimento = vencimento, Competencia = "2026-11", Descricao = "Conta de energia", Aprovacao = "aprovado", ParceiroNome = "Energia",
     };
 
-    private static Cenario Montar(params Movimento[] lancamentos)
+    private static Cenario Montar(params Movimento[] lancamentos) => Montar(false, lancamentos);
+
+    private static Cenario Montar(bool represar, params Movimento[] lancamentos)
     {
         var pagamentos = new Mem<PagamentoBancario>();
         var movs = new Mem<Movimento>();
         movs.Itens.AddRange(lancamentos);
         var integracoes = new Mem<IntegracaoBancaria>();
-        integracoes.Itens.Add(new IntegracaoBancaria { Id = "integ", EmpresaId = "matriz", Banco = "simulador", Ambiente = "sandbox", Ativa = true, CarteiraId = "inter", Recursos = [IntegracaoBancaria.RecursoPagamento] });
+        integracoes.Itens.Add(new IntegracaoBancaria { Id = "integ", EmpresaId = "matriz", Banco = "simulador", Ambiente = "sandbox", Ativa = true, CarteiraId = "inter", Recursos = [IntegracaoBancaria.RecursoPagamento], RepresarPagamentos = represar });
         var carteiras = new Mem<Carteira>();
         carteiras.Itens.Add(new Carteira { Id = "inter", Nome = "Inter Matriz", EmpresaId = "matriz" });
         var empresas = new Mem<Empresa>();
@@ -241,6 +243,63 @@ public class PagamentoBoletoTests
         Assert.Equal(PagamentoBancario.Cancelado, c.Pagamentos.Itens.Single().Situacao);
         // Agora o lançamento pode ir de novo.
         Assert.True((await c.Svc.AgendarAsync(new([new ItemAgendamentoDto("m1", "", PagamentoBancario.FormaBoleto, BarrasSemValor(), "2026-11-10")], "2026-11-03"), Ricardo)).Single().Ok);
+    }
+
+    [Fact]
+    public async Task Represado_nao_vai_ao_banco_ate_liberar_e_a_rotina_nao_manda()
+    {
+        var c = Montar(true, Conta("m1", 666.53m));
+        var r = (await c.Svc.AgendarAsync(Boleto("m1", BarrasBancario), Ricardo)).Single();
+        Assert.True(r.Ok, r.Mensagem);
+        var p = c.Pagamentos.Itens.Single();
+        Assert.Equal(PagamentoBancario.Represado, p.Situacao);
+        Assert.Equal(0, c.Banco.BoletosIncluidos(BarrasBancario));
+
+        // A conferência de hora em hora e o "Atualizar" da tela não mandam o represado.
+        await c.Svc.ConferirAbertosAsync(incluirAgendadosFuturos: true);
+        await c.Svc.AtualizarAsync(p.Id);
+        Assert.Equal(0, c.Banco.BoletosIncluidos(BarrasBancario));
+
+        // Monitor: aparece com as conferências.
+        var item = (await c.Svc.MonitorAsync()).Single();
+        Assert.Contains(item.Conferencias, x => x.Nivel == "ok" && x.Texto.StartsWith("Valor igual"));
+        Assert.DoesNotContain(item.Conferencias, x => x.Nivel == "erro");
+
+        // Liberou: vai ao banco uma vez.
+        var lib = await c.Svc.LiberarAsync(p.Id, Ricardo);
+        Assert.True(lib.IsSuccess, lib.Error);
+        Assert.Equal(PagamentoBancario.AguardandoAprovacao, c.Pagamentos.Itens.Single().Situacao);
+        Assert.Equal("Ricardo", c.Pagamentos.Itens.Single().LiberadoPor);
+        Assert.Equal(1, c.Banco.BoletosIncluidos(BarrasBancario));
+        Assert.False((await c.Svc.LiberarAsync(p.Id, Ricardo)).IsSuccess); // não libera duas vezes
+        Assert.Equal(1, c.Banco.BoletosIncluidos(BarrasBancario));
+    }
+
+    [Fact]
+    public async Task Represado_nao_libera_se_o_lancamento_mudou_e_pode_ser_cancelado()
+    {
+        var c = Montar(true, Conta("m1", 666.53m));
+        await c.Svc.AgendarAsync(Boleto("m1", BarrasBancario), Ricardo);
+        var p = c.Pagamentos.Itens.Single();
+        c.Movs.Itens.Single().Valor = 700m;
+        var lib = await c.Svc.LiberarAsync(p.Id, Ricardo);
+        Assert.False(lib.IsSuccess);
+        Assert.Contains("mudou de valor", lib.Error);
+        Assert.Equal(0, c.Banco.BoletosIncluidos(BarrasBancario));
+        Assert.True((await c.Svc.CancelarRepresadoAsync(p.Id, Ricardo)).IsSuccess);
+        Assert.Equal(PagamentoBancario.Cancelado, c.Pagamentos.Itens.Single().Situacao);
+    }
+
+    [Fact]
+    public void Boleto_vencido_avisa_e_vencido_em_dia_nao_util_nao()
+    {
+        var m = Conta("m1", 666.53m);
+        PagamentoBancario P(string venc) => new() { Id = "p", MovimentoId = "m1", Forma = PagamentoBancario.FormaBoleto, CodigoBarras = BarrasBancario, Valor = 666.53m, Data = "2026-11-03", VencimentoBoleto = venc, FavorecidoEmail = "a@b.com" };
+        m.Aprovacao = "aprovado";
+        // 01/11 domingo + 02/11 Finados: pagar em 03/11 está no prazo.
+        Assert.Contains(PagamentoService.Conferencias(P("2026-11-01"), m, Hoje, []), x => x.Nivel == "ok" && x.Texto.Contains("dia não útil"));
+        // 29/10: venceu de verdade.
+        Assert.Contains(PagamentoService.Conferencias(P("2026-10-29"), m, Hoje, []), x => x.Nivel == "aviso" && x.Texto.Contains("juros e multa"));
     }
 
     /// <summary>Conta de consumo com "valor de referência" (3º dígito 7): o código não traz o valor em reais.</summary>

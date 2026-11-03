@@ -11,13 +11,14 @@ namespace Elrond.Application.Services;
 /// </summary>
 public sealed record ConfigurarIntegracaoDto(
     string Banco, string Ambiente, string ClientId, string? ClientSecret, string? CertificadoPem, string? ChavePem,
-    string? ContaCorrente, List<string>? Recursos, bool Ativa, string? CarteiraId = null, RegrasBoleto? Boleto = null);
+    string? ContaCorrente, List<string>? Recursos, bool Ativa, string? CarteiraId = null, RegrasBoleto? Boleto = null,
+    bool? RepresarPagamentos = null);
 
 /// <summary>Integração como as telas veem: sem nenhum segredo.</summary>
 public sealed record IntegracaoResumoDto(
     string Id, string EmpresaId, string Banco, string Ambiente, string ContaCorrente, List<string> Recursos,
     bool Ativa, string CertificadoValidoAte, bool Configurada, string ClientId, string CarteiraId, RegrasBoleto Boleto,
-    string AlteradoEm, string AlteradoPor, string AvisoRegistradoEm);
+    string AlteradoEm, string AlteradoPor, string AvisoRegistradoEm, bool RepresarPagamentos = true);
 
 /// <summary>Banco que o motor sabe usar (para a tela escolher).</summary>
 public sealed record BancoDisponivelDto(string Codigo, string Nome, List<string> Recursos);
@@ -122,6 +123,7 @@ public sealed class IntegracaoBancariaService(
         i.Status = "ativo";
         if (dto.CarteiraId is not null) i.CarteiraId = dto.CarteiraId;
         if (dto.Boleto is not null) i.Boleto = Normalizar(dto.Boleto);
+        if (dto.RepresarPagamentos is { } represar) i.RepresarPagamentos = represar;
 
         // Segredos: só troca o que veio; o que não veio continua o gravado.
         var novoSegredo = !string.IsNullOrWhiteSpace(dto.ClientSecret);
@@ -145,7 +147,7 @@ public sealed class IntegracaoBancariaService(
         // Nunca registra segredos: só o que mudou de configuração.
         await auditoria.RegistrarAsync(existente is null ? "criar" : "editar", "IntegracaoBancaria", i.Id,
             $"Integração {banco}/{ambiente} da {empresa.Nome}: {(i.Ativa ? "ativa" : "desligada")}, recursos {string.Join(", ", i.Recursos)}{(novoCertificado ? $", certificado até {i.CertificadoValidoAte}" : string.Empty)}",
-            depois: new { i.Ambiente, i.Ativa, i.Recursos, i.ContaCorrente, i.CarteiraId, boleto = i.RegrasDoBoleto });
+            depois: new { i.Ambiente, i.Ativa, i.Recursos, i.ContaCorrente, i.CarteiraId, boleto = i.RegrasDoBoleto, i.RepresarPagamentos });
         return Result.Success(Resumo(i));
     }
 
@@ -186,5 +188,5 @@ public sealed class IntegracaoBancariaService(
     private static IntegracaoResumoDto Resumo(IntegracaoBancaria i) =>
         new(i.Id, i.EmpresaId, i.Banco, i.Ambiente, i.ContaCorrente, i.Recursos, i.Ativa, i.CertificadoValidoAte, i.SegredoCifrado.Length > 0,
             i.ClientId, i.CarteiraId, i.RegrasDoBoleto,
-            i.AlteradoEm.Length > 0 ? i.AlteradoEm : i.CriadoEm, i.AlteradoEm.Length > 0 ? i.AlteradoPor : i.CriadoPor, i.AvisoRegistradoEm);
+            i.AlteradoEm.Length > 0 ? i.AlteradoEm : i.CriadoEm, i.AlteradoEm.Length > 0 ? i.AlteradoPor : i.CriadoPor, i.AvisoRegistradoEm, i.RepresarPagamentos);
 }
