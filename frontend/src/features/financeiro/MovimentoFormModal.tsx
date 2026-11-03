@@ -21,7 +21,7 @@ import { useUsuarios } from '@/features/usuarios/store'
 import { FORMAS_PAGAMENTO } from '@/features/parceiros/types'
 import { formatBRL } from '@/lib/format'
 import { gerarParcelas, hojeISO } from './calculos'
-import { carteiraDaEmpresa, movimentoVazio, PERIODICIDADES, TIPOS_VARIAVEL, type Carteira, type ItemVariavelMovimento, type Movimento, type Periodicidade, type TipoMovimento } from './types'
+import { carteiraDaEmpresa, movimentoVazio, PERIODICIDADES, TIPOS_VARIAVEL, comSinal, type Carteira, type ItemVariavelMovimento, type Movimento, type Periodicidade, type TipoMovimento } from './types'
 import { empresaPadrao } from '@/features/unidades/types'
 import s from './financeiro.module.css'
 
@@ -144,10 +144,12 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
   const daDespesaFixa = !!initial && initial.origem === 'custo-fixo'
   const variaveis = d.itensVariaveis ?? []
   const centavos = (n: number) => Math.round(n * 100) / 100
-  const totalVariavel = centavos(variaveis.reduce((a, i) => a + (i.valor || 0), 0))
+  const totalVariavel = centavos(variaveis.reduce((a, i) => a + comSinal(i), 0))
   const parteFixa = centavos(d.valor - totalVariavel)
+  const acrescimos = centavos(variaveis.filter((i) => i.tipo !== 'desconto').reduce((a, i) => a + (i.valor || 0), 0))
+  const descontos = centavos(variaveis.filter((i) => i.tipo === 'desconto').reduce((a, i) => a + (i.valor || 0), 0))
   const mudarVariaveis = (lista: ItemVariavelMovimento[]) => {
-    const novoTotal = centavos(lista.reduce((a, i) => a + (i.valor || 0), 0))
+    const novoTotal = centavos(lista.reduce((a, i) => a + comSinal(i), 0))
     set({ itensVariaveis: lista, valorVariavel: novoTotal, valor: centavos(parteFixa + novoTotal) })
   }
   const mudarVariavel = (id: string, p: Partial<ItemVariavelMovimento>) => mudarVariaveis(variaveis.map((i) => (i.id === id ? { ...i, ...p } : i)))
@@ -392,7 +394,7 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
           <div className={s.variaveis}>
             <div className={s.variaveisTitulo}>
               Variáveis desta despesa fixa
-              <span>cobranças que mudam a cada mês e entram neste pagamento; ficam atreladas à despesa fixa</span>
+              <span>cobranças e descontos que mudam a cada mês e entram neste pagamento; ficam atreladas à despesa fixa</span>
             </div>
             {variaveis.map((i) => (
               <div key={i.id} className={s.variavelLinha}>
@@ -410,7 +412,10 @@ export function MovimentoFormModal({ open, initial, carteiras, onClose, onSave, 
                 <Plus /> Item variável
               </button>
               <span className={s.variaveisTotal}>
-                Fixo {formatBRL(parteFixa)} + variável {formatBRL(totalVariavel)} = <b>{formatBRL(d.valor)}</b>
+                Fixo {formatBRL(parteFixa)}
+                {acrescimos > 0 && <> + variável {formatBRL(acrescimos)}</>}
+                {descontos > 0 && <> − desconto {formatBRL(descontos)}</>}
+                {' '}= <b>{formatBRL(d.valor)}</b>
               </span>
             </div>
             {initial && d.valor !== initial.valor && initial.aprovacao === 'aprovado' && (

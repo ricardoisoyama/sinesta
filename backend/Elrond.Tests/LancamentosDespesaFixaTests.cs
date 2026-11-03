@@ -90,6 +90,28 @@ public class LancamentosDespesaFixaTests
     }
 
     [Fact]
+    public async Task Desconto_subtrai_do_lancamento_e_a_parte_fixa_fica_a_mesma()
+    {
+        var (svc, movs, financeiro) = MontarComFinanceiro();
+        await svc.SincronizarAsync(Aluguel(), false, Ana);
+        var nov = movs.Itens.Single(m => m.Competencia == "2026-11");
+        var dados = (await movs.GetByIdAsync(nov.Id))!;
+        // 2.500 fixo + juros 12,30 − desconto 100 = 2.412,30.
+        dados.ItensVariaveis = [Variavel("juros", "Juros de atraso", 12.30m), Variavel("desconto", "Desconto por antecipação", 100m)];
+        dados.Valor = 2412.30m;
+        var r = await financeiro.AtualizarAsync(nov.Id, dados);
+        Assert.True(r.IsSuccess, r.Error);
+        var gravado = movs.Itens.Single(m => m.Id == nov.Id);
+        Assert.Equal((2412.30m, -87.70m, 2500m), (gravado.Valor, gravado.ValorVariavel, gravado.ValorFixo));
+
+        // Desconto maior que tudo: não grava.
+        dados = (await movs.GetByIdAsync(nov.Id))!;
+        dados.ItensVariaveis = [Variavel("desconto", "Desconto errado", 3000m)];
+        dados.Valor = -500m;
+        Assert.False((await financeiro.AtualizarAsync(nov.Id, dados)).IsSuccess);
+    }
+
+    [Fact]
     public async Task Atualizar_a_despesa_fixa_mantem_os_variaveis_e_so_troca_a_parte_fixa()
     {
         var (svc, movs, financeiro) = MontarComFinanceiro();

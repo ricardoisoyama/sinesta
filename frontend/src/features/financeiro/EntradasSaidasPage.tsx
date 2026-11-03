@@ -308,10 +308,10 @@ export function EntradasSaidasPage() {
       cell: (m) => (
         <span
           className={`${s.valor} ${m.cancelado ? s.cancelado : s[m.tipo]}`}
-          title={(m.valorVariavel ?? 0) > 0 ? `Fixo ${formatBRL(m.valor - (m.valorVariavel ?? 0))} + variável ${formatBRL(m.valorVariavel ?? 0)}` : undefined}
+          title={(m.valorVariavel ?? 0) !== 0 ? `Fixo ${formatBRL(m.valor - (m.valorVariavel ?? 0))} ${(m.valorVariavel ?? 0) > 0 ? '+ variável' : '− desconto'} ${formatBRL(Math.abs(m.valorVariavel ?? 0))}` : undefined}
         >
           {m.tipo === 'receber' ? '+' : '−'} {formatBRL(liquidoDe(m))}
-          {(m.valorVariavel ?? 0) > 0 && <small className={s.comVariavel}>+ variável</small>}
+          {(m.valorVariavel ?? 0) !== 0 && <small className={s.comVariavel}>{(m.valorVariavel ?? 0) > 0 ? '+ variável' : '− desconto'}</small>}
         </span>
       ),
     },

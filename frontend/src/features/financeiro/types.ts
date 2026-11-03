@@ -14,16 +14,21 @@ export type OrigemMovimento = 'manual' | 'proposta' | 'despesa' | 'conciliacao' 
 /** Parte variável de um lançamento de despesa fixa (seguro por viagem, juros, mora...), incluída pelo financeiro. */
 export interface ItemVariavelMovimento {
   id: string
-  tipo: 'seguro' | 'juros' | 'multa' | 'outro'
+  /** desconto subtrai do lançamento; os outros somam. O valor é sempre positivo. */
+  tipo: 'seguro' | 'juros' | 'multa' | 'outro' | 'desconto'
   descricao: string
   valor: number
 }
+
+/** Quanto o item muda o lançamento: + nos acréscimos, − no desconto. */
+export const comSinal = (i: Pick<ItemVariavelMovimento, 'tipo' | 'valor'>) => (i.tipo === 'desconto' ? -(i.valor || 0) : i.valor || 0)
 
 export const TIPOS_VARIAVEL: { valor: ItemVariavelMovimento['tipo']; label: string; exemplo: string }[] = [
   { valor: 'seguro', label: 'Seguro por viagem', exemplo: 'Ex.: Viagem 1234 · 0,03% sobre NF de R$ 600 mil' },
   { valor: 'juros', label: 'Juros', exemplo: 'Ex.: Juros de 3 dias de atraso' },
   { valor: 'multa', label: 'Multa / mora', exemplo: 'Ex.: Multa de 2% por atraso' },
   { valor: 'outro', label: 'Outro', exemplo: 'Descreva o que compõe a cobrança' },
+  { valor: 'desconto', label: 'Desconto (subtrai)', exemplo: 'Ex.: Desconto por pagamento antecipado' },
 ]
 
 /** Situação da aprovação: todo lançamento nasce pendente. */

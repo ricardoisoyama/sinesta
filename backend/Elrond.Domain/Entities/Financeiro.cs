@@ -29,12 +29,16 @@ public class Carteira : Rastreavel, IEntity, IInativavel
 public class ItemVariavelMovimento
 {
     public const string Seguro = "seguro";
-    public static readonly string[] Tipos = [Seguro, "juros", "multa", "outro"];
+    public const string Desconto = "desconto";
+    public static readonly string[] Tipos = [Seguro, "juros", "multa", "outro", Desconto];
     public string Id { get; set; } = string.Empty;
-    /// <summary>seguro | juros | multa | outro (relatório de fixo × variável agrupa por aqui).</summary>
+    /// <summary>seguro | juros | multa | outro | desconto (relatório de fixo × variável agrupa por aqui).</summary>
     public string Tipo { get; set; } = "outro";
     public string Descricao { get; set; } = string.Empty;
+    /// <summary>Sempre positivo; o desconto é subtraído (ver <see cref="ComSinal"/>).</summary>
     public decimal Valor { get; set; }
+    /// <summary>Quanto o item muda o lançamento: + nos acréscimos, − no desconto.</summary>
+    public decimal ComSinal => Tipo == Desconto ? -Valor : Valor;
 }
 
 /// <summary>Assinatura de um aprovador no lançamento.</summary>

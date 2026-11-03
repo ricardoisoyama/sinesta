@@ -346,8 +346,10 @@ public class FinanceiroService : IFinanceiroService
             : new List<ItemVariavelMovimento>();
         if (itens.Any(i => i.Valor <= 0)) return Result.Failure<Movimento>("Informe o valor de cada item variável (ou tire o item).");
         if (itens.Any(i => i.Descricao.Length == 0)) return Result.Failure<Movimento>("Descreva cada item variável (ex.: seguro da viagem 1234).");
-        var variavel = itens.Sum(i => i.Valor);
+        // Variável com sinal: acréscimos somam, desconto subtrai (ValorVariavel pode ficar negativo).
+        var variavel = itens.Sum(i => i.ComSinal);
         if (dados.Valor - variavel < 0) return Result.Failure<Movimento>("A parte fixa não pode ficar negativa: confira o valor e os itens variáveis.");
+        if (itens.Count > 0 && dados.Valor <= 0) return Result.Failure<Movimento>("O desconto não pode ser maior que a cobrança: o total ficou zerado ou negativo.");
 
         // Mudou o que foi aprovado (valor, vencimento, quem recebe/paga): volta para aprovação.
         var mudouAprovado = atual.Valor != dados.Valor || atual.Vencimento != dados.Vencimento || atual.ParceiroNome != dados.ParceiroNome.Trim();
