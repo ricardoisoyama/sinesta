@@ -460,8 +460,51 @@ public class FinanceiroService : IFinanceiroService
 
     // ══════════════════════════ conciliação ══════════════════════════
 
-    public async Task<List<ExtratoLinha>> ExtratoAsync(string carteiraId) =>
-        (await _extrato.ListarAsync(l => l.CarteiraId == carteiraId)).OrderBy(l => l.Data).ThenBy(l => l.Fitid).ToList();
+    public async Task<List<ExtratoLinha>> ExtratoAsync(string carteiraId)
+    {
+        await ConciliarPagosPeloElrondAsync(carteiraId);
+        return (await _extrato.ListarAsync(l => l.CarteiraId == carteiraId)).OrderBy(l => l.Data).ThenBy(l => l.Fitid).ToList();
+    }
+
+    private static readonly UsuarioAtual PeloBanco = new("sistema", "Conciliação automática", "Admin");
+
+    /// <summary>
+    /// Saídas do extrato que são pagamentos feitos pelo ELROND (Pix e boleto pelo banco, já baixados): concilia
+    /// sozinho. Casa a linha pendente com o lançamento pago pelo banco da mesma conta, na mesma data e com o mesmo
+    /// valor; cada lançamento casa com uma linha só (dois boletos iguais no mesmo dia ficam um em cada linha,
+    /// o nome do extrato desempata). Não baixa nada: o lançamento já foi baixado pelo aviso do banco.
+    /// </summary>
+    public async Task<int> ConciliarPagosPeloElrondAsync(string carteiraId)
+    {
+        var pendentes = (await _extrato.ListarAsync(l => l.CarteiraId == carteiraId && l.Situacao == "pendente" && l.Valor < 0)).OrderBy(l => l.Data).ThenBy(l => l.Fitid).ToList();
+        if (pendentes.Count == 0) return 0;
+        var datas = pendentes.Select(l => l.Data).ToHashSet();
+        var pagos = (await _movimentos.ListarAsync(m => m.CarteiraId == carteiraId && m.Tipo == "pagar" && !m.Cancelado && m.PagamentoBancarioId != "" && m.PagoEm != ""))
+            .Where(m => datas.Contains(m.PagoEm.Length >= 10 ? m.PagoEm[..10] : m.PagoEm)).ToList();
+        if (pagos.Count == 0) return 0;
+        var jaLigados = (await _extrato.ListarAsync(x => x.CarteiraId == carteiraId && x.Situacao == "conciliado")).SelectMany(x => x.Vinculados()).ToHashSet();
+        var livres = pagos.Where(m => !jaLigados.Contains(m.Id)).ToList();
+        string Chave(string? s) => new string((s ?? string.Empty).Normalize(System.Text.NormalizationForm.FormD)
+            .Where(char.IsLetterOrDigit).ToArray()).ToUpperInvariant();
+        var conciliadas = 0;
+        foreach (var l in pendentes)
+        {
+            var candidatos = livres.Where(m => (m.PagoEm.Length >= 10 ? m.PagoEm[..10] : m.PagoEm) == l.Data && R2(m.Liquido) == R2(Math.Abs(l.Valor))).ToList();
+            if (candidatos.Count == 0) continue;
+            // Mais de um com o mesmo valor no dia: prefere o que tem a primeira palavra do favorecido no extrato.
+            var memo = Chave(l.Memo);
+            var m = candidatos.FirstOrDefault(x => Chave(x.ParceiroNome).Length >= 4 && memo.Contains(Chave(x.ParceiroNome)[..Math.Min(8, Chave(x.ParceiroNome).Length)])) ?? candidatos[0];
+            livres.Remove(m);
+            l.Situacao = "conciliado";
+            l.MovimentoId = m.Id;
+            l.MovimentoIds = new List<string> { m.Id };
+            await _extrato.UpdateAsync(l.Id, l);
+            await _auditoria.RegistrarAsync("conciliar", "ExtratoLinha", l.Id,
+                $"Conciliado sozinho: \"{l.Memo}\" ({l.Valor:N2}) é o pagamento nº {m.Numero} \"{m.Descricao}\" ({m.ParceiroNome}) feito pelo ELROND", quem: PeloBanco);
+            conciliadas++;
+        }
+        return conciliadas;
+    }
 
     public async Task<Result<ImportarExtratoResultado>> ImportarAsync(ImportarExtratoDto dto, UsuarioAtual quem)
     {
@@ -484,6 +527,7 @@ public class FinanceiroService : IFinanceiroService
                 Situacao = "pendente",
             }).ToList();
         if (novas.Count > 0) await _uow.ExecutarAsync(() => _extrato.SalvarLoteAsync(novas, Array.Empty<ExtratoLinha>()));
+        if (novas.Count > 0) await ConciliarPagosPeloElrondAsync(dto.CarteiraId);
         await _auditoria.RegistrarAsync("importar", "ExtratoLinha", dto.CarteiraId, $"{quem.Nome} importou extrato: {novas.Count} linha(s) nova(s), {linhas.Count - novas.Count} já importada(s)");
         return Result.Success(new ImportarExtratoResultado(novas.Count, linhas.Count - novas.Count));
     }

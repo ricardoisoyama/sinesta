@@ -130,6 +130,9 @@ export function conciliar({ linhas, movimentos, vinculos, ignorados, regras, con
   // Pix em andamento no banco ainda não saiu da conta: não é par de nenhuma linha do extrato.
   const livres = movimentos.filter((m) => !m.cancelado && !usados.has(m.id) && !m.pixSituacao)
 
+  // Um lançamento é o par principal de uma linha só: dois pagamentos iguais (mesmo valor e fornecedor) não
+  // sugerem o mesmo lançamento para as duas linhas do extrato.
+  const tomados = new Set<string>()
   return linhas.map((l) => {
     if (vinculos[l.id]) {
       const movimento = movimentos.find((m) => m.id === vinculos[l.id])
@@ -141,7 +144,8 @@ export function conciliar({ linhas, movimentos, vinculos, ignorados, regras, con
       .map((m) => pontuar(l, m, contexto))
       .filter((c): c is Candidato => !!c)
       .sort((a, b) => b.pontos - a.pontos)
-    const melhor = candidatos[0]
+    const melhor = candidatos.find((c) => !tomados.has(c.movimento.id))
+    if (melhor && melhor.pontos >= 55) tomados.add(melhor.movimento.id)
     // Conciliação automática só quando não há dúvida: valor exato + nome (ou documento) batendo.
     if (melhor && melhor.pontos >= 90) return { linha: l, situacao: 'conciliado', movimento: melhor.movimento, confianca: melhor.confianca, motivo: melhor.motivo, candidatos }
     if (melhor && melhor.pontos >= 55) return { linha: l, situacao: 'sugestao', movimento: melhor.movimento, confianca: melhor.confianca, motivo: melhor.motivo, candidatos }

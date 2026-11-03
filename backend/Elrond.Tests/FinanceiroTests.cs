@@ -36,6 +36,36 @@ public class FinanceiroTests
     }
 
     [Fact]
+    public async Task Pagos_pelo_elrond_conciliam_sozinhos_um_lancamento_por_linha()
+    {
+        var movs = new MemRepo<Movimento>();
+        var carteiras = new MemRepo<Carteira>();
+        carteiras.Itens.Add(new Carteira { Id = "inter", Nome = "077 - Banco Inter" });
+        var extrato = new MemRepo<ExtratoLinha>();
+        var svc = new FinanceiroService(movs, carteiras, new MemRepo<RegraAprovacao>(), extrato, new SemTransacao(), new FakeAuditoria(), new Sequencia(), new MemRepo<Empresa>(), Pagamentos);
+        Movimento Pago(string id, string nome, decimal valor, string pagamento = "pg") => new()
+        {
+            Id = id, Numero = id.Length, Tipo = "pagar", ParceiroNome = nome, Descricao = nome, Vencimento = "2026-11-03", Valor = valor, ValorPago = valor,
+            CarteiraId = "inter", PagoEm = "2026-11-03", Aprovacao = "aprovado", PagamentoBancarioId = pagamento.Length > 0 ? pagamento + id : "",
+        };
+        movs.Itens.AddRange([Pago("138", "RODOCLUBE DO BRASIL", 490m), Pago("184", "Rodoclube do Brasil", 490m), Pago("183", "BL CARGAS", 425.34m),
+            Pago("99", "Pago à mão", 76m, pagamento: "")]);
+        ExtratoLinha L(string id, decimal v, string memo) => new() { Id = id, CarteiraId = "inter", Fitid = id, Data = "2026-11-03", Valor = v, Memo = memo };
+        extrato.Itens.AddRange([L("e1", -490m, "Pagamento de Título · RODOCLUBE DO BRASIL TECNOLOGIA SA"), L("e2", -490m, "Pagamento de Título · RODOCLUBE DO BRASIL TECNOLOGIA S.A."),
+            L("e3", -425.34m, "Pagamento de Título · BL EXPRESS GUARULHOS"), L("e4", -76m, "Pix enviado · Nic Br")]);
+
+        var linhas = await svc.ExtratoAsync("inter");
+
+        Assert.Equal(["conciliado", "conciliado", "conciliado", "pendente"], linhas.OrderBy(l => l.Id).Select(l => l.Situacao));
+        Assert.Equal(new HashSet<string> { "138", "184" }, linhas.Where(l => l.Id is "e1" or "e2").Select(l => l.MovimentoId).ToHashSet());
+        Assert.Equal("183", linhas.Single(l => l.Id == "e3").MovimentoId);
+        // Pago à mão (sem o banco do ELROND) continua para conciliar na tela.
+        Assert.Equal("", linhas.Single(l => l.Id == "e4").MovimentoId);
+        // Rodar de novo não muda nada.
+        Assert.Equal(0, await svc.ConciliarPagosPeloElrondAsync("inter"));
+    }
+
+    [Fact]
     public async Task Pix_em_andamento_trava_baixa_alteracao_e_cancelamento_mas_nao_a_baixa_do_banco()
     {
         var (svc, movs, _) = Montar(Regra(0, 0, "u-ana"));

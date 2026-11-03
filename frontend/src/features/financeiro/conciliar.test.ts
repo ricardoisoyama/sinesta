@@ -52,6 +52,17 @@ describe('conciliar', () => {
     expect(nosso[0].situacao).toBe('sugestao')
   })
 
+  it('dois pagamentos iguais no mesmo dia: cada linha do extrato sugere um lançamento diferente', () => {
+    const l = [
+      { id: 'L1', data: '2026-11-03', valor: -490, memo: 'Pagamento de Título · RODOCLUBE DO BRASIL TECNOLOGIA SA', tipo: 'debito' as const },
+      { id: 'L2', data: '2026-11-03', valor: -490, memo: 'Pagamento de Título · RODOCLUBE DO BRASIL TECNOLOGIA S.A.', tipo: 'debito' as const },
+    ]
+    const a = mov({ id: '138', tipo: 'pagar', parceiroNome: 'Rodoclube do Brasil', valor: 490, vencimento: '2026-11-03' })
+    const b = mov({ id: '184', tipo: 'pagar', parceiroNome: 'Rodoclube do Brasil', valor: 490, vencimento: '2026-11-03' })
+    const r = conciliar({ linhas: l, movimentos: [a, b], vinculos: {}, ignorados: [], regras: [] })
+    expect(new Set(r.map((x) => x.movimento?.id))).toEqual(new Set(['138', '184']))
+  })
+
   it('lançamento com Pix em andamento no banco não é par (o dinheiro ainda não saiu)', () => {
     const das = mov({ id: 'das', tipo: 'pagar', parceiroNome: 'Receita Federal', valor: 12198.21, vencimento: '2026-09-20', pixSituacao: 'agendado' })
     const r = conciliar({ linhas, movimentos: [das], vinculos: {}, ignorados: [], regras: [] })
