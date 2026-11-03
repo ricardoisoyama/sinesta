@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { definirFeriados, diaUtil, pascoa, proximoDiaUtil, vencido } from './diasUteis'
+import { definirCidadesEmpresas, definirFeriados, diaUtil, pascoa, proximoDiaUtil, vencido } from './diasUteis'
 
 describe('diasUteis', () => {
   it('Páscoa e feriados móveis', () => {
@@ -20,5 +20,21 @@ describe('diasUteis', () => {
     expect(diaUtil('2027-01-25')).toBe(false)
     definirFeriados([])
     expect(diaUtil('2027-01-25')).toBe(true)
+  })
+
+  it('municipal só na empresa da cidade; estadual no estado', () => {
+    definirCidadesEmpresas([{ id: 'matriz', endereco: 'São Paulo - SP' }, { id: 'filial', endereco: 'São Vicente - SP' }, { id: 'rio', endereco: 'Niterói - RJ' }])
+    definirFeriados([
+      { data: '2026-01-22', todoAno: true, abrangencia: 'cidade', cidade: 'Sao Vicente - SP' },
+      { data: '2026-07-09', todoAno: true, abrangencia: 'uf', uf: 'SP' },
+    ])
+    expect(diaUtil('2027-01-22', 'filial')).toBe(false)
+    expect(diaUtil('2027-01-22', 'matriz')).toBe(true)
+    expect(diaUtil('2027-01-22')).toBe(true)
+    expect(diaUtil('2027-07-09', 'matriz')).toBe(false)
+    expect(diaUtil('2027-07-09', 'rio')).toBe(true)
+    expect(proximoDiaUtil('2027-01-22', 'filial')).toBe('2027-01-25')
+    definirFeriados([])
+    definirCidadesEmpresas([])
   })
 })

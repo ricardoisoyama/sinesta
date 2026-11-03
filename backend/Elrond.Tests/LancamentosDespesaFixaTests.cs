@@ -65,6 +65,44 @@ public class LancamentosDespesaFixaTests
         Assert.Equal("2026-11-30", movs.Itens.Single(m => m.Competencia == "2026-12" && !m.Cancelado).Vencimento);
     }
 
+    [Fact]
+    public async Task Feriado_municipal_vale_so_para_a_empresa_daquela_cidade()
+    {
+        var feriados = new Mem<Feriado>();
+        // 01/12 municipal de São Vicente; 02/12 estadual de RJ (não pega SP); 03/12 de todas.
+        feriados.Itens.AddRange([
+            new Feriado { Id = "sv", Nome = "Aniversário de São Vicente", Data = "2026-12-01", TodoAno = false, Abrangencia = Feriado.Municipal, Cidade = "Sao Vicente - SP" },
+            new Feriado { Id = "rj", Nome = "Estadual RJ", Data = "2026-12-02", TodoAno = false, Abrangencia = Feriado.Estadual, Uf = "RJ" },
+            new Feriado { Id = "td", Nome = "Ponto da empresa", Data = "2026-12-03", TodoAno = false },
+        ]);
+        var empresas = new Mem<Empresa>();
+        empresas.Itens.AddRange([
+            new Empresa { Id = "matriz", Nome = "Matriz", Endereco = "São Paulo - SP" },
+            new Empresa { Id = "filial", Nome = "Filial", Endereco = "São Vicente - SP" },
+        ]);
+        async Task<string> Vencimento(string unidade)
+        {
+            var movs = new Mem<Movimento>();
+            var carteiras = new Mem<Carteira>();
+            carteiras.Itens.Add(new Carteira { Id = "cart", Nome = "Banco", EmpresaId = unidade });
+            var fornecedores = new Mem<Fornecedor>();
+            fornecedores.Itens.Add(new Fornecedor { Id = "f-1", Nome = "Imobiliária", VencimentoFimDeSemana = VencimentoFimDeSemana.Postergar });
+            var financeiro = new FinanceiroService(movs, carteiras, new Mem<RegraAprovacao>(), new Mem<ExtratoLinha>(), new SemTransacao(), new Auditoria(), new Sequencia());
+            var svc = new LancamentosDespesaFixa(movs, fornecedores, new SemUsuarios(), financeiro, Hoje, feriados, empresas);
+            var df = Aluguel();
+            df.UnidadeId = unidade;
+            df.DiaVencimento = 1;
+            await svc.SincronizarAsync(df, false, Ana);
+            return movs.Itens.Single(m => m.Competencia == "2026-12").Vencimento;
+        }
+
+        // Matriz (São Paulo): 01/12 é dia útil. Filial (São Vicente): 01/12 feriado, 02/12 útil (o de RJ não vale).
+        Assert.Equal("2026-12-01", await Vencimento("matriz"));
+        Assert.Equal("2026-12-02", await Vencimento("filial"));
+        Assert.True(feriados.Itens.Single(f => f.Id == "td").ValePara(""));
+        Assert.False(feriados.Itens.Single(f => f.Id == "sv").ValePara(""));
+    }
+
     private static ItemVariavelMovimento Variavel(string tipo, string descricao, decimal valor) => new() { Tipo = tipo, Descricao = descricao, Valor = valor };
 
     [Fact]

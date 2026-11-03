@@ -30,27 +30,49 @@ export function feriadosNacionais(ano: number): Set<string> {
   return s
 }
 
+interface FeriadoExtra { data: string; todoAno: boolean; abrangencia?: string; uf?: string; cidade?: string; status?: string }
+
 /** Feriados do cadastro (o de todo ano vale no mesmo dia e mês de qualquer ano). Preenchido ao abrir o sistema. */
-let extras: { data: string; todoAno: boolean }[] = []
-export function definirFeriados(lista: { data: string; todoAno: boolean; status?: string }[]) {
+let extras: FeriadoExtra[] = []
+export function definirFeriados(lista: FeriadoExtra[]) {
   extras = lista.filter((f) => f.status !== 'inativo' && /^\d{4}-\d{2}-\d{2}$/.test(f.data))
 }
 
-export function diaUtil(data: string): boolean {
+/** Cidade de cada empresa ("São Vicente - SP"): o feriado municipal vale só para as empresas daquela cidade. */
+let cidades = new Map<string, string>()
+export function definirCidadesEmpresas(lista: { id: string; endereco?: string }[]) {
+  cidades = new Map(lista.map((e) => [e.id, e.endereco ?? '']))
+}
+
+const normalizar = (s?: string) => (s ?? '').trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase()
+
+/** Espelha Feriado.ValePara do servidor: de todas, estadual do estado da empresa, municipal da cidade da empresa. */
+export function feriadoValePara(f: Pick<FeriadoExtra, 'abrangencia' | 'uf' | 'cidade'>, cidadeEmpresa: string): boolean {
+  const cidade = normalizar(cidadeEmpresa)
+  const i = cidade.lastIndexOf(' - ')
+  const uf = i >= 0 ? cidade.slice(i + 3) : ''
+  if (f.abrangencia === 'uf') return !!uf && uf === normalizar(f.uf)
+  if (f.abrangencia === 'cidade') return !!cidade && cidade === normalizar(f.cidade)
+  return true
+}
+
+/** Dia útil para a empresa (sem empresa: só os feriados que valem para todas). */
+export function diaUtil(data: string, empresaId = ''): boolean {
   const d = utc(data)
   const dow = d.getUTCDay()
   if (dow === 0 || dow === 6) return false
   const s = data.slice(0, 10)
   if (feriadosNacionais(d.getUTCFullYear()).has(s)) return false
-  return !extras.some((f) => (f.todoAno ? f.data.slice(5) === s.slice(5) : f.data === s))
+  const cidade = cidades.get(empresaId) ?? ''
+  return !extras.some((f) => (f.todoAno ? f.data.slice(5) === s.slice(5) : f.data === s) && feriadoValePara(f, cidade))
 }
 
-/** O próprio dia, se útil; senão o próximo dia útil. */
-export function proximoDiaUtil(data: string): string {
+/** O próprio dia, se útil; senão o próximo dia útil (da empresa). */
+export function proximoDiaUtil(data: string, empresaId = ''): string {
   let d = utc(data)
-  for (let i = 0; i < 15 && !diaUtil(iso(d)); i++) d.setUTCDate(d.getUTCDate() + 1)
+  for (let i = 0; i < 15 && !diaUtil(iso(d), empresaId); i++) d.setUTCDate(d.getUTCDate() + 1)
   return iso(d)
 }
 
-/** Venceu de verdade: já passou o próximo dia útil depois do vencimento. */
-export const vencido = (vencimento: string, hoje: string) => !!vencimento && proximoDiaUtil(vencimento) < hoje
+/** Venceu de verdade: já passou o próximo dia útil depois do vencimento (na cidade da empresa). */
+export const vencido = (vencimento: string, hoje: string, empresaId = '') => !!vencimento && proximoDiaUtil(vencimento, empresaId) < hoje

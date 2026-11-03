@@ -391,9 +391,14 @@ public class FeriadosController(ICrudRepository<Feriado> repo) : CrudControllerB
     protected override Task<string?> AntesDeGravarAsync(Feriado f)
     {
         f.Nome = (f.Nome ?? string.Empty).Trim();
+        f.Abrangencia = f.Abrangencia is Feriado.Estadual or Feriado.Municipal ? f.Abrangencia : Feriado.Todas;
+        f.Uf = f.Abrangencia == Feriado.Estadual ? (f.Uf ?? string.Empty).Trim().ToUpperInvariant() : string.Empty;
+        f.Cidade = f.Abrangencia == Feriado.Municipal ? (f.Cidade ?? string.Empty).Trim() : string.Empty;
         return Task.FromResult(
             f.Nome.Length == 0 ? "Dê um nome ao feriado."
             : !DateOnly.TryParseExact(f.Data ?? string.Empty, "yyyy-MM-dd", out _) ? "Informe a data do feriado."
+            : f.Abrangencia == Feriado.Estadual && f.Uf.Length != 2 ? "Escolha o estado do feriado estadual."
+            : f.Abrangencia == Feriado.Municipal && !f.Cidade.Contains(" - ") ? "Escolha a cidade do feriado municipal."
             : null);
     }
 }

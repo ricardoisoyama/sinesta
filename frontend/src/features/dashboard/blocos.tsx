@@ -327,12 +327,12 @@ function FinanceiroSemana({ empresaId }: ContextoBloco) {
     },
     {
       rotulo: 'A receber vencido',
-      valor: soma((m) => m.tipo === 'receber' && vencido(m.vencimento, hoje) && !m.pixSituacao),
+      valor: soma((m) => m.tipo === 'receber' && vencido(m.vencimento, hoje, m.empresaId) && !m.pixSituacao),
       tom: s.ruim,
     },
     {
       rotulo: 'A pagar vencido',
-      valor: soma((m) => m.tipo === 'pagar' && vencido(m.vencimento, hoje) && !m.pixSituacao),
+      valor: soma((m) => m.tipo === 'pagar' && vencido(m.vencimento, hoje, m.empresaId) && !m.pixSituacao),
       tom: s.ruim,
     },
   ]

@@ -219,6 +219,10 @@ public class AppDbContext : DbContext
         {
             e.ToTable("feriados");
             e.HasKey(f => f.Id);
+            // Aditivo: os de antes valem para todas as empresas.
+            e.Property(f => f.Abrangencia).IsRequired().HasMaxLength(10).HasDefaultValue(Feriado.Todas);
+            e.Property(f => f.Uf).IsRequired().HasMaxLength(2).HasDefaultValue(string.Empty);
+            e.Property(f => f.Cidade).IsRequired().HasMaxLength(120).HasDefaultValue(string.Empty);
             e.Property(f => f.Data).IsRequired().HasMaxLength(10);
             e.Property(f => f.Nome).IsRequired().HasMaxLength(120);
         });

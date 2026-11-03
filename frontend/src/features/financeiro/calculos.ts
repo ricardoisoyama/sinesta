@@ -31,7 +31,7 @@ export function statusDe(m: Movimento, hoje = hojeISO()): StatusMovimento {
   if (m.cancelado) return 'cancelado'
   if (m.pagoEm) return 'liquidado'
   // Vence em dia não útil (fim de semana, feriado): só atrasa depois do próximo dia útil.
-  return vencido(m.vencimento, hoje) ? 'atrasado' : 'aberto'
+  return vencido(m.vencimento, hoje, m.empresaId) ? 'atrasado' : 'aberto'
 }
 
 /** Valor que sai/entra de fato: valor − desconto + juros + multa (ou o pago, quando liquidado). */
@@ -65,8 +65,8 @@ export function resumo(movs: Movimento[], hoje = hojeISO()): ResumoFinanceiro {
     aReceber: abertos.filter((m) => m.tipo === 'receber').reduce((a, m) => a + liquidoDe(m), 0),
     aPagar: abertos.filter((m) => m.tipo === 'pagar').reduce((a, m) => a + liquidoDe(m), 0),
     // Com Pix já programado no banco (agendado ou esperando aprovação) não é conta esquecida: fora de vencidos.
-    vencidos: abertos.filter((m) => vencido(m.vencimento, hoje) && !m.pixSituacao).reduce((a, m) => a + liquidoDe(m), 0),
-    qtdVencidos: abertos.filter((m) => vencido(m.vencimento, hoje) && !m.pixSituacao).length,
+    vencidos: abertos.filter((m) => vencido(m.vencimento, hoje, m.empresaId) && !m.pixSituacao).reduce((a, m) => a + liquidoDe(m), 0),
+    qtdVencidos: abertos.filter((m) => vencido(m.vencimento, hoje, m.empresaId) && !m.pixSituacao).length,
     previsto30: abertos.filter((m) => m.vencimento <= limite).reduce((a, m) => a + sinal(m) * liquidoDe(m), 0),
   }
 }

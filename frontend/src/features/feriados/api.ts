@@ -2,15 +2,24 @@ import { useQuery } from '@tanstack/react-query'
 import { apiFetch } from '@/lib/api'
 import { definirFeriados } from '@/features/financeiro/diasUteis'
 
-/** Feriado do cadastro (estadual, municipal); os nacionais o sistema já sabe. */
+/** Feriado do cadastro (estadual, municipal, da empresa); os nacionais o sistema já sabe. */
 export interface Feriado {
   id: string
   /** yyyy-MM-dd (com "todo ano", só o dia e o mês valem). */
   data: string
   nome: string
   todoAno: boolean
+  /** Onde vale: todas as empresas, o estado (uf) ou a cidade das empresas. */
+  abrangencia: AbrangenciaFeriado
+  /** Estadual: "SP". */
+  uf: string
+  /** Municipal: "Santos - SP" (como a cidade da empresa). */
+  cidade: string
   status: 'ativo' | 'inativo'
 }
+
+export type AbrangenciaFeriado = 'todas' | 'uf' | 'cidade'
+
 
 const base = '/feriados'
 export const listarFeriados = () => apiFetch<Feriado[]>(base)

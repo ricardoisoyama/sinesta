@@ -2151,6 +2151,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("Abrangencia")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("todas");
+
                     b.Property<string>("AlteradoEm")
                         .IsRequired()
                         .HasColumnType("text");
@@ -2158,6 +2165,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("AlteradoPor")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("Cidade")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("CriadoEm")
                         .IsRequired()
@@ -2191,6 +2205,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
 
                     b.Property<bool>("TodoAno")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Uf")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasDefaultValue("");
 
                     b.HasKey("Id");
 

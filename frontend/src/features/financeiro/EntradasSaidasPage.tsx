@@ -222,7 +222,7 @@ export function EntradasSaidasPage() {
           <div className={s.venc}>
             <span className={ui.cellStrong}>{dataBR(m.vencimento)}</span>
             {st === 'atrasado' && <small className={s.atraso}>{-dias} dia{dias === -1 ? '' : 's'} de atraso</small>}
-            {st === 'aberto' && <small>{dias < 0 ? `dia não útil: paga até ${dataBR(proximoDiaUtil(m.vencimento))}` : dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
+            {st === 'aberto' && <small>{dias < 0 ? `dia não útil: paga até ${dataBR(proximoDiaUtil(m.vencimento, m.empresaId))}` : dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
           </div>
         )
       },

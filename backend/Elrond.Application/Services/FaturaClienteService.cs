@@ -415,7 +415,7 @@ public sealed class FaturaClienteService(
         var vencimento = !string.IsNullOrWhiteSpace(d.Vencimento)
             ? d.Vencimento!.Trim()
             : VencimentoFimDeSemana.Ajustar(Hoje.AddDays(Math.Max(0, cliente.PrazoPagamentoDias)), regra,
-                await FeriadosCadastro.DatasAsync(feriados, Hoje.Year, Hoje.Year + 1)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+                await FeriadosCadastro.DatasAsync(feriados, Hoje.Year, Hoje.Year + 1, empresa.Endereco)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var padrao = empresa.Faturamento ?? new FaturamentoEmpresa();
         var centroId = d.CentroCustoId ?? cliente.CentroCustoId;
         var centro = centroId.Length > 0 ? await centros.GetByIdAsync(centroId) : null;

@@ -26,7 +26,8 @@ public sealed class LancamentosDespesaFixa(
     IUsuarioRepository usuarios,
     IFinanceiroService financeiro,
     TimeProvider relogio,
-    ICrudRepository<Feriado>? feriados = null)
+    ICrudRepository<Feriado>? feriados = null,
+    ICrudRepository<Empresa>? empresas = null)
 {
     private static readonly TimeZoneInfo Brasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
     private const string PrefixoFuncionario = "func-";
@@ -101,7 +102,9 @@ public sealed class LancamentosDespesaFixa(
         var (parceiroId, parceiroNome, fantasia, forma, regraFornecedor) = await ParceiroAsync(df);
         // Dia não útil (fim de semana, feriado): a regra da despesa ou, sem ela, a do fornecedor. A competência fica a do mês.
         var regra = VencimentoFimDeSemana.Valido(df.VencimentoDiaUtil) ? df.VencimentoDiaUtil : regraFornecedor;
-        var extras = await FeriadosCadastro.DatasAsync(feriados, hoje.Year, hoje.Year + 3);
+        // Feriado municipal/estadual: o da cidade da empresa que paga (Matriz e Filial podem ser de cidades diferentes).
+        var cidade = empresas is not null && await empresas.GetByIdAsync(df.UnidadeId) is { } emp ? emp.Endereco : string.Empty;
+        var extras = await FeriadosCadastro.DatasAsync(feriados, hoje.Year, hoje.Year + 3, cidade);
         Movimento Modelo(DateOnly venc) => new()
         {
             Tipo = "pagar",

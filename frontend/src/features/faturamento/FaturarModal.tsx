@@ -150,7 +150,7 @@ export function FaturarModal({ documentos, nomeEmpresa, onClose, onFaturado }: P
           <div className={ui.grid} style={{ marginTop: 16 }}>
             <Field label="Vencimento" req hint={`Prazo do cliente; a regra dele ${REGRA[sugestao.vencimentoRegra]} (cadastro do cliente › Comercial).`}>
               <input type="date" value={d.vencimento ?? ''} onChange={(e) => set({ vencimento: e.target.value })} />
-              {d.vencimento && !diaUtil(d.vencimento) && <span className={s.alertaCelula}>Cai em dia não útil (fim de semana ou feriado).</span>}
+              {d.vencimento && !diaUtil(d.vencimento, sugestao.empresaId) && <span className={s.alertaCelula}>Cai em dia não útil (fim de semana ou feriado).</span>}
             </Field>
             <Field label="Centro de custo" hint="Vem do cadastro do cliente.">
               <select value={d.centroCustoId ?? ''} onChange={(e) => set({ centroCustoId: e.target.value })}>
