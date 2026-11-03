@@ -2,10 +2,11 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createCliente, createFornecedor } from '@/features/cadastros/api'
 import { consultarCnpj } from '@/features/common/consultas'
-import { emptyParceiro } from '@/features/parceiros/parceiro-schema'
+import { emptyParceiro, type ParceiroForm } from '@/features/parceiros/parceiro-schema'
+import { ParceiroFormModal } from '@/features/parceiros/ParceiroFormModal'
 import { novoContato, type Parceiro } from '@/features/parceiros/types'
 import { Link } from 'react-router-dom'
-import { Ban, Check, CheckCheck, CheckCircle2, CloudDownload, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, UserPlus, Wand2, X } from 'lucide-react'
+import { Ban, Check, CheckCheck, CheckCircle2, CloudDownload, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, UserPlus, Wand2, X, Building2, Truck } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
@@ -595,6 +596,10 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
   const [parceiroId, setParceiroId] = useState('')
   const [cadastrando, setCadastrando] = useState(false)
   const [erroCadastro, setErroCadastro] = useState('')
+  /** Cadastro completo aberto (o mesmo de Cadastros › Fornecedores/Clientes), já preenchido. */
+  const [modal, setModal] = useState<{ inicial: Parceiro | null; nome: string } | null>(null)
+  const [salvandoModal, setSalvandoModal] = useState(false)
+  const [erroModal, setErroModal] = useState<string | null>(null)
   const [achou, setAchou] = useState(false)
   if (!achou && doCnpj) {
     setAchou(true)
@@ -605,29 +610,46 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
     setParceiroNome(nome)
     setParceiroId(parceiros.find((p) => nomeDe(p) === nome || p.nome === nome)?.id ?? '')
   }
+  // Com CNPJ: consulta a Receita e abre o cadastro completo já preenchido. Sem CNPJ (Pix a pessoa física): abre com o
+  // nome digitado, para completar CPF, contato e banco ali mesmo.
   const cadastrar = async () => {
-    setCadastrando(true)
     setErroCadastro('')
+    setErroModal(null)
+    if (!cnpj) return setModal({ inicial: null, nome: parceiroNome.trim() })
+    setCadastrando(true)
     try {
-      let novo: Parceiro = { ...emptyParceiro, id: '', nome: parceiroNome.trim() || 'Novo cadastro' }
-      if (cnpj) {
-        const c = await consultarCnpj(cnpj)
-        novo = {
-          ...novo, nome: c.razaoSocial, nomeFantasia: c.nomeFantasia, cpfCnpj: formatCnpj(cnpj), cidade: c.cidade,
+      const c = await consultarCnpj(cnpj)
+      setModal({
+        nome: '',
+        inicial: {
+          ...emptyParceiro, id: '', tipo: 'juridica', nome: c.razaoSocial, nomeFantasia: c.nomeFantasia, cpfCnpj: formatCnpj(cnpj), cidade: c.cidade,
           endereco: { ...emptyParceiro.endereco, cep: c.cep, logradouro: c.logradouro, numero: c.numero, complemento: c.complemento, bairro: c.bairro },
           telefone: c.telefone, email: c.email,
           contatos: c.telefone || c.email ? [{ ...novoContato(), nome: c.nomeFantasia || c.razaoSocial, telefone: c.telefone, email: c.email }] : [],
-        }
-      }
-      const criado = await (credito ? createCliente(novo) : createFornecedor(novo))
+        },
+      })
+    } catch (e) {
+      // Receita fora do ar: abre do mesmo jeito, com o CNPJ (a pessoa completa).
+      setErroCadastro(`Receita: ${getErrorMessage(e)}`)
+      setModal({ nome: parceiroNome.trim(), inicial: { ...emptyParceiro, id: '', tipo: 'juridica', nome: parceiroNome.trim(), cpfCnpj: formatCnpj(cnpj) } })
+    } finally {
+      setCadastrando(false)
+    }
+  }
+  const salvarModal = async (form: ParceiroForm) => {
+    setSalvandoModal(true)
+    setErroModal(null)
+    try {
+      const criado = await (credito ? createCliente({ ...form, id: '' } as Parceiro) : createFornecedor({ ...form, id: '' } as Parceiro))
       await qc.invalidateQueries({ queryKey: [credito ? 'clientes' : 'fornecedores'] })
       setParceiroNome(nomeDe(criado))
       setParceiroId(criado.id)
       setAchou(true)
+      setModal(null)
     } catch (e) {
-      setErroCadastro(getErrorMessage(e))
+      setErroModal(getErrorMessage(e))
     } finally {
-      setCadastrando(false)
+      setSalvandoModal(false)
     }
   }
   const [descricao, setDescricao] = useState(l.regra?.descricao ?? l.linha.memo)
@@ -658,13 +680,27 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
             <button type="button" className={s.cadastrarDoExtrato} onClick={() => void cadastrar()} disabled={cadastrando}>
               <UserPlus size={13} /> {cadastrando ? 'Consultando a Receita...' : `Cadastrar ${credito ? 'cliente' : 'fornecedor'} pelo CNPJ ${formatCnpj(cnpj)}`}
             </button>
-          ) : parceiroNome.trim().length > 1 ? (
+          ) : (
             <button type="button" className={s.cadastrarDoExtrato} onClick={() => void cadastrar()} disabled={cadastrando}>
-              <UserPlus size={13} /> {cadastrando ? 'Cadastrando...' : `Cadastrar "${parceiroNome.trim()}" como ${credito ? 'cliente' : 'fornecedor'}`}
+              <UserPlus size={13} /> {parceiroNome.trim().length > 1 ? `Cadastrar "${parceiroNome.trim()}" como ${credito ? 'cliente' : 'fornecedor'}` : `Novo ${credito ? 'cliente' : 'fornecedor'}`}
             </button>
-          ) : null}
+          )}
           {erroCadastro && <small className={s.cadastroErro}>{erroCadastro}</small>}
         </label>
+        {modal && (
+          <ParceiroFormModal
+            open
+            titulo={credito ? 'Cliente' : 'Fornecedor'}
+            tipoParceiro={credito ? 'cliente' : 'fornecedor'}
+            icon={credito ? <Building2 /> : <Truck />}
+            initial={modal.inicial}
+            nomeInicial={modal.nome}
+            error={erroModal}
+            busy={salvandoModal}
+            onClose={() => setModal(null)}
+            onSave={(f) => void salvarModal(f)}
+          />
+        )}
         <label>
           Descrição
           <input value={descricao} onChange={(e) => setDescricao(e.target.value)} />

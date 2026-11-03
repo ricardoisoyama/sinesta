@@ -134,7 +134,7 @@ public class ComprovantePixController(PagamentoService pagamentos) : ControllerB
 /// <summary>
 /// Pagamentos pelo banco (Entradas e Saídas › Agendar pagamento), só lançamento a pagar aprovado, pela
 /// integração da empresa. Duas permissões: AGENDAR (o gestor do financeiro) e o Monitor, liberar, cancelar e
-/// consultar o banco (a equipe ELROND). Quem só agenda sempre represa: o pagamento só sai liberado no Monitor.
+/// consultar o banco (a equipe ELROND). Com o represamento ligado na integração, o agendado espera no Monitor.
 /// </summary>
 [ApiController]
 [Route("api/pagamentos")]
@@ -159,9 +159,8 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
     public async Task<IActionResult> Agendar([FromBody] AgendarPagamentosDto dto, CancellationToken ct)
     {
         if (!await PodeAgendarAsync()) return SemPermissao();
-        // Quem não libera (não tem o Monitor) sempre represa, mesmo com o represamento desligado na integração.
-        var forcarRepresar = !await usuario.PodeAsync(PermissaoLiberar);
-        return Ok(await pagamentos.AgendarAsync(dto, await usuario.QuemAsync(), ct, forcarRepresar));
+        // Represar ou não é da integração (Administrativo › Integrações), para quem agendar.
+        return Ok(await pagamentos.AgendarAsync(dto, await usuario.QuemAsync(), ct));
     }
 
     [Authorize(Policy = "func:" + PermissaoLiberar)]

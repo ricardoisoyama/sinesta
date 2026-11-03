@@ -266,7 +266,7 @@ export function ParceiroFormModal({
       open={open}
       onClose={onClose}
       title={titulo}
-      subtitle={initial ? 'Editar registro' : 'Novo registro'}
+      subtitle={initial?.id ? 'Editar registro' : 'Novo registro'}
       icon={icon}
       maxWidth={800}
       error={error}
