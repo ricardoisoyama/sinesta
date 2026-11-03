@@ -85,7 +85,9 @@ export function EntradasSaidasPage() {
   // Aprovar exige a permissão no perfil e estar entre os aprovadores da regra.
   const podeAprovar = !!user?.permissoes?.includes('/financeiro/aprovar')
   // Piloto de pagamentos pelo banco: só a equipe ELROND (permissão administrativa).
-  const podePagarBanco = !!user?.permissoes?.includes('/financeiro/pagamento-banco')
+  // Agendar (gestor do financeiro) e liberar/consultar o banco (equipe ELROND, Monitor) são permissões separadas.
+  const podeLiberarBanco = !!user?.permissoes?.includes('/financeiro/pagamento-banco')
+  const podePagarBanco = podeLiberarBanco || !!user?.permissoes?.includes('/financeiro/agendar-pagamento')
   const { data: pagamentosData, refetch: recarregarPagamentos } = usePagamentos(podePagarBanco)
   /** Pix ainda no banco (aguardando aprovação, agendado...): o banco não avisa toda mudança, então dá para perguntar. */
   const emAndamentoNoBanco = (p: PagamentoBancario) => ['pendente', 'aguardando-aprovacao', 'agendado', 'processando', 'incerto'].includes(p.situacao)
@@ -252,7 +254,7 @@ export function EntradasSaidasPage() {
                 {/* O motivo que o banco deu ("limite diário...") sem o código entre colchetes. */}
                 {['recusado', 'falha'].includes(p.situacao) && p.mensagem ? `: ${motivoCurto(p.mensagem)}` : ''}
                 {/* Boleto sem resposta que o banco não mostra: só sai daqui descartando (o ELROND nunca reenvia sozinho). */}
-                {p.forma === 'boleto' && p.situacao === 'incerto' && !p.idBanco && p.mensagem && (
+                {podeLiberarBanco && p.forma === 'boleto' && p.situacao === 'incerto' && !p.idBanco && p.mensagem && (
                   <button type="button" className={s.pagDescartar} onClick={() => void descartarBoleto(p)}>descartar</button>
                 )}
               </small>
@@ -425,7 +427,7 @@ export function EntradasSaidasPage() {
         // Atualizar também pergunta ao banco pelos Pix ainda em andamento (o banco não avisa toda mudança).
         onAtualizar={async () => {
           const abertos = podePagarBanco ? (pagamentosData ?? []).filter(emAndamentoNoBanco).map((p) => p.id) : []
-          if (abertos.length > 0) await consultarNoBanco(abertos)
+          if (abertos.length > 0 && podeLiberarBanco) await consultarNoBanco(abertos)
           else await Promise.all([recarregar(), podePagarBanco ? recarregarPagamentos() : null])
         }}
         // Clicar na linha abre o lançamento (com os documentos anexados).

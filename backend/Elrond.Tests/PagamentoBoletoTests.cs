@@ -276,6 +276,16 @@ public class PagamentoBoletoTests
     }
 
     [Fact]
+    public async Task Quem_so_agenda_sempre_represa_mesmo_com_o_represamento_desligado()
+    {
+        var c = Montar(false, Conta("m1", 666.53m));
+        var r = (await c.Svc.AgendarAsync(Boleto("m1", BarrasBancario), Ricardo, forcarRepresar: true)).Single();
+        Assert.True(r.Ok, r.Mensagem);
+        Assert.Equal(PagamentoBancario.Represado, c.Pagamentos.Itens.Single().Situacao);
+        Assert.Equal(0, c.Banco.BoletosIncluidos(BarrasBancario));
+    }
+
+    [Fact]
     public async Task Represado_nao_libera_se_o_lancamento_mudou_e_pode_ser_cancelado()
     {
         var c = Montar(true, Conta("m1", 666.53m));

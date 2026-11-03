@@ -132,26 +132,39 @@ public class ComprovantePixController(PagamentoService pagamentos) : ControllerB
 }
 
 /// <summary>
-/// Piloto de pagamentos pelo banco (Entradas e Saídas › Agendar pagamento): só a equipe ELROND
-/// (permissão administrativa), só lançamento a pagar aprovado. Pix pela integração da empresa.
+/// Pagamentos pelo banco (Entradas e Saídas › Agendar pagamento), só lançamento a pagar aprovado, pela
+/// integração da empresa. Duas permissões: AGENDAR (o gestor do financeiro) e o Monitor, liberar, cancelar e
+/// consultar o banco (a equipe ELROND). Quem só agenda sempre represa: o pagamento só sai liberado no Monitor.
 /// </summary>
 [ApiController]
 [Route("api/pagamentos")]
-[Authorize(Policy = "func:/financeiro/pagamento-banco")]
+[Authorize]
 public class PagamentosController(PagamentoService pagamentos, UsuarioContexto usuario) : ControllerBase
 {
+    public const string PermissaoAgendar = "/financeiro/agendar-pagamento";
+    public const string PermissaoLiberar = "/financeiro/pagamento-banco";
     public record PrepararDto(List<string> MovimentoIds);
 
+    private async Task<bool> PodeAgendarAsync() => await usuario.PodeAsync(PermissaoAgendar) || await usuario.PodeAsync(PermissaoLiberar);
+    private ObjectResult SemPermissao() => StatusCode(StatusCodes.Status403Forbidden, "Você não tem a permissão de agendar pagamentos pelo banco.");
+
     [HttpGet]
-    public async Task<IActionResult> Listar() => Ok(await pagamentos.ListarAsync());
+    public async Task<IActionResult> Listar() => await PodeAgendarAsync() ? Ok(await pagamentos.ListarAsync()) : SemPermissao();
 
     [HttpPost("preparar")]
-    public async Task<IActionResult> Preparar([FromBody] PrepararDto dto) => Ok(await pagamentos.PrepararAsync(dto.MovimentoIds ?? new()));
+    public async Task<IActionResult> Preparar([FromBody] PrepararDto dto) =>
+        await PodeAgendarAsync() ? Ok(await pagamentos.PrepararAsync(dto.MovimentoIds ?? new())) : SemPermissao();
 
     [HttpPost("agendar")]
-    public async Task<IActionResult> Agendar([FromBody] AgendarPagamentosDto dto, CancellationToken ct) =>
-        Ok(await pagamentos.AgendarAsync(dto, await usuario.QuemAsync(), ct));
+    public async Task<IActionResult> Agendar([FromBody] AgendarPagamentosDto dto, CancellationToken ct)
+    {
+        if (!await PodeAgendarAsync()) return SemPermissao();
+        // Quem não libera (não tem o Monitor) sempre represa, mesmo com o represamento desligado na integração.
+        var forcarRepresar = !await usuario.PodeAsync(PermissaoLiberar);
+        return Ok(await pagamentos.AgendarAsync(dto, await usuario.QuemAsync(), ct, forcarRepresar));
+    }
 
+    [Authorize(Policy = "func:" + PermissaoLiberar)]
     [HttpPost("{id}/atualizar")]
     public async Task<IActionResult> Atualizar(string id, CancellationToken ct)
     {
@@ -160,10 +173,12 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
     }
 
     /// <summary>Monitor dos pagamentos assistidos: represados, em andamento e os dos últimos dias, com as conferências.</summary>
+    [Authorize(Policy = "func:" + PermissaoLiberar)]
     [HttpGet("monitor")]
     public async Task<IActionResult> Monitor() => Ok(await pagamentos.MonitorAsync());
 
     /// <summary>Libera o represado para o banco (confere o lançamento de novo antes de mandar).</summary>
+    [Authorize(Policy = "func:" + PermissaoLiberar)]
     [HttpPost("{id}/liberar")]
     public async Task<IActionResult> Liberar(string id, CancellationToken ct)
     {
@@ -172,6 +187,7 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
     }
 
     /// <summary>Desiste do represado (não foi ao banco).</summary>
+    [Authorize(Policy = "func:" + PermissaoLiberar)]
     [HttpPost("{id}/cancelar-represado")]
     public async Task<IActionResult> CancelarRepresado(string id)
     {
@@ -183,6 +199,7 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
     [HttpPost("leitura")]
     public async Task<IActionResult> AbrirLeitura([FromServices] LeituraBoletoService leituras)
     {
+        if (!await PodeAgendarAsync()) return SemPermissao();
         var s = leituras.Abrir((await usuario.QuemAsync()).Id);
         return Ok(new { token = s.Token, expiraEm = s.ExpiraEm.ToString("o") });
     }
@@ -190,9 +207,10 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
     /// <summary>A tela pergunta se o celular já leu (pegou o código = a sessão acaba).</summary>
     [HttpGet("leitura/{token}")]
     public async Task<IActionResult> ConsultarLeitura(string token, [FromServices] LeituraBoletoService leituras) =>
-        leituras.Consultar(token, (await usuario.QuemAsync()).Id) is { } s ? Ok(s) : NotFound("Leitura não encontrada.");
+        !await PodeAgendarAsync() ? SemPermissao() : leituras.Consultar(token, (await usuario.QuemAsync()).Id) is { } s ? Ok(s) : NotFound("Leitura não encontrada.");
 
     /// <summary>Boleto sem confirmação que o banco não mostra: encerra para poder mandar de novo.</summary>
+    [Authorize(Policy = "func:" + PermissaoLiberar)]
     [HttpPost("{id}/descartar")]
     public async Task<IActionResult> Descartar(string id, CancellationToken ct)
     {

@@ -113,7 +113,8 @@ public sealed class PagamentoService(
     }
 
     /// <summary>Agenda (ou paga hoje) cada lançamento pelo banco. Cada um responde por si: um que falha não trava os outros.</summary>
-    public async Task<List<ResultadoAgendamentoDto>> AgendarAsync(AgendarPagamentosDto dto, UsuarioAtual quem, CancellationToken ct = default)
+    /// <param name="forcarRepresar">Quem agenda sem poder liberar: represa sempre, mesmo com o represamento desligado na integração.</param>
+    public async Task<List<ResultadoAgendamentoDto>> AgendarAsync(AgendarPagamentosDto dto, UsuarioAtual quem, CancellationToken ct = default, bool forcarRepresar = false)
     {
         var hoje = DateOnly.FromDateTime(relogio.GetLocalNow().DateTime);
         var resultados = new List<ResultadoAgendamentoDto>();
@@ -124,20 +125,20 @@ public sealed class PagamentoService(
         var todasInteg = await integracoes.GetAllAsync();
         foreach (var item in dto.Itens ?? new())
         {
-            var r = await AgendarUmAsync(item, data.ToString("yyyy-MM-dd"), todasInteg, quem, ct);
+            var r = await AgendarUmAsync(item, data.ToString("yyyy-MM-dd"), todasInteg, quem, ct, forcarRepresar);
             resultados.Add(r);
         }
         return resultados;
     }
 
-    private async Task<ResultadoAgendamentoDto> AgendarUmAsync(ItemAgendamentoDto item, string data, List<IntegracaoBancaria> todasInteg, UsuarioAtual quem, CancellationToken ct)
+    private async Task<ResultadoAgendamentoDto> AgendarUmAsync(ItemAgendamentoDto item, string data, List<IntegracaoBancaria> todasInteg, UsuarioAtual quem, CancellationToken ct, bool forcarRepresar = false)
     {
         var m = await movimentos.GetByIdAsync(item.MovimentoId);
         if (m is null) return new(item.MovimentoId, false, "Lançamento não encontrado.", null);
         var integ = IntegracaoDe(todasInteg, m.EmpresaId);
         var atual = (await pagamentos.ListarAsync(p => p.MovimentoId == m.Id)).FirstOrDefault(p => p.Vigente);
         if (Problema(m, integ, atual) is { Length: > 0 } problema) return new(m.Id, false, problema, atual);
-        if (item.Forma == PagamentoBancario.FormaBoleto) return await AgendarBoletoAsync(m, item, data, integ!, quem, ct);
+        if (item.Forma == PagamentoBancario.FormaBoleto) return await AgendarBoletoAsync(m, item, data, integ!, quem, ct, forcarRepresar);
         var chavePix = ChavePix.Normalizar(item.Chave);
         if (!chavePix.Ok) return new(m.Id, false, chavePix.Erro, null);
         var chave = chavePix.Chave;
@@ -160,7 +161,7 @@ public sealed class PagamentoService(
             Descricao = Descricao(m),
             Situacao = PagamentoBancario.Pendente,
         };
-        if (integ.RepresarPagamentos) return await RepresarAsync(p, m, quem);
+        if (integ.RepresarPagamentos || forcarRepresar) return await RepresarAsync(p, m, quem);
         // Grava antes de chamar o banco: queda no meio não perde o rastro (e o id reenviado não paga duas vezes).
         await pagamentos.AddAsync(p);
         return await EnviarPixAsync(p, m, integ, quem, ct);
@@ -193,7 +194,7 @@ public sealed class PagamentoService(
     /// ao banco UMA vez. Sem resposta, fica "sem confirmação" e a conferência procura pelo código no banco;
     /// nunca reenvia sozinho (o Inter não tem idempotência para boleto: reenviar pagaria duas vezes).
     /// </summary>
-    private async Task<ResultadoAgendamentoDto> AgendarBoletoAsync(Movimento m, ItemAgendamentoDto item, string data, IntegracaoBancaria integ, UsuarioAtual quem, CancellationToken ct)
+    private async Task<ResultadoAgendamentoDto> AgendarBoletoAsync(Movimento m, ItemAgendamentoDto item, string data, IntegracaoBancaria integ, UsuarioAtual quem, CancellationToken ct, bool forcarRepresar = false)
     {
         var hoje = DateOnly.FromDateTime(relogio.GetLocalNow().DateTime);
         var (codigo, erro) = CodigoBoleto.Ler(item.Codigo, hoje);
@@ -227,7 +228,7 @@ public sealed class PagamentoService(
             Descricao = Descricao(m),
             Situacao = PagamentoBancario.Pendente,
         };
-        if (integ.RepresarPagamentos) return await RepresarAsync(p, m, quem);
+        if (integ.RepresarPagamentos || forcarRepresar) return await RepresarAsync(p, m, quem);
         // Grava antes de chamar o banco: queda no meio não perde o rastro e o mesmo código não vai de novo.
         await pagamentos.AddAsync(p);
         return await EnviarBoletoAsync(p, m, integ, quem, ct);

@@ -21,6 +21,8 @@ public static class Funcionalidades
         "/financeiro/conciliacao",
         // Não é tela: aprova lançamentos financeiros (precisa também estar na regra de aprovação).
         "/financeiro/aprovar",
+        // Não é tela: agenda pagamentos pelo banco (Pix e boleto). Fica represado; quem libera é a equipe ELROND (Monitor).
+        "/financeiro/agendar-pagamento",
         // Cadastros parametrizáveis (Dados da Operação e Ficha Técnica) que o Pricing usa.
         "/cadastros/fichas-tecnicas",
         "/cadastros/campos-operacao",

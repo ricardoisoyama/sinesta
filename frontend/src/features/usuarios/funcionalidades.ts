@@ -84,7 +84,8 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/administrativo/smtp', label: 'Integração SMTP (servidor de e-mail do sistema)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/administrativo/modulos', label: 'Módulos do sistema (o que o menu do ambiente mostra)', grupo: GRUPO_EQUIPE, admin: true },
   { key: '/administrativo/numeracoes', label: 'Numerações (de onde parte a fatura, NF-e, NFS-e, CT-e e MDF-e de cada empresa)', grupo: GRUPO_EQUIPE, admin: true },
-  { key: '/financeiro/pagamento-banco', label: 'Mandar pagamentos (Pix e boleto) ao banco e Monitor de pagamentos', grupo: GRUPO_EQUIPE, admin: true },
+  { key: '/financeiro/agendar-pagamento', label: 'Agendar pagamentos pelo banco (Pix e boleto; ficam represados até liberar)', grupo: 'Financeiro' },
+  { key: '/financeiro/pagamento-banco', label: 'Monitor de pagamentos: liberar para o banco, cancelar e consultar (pagamentos assistidos)', grupo: GRUPO_EQUIPE, admin: true },
 ]
 
 export const TODAS_FUNCIONALIDADES = FUNCIONALIDADES.map((f) => f.key)

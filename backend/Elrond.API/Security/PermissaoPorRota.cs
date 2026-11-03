@@ -62,6 +62,7 @@ public sealed class PermissaoPorRotaFilter : IAsyncAuthorizationFilter
     private static readonly string[] CuidamDaPropriaPermissao =
     {
         "api/anexos",   // permissão depende da entidade (cliente/fornecedor) do anexo
+        "api/pagamentos", // agendar: confere agendar-pagamento ou pagamento-banco; monitor/liberar/cancelar têm policy própria
         "api/auth",     // login é anônimo; o resto é GET
         "api/pricing/fator", // só calcula (não grava): a tela da empresa usa sem ter o Pricing
         "api/preferencias", // só grava as preferências de quem está logado (o padrão do ambiente confere gestor)
