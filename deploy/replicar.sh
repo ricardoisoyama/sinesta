@@ -16,6 +16,9 @@ set -u
 PKG=${1:?pacote}
 VERSAO=${2:?versao}
 ROT=${3:-deploy}
+# O rótulo vira parte do nome do backup: barra, espaço e acento quebrariam o caminho do arquivo.
+ROT=$(printf '%s' "$ROT" | iconv -f utf-8 -t ascii//TRANSLIT 2>/dev/null | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-*//; s/-*$//' | cut -c1-80)
+ROT=${ROT:-deploy}
 BASE=/root/apps
 LOG=$BASE/build.log
 AQUI=$(cd "$(dirname "$0")" && pwd)
