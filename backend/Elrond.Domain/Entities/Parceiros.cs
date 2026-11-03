@@ -20,7 +20,10 @@ public class ContatoParceiro
     public bool RecebeProposta { get; set; }
 }
 
-/// <summary>O que fazer com o vencimento que cai no sábado ou no domingo (cadastro do cliente, aba Comercial).</summary>
+/// <summary>
+/// O que fazer com o vencimento que cai em dia não útil, fim de semana ou feriado (cliente, fornecedor e
+/// despesa fixa). O nome ficou de quando só olhava o fim de semana.
+/// </summary>
 public static class VencimentoFimDeSemana
 {
     public const string Manter = "manter";
@@ -29,15 +32,9 @@ public static class VencimentoFimDeSemana
 
     public static bool Valido(string v) => v is Manter or Antecipar or Postergar;
 
-    /// <summary>Sábado/domingo vai para a sexta (antecipar) ou para a segunda (postergar).</summary>
-    public static DateOnly Ajustar(DateOnly data, string regra) => (regra, data.DayOfWeek) switch
-    {
-        (Antecipar, DayOfWeek.Saturday) => data.AddDays(-1),
-        (Antecipar, DayOfWeek.Sunday) => data.AddDays(-2),
-        (Postergar, DayOfWeek.Saturday) => data.AddDays(2),
-        (Postergar, DayOfWeek.Sunday) => data.AddDays(1),
-        _ => data,
-    };
+    /// <summary>Dia não útil (sábado, domingo, feriado) vai para o dia útil anterior (antecipar) ou o próximo (postergar).</summary>
+    public static DateOnly Ajustar(DateOnly data, string regra, IReadOnlySet<DateOnly>? feriados = null) =>
+        Regras.DiasUteis.Ajustar(data, regra, feriados);
 }
 
 /// <summary>Endereço (cliente, fornecedor e empresa). A cidade fica no campo próprio de cada cadastro, "Praia Grande - SP".</summary>
@@ -166,6 +163,8 @@ public class Fornecedor : Rastreavel, IEntity, IInativavel
 
     /// <summary>Fornecedor que é seguradora: aparece na escolha da seguradora em Cadastros › Apólices.</summary>
     public bool Seguradora { get; set; }
+    /// <summary>Conta deste fornecedor que vence em dia não útil: manter | antecipar | postergar (as despesas fixas herdam).</summary>
+    public string VencimentoFimDeSemana { get; set; } = Entities.VencimentoFimDeSemana.Manter;
     /// <summary>
     /// Legado (17/10/2026): as apólices moravam aqui e foram copiadas para a tabela apolices.
     /// A coluna fica (o banco nunca perde dado); a tela não lê nem grava mais.

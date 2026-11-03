@@ -74,13 +74,8 @@ public static class FaturamentoContrato
         return new Previa(linhas, R2(linhas.Sum(l => l.Valor ?? 0)));
     }
 
-    /// <summary>Vencimento no dia útil: fim de semana antecipa para sexta ou adia para segunda.</summary>
-    private static DateOnly DiaUtil(DateOnly d, bool antecipar) => d.DayOfWeek switch
-    {
-        DayOfWeek.Saturday => d.AddDays(antecipar ? -1 : 2),
-        DayOfWeek.Sunday => d.AddDays(antecipar ? -2 : 1),
-        _ => d,
-    };
+    /// <summary>Vencimento no dia útil: dia não útil (fim de semana, feriado nacional) antecipa ou adia.</summary>
+    private static DateOnly DiaUtil(DateOnly d, bool antecipar) => DiasUteis.Ajustar(d, antecipar ? DiasUteis.Antecipar : DiasUteis.Postergar);
 
     private static DateOnly DiaDoMes(DateOnly mes, int dia) => new(mes.Year, mes.Month, Math.Clamp(dia, 1, DateTime.DaysInMonth(mes.Year, mes.Month)));
 

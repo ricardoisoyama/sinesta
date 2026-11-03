@@ -38,6 +38,8 @@ export interface CustoFixo {
   fornecedorId: string
   /** Dia do mês em que é paga (1–31). 0 = não informado. */
   diaVencimento?: number
+  /** Vencimento em dia não útil (fim de semana, feriado): vazio = segue o fornecedor; manter | antecipar | postergar. */
+  vencimentoDiaUtil?: '' | 'manter' | 'antecipar' | 'postergar'
   /** Conta que paga: com ela, o término e o dia, a recorrente gera os lançamentos a pagar. */
   carteiraId?: string
   /**

@@ -47,6 +47,7 @@ import {
   ChartColumnDecreasing,
   Hash,
   type LucideIcon,
+  CalendarOff,
 } from 'lucide-react'
 
 export interface NavItem {
@@ -84,6 +85,7 @@ export const navGroups: NavGroup[] = [
       // Nasce desligado: a equipe ELROND liga em Administrativo › Módulos do sistema.
       { label: 'Motoristas', path: '/cadastros/motoristas', icon: IdCard },
       { label: 'Apólices de seguro', path: '/cadastros/apolices', icon: ShieldPlus },
+      { label: 'Feriados', path: '/cadastros/feriados', icon: CalendarOff },
       // Taxas e Seguros e Tipos de Custo ficam ocultos; as rotas continuam existindo.
       // O funcionário é o usuário do portal: cadastro e permissões no mesmo lugar.
       { label: 'Funcionários', path: '/cadastros/usuarios', icon: Users },

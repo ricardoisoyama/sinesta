@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- o catálogo (BLOCOS) e os blocos ficam juntos */
 import type { ReactNode } from 'react'
+import { vencido } from '@/features/financeiro/diasUteis'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -326,12 +327,12 @@ function FinanceiroSemana({ empresaId }: ContextoBloco) {
     },
     {
       rotulo: 'A receber vencido',
-      valor: soma((m) => m.tipo === 'receber' && m.vencimento < hoje && !m.pixSituacao),
+      valor: soma((m) => m.tipo === 'receber' && vencido(m.vencimento, hoje) && !m.pixSituacao),
       tom: s.ruim,
     },
     {
       rotulo: 'A pagar vencido',
-      valor: soma((m) => m.tipo === 'pagar' && m.vencimento < hoje && !m.pixSituacao),
+      valor: soma((m) => m.tipo === 'pagar' && vencido(m.vencimento, hoje) && !m.pixSituacao),
       tom: s.ruim,
     },
   ]

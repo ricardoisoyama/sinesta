@@ -80,7 +80,7 @@ export function CustosFixosPage() {
 
   /** O que nos lançamentos depende da despesa: mudou algum, pergunta se atualiza os em aberto. */
   const mexeNosLancamentos = (a: CustoFixo, b: CustoFixoForm) =>
-    a.valorMensal !== b.valorMensal || (a.diaVencimento ?? 0) !== b.diaVencimento || (a.carteiraId ?? '') !== b.carteiraId ||
+    a.valorMensal !== b.valorMensal || (a.diaVencimento ?? 0) !== b.diaVencimento || (a.vencimentoDiaUtil ?? '') !== b.vencimentoDiaUtil || (a.carteiraId ?? '') !== b.carteiraId ||
     (a.planoContaId ?? '') !== b.planoContaId || a.categoriaId !== b.categoriaId || a.fornecedorId !== b.fornecedorId ||
     a.descricao !== b.descricao || a.dataInicio !== b.dataInicio || a.dataFim !== b.dataFim
 

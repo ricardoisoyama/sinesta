@@ -50,6 +50,7 @@ import { FichasTecnicasPage } from '@/features/fichaTecnica/FichasTecnicasPage'
 import { PricingPage } from '@/features/simulador/PricingPage'
 import { ApolicesPage } from '@/features/apolices/ApolicesPage'
 import { TabelaIcmsPage } from '@/features/icms/TabelaIcmsPage'
+import { FeriadosPage } from '@/features/feriados/FeriadosPage'
 
 export function App() {
   return (
@@ -110,6 +111,7 @@ export function App() {
           {/* Cadastros parametrizáveis (fase de layout) */}
           <Route path="/cadastros/campos-operacao" element={<CamposOperacaoPage />} />
           <Route path="/cadastros/icms" element={<TabelaIcmsPage />} />
+          <Route path="/cadastros/feriados" element={<FeriadosPage />} />
           <Route path="/cadastros/apolices" element={<ApolicesPage />} />
           <Route path="/cadastros/fichas-tecnicas" element={<FichasTecnicasPage />} />
 

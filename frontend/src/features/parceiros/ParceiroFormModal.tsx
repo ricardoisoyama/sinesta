@@ -545,7 +545,7 @@ export function ParceiroFormModal({
                   ))}
                 </datalist>
               </Field>
-              <Field className={ui.col2} label="Vencimento no fim de semana" hint="Quando o prazo cai no sábado ou no domingo, a fatura e o boleto vencem conforme esta regra.">
+              <Field className={ui.col2} label="Vencimento em dia não útil" hint="Quando o prazo cai no sábado, no domingo ou num feriado (nacional ou do cadastro de Feriados), a fatura e o boleto vencem conforme esta regra.">
                 <select value={vencimentoFimDeSemana} onChange={(e) => setValue('vencimentoFimDeSemana', e.target.value as VencimentoFimDeSemana)}>
                   {VENCIMENTO_FIM_DE_SEMANA.map((o) => (
                     <option key={o.valor} value={o.valor}>
@@ -592,6 +592,15 @@ export function ParceiroFormModal({
                   <option value="">Não informado</option>
                   <option value="produto">Produto</option>
                   <option value="servico">Serviço</option>
+                </select>
+              </Field>
+              <Field className={ui.col2} label="Vencimento em dia não útil" hint="Conta deste fornecedor que vence no sábado, no domingo ou num feriado (nacional ou do cadastro de Feriados). As despesas fixas dele seguem esta regra, se não tiverem a delas.">
+                <select value={vencimentoFimDeSemana} onChange={(e) => setValue('vencimentoFimDeSemana', e.target.value as VencimentoFimDeSemana)}>
+                  {VENCIMENTO_FIM_DE_SEMANA.map((o) => (
+                    <option key={o.valor} value={o.valor}>
+                      {o.label}
+                    </option>
+                  ))}
                 </select>
               </Field>
               <Field className={ui.col2} label="Natureza do custo" hint="Fixo: recorrente e independente do volume. Variável: acompanha a operação.">

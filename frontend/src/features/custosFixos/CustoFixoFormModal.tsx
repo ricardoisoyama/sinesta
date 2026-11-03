@@ -1,3 +1,4 @@
+import { VENCIMENTO_FIM_DE_SEMANA } from '@/features/parceiros/types'
 import { useEffect, useState } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -76,7 +77,7 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
     if (!open) return
     reset(
         initial
-          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, carteiraId: initial.carteiraId ?? '', rateio: initial.rateio ?? [] }
+          ? { ...emptyCustoFixo, ...initial, planoContaId: initial.planoContaId ?? '', diaVencimento: initial.diaVencimento ?? 0, vencimentoDiaUtil: initial.vencimentoDiaUtil ?? '', carteiraId: initial.carteiraId ?? '', rateio: initial.rateio ?? [] }
           : emptyCustoFixo,
       )
   }, [open, initial, reset])
@@ -324,6 +325,17 @@ export function CustoFixoFormModal({ open, initial, error, onClose, onSave }: Pr
                 placeholder="Ex.: 10"
                 {...register('diaVencimento', { setValueAs: (v) => (v === '' || v == null ? 0 : Number(v)) })}
               />
+            </Field>
+            <Field
+              label="Em dia não útil"
+              hint={`Vencimento no sábado, no domingo ou num feriado (nacional ou do cadastro de Feriados): manter, antecipar para o dia útil anterior ou postergar para o próximo. "Do fornecedor" segue o cadastro dele${fornecedor ? ` (hoje: ${VENCIMENTO_FIM_DE_SEMANA.find((o) => o.valor === (fornecedor.vencimentoFimDeSemana ?? 'manter'))?.label.toLowerCase()})` : ''}. A competência continua a do mês.`}
+            >
+              <select {...register('vencimentoDiaUtil')}>
+                <option value="">Do fornecedor</option>
+                <option value="manter">Manter</option>
+                <option value="antecipar">Antecipar</option>
+                <option value="postergar">Postergar</option>
+              </select>
             </Field>
             {recorrente && (
               <Field className={ui.col2} label="Conta que paga" hint="Com a conta, o término e o dia de pagamento, a despesa gera os lançamentos a pagar mês a mês nas Entradas e Saídas.">

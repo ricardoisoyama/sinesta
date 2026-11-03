@@ -27,6 +27,8 @@ public class CustoFixo : Rastreavel, IEntity, IInativavel, INumerado
     public string FornecedorId { get; set; } = string.Empty;
     /// <summary>Dia do mês em que a despesa é paga (1–31; mês mais curto = último dia). 0 = não informado.</summary>
     public int DiaVencimento { get; set; }
+    /// <summary>Vencimento em dia não útil: vazio = segue o fornecedor; manter | antecipar | postergar = a regra desta despesa.</summary>
+    public string VencimentoDiaUtil { get; set; } = string.Empty;
     /// <summary>Conta que paga (Caixa): com ela e o término, a recorrente gera os lançamentos a pagar.</summary>
     public string CarteiraId { get; set; } = string.Empty;
 

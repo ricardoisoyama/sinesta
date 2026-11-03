@@ -38,6 +38,33 @@ public class LancamentosDespesaFixaTests
         return (new LancamentosDespesaFixa(movs, fornecedores, new SemUsuarios(), financeiro, Hoje), movs, financeiro);
     }
 
+    [Fact]
+    public async Task Vencimento_em_dia_nao_util_segue_o_fornecedor_ou_a_regra_da_despesa()
+    {
+        var movs = new Mem<Movimento>();
+        var carteiras = new Mem<Carteira>();
+        carteiras.Itens.Add(new Carteira { Id = "cart", Nome = "Banco", EmpresaId = "matriz" });
+        var fornecedores = new Mem<Fornecedor>();
+        fornecedores.Itens.Add(new Fornecedor { Id = "f-1", Nome = "Imobiliária Santos", VencimentoFimDeSemana = VencimentoFimDeSemana.Postergar });
+        var feriados = new Mem<Feriado>();
+        feriados.Itens.Add(new Feriado { Id = "sp", Nome = "Feriado municipal", Data = "2026-12-01", TodoAno = false });
+        var financeiro = new FinanceiroService(movs, carteiras, new Mem<RegraAprovacao>(), new Mem<ExtratoLinha>(), new SemTransacao(), new Auditoria(), new Sequencia());
+        var svc = new LancamentosDespesaFixa(movs, fornecedores, new SemUsuarios(), financeiro, Hoje, feriados);
+
+        // Dia 1: 01/11 é domingo e 02/11 Finados → 03/11; 01/12 é feriado do cadastro → 02/12. Competência continua a do mês.
+        var df = Aluguel("2026-12-31");
+        df.DiaVencimento = 1;
+        await svc.SincronizarAsync(df, false, Ana);
+        Assert.Equal(("2026-11", "2026-11-03"), movs.Itens.Where(m => m.Competencia == "2026-11").Select(m => (m.Competencia, m.Vencimento)).Single());
+        Assert.Equal("2026-12-02", movs.Itens.Single(m => m.Competencia == "2026-12").Vencimento);
+
+        // A despesa pode ter a regra dela (antecipar): atualizar os em aberto leva os vencimentos.
+        df.VencimentoDiaUtil = VencimentoFimDeSemana.Antecipar;
+        await svc.SincronizarAsync(df, true, Ana);
+        Assert.Equal("2026-10-30", movs.Itens.Single(m => m.Competencia == "2026-11" && !m.Cancelado).Vencimento);
+        Assert.Equal("2026-11-30", movs.Itens.Single(m => m.Competencia == "2026-12" && !m.Cancelado).Vencimento);
+    }
+
     private static ItemVariavelMovimento Variavel(string tipo, string descricao, decimal valor) => new() { Tipo = tipo, Descricao = descricao, Valor = valor };
 
     [Fact]

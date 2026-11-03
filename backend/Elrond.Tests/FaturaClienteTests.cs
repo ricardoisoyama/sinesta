@@ -99,8 +99,8 @@ public class FaturaClienteTests
         Assert.Equal(10311.47m, f.Total);
         Assert.Equal("minuta", f.Tipo);
         Assert.Equal("Comercial", f.CentroCustoNome);
-        // Prazo de 8 dias cai no sábado 31/10; o cliente posterga para segunda.
-        Assert.Equal("2026-11-02", f.Vencimento);
+        // Prazo de 8 dias cai no sábado 31/10; o cliente posterga: segunda 02/11 é Finados, vence 03/11.
+        Assert.Equal("2026-11-03", f.Vencimento);
         // Detalhe lido na hora (a consulta não tinha lido): peso e valor da carga somados.
         Assert.Equal(2, c.Siimp.DetalhesLidos);
         Assert.Equal(49120m, f.PesoTotal);
@@ -115,7 +115,7 @@ public class FaturaClienteTests
 
         // Boleto com o número da fatura.
         var boleto = c.Cobrancas.Itens.Single();
-        Assert.Equal(("fatura", f.Id, 10311.47m, "2026-11-02"), (boleto.OrigemTipo, boleto.OrigemId, boleto.Valor, boleto.Vencimento));
+        Assert.Equal(("fatura", f.Id, 10311.47m, "2026-11-03"), (boleto.OrigemTipo, boleto.OrigemId, boleto.Valor, boleto.Vencimento));
 
         // E-mail: Neto recebe tudo; a contabilidade só as NFS-e; Vendas (nada marcado) não recebe.
         Assert.Equal(2, c.Smtp.Enviadas.Count);
@@ -166,7 +166,7 @@ public class FaturaClienteTests
         var c = Montar();
         var s = await c.Svc.SugerirAsync(Docs("minuta-242791", "minuta-242837"));
         Assert.True(s.IsSuccess, s.Error);
-        Assert.Equal(("2026-11-02", "postergar", "cc-comercial", "p-nfe", "inter-filial", 51L), (s.Value!.Vencimento, s.Value.VencimentoRegra, s.Value.CentroCustoId, s.Value.PlanoContaId, s.Value.CarteiraId, s.Value.NumeroProvavel));
+        Assert.Equal(("2026-11-03", "postergar", "cc-comercial", "p-nfe", "inter-filial", 51L), (s.Value!.Vencimento, s.Value.VencimentoRegra, s.Value.CentroCustoId, s.Value.PlanoContaId, s.Value.CarteiraId, s.Value.NumeroProvavel));
         Assert.Equal(["neto@cobrecom.com.br", "contabil@cobrecom.com.br"], s.Value.Destinatarios.Select(d => d.Email));
         Assert.Empty(s.Value.Avisos);
     }
@@ -207,8 +207,8 @@ public class FaturaClienteTests
     }
 
     [Theory]
-    [InlineData("2026-10-31", "postergar", "2026-11-02")]
-    [InlineData("2026-11-01", "postergar", "2026-11-02")]
+    [InlineData("2026-10-31", "postergar", "2026-11-03")] // segunda 02/11 é Finados
+    [InlineData("2026-11-01", "postergar", "2026-11-03")]
     [InlineData("2026-10-31", "antecipar", "2026-10-30")]
     [InlineData("2026-11-01", "antecipar", "2026-10-30")]
     [InlineData("2026-10-31", "manter", "2026-10-31")]

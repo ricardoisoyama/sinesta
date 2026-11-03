@@ -1489,6 +1489,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
 
+                    b.Property<string>("VencimentoDiaUtil")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Numero")
@@ -2139,6 +2146,57 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.ToTable("faturas_siimp_lidas", (string)null);
                 });
 
+            modelBuilder.Entity("Elrond.Domain.Entities.Feriado", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("AlteradoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CriadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("InativadoEm")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("InativadoPor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Nome")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TodoAno")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("feriados", (string)null);
+                });
+
             modelBuilder.Entity("Elrond.Domain.Entities.FichaColuna", b =>
                 {
                     b.Property<string>("Id")
@@ -2544,6 +2602,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<string>("TipoFornecimento")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("VencimentoFimDeSemana")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("manter");
 
                     b.HasKey("Id");
 

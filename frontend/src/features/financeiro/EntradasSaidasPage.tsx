@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { proximoDiaUtil } from './diasUteis'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Ban, CheckCircle2, Clock, Landmark, Pencil, Plus, RotateCcw, ShieldCheck, Wallet } from 'lucide-react'
 import { getErrorMessage } from '@/lib/api'
@@ -218,7 +219,7 @@ export function EntradasSaidasPage() {
           <div className={s.venc}>
             <span className={ui.cellStrong}>{dataBR(m.vencimento)}</span>
             {st === 'atrasado' && <small className={s.atraso}>{-dias} dia{dias === -1 ? '' : 's'} de atraso</small>}
-            {st === 'aberto' && <small>{dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
+            {st === 'aberto' && <small>{dias < 0 ? `dia não útil: paga até ${dataBR(proximoDiaUtil(m.vencimento))}` : dias === 0 ? 'vence hoje' : dias === 1 ? 'amanhã' : `em ${dias} dias`}</small>}
           </div>
         )
       },

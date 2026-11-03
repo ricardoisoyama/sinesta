@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { diaUtil } from '@/features/financeiro/diasUteis'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Eye, FileText, Mail, Receipt } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
@@ -26,13 +27,9 @@ interface Props {
 }
 
 const REGRA: Record<SugestaoFatura['vencimentoRegra'], string> = {
-  manter: 'mantém no fim de semana',
-  antecipar: 'antecipa o fim de semana para sexta',
-  postergar: 'posterga o fim de semana para segunda',
-}
-const fimDeSemana = (iso: string) => {
-  const d = new Date(`${iso}T12:00:00`)
-  return d.getDay() === 0 || d.getDay() === 6
+  manter: 'mantém em dia não útil',
+  antecipar: 'antecipa o dia não útil para o dia útil anterior',
+  postergar: 'posterga o dia não útil para o próximo dia útil',
 }
 
 /**
@@ -153,7 +150,7 @@ export function FaturarModal({ documentos, nomeEmpresa, onClose, onFaturado }: P
           <div className={ui.grid} style={{ marginTop: 16 }}>
             <Field label="Vencimento" req hint={`Prazo do cliente; a regra dele ${REGRA[sugestao.vencimentoRegra]} (cadastro do cliente › Comercial).`}>
               <input type="date" value={d.vencimento ?? ''} onChange={(e) => set({ vencimento: e.target.value })} />
-              {d.vencimento && fimDeSemana(d.vencimento) && <span className={s.alertaCelula}>Cai no fim de semana.</span>}
+              {d.vencimento && !diaUtil(d.vencimento) && <span className={s.alertaCelula}>Cai em dia não útil (fim de semana ou feriado).</span>}
             </Field>
             <Field label="Centro de custo" hint="Vem do cadastro do cliente.">
               <select value={d.centroCustoId ?? ''} onChange={(e) => set({ centroCustoId: e.target.value })}>

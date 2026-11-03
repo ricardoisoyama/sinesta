@@ -1,0 +1,10 @@
+.colunas { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .colunas { grid-template-columns: 1fr; } }
+.titulo { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: #143d18; margin-bottom: 10px; }
+.novo { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; margin-bottom: 12px; }
+.novo > input { height: 36px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; min-width: 0; }
+.todoAno { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: #3d4b43; white-space: nowrap; }
+.data { font-variant-numeric: tabular-nums; font-weight: 600; color: #1f2a24; }
+.nacionais li { color: #1f2a24; }
+.nacionais { list-style: none; margin: 0 0 10px; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; font-size: 13px; }
+.painel { padding: 16px 18px; }

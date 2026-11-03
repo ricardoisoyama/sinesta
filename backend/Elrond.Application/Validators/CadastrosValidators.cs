@@ -27,6 +27,7 @@ public class FornecedorValidator : AbstractValidator<Fornecedor>
     {
         RuleFor(f => f.Nome).NotEmpty().WithMessage("Informe a razão social ou o nome do fornecedor.").MaximumLength(160);
         RuleFor(f => f.Pais).NotEmpty().When(f => f.Externo).WithMessage("Informe o país do fornecedor do exterior.");
+        RuleFor(f => f.VencimentoFimDeSemana).Must(VencimentoFimDeSemana.Valido).WithMessage("Vencimento em dia não útil: manter, antecipar ou postergar.");
         RuleFor(f => f.Email).EmailAddress().When(f => !string.IsNullOrWhiteSpace(f.Email)).WithMessage("E-mail inválido.");
         RuleFor(f => f.LimiteCompra).GreaterThanOrEqualTo(0);
     }
@@ -117,6 +118,7 @@ public class CustoFixoValidator : AbstractValidator<CustoFixo>
     {
         RuleFor(c => c.Descricao).NotEmpty().WithMessage("Informe a descrição da despesa.");
         RuleFor(c => c.UnidadeId).NotEmpty().WithMessage("Informe a empresa da despesa.");
+        RuleFor(c => c.VencimentoDiaUtil).Must(v => v.Length == 0 || VencimentoFimDeSemana.Valido(v)).WithMessage("Vencimento em dia não útil: igual ao fornecedor, manter, antecipar ou postergar.");
         RuleFor(c => c.ValorMensal).GreaterThanOrEqualTo(0).WithMessage("Valor inválido.");
         RuleFor(c => c.Tipo).Must(t => t is "recorrente" or "spot").WithMessage("Tipo deve ser recorrente ou spot.");
         RuleFor(c => c.DiaVencimento).InclusiveBetween(0, 31).WithMessage("Dia de vencimento deve ser de 1 a 31.");

@@ -384,6 +384,20 @@ public class ClientesController(ICrudRepository<Cliente> repo, ICarteiraService 
 
 }
 
+/// <summary>Feriados do cadastro (estaduais, municipais): somam aos nacionais no dia útil dos vencimentos.</summary>
+[Route("api/feriados")]
+public class FeriadosController(ICrudRepository<Feriado> repo) : CrudControllerBase<Feriado>(repo)
+{
+    protected override Task<string?> AntesDeGravarAsync(Feriado f)
+    {
+        f.Nome = (f.Nome ?? string.Empty).Trim();
+        return Task.FromResult(
+            f.Nome.Length == 0 ? "Dê um nome ao feriado."
+            : !DateOnly.TryParseExact(f.Data ?? string.Empty, "yyyy-MM-dd", out _) ? "Informe a data do feriado."
+            : null);
+    }
+}
+
 /// <summary>Tabela de ICMS por UF de origem × destino (única do sistema). PUT grava só as linhas enviadas.</summary>
 [ApiController]
 [Authorize]

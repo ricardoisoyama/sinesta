@@ -51,6 +51,7 @@ export const FUNCIONALIDADES: Funcionalidade[] = [
   { key: '/cadastros/veiculos', label: 'Veículos', grupo: 'Cadastros' },
   { key: '/cadastros/motoristas', label: 'Motoristas', grupo: 'Cadastros' },
   { key: '/cadastros/apolices', label: 'Apólices de seguro', grupo: 'Cadastros' },
+  { key: '/cadastros/feriados', label: 'Feriados (estaduais e municipais)', grupo: 'Cadastros' },
   { key: '/cadastros/fichas-tecnicas', label: 'Ficha Técnica (custos parametrizáveis)', grupo: 'Parametrizações' },
   { key: '/cadastros/campos-operacao', label: 'Dados da Operação (campos da Precificação)', grupo: 'Parametrizações' },
   { key: '/cadastros/icms', label: 'Tabela de ICMS (origem × destino)', grupo: 'Parametrizações' },

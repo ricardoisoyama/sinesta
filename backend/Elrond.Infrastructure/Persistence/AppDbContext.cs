@@ -53,6 +53,7 @@ public class AppDbContext : DbContext
     public DbSet<Contrato> Contratos => Set<Contrato>();
     public DbSet<Fatura> Faturas => Set<Fatura>();
     public DbSet<CenarioProjecao> CenariosProjecao => Set<CenarioProjecao>();
+    public DbSet<Feriado> Feriados => Set<Feriado>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -210,6 +211,14 @@ public class AppDbContext : DbContext
             e.HasIndex(a => a.SeguradoraId);
         });
 
+        modelBuilder.Entity<Feriado>(e =>
+        {
+            e.ToTable("feriados");
+            e.HasKey(f => f.Id);
+            e.Property(f => f.Data).IsRequired().HasMaxLength(10);
+            e.Property(f => f.Nome).IsRequired().HasMaxLength(120);
+        });
+
         modelBuilder.Entity<AliquotaIcms>(e =>
         {
             e.ToTable("aliquotas_icms");
@@ -236,6 +245,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("custos_fixos");
             e.HasKey(c => c.Id);
+            e.Property(c => c.VencimentoDiaUtil).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
             // Número da despesa: o banco gera (sequência); o repositório preserva na alteração.
             e.Property(c => c.Numero).HasDefaultValueSql("nextval('custos_fixos_numero_seq')");
             e.HasIndex(c => c.Numero).IsUnique();
@@ -632,6 +642,7 @@ public class AppDbContext : DbContext
         {
             e.ToTable("fornecedores");
             e.HasKey(f => f.Id);
+            e.Property(f => f.VencimentoFimDeSemana).IsRequired().HasMaxLength(10).HasDefaultValue(VencimentoFimDeSemana.Manter);
             e.Property(f => f.Nome).IsRequired().HasMaxLength(160);
             e.OwnsMany(f => f.Contatos, b => b.ToJson());
             e.OwnsOne(f => f.Banco, b => b.ToJson());

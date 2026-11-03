@@ -25,7 +25,8 @@ public sealed class LancamentosDespesaFixa(
     ICrudRepository<Fornecedor> fornecedores,
     IUsuarioRepository usuarios,
     IFinanceiroService financeiro,
-    TimeProvider relogio)
+    TimeProvider relogio,
+    ICrudRepository<Feriado>? feriados = null)
 {
     private static readonly TimeZoneInfo Brasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
     private const string PrefixoFuncionario = "func-";
@@ -97,7 +98,10 @@ public sealed class LancamentosDespesaFixa(
         if (motivo is not null)
             return Result.Success(new ResumoLancamentosDf(0, 0, cancelados, abertos.Count - cancelados, motivo));
 
-        var (parceiroId, parceiroNome, fantasia, forma) = await ParceiroAsync(df);
+        var (parceiroId, parceiroNome, fantasia, forma, regraFornecedor) = await ParceiroAsync(df);
+        // Dia não útil (fim de semana, feriado): a regra da despesa ou, sem ela, a do fornecedor. A competência fica a do mês.
+        var regra = VencimentoFimDeSemana.Valido(df.VencimentoDiaUtil) ? df.VencimentoDiaUtil : regraFornecedor;
+        var extras = await FeriadosCadastro.DatasAsync(feriados, hoje.Year, hoje.Year + 3);
         Movimento Modelo(DateOnly venc) => new()
         {
             Tipo = "pagar",
@@ -109,7 +113,7 @@ public sealed class LancamentosDespesaFixa(
             CentroCustoId = df.CategoriaId,
             Documento = df.Numero > 0 ? $"Despesa fixa {df.Numero}" : "Despesa fixa",
             Competencia = venc.ToString("yyyy-MM", CultureInfo.InvariantCulture),
-            Vencimento = venc.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            Vencimento = VencimentoFimDeSemana.Ajustar(venc, regra, extras).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             Valor = df.ValorMensal,
             CarteiraId = df.CarteiraId,
             FormaPagamento = forma,
@@ -191,13 +195,14 @@ public sealed class LancamentosDespesaFixa(
     private static string Dia(string iso) => iso.Length >= 10 ? $"{iso[8..10]}/{iso[5..7]}" : iso;
 
     /// <summary>Quem recebe: o fornecedor ou o funcionário ("func-{id}") da despesa; sem nenhum, a própria despesa.</summary>
-    private async Task<(string Id, string Nome, string Fantasia, string Forma)> ParceiroAsync(CustoFixo df)
+    private async Task<(string Id, string Nome, string Fantasia, string Forma, string Regra)> ParceiroAsync(CustoFixo df)
     {
         if (df.FornecedorId.StartsWith(PrefixoFuncionario, StringComparison.Ordinal)
             && await usuarios.GetByIdAsync(df.FornecedorId[PrefixoFuncionario.Length..]) is { } u)
-            return (df.FornecedorId, u.Name, string.Empty, "Pix");
+            return (df.FornecedorId, u.Name, string.Empty, "Pix", VencimentoFimDeSemana.Manter);
         if (df.FornecedorId.Length > 0 && await fornecedores.GetByIdAsync(df.FornecedorId) is { } f)
-            return (f.Id, f.Nome, f.NomeFantasia ?? string.Empty, string.Empty);
-        return (string.Empty, df.Descricao, string.Empty, string.Empty);
+            return (f.Id, f.Nome, f.NomeFantasia ?? string.Empty, string.Empty,
+                VencimentoFimDeSemana.Valido(f.VencimentoFimDeSemana) ? f.VencimentoFimDeSemana : VencimentoFimDeSemana.Manter);
+        return (string.Empty, df.Descricao, string.Empty, string.Empty, VencimentoFimDeSemana.Manter);
     }
 }

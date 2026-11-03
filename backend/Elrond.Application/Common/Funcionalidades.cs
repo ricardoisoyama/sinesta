@@ -36,6 +36,8 @@ public static class Funcionalidades
         "/cadastros/fornecedores",
         // Apólices de seguro (base do ad valorem), separadas do fornecedor seguradora em 17/10/2026.
         "/cadastros/apolices",
+        // Feriados estaduais e municipais (os nacionais o sistema já sabe): dia útil dos vencimentos.
+        "/cadastros/feriados",
         "/cadastros/vendedores",
         "/cadastros/servicos",
         "/cadastros/veiculos",

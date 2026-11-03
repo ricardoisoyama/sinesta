@@ -19,9 +19,9 @@ export const PERFIS_COMPRA: { valor: PerfilCompra; label: string }[] = [
 /** Uma pessoa de contato no cliente/fornecedor. */
 export type VencimentoFimDeSemana = 'manter' | 'antecipar' | 'postergar'
 export const VENCIMENTO_FIM_DE_SEMANA: { valor: VencimentoFimDeSemana; label: string }[] = [
-  { valor: 'manter', label: 'Manter a data (vence no sábado/domingo)' },
-  { valor: 'antecipar', label: 'Antecipar para a sexta-feira' },
-  { valor: 'postergar', label: 'Postergar para a segunda-feira' },
+  { valor: 'manter', label: 'Manter a data (mesmo em dia não útil)' },
+  { valor: 'antecipar', label: 'Antecipar para o dia útil anterior' },
+  { valor: 'postergar', label: 'Postergar para o próximo dia útil' },
 ]
 
 export interface Contato {

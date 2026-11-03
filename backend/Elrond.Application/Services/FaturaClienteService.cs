@@ -56,7 +56,8 @@ public sealed class FaturaClienteService(
     EmailService email,
     IAuditoriaService auditoria,
     TimeProvider relogio,
-    ILogger<FaturaClienteService> log)
+    ILogger<FaturaClienteService> log,
+    ICrudRepository<Feriado>? feriados = null)
 {
     public const string OrigemCobranca = "fatura";
     private static readonly CultureInfo PtBr = CultureInfo.GetCultureInfo("pt-BR");
@@ -413,7 +414,8 @@ public sealed class FaturaClienteService(
         var regra = VencimentoFimDeSemana.Valido(cliente.VencimentoFimDeSemana) ? cliente.VencimentoFimDeSemana : VencimentoFimDeSemana.Manter;
         var vencimento = !string.IsNullOrWhiteSpace(d.Vencimento)
             ? d.Vencimento!.Trim()
-            : VencimentoFimDeSemana.Ajustar(Hoje.AddDays(Math.Max(0, cliente.PrazoPagamentoDias)), regra).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            : VencimentoFimDeSemana.Ajustar(Hoje.AddDays(Math.Max(0, cliente.PrazoPagamentoDias)), regra,
+                await FeriadosCadastro.DatasAsync(feriados, Hoje.Year, Hoje.Year + 1)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
         var padrao = empresa.Faturamento ?? new FaturamentoEmpresa();
         var centroId = d.CentroCustoId ?? cliente.CentroCustoId;
         var centro = centroId.Length > 0 ? await centros.GetByIdAsync(centroId) : null;
