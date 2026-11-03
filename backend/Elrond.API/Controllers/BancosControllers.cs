@@ -73,6 +73,28 @@ public class AvisosBancoController(ICobrancaService cobrancas) : ControllerBase
     }
 }
 
+/// <summary>
+/// Página do celular do "Ler boleto em outro dispositivo": sem login (o celular não está logado), só com o token
+/// aleatório da sessão aberta pela tela do computador. Só recebe um código de boleto válido, uma vez, em 10 minutos.
+/// </summary>
+[ApiController]
+[AllowAnonymous]
+[Route("api/leitura-boleto")]
+public class LeituraBoletoController(LeituraBoletoService leituras) : ControllerBase
+{
+    public record EnvioLeitura(string Codigo);
+
+    [HttpGet("{token}")]
+    public IActionResult Situacao(string token) => Ok(new { valida = leituras.Valida(token) });
+
+    [HttpPost("{token}")]
+    public IActionResult Enviar(string token, [FromBody] EnvioLeitura dto)
+    {
+        var (codigo, erro) = leituras.Registrar(token, dto?.Codigo ?? string.Empty);
+        return codigo is null ? BadRequest(erro) : Ok(new { valor = codigo.Valor, vencimento = codigo.Vencimento?.ToString("yyyy-MM-dd") ?? string.Empty });
+    }
+}
+
 /// <summary>Aviso do banco sobre pagamentos (pix-pagamento do Inter). Anônimo como o de cobrança; o token identifica a integração.</summary>
 [ApiController]
 [AllowAnonymous]
@@ -136,6 +158,19 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
         var r = await pagamentos.AtualizarAsync(id, ct);
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
+
+    /// <summary>"Ler boleto em outro dispositivo": abre a sessão (10 min) que o QR da tela leva para o celular.</summary>
+    [HttpPost("leitura")]
+    public async Task<IActionResult> AbrirLeitura([FromServices] LeituraBoletoService leituras)
+    {
+        var s = leituras.Abrir((await usuario.QuemAsync()).Id);
+        return Ok(new { token = s.Token, expiraEm = s.ExpiraEm.ToString("o") });
+    }
+
+    /// <summary>A tela pergunta se o celular já leu (pegou o código = a sessão acaba).</summary>
+    [HttpGet("leitura/{token}")]
+    public async Task<IActionResult> ConsultarLeitura(string token, [FromServices] LeituraBoletoService leituras) =>
+        leituras.Consultar(token, (await usuario.QuemAsync()).Id) is { } s ? Ok(s) : NotFound("Leitura não encontrada.");
 
     /// <summary>Boleto sem confirmação que o banco não mostra: encerra para poder mandar de novo.</summary>
     [HttpPost("{id}/descartar")]

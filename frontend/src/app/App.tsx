@@ -6,6 +6,7 @@ import { ConvitePage } from '@/features/auth/ConvitePage'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { LoginPage } from '@/features/auth/LoginPage'
 import { ProtectedRoute } from '@/features/auth/protected-route'
+import { LeituraBoletoPage } from '@/features/leituraBoleto/LeituraBoletoPage'
 import { AppLayout } from '@/features/layout/AppLayout'
 import { DashboardPage } from '@/features/dashboard/DashboardPage'
 import { SimuladorPage } from '@/features/simulador/SimuladorPage'
@@ -58,6 +59,8 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       {/* Convite por e-mail: público (a pessoa ainda não tem senha) */}
       <Route path="/convite/:token" element={<ConvitePage />} />
+      {/* Leitura do boleto pelo celular (pública: vale o token do QR, por 10 minutos) */}
+      <Route path="/leitura-boleto/:token" element={<LeituraBoletoPage />} />
 
       {/* Rotas protegidas dentro do layout */}
       <Route element={<ProtectedRoute />}>

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { AlertTriangle, CheckCircle2, Landmark, Send } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, FileUp, Landmark, Loader2, Send, Smartphone } from 'lucide-react'
 import { Modal } from '@/features/common/Modal'
 import ui from '@/features/common/ui.module.css'
 import { formatBRL } from '@/lib/format'
 import { getErrorMessage } from '@/lib/api'
 import { hojeISO } from './calculos'
 import { lerCodigoBoleto } from './codigoBoleto'
+import { lerArquivoBoleto } from './lerBoleto'
+import { LerOutroDispositivo } from './LerOutroDispositivo'
 import { agendarPagamentos, prepararPagamentos, rotuloPagamento, type PreparoPagamento, type ResultadoAgendamento } from './pagamentos'
 import s from './financeiro.module.css'
 
@@ -33,6 +35,19 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
   const [erro, setErro] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [resultados, setResultados] = useState<ResultadoAgendamento[] | null>(null)
+  // Boleto por arquivo (PDF ou foto, lido no navegador) ou pelo celular (QR).
+  const [lendoArquivo, setLendoArquivo] = useState('')
+  const [erroArquivo, setErroArquivo] = useState<Record<string, string>>({})
+  const [noCelular, setNoCelular] = useState<PreparoPagamento | null>(null)
+  const usarArquivo = async (id: string, arquivo: File | undefined) => {
+    if (!arquivo) return
+    setLendoArquivo(id)
+    setErroArquivo((x) => ({ ...x, [id]: '' }))
+    const r = await lerArquivoBoleto(arquivo)
+    setLendoArquivo('')
+    if ('codigo' in r) setCodigos((x) => ({ ...x, [id]: r.codigo }))
+    else setErroArquivo((x) => ({ ...x, [id]: r.erro }))
+  }
 
   useEffect(() => {
     let vivo = true
@@ -212,6 +227,17 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
                             aria-label={`Linha digitável do boleto de ${p.favorecido}`}
                             inputMode="numeric"
                           />
+                          <div className={s.pagFontes}>
+                            <label className={s.pagFonte} title="O boleto em PDF ou uma foto: o sistema acha a linha digitável ou lê o código de barras">
+                              {lendoArquivo === p.movimentoId ? <Loader2 size={13} className={s.girando} /> : <FileUp size={13} />}
+                              {lendoArquivo === p.movimentoId ? 'Lendo...' : 'Enviar boleto (PDF ou foto)'}
+                              <input type="file" accept="application/pdf,image/*" hidden onChange={(e) => { void usarArquivo(p.movimentoId, e.target.files?.[0]); e.target.value = '' }} />
+                            </label>
+                            <button type="button" className={s.pagFonte} onClick={() => setNoCelular(p)} title="Mostra um QR Code: o celular lê o código de barras com a câmera">
+                              <Smartphone size={13} /> Ler em outro dispositivo
+                            </button>
+                          </div>
+                          {erroArquivo[p.movimentoId] && <div className={s.pagProblema}><AlertTriangle size={12} /> {erroArquivo[p.movimentoId]}</div>}
                           {l?.codigo && !l.problema && (
                             <div className={s.pagLido}>
                               <CheckCircle2 size={12} /> {l.codigo.valor ? formatBRL(l.codigo.valor) : 'valor do lançamento'}
@@ -239,6 +265,13 @@ export function AgendarPagamentoModal({ movimentoIds, onClose, onFeito }: Props)
               })}
             </tbody>
           </table>
+          {noCelular && (
+            <LerOutroDispositivo
+              favorecido={`${noCelular.favorecido} · ${formatBRL(noCelular.valor)}`}
+              onLido={(codigo) => { setCodigos((x) => ({ ...x, [noCelular.movimentoId]: codigo })); setNoCelular(null) }}
+              onClose={() => setNoCelular(null)}
+            />
+          )}
           {pendencias.length > 0 && (
             <p className={s.pagProblema}>
               <AlertTriangle size={12} /> Falta {pendencias.map((p) => `${forma(p.movimentoId) === 'pix' ? 'a chave Pix' : 'o boleto'} de ${p.favorecido}`).join(', ')}.

@@ -200,3 +200,16 @@
 @media (max-width: 640px) { .variavelLinha { grid-template-columns: 1fr 1fr; } }
 .comVariavel { display: block; font-size: 10.5px; font-weight: 600; color: #b5651d; }
 .pagDescartar { margin-left: 6px; border: none; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 600; color: #a33a2a; text-decoration: underline; cursor: pointer; }
+
+/* Boleto: enviar o arquivo ou ler pelo celular */
+.pagFontes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+.pagFonte { display: inline-flex; align-items: center; gap: 5px; border: 1px dashed #d7d3ca; border-radius: 7px; background: #fff; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 600; color: #143d18; cursor: pointer; }
+.pagFonte:hover { border-color: #e8702f; background: #fffaf6; }
+.girando { animation: girar 0.9s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .girando { animation: none; } }
+.outroDispositivo { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: left; }
+.outroDispositivo img { border: 1px solid #e6e3db; border-radius: 12px; padding: 8px; background: #fff; }
+.outroDispositivo ol { margin: 0; padding-left: 20px; font-size: 13px; color: #3d4b43; display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
+.outroDispositivo p { margin: 0; font-size: 12px; align-self: stretch; }
+.linkLeitura { word-break: break-all; }

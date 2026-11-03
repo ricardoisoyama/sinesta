@@ -91,6 +91,8 @@ public static class DependencyInjection
         // Motor de NFS-e: provedores trocáveis (NFE.io real e simulador), escolhidos pela configuração
         // fiscal de cada empresa. A chave da NFE.io vem do ambiente; sem ela, só o simulador funciona.
         services.AddSingleton(TimeProvider.System);
+        // Sessões do "Ler boleto em outro dispositivo" (na memória, 10 minutos).
+        services.AddSingleton<Elrond.Application.Services.LeituraBoletoService>();
         var nfeio = new NfeIoOpcoes
         {
             ChaveApi = configuration["NfeIo:ChaveApi"] ?? string.Empty,
