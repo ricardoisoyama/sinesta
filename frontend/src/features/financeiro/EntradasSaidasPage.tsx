@@ -485,8 +485,16 @@ export function EntradasSaidasPage() {
           const baixaveis = abertos.filter((m) => m.aprovacao === 'aprovado')
           const pagaveis = baixaveis.filter((m) => m.tipo === 'pagar' && !(pagamentoDe(m) && vigente(pagamentoDe(m)!)))
           const aprovaveis = abertos.filter(aguardandoMim)
+          // Total do que está marcado (o valor que sai/entra: com desconto, juros e multa).
+          const somaPagar = itens.filter((m) => m.tipo === 'pagar').reduce((a, m) => a + liquidoDe(m), 0)
+          const somaReceber = itens.filter((m) => m.tipo === 'receber').reduce((a, m) => a + liquidoDe(m), 0)
           return (
             <>
+              <span className={s.selTotal}>
+                {somaPagar > 0 && <>a pagar <b>{formatBRL(somaPagar)}</b></>}
+                {somaPagar > 0 && somaReceber > 0 && ' · '}
+                {somaReceber > 0 && <>a receber <b>{formatBRL(somaReceber)}</b></>}
+              </span>
               {podeAprovar && (
                 <button
                   type="button"

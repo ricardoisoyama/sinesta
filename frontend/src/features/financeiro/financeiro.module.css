@@ -213,3 +213,7 @@
 .outroDispositivo ol { margin: 0; padding-left: 20px; font-size: 13px; color: #3d4b43; display: flex; flex-direction: column; gap: 4px; align-self: stretch; }
 .outroDispositivo p { margin: 0; font-size: 12px; align-self: stretch; }
 .linkLeitura { word-break: break-all; }
+
+/* Barra da seleção: total do que está marcado */
+.selTotal { font-size: 13px; color: #d9e6dc; margin-right: 8px; font-variant-numeric: tabular-nums; }
+.selTotal b { color: #fff; font-size: 14px; margin: 0; }
