@@ -29,9 +29,9 @@ const excluir = (id: string) => apiFetch<void>(`${base}/${id}`, { method: 'DELET
  * Cenários gravados no servidor. A tela mexe no estado local e cada cenário alterado grava sozinho
  * um instante depois (renomear letra a letra não vira uma gravação por tecla).
  */
-export function useCenarios() {
+export function useCenarios(habilitado = true) {
   const qc = useQueryClient()
-  const q = useQuery({ queryKey: ['cenarios-projecao'], queryFn: listar })
+  const q = useQuery({ queryKey: ['cenarios-projecao'], queryFn: listar, enabled: habilitado })
   const [editados, setEditados] = useState<Record<string, Cenario>>({})
   const [removidos, setRemovidos] = useState<string[]>([])
   const [erro, setErro] = useState('')

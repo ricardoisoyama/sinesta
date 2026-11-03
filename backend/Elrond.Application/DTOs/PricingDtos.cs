@@ -23,7 +23,9 @@ public record CalcularPrecoRequest(
     /// <summary>Alíquota do campo ICMS dos Dados da Operação (fração). Informada, substitui a busca por UfDestinoId.</summary>
     decimal? AliquotaIcms = null,
     /// <summary>Serviço do item: os impostos vêm dele (e decidem o ICMS). Obrigatório para precificar.</summary>
-    string? ServicoId = null
+    string? ServicoId = null,
+    /// <summary>Cenário da Projeção (só gestor/admin): DF e meta do mês com as hipóteses dele. Nulo = os cadastros (base).</summary>
+    string? CenarioId = null
 );
 
 /// <summary>
@@ -36,7 +38,9 @@ public record CalcularFatorRequest(string? EmpresaId, Empresa? Empresa = null, s
     /// <summary>Serviço do item do Pricing: os impostos vêm dele (a tabela do regime da empresa em vigor).</summary>
     string? ServicoId = null,
     /// <summary>true = precificação de item: sem serviço com impostos o fator não fica pronto. false = painéis da empresa (média dos serviços).</summary>
-    bool Precificar = false);
+    bool Precificar = false,
+    /// <summary>Cenário da Projeção (só gestor/admin): DF e meta do mês com as hipóteses dele. Nulo = os cadastros (base).</summary>
+    string? CenarioId = null);
 
 /// <summary>Um imposto do serviço já calculado (frações).</summary>
 public record ImpostoCalculadoDto(string Imposto, string Nome, decimal Base, decimal Aliquota, decimal Efetiva, bool AfetaPreco);
@@ -89,7 +93,10 @@ public record FatorResultado(
     /// <summary>Nulo = o serviço não tem impostos (o ICMS segue a regra da empresa).</summary>
     IcmsServicoDto? Icms = null,
     /// <summary>Qual tabela do serviço valeu (regime e vigência), ou por que o serviço caiu nos da empresa.</summary>
-    string ImpostosNota = "");
+    string ImpostosNota = "",
+    /// <summary>Cenário da Projeção usado no lugar dos cadastros (vazio = base) e o que ele mudou no mês.</summary>
+    string CenarioNome = "",
+    string CenarioNota = "");
 
 /// <summary>Resultado da precificação + memória de cálculo (fonte da verdade = servidor).</summary>
 public record CalcularPrecoResponse(

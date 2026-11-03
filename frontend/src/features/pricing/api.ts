@@ -22,6 +22,8 @@ export interface CalcularPrecoRequest {
   vendedorId?: string | null
   /** Serviço do item: com impostos cadastrados, eles substituem os da empresa (e decidem o ICMS). */
   servicoId?: string | null
+  /** Cenário da Projeção (só gestor/admin): DF e meta do mês com as hipóteses dele. */
+  cenarioId?: string | null
 }
 
 /** Um imposto do serviço já calculado (frações). */
@@ -80,6 +82,9 @@ export interface FatorResultado {
   icms?: { incide: boolean; aliquota: number; afetaPreco: boolean } | null
   /** Tabela do serviço que valeu (regime e vigência), ou por que caiu nos impostos da empresa. */
   impostosNota?: string
+  /** Cenário da Projeção usado no lugar dos cadastros (vazio = base) e o que ele mudou no mês. */
+  cenarioNome?: string
+  cenarioNota?: string
 }
 
 export interface CalcularFatorRequest {
@@ -94,6 +99,8 @@ export interface CalcularFatorRequest {
   servicoId?: string | null
   /** Precificação de item: sem serviço com impostos o fator não fica pronto (o Pricing bloqueia e diz por quê). */
   precificar?: boolean
+  /** Cenário da Projeção (só gestor/admin): DF e meta do mês com as hipóteses dele. */
+  cenarioId?: string | null
 }
 
 /** Resposta do motor no servidor (.NET) — fonte da verdade do preço. */

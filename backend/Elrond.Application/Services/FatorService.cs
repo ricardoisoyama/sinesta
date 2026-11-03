@@ -23,10 +23,13 @@ public class FatorService : IFatorService
     private readonly ICrudRepository<Meta> _metas;
     private readonly ICrudRepository<RegraAprovacao> _regras;
     private readonly ICrudRepository<Servico> _servicos;
+    private readonly ICrudRepository<CenarioProjecao>? _cenarios;
 
     public FatorService(ICrudRepository<Empresa> empresas, ICrudRepository<CustoFixo> custos,
-        ICrudRepository<Meta> metas, ICrudRepository<RegraAprovacao> regras, ICrudRepository<Servico> servicos)
+        ICrudRepository<Meta> metas, ICrudRepository<RegraAprovacao> regras, ICrudRepository<Servico> servicos,
+        ICrudRepository<CenarioProjecao>? cenarios = null)
     {
+        _cenarios = cenarios;
         _empresas = empresas;
         _custos = custos;
         _metas = metas;
@@ -62,7 +65,35 @@ public class FatorService : IFatorService
         // Sem serviço (painéis da empresa: markup, dashboard, break-even): a média dos impostos dos serviços.
         var servicos = servico is null && !req.Precificar ? await _servicos.ListarAsync(s => s.Status == "ativo") : [];
         var hoje = DateOnly.FromDateTime(DateTime.UtcNow);
-        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro, servico, req.Precificar, servicos));
+        CenarioProjecao? cenario = null;
+        if (!string.IsNullOrWhiteSpace(req.CenarioId))
+        {
+            cenario = _cenarios is null ? null : await _cenarios.GetByIdAsync(req.CenarioId);
+            if (cenario is null || cenario.Status == "inativo") return Result.Failure<FatorResultado>("Cenário da Projeção não encontrado.");
+        }
+        return Result.Success(Calcular(empresa, id, custos, metas, hoje, padrao, req.Comissoes, req.Lucro, servico, req.Precificar, servicos, cenario));
+    }
+
+    /// <summary>
+    /// Hipóteses do cenário que valem no mês, na mesma ordem da Projeção: receita × (1 + variação da meta) + nova
+    /// receita, × (1 + sensibilidade); DF − despesas cortadas, × (1 + reajuste), + despesas novas. Os valores das
+    /// hipóteses entram inteiros na empresa que está sendo precificada. Custo variável é só demonstrativo.
+    /// </summary>
+    public static (decimal Df, decimal Receita, string Nota) AplicarCenario(CenarioProjecao c, decimal df, decimal receita, DateOnly mes,
+        Func<string, decimal> valorDoCusto)
+    {
+        var chave = mes.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
+        var hs = c.Hipoteses.Where(h => h.Ativa && string.CompareOrdinal(h.Inicio, chave) <= 0 && (h.Fim.Length == 0 || string.CompareOrdinal(h.Fim, chave) >= 0)).ToList();
+        foreach (var h in hs.Where(h => h.Tipo == "variacao-meta")) receita *= 1 + h.Valor;
+        foreach (var h in hs.Where(h => h.Tipo == "nova-receita")) receita += h.Valor;
+        receita *= 1 + c.Sensibilidade;
+        foreach (var h in hs.Where(h => h.Tipo == "cortar-custo" && h.CustoId.Length > 0)) df -= valorDoCusto(h.CustoId);
+        foreach (var h in hs.Where(h => h.Tipo == "reajuste-custos")) df *= 1 + h.Valor;
+        foreach (var h in hs.Where(h => h.Tipo == "novo-custo")) df += h.Valor;
+        var usadas = hs.Count(h => h.Tipo != "custo-variavel");
+        var nota = usadas == 0 && c.Sensibilidade == 0 ? "sem hipóteses neste mês: igual à base"
+            : $"{usadas} hipótese(s) do mês{(c.Sensibilidade != 0 ? $", faturamento {(c.Sensibilidade > 0 ? "+" : "")}{c.Sensibilidade:P0}" : string.Empty)}";
+        return (Math.Max(0m, df), Math.Max(0m, receita), nota);
     }
 
     /// <summary>
@@ -71,7 +102,7 @@ public class FatorService : IFatorService
     /// </summary>
     public static FatorResultado Calcular(Empresa empresa, string empresaId, IEnumerable<CustoFixo> custos, IEnumerable<Meta> metas,
         DateOnly hoje, decimal comissaoPadrao, decimal? comissoes = null, decimal? lucro = null, Servico? servico = null,
-        bool precificar = false, IEnumerable<Servico>? servicos = null)
+        bool precificar = false, IEnumerable<Servico>? servicos = null, CenarioProjecao? cenario = null)
     {
         // DF da empresa = a parte dela em cada despesa (inteira se for só dela; o percentual se rateada).
         var naDf = custos.Where(c => c.EntraNaDf(hoje) && c.PercentualDa(empresaId) > 0).ToList();
@@ -82,6 +113,10 @@ public class FatorService : IFatorService
         // A meta escolhe a base: "media" = média mensal do ano (preço estável o ano todo);
         // "mes" = meta do mês corrente, igual à planilha (G58:G69), e o preço muda a cada mês.
         var faturamentoMensal = meta?.BaseDoMes(hoje.Month) ?? 0m;
+        var notaCenario = string.Empty;
+        if (cenario is not null)
+            (totalDf, faturamentoMensal, notaCenario) = AplicarCenario(cenario, totalDf, faturamentoMensal, hoje,
+                id => naDf.FirstOrDefault(c => c.Id == id)?.ValorPara(empresaId) ?? 0m);
         var semMeta = faturamentoMensal <= 0;
         var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
@@ -174,7 +209,9 @@ public class FatorService : IFatorService
             ImpostosDetalhe: detalhe,
             ImpostosDestacados: destacados,
             Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, 0m, icmsDoServico?.AfetaPreco ?? false),
-            ImpostosNota: notaImpostos);
+            ImpostosNota: notaImpostos,
+            CenarioNome: cenario?.Nome ?? string.Empty,
+            CenarioNota: notaCenario);
     }
 
     private static string DataBr(string iso) =>

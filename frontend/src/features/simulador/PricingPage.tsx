@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { useCenarios } from '@/features/projecao/api'
 import { AlertTriangle, Calculator, Check, ClipboardList, Eye, FileText, Pencil, Plus, Receipt, RotateCcw, Settings2, ShieldCheck, Trash2, Undo2, UserPlus } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
@@ -173,7 +174,11 @@ export function PricingPage() {
   const vendedorSel = vendedores.find((v) => v.id === vendedorId)
 
   // ── fator da empresa (motor do servidor) ──
-  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado, servicoId: servicoId || null, precificar: true }, !!empresaId)
+  // Gestor/admin pode precificar pelos parâmetros de um cenário da Projeção (padrão: a base, os cadastros de hoje).
+  const { cenarios } = useCenarios(ehGestor)
+  const [cenarioId, setCenarioId] = useState('')
+  const cenarioUsado = ehGestor && cenarios.some((c) => c.id === cenarioId) ? cenarioId : ''
+  const fatorEmpresa = useFator({ empresaId, vendedorId: vendedorId || null, comissoes: comissaoEditada, lucro: lucroEditado, servicoId: servicoId || null, precificar: true, cenarioId: cenarioUsado || null }, !!empresaId)
   const fr = fatorEmpresa.fator
   const semFator = !!fr && !fr.pronto
   const dfPct = fr?.pronto ? fr.dfPct : 0
@@ -248,6 +253,7 @@ export function PricingPage() {
       comissoes: comissaoEditada,
       vendedorId: vendedorId || null,
       servicoId: servicoId || null,
+      cenarioId: cenarioUsado || null,
     },
     temCusto && !!empresaId && !!fr?.pronto,
   )
@@ -582,6 +588,15 @@ export function PricingPage() {
                 </select>
               </label>
             )}
+            {ehGestor && cenarios.length > 0 && (
+              <label className={s.empresaSel} title="Precificar com a DF e a meta de um cenário da Projeção (as hipóteses do mês). Base = os cadastros de hoje.">
+                Parâmetros
+                <select value={cenarioUsado} onChange={(e) => setCenarioId(e.target.value)} aria-label="Parâmetros do preço">
+                  <option value="">Base (cadastros de hoje)</option>
+                  {cenarios.map((c) => <option key={c.id} value={c.id}>Cenário: {c.nome}</option>)}
+                </select>
+              </label>
+            )}
             {/* Só aparece quando a empresa tem mais de um tipo (com um só, não há o que escolher). */}
             {tiposOperacao.length > 1 && (
               <label className={s.empresaSel}>
@@ -865,6 +880,12 @@ export function PricingPage() {
             </div>
             {podeVerCalculo && fr?.pronto && (
               <>
+                {fr.cenarioNome && (
+                  <div className={base.memRow}>
+                    <span className={base.memLabel}>Parâmetros do cenário {fr.cenarioNome} <span className={base.memSub}>{fr.cenarioNota}: DF {formatBRL(fr.totalDf)} sobre {formatBRL(fr.faturamentoMensal)}</span></span>
+                    <span className={base.memVal}>Projeção</span>
+                  </div>
+                )}
                 <div className={base.memRow}><span className={base.memLabel}>× Fator (DF {formatPct(dfPct)} + DV {formatPct(dvSem)} + lucro {formatPct(lucro)})</span><span className={base.memVal}>{fator4(fatorVal)}</span></div>
                 <div className={base.memRow}>
                   <span className={base.memLabel}>

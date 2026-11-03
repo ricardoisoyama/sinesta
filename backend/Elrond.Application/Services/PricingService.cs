@@ -34,7 +34,7 @@ public class PricingService : IPricingService
         if (empresa is null)
             return Result.Failure<CalcularPrecoResponse>("Empresa não encontrada.");
 
-        var rf = await _fator.CalcularAsync(new CalcularFatorRequest(req.EmpresaId, null, req.VendedorId, req.Comissoes, req.LucroDesejado, req.ServicoId, Precificar: true));
+        var rf = await _fator.CalcularAsync(new CalcularFatorRequest(req.EmpresaId, null, req.VendedorId, req.Comissoes, req.LucroDesejado, req.ServicoId, Precificar: true, CenarioId: req.CenarioId));
         if (!rf.IsSuccess) return Result.Failure<CalcularPrecoResponse>(rf.Error!);
         var f = rf.Value!;
         // Sem meta (ou com despesas acima de 100%) não há fator: o Pricing bloqueia com o motivo.
