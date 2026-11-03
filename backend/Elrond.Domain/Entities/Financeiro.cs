@@ -100,6 +100,8 @@ public class Movimento : Rastreavel, IEntity, INumerado
     public string PixSituacao { get; set; } = string.Empty;
     /// <summary>Data marcada no banco para o Pix em andamento (yyyy-MM-dd). Não é gravado: a lista preenche.</summary>
     public string PixData { get; set; } = string.Empty;
+    /// <summary>Forma do pagamento em andamento: pix | boleto. Não é gravado: a lista preenche.</summary>
+    public string PixForma { get; set; } = string.Empty;
     public string OrigemId { get; set; } = string.Empty;
     public string Observacao { get; set; } = string.Empty;
     public bool Cancelado { get; set; }

@@ -139,6 +139,8 @@ export interface Movimento {
   pagoPeloBanco?: boolean
   /** Pix em andamento no banco (vem do servidor): aguardando-aprovacao, agendado, processando... */
   pixSituacao?: string
+  /** pix | boleto (o pagamento em andamento). */
+  pixForma?: string
   /** Data marcada no banco para esse Pix (yyyy-MM-dd). */
   pixData?: string
   observacao: string

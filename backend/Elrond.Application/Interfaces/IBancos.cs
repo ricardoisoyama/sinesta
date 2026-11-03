@@ -103,7 +103,8 @@ public enum DesfechoPagamento
 public sealed record EnvioPagamento(DesfechoPagamento Desfecho, string IdBanco, string Mensagem);
 
 /// <summary>Situação do pagamento no banco, traduzida para as nossas (PagamentoBancario.*).</summary>
-public sealed record SituacaoPagamento(string Situacao, string SituacaoBanco, string EndToEnd, string PagoEm, string Mensagem);
+/// <remarks>Boleto: EndToEnd = autenticação bancária; Beneficiario = quem recebeu, segundo o banco.</remarks>
+public sealed record SituacaoPagamento(string Situacao, string SituacaoBanco, string EndToEnd, string PagoEm, string Mensagem, string Beneficiario = "");
 
 public sealed record ConsultaPagamento(SituacaoPagamento? Situacao, bool NaoExiste, string Falha)
 {
@@ -115,11 +116,21 @@ public sealed record ConsultaPagamento(SituacaoPagamento? Situacao, bool NaoExis
 /// <summary>O que o banco mandou no aviso de um pagamento (o ELROND confere no banco antes de dar baixa).</summary>
 public sealed record AvisoPagamento(string IdBanco, string Situacao, string DataHora);
 
-/// <summary>Capacidade de pagamento: Pix (enviar, consultar) e o aviso de quando ele é efetivado.</summary>
+/// <summary>
+/// Boleto a pagar (código de barras ou linha digitável, só dígitos). O banco NÃO tem chave de idempotência
+/// para boleto: envio incerto se confere procurando pelo código (<see cref="IPagamentoBancario.ProcurarBoletoAsync"/>), nunca reenviando.
+/// </summary>
+public sealed record PedidoBoleto(string Id, string Codigo, decimal Valor, string Data, string Vencimento);
+
+/// <summary>Capacidade de pagamento: Pix e boleto (enviar, consultar) e o aviso de quando ele é efetivado.</summary>
 public interface IPagamentoBancario
 {
     Task<EnvioPagamento> PagarPixAsync(CredencialBanco credencial, PedidoPix pedido, CancellationToken ct = default);
     Task<ConsultaPagamento> ConsultarPixAsync(CredencialBanco credencial, string idBanco, CancellationToken ct = default);
+    Task<EnvioPagamento> PagarBoletoAsync(CredencialBanco credencial, PedidoBoleto pedido, CancellationToken ct = default);
+    Task<ConsultaPagamento> ConsultarBoletoAsync(CredencialBanco credencial, string idBanco, CancellationToken ct = default);
+    /// <summary>Envio incerto: procura no banco o pagamento deste código incluído nos últimos dias. Devolve o código do banco ou vazio.</summary>
+    Task<(string IdBanco, string Falha)> ProcurarBoletoAsync(CredencialBanco credencial, string codigo, CancellationToken ct = default);
     /// <summary>Cadastra no banco o endereço que ele chama quando um pagamento muda de situação. Null = ok.</summary>
     Task<string?> RegistrarAvisoAsync(CredencialBanco credencial, string url, CancellationToken ct = default);
     IReadOnlyList<AvisoPagamento> LerAviso(string corpo);

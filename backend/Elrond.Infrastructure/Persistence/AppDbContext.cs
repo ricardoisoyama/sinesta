@@ -95,6 +95,11 @@ public class AppDbContext : DbContext
             e.HasKey(p => p.Id);
             e.Property(p => p.Situacao).IsRequired().HasMaxLength(30);
             e.Property(p => p.Chave).HasMaxLength(80);
+            // Boleto (aditivo): os Pix que já existem ficam "pix" e sem código.
+            e.Property(p => p.Forma).IsRequired().HasMaxLength(10).HasDefaultValue(PagamentoBancario.FormaPix);
+            e.Property(p => p.CodigoBarras).IsRequired().HasMaxLength(48).HasDefaultValue(string.Empty);
+            e.Property(p => p.VencimentoBoleto).IsRequired().HasMaxLength(10).HasDefaultValue(string.Empty);
+            e.Property(p => p.Beneficiario).IsRequired().HasMaxLength(200).HasDefaultValue(string.Empty);
             e.Property(p => p.Descricao).HasMaxLength(140);
             e.Property(p => p.Mensagem).HasMaxLength(500);
             e.Ignore(p => p.Vigente);
@@ -780,6 +785,7 @@ public class AppDbContext : DbContext
             e.HasKey(m => m.Id);
             e.Ignore(m => m.PixSituacao);
             e.Ignore(m => m.PixData);
+            e.Ignore(m => m.PixForma);
             // Número do lançamento (cada parcela tem o seu): o banco gera (sequência); o repositório
             // preserva na alteração.
             e.Property(m => m.Numero).HasDefaultValueSql("nextval('movimentos_numero_seq')");

@@ -68,7 +68,7 @@ public static class ComprovantePdf
         Cmd($"0.91 0.44 0.18 rg 0 {N(A - altFaixa - 3)} {N(L)} 3 re f");
 
         var y = A - altFaixa - 48;
-        Texto("F2", 18, Margem, y, "Comprovante de pagamento Pix", "0.08 0.24 0.09");
+        Texto("F2", 18, Margem, y, ComprovanteEmail.Titulo(c), "0.08 0.24 0.09");
         y -= 18;
         Texto("F1", 10, Margem, y, $"Lançamento nº {c.Numero}", "0.42 0.48 0.45");
         y -= 42;
@@ -91,7 +91,7 @@ public static class ComprovantePdf
         }
         Cmd($"0.91 0.9 0.87 RG 0.6 w {N(Margem)} {N(y)} m {N(L - Margem)} {N(y)} l S");
         y -= 22;
-        Texto("F1", 8.5f, Margem, y, "Gerado pelo ELROND com os dados devolvidos pelo banco. O ID do Pix identifica a transação em qualquer banco.", "0.55 0.6 0.57");
+        Texto("F1", 8.5f, Margem, y, $"Gerado pelo ELROND com os dados devolvidos pelo banco. {ComprovanteEmail.Nota(c)}", "0.55 0.6 0.57");
 
         // Faixa do rodapé: quem pagou
         Cmd($"0.08 0.24 0.09 rg 0 0 {N(L)} 56 re f");

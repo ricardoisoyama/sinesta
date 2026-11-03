@@ -31,7 +31,15 @@ export interface ComprovantePixDados {
   emailSituacao: string
   emailPara: string
   emailEm: string
+  forma?: 'pix' | 'boleto'
+  codigoBarras?: string
+  vencimentoBoleto?: string
+  beneficiario?: string
 }
+
+const boleto = (c: ComprovantePixDados) => c.forma === 'boleto'
+const titulo = (c: ComprovantePixDados) => (boleto(c) ? 'Comprovante de pagamento de boleto' : 'Comprovante de pagamento Pix')
+const idRotulo = (c: ComprovantePixDados) => (boleto(c) ? 'Autenticação bancária' : 'ID do Pix (fim a fim)')
 
 const TIPO_CHAVE: Record<string, string> = { cpf: 'CPF', cnpj: 'CNPJ', celular: 'Celular', email: 'E-mail', aleatoria: 'Chave aleatória' }
 
@@ -44,12 +52,14 @@ const quando = (iso: string) => {
 
 const linhasDo = (c: ComprovantePixDados): [string, string][] => [
   ['Valor', formatBRL(c.valor)],
-  ['Efetivado no banco em', quando(c.efetivadoEm)],
-  ['Favorecido', c.favorecido],
-  ['Chave Pix', `${c.chave}${c.tipoChave ? ` (${TIPO_CHAVE[c.tipoChave] ?? c.tipoChave})` : ''}`],
+  [boleto(c) ? 'Pago no banco em' : 'Efetivado no banco em', quando(c.efetivadoEm)],
+  ['Favorecido', boleto(c) && c.beneficiario ? c.beneficiario : c.favorecido],
+  ...(boleto(c)
+    ? ([['Código de barras', c.codigoBarras || '—'], ['Vencimento', c.vencimentoBoleto ? c.vencimentoBoleto.split('-').reverse().join('/') : '—']] as [string, string][])
+    : ([['Chave Pix', `${c.chave}${c.tipoChave ? ` (${TIPO_CHAVE[c.tipoChave] ?? c.tipoChave})` : ''}`]] as [string, string][])),
   ['Pago por', [c.empresa, c.banco, c.conta].filter(Boolean).join(' · ')],
-  ['ID do Pix (fim a fim)', c.idPix || '—'],
-  ['Código da solicitação no banco', c.codigoBanco || '—'],
+  [idRotulo(c), c.idPix || '—'],
+  [boleto(c) ? 'Código da transação no banco' : 'Código da solicitação no banco', c.codigoBanco || '—'],
   ['Referência', c.descricao],
   ['Agendado por', `${c.agendadoPor || '—'} em ${quando(c.agendadoEm)}`],
   ['Confirmação', `${c.confirmadoComo} em ${quando(c.confirmadoEm)}`],
@@ -63,7 +73,7 @@ function imprimir(c: ComprovantePixDados) {
   const w = window.open('', '_blank', 'width=720,height=860')
   if (!w) return
   const linhas = linhasDo(c).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')
-  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Comprovante Pix · lançamento ${c.numero}</title>
+  w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${titulo(c)} · lançamento ${c.numero}</title>
 <style>
   body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #1f2a24; margin: 40px; }
   h1 { font-size: 20px; margin: 0 0 4px; color: #143d18; }
@@ -75,18 +85,18 @@ function imprimir(c: ComprovantePixDados) {
   footer { margin-top: 28px; font-size: 11px; color: #9aa39b; }
   ${c.ambiente !== 'producao' ? '.teste { color: #b5651d; font-weight: 700; }' : ''}
 </style></head><body>
-<h1>Comprovante de pagamento Pix</h1>
+<h1>${titulo(c)}</h1>
 <p class="sub">Lançamento nº ${c.numero}${c.ambiente !== 'producao' ? ' · <span class="teste">AMBIENTE DE TESTE (sandbox)</span>' : ''}</p>
 <div class="valor">${esc(formatBRL(c.valor))}</div>
 <table>${linhas}</table>
-<footer>Gerado pelo ELROND com os dados devolvidos pelo banco. O ID do Pix identifica a transação em qualquer banco.</footer>
+<footer>Gerado pelo ELROND com os dados devolvidos pelo banco. ${boleto(c) ? 'A autenticação bancária identifica o pagamento no banco.' : 'O ID do Pix identifica a transação em qualquer banco.'}</footer>
 <script>window.onload = () => window.print()</script>
 </body></html>`)
   w.document.close()
 }
 
 /** Baixa o PDF do comprovante (o mesmo que vai anexo no e-mail ao favorecido). */
-async function baixarPdf(movimentoId: string, numero: number) {
+async function baixarPdf(movimentoId: string, numero: number, forma = 'pix') {
   try {
     const token = localStorage.getItem('token')
     const res = await fetch(`${env.apiUrl}/financeiro/movimentos/${encodeURIComponent(movimentoId)}/comprovante-pix/pdf`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
@@ -94,7 +104,7 @@ async function baixarPdf(movimentoId: string, numero: number) {
     const url = URL.createObjectURL(await res.blob())
     const a = document.createElement('a')
     a.href = url
-    a.download = `comprovante-pix-lancamento-${numero}.pdf`
+    a.download = `comprovante-${forma}-lancamento-${numero}.pdf`
     a.click()
     URL.revokeObjectURL(url)
   } catch (e) {
@@ -119,7 +129,7 @@ export function ComprovantePix({ movimentoId }: { movimentoId: string }) {
   return (
     <section className={ui.fsection}>
       <div className={ui.fsectionTitle}>
-        <Landmark size={13} /> Comprovante do Pix <span className={ui.fsectionHint}>pago pelo ELROND</span>
+        <Landmark size={13} /> {boleto(c) ? 'Comprovante do boleto' : 'Comprovante do Pix'} <span className={ui.fsectionHint}>pago pelo ELROND</span>
       </div>
       <dl className={s.comprovante}>
         {linhasDo(c).map(([k, v]) => (
@@ -127,18 +137,18 @@ export function ComprovantePix({ movimentoId }: { movimentoId: string }) {
             <dt>{k}</dt>
             <dd>
               {v}
-              {k.startsWith('ID do Pix') && c.idPix && (
-                <button type="button" className={ui.iconBtn} title="Copiar o ID do Pix" onClick={() => void copiar()}>
+              {k === idRotulo(c) && c.idPix && (
+                <button type="button" className={ui.iconBtn} title={`Copiar: ${k}`} onClick={() => void copiar()}>
                   <Copy size={13} />
                 </button>
               )}
-              {k.startsWith('ID do Pix') && copiado && <span className={s.copiado}>copiado</span>}
+              {k === idRotulo(c) && copiado && <span className={s.copiado}>copiado</span>}
             </dd>
           </div>
         ))}
       </dl>
       <div className={s.comprovanteAcoes}>
-        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void baixarPdf(c.movimentoId, c.numero)}>
+        <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => void baixarPdf(c.movimentoId, c.numero, c.forma)}>
           <Download /> Baixar PDF
         </button>
         <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => imprimir(c)}>

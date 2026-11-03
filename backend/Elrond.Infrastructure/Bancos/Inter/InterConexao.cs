@@ -28,6 +28,8 @@ public sealed class InterConexao(InterOpcoes opcoes, TimeProvider relogio) : IDi
     public const string Escopos = "boleto-cobranca.read boleto-cobranca.write extrato.read";
     /// <summary>Escopos dos pagamentos (token à parte: integração sem pagamento continua cobrando).</summary>
     public const string EscoposPagamento = "pagamento-pix.write pagamento-pix.read webhook-banking.write webhook-banking.read";
+    /// <summary>Escopos do pagamento de boleto (token à parte: sem a permissão no Inter, o Pix segue funcionando).</summary>
+    public const string EscoposBoleto = "pagamento-boleto.write pagamento-boleto.read webhook-banking.write webhook-banking.read";
 
     private sealed record Cliente(HttpClient Http, string Impressao);
     private sealed record Token(string Valor, DateTimeOffset VenceEm);

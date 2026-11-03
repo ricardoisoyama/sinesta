@@ -98,12 +98,43 @@ public sealed class SimuladorPagamento : IPagamentoBancario
 
     public Task<string?> RegistrarAvisoAsync(CredencialBanco c, string url, CancellationToken ct = default) => Task.FromResult<string?>(null);
 
-    /// <summary>Mesmo formato do Inter. PROCESSADO/PAGO "aprova" o Pix no simulador (para a conferência achar pago).</summary>
+    // Boleto: como no Inter, NÃO há idempotência (pedir duas vezes inclui dois pagamentos). Valor terminado
+    // em ,13 simula envio sem resposta (o pagamento fica incluído); ,66 recusa.
+    private sealed record Boleto(string Id, PedidoBoleto Pedido, string Status, string PagoEm, string IncluidoEm);
+    private readonly ConcurrentDictionary<string, Boleto> _boletos = new();
+
+    /// <summary>Quantos pagamentos de boleto o simulador incluiu (o teste confere que nunca paga duas vezes).</summary>
+    public int BoletosIncluidos(string codigo) => _boletos.Values.Count(b => b.Pedido.Codigo == codigo);
+
+    public Task<EnvioPagamento> PagarBoletoAsync(CredencialBanco c, PedidoBoleto p, CancellationToken ct = default)
+    {
+        var centavos = (int)(p.Valor * 100 % 100);
+        if (centavos == 66) return Task.FromResult(new EnvioPagamento(DesfechoPagamento.Recusado, string.Empty, "boleto já pago ou vencido (simulador)"));
+        var id = Guid.NewGuid().ToString();
+        _boletos[id] = new Boleto(id, p, "AGUARDANDO_APROVACAO", string.Empty, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        return Task.FromResult(centavos == 13
+            ? new EnvioPagamento(DesfechoPagamento.Incerto, string.Empty, "sem resposta (simulador)")
+            : new EnvioPagamento(DesfechoPagamento.AguardandoAprovacao, id, string.Empty));
+    }
+
+    public Task<ConsultaPagamento> ConsultarBoletoAsync(CredencialBanco c, string idBanco, CancellationToken ct = default) =>
+        Task.FromResult(_boletos.TryGetValue(idBanco, out var b)
+            ? ConsultaPagamento.Encontrado(new SituacaoPagamento(Inter.InterPagamento.NossaBoleto(b.Status), b.Status, b.Status == "REALIZADO" ? $"AUT{b.Id[..8]}" : string.Empty, b.PagoEm, string.Empty, "Beneficiário simulado"))
+            : ConsultaPagamento.Inexistente());
+
+    public Task<(string IdBanco, string Falha)> ProcurarBoletoAsync(CredencialBanco c, string codigo, CancellationToken ct = default) =>
+        Task.FromResult((_boletos.Values.Where(b => b.Pedido.Codigo == codigo).OrderByDescending(b => b.IncluidoEm).Select(b => b.Id).FirstOrDefault() ?? string.Empty, string.Empty));
+
+    /// <summary>Mesmo formato do Inter. PROCESSADO/PAGO (Pix) e REALIZADO (boleto) "aprovam" no simulador (para a conferência achar pago).</summary>
     public IReadOnlyList<AvisoPagamento> LerAviso(string corpo)
     {
         var avisos = Inter.InterPagamento.Aviso(corpo);
-        foreach (var a in avisos.Where(a => a.Situacao is "PROCESSADO" or "PAGO"))
-            if (_pix.TryGetValue(a.IdBanco, out var r)) _pix[a.IdBanco] = r with { Status = "PAGO", PagoEm = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss") };
+        var agora = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss");
+        foreach (var a in avisos.Where(a => a.Situacao is "PROCESSADO" or "PAGO" or "REALIZADO"))
+        {
+            if (_pix.TryGetValue(a.IdBanco, out var r)) _pix[a.IdBanco] = r with { Status = "PAGO", PagoEm = agora };
+            if (_boletos.TryGetValue(a.IdBanco, out var b)) _boletos[a.IdBanco] = b with { Status = "REALIZADO", PagoEm = agora[..10] };
+        }
         return avisos;
     }
 

@@ -14,6 +14,11 @@ export interface PagamentoBancario {
   favorecidoNome: string
   favorecidoEmail: string
   chave: string
+  /** pix | boleto */
+  forma?: 'pix' | 'boleto'
+  codigoBarras?: string
+  vencimentoBoleto?: string
+  beneficiario?: string
   valor: number
   data: string
   descricao: string
@@ -66,14 +71,28 @@ export const ROTULO_PAGAMENTO: Record<SituacaoPagamento, string> = {
   incerto: 'Sem confirmação (conferindo)',
 }
 
+/** Rótulo da situação com a forma certa ("Boleto aguardando aprovação no app"). */
+export const rotuloPagamento = (p: Pick<PagamentoBancario, 'situacao' | 'forma'>) =>
+  p.forma === 'boleto' ? ROTULO_PAGAMENTO[p.situacao].replace(/^Pix /, 'Boleto ') : ROTULO_PAGAMENTO[p.situacao]
+
 /** Pagamento que ainda vale para o lançamento (não terminou recusado/cancelado/falha). */
 export const vigente = (p: PagamentoBancario) => !['recusado', 'cancelado', 'falha'].includes(p.situacao)
 
 const base = '/pagamentos'
 export const listarPagamentos = () => apiFetch<PagamentoBancario[]>(base)
 export const prepararPagamentos = (movimentoIds: string[]) => apiFetch<PreparoPagamento[]>(`${base}/preparar`, { method: 'POST', body: JSON.stringify({ movimentoIds }) })
-export const agendarPagamentos = (itens: { movimentoId: string; chave: string }[], data: string) =>
+export interface ItemAgendamento {
+  movimentoId: string
+  chave: string
+  forma?: 'pix' | 'boleto'
+  /** Boleto: linha digitável ou código de barras. */
+  codigo?: string
+  /** Boleto sem vencimento no código (conta de consumo): yyyy-MM-dd. */
+  vencimento?: string
+}
+export const agendarPagamentos = (itens: ItemAgendamento[], data: string) =>
   apiFetch<ResultadoAgendamento[]>(`${base}/agendar`, { method: 'POST', body: JSON.stringify({ itens, data }) })
+export const descartarPagamento = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/descartar`, { method: 'POST' })
 export const atualizarPagamento = (id: string) => apiFetch<PagamentoBancario>(`${base}/${encodeURIComponent(id)}/atualizar`, { method: 'POST' })
 
 /** Pagamentos pelo banco (só quem tem a permissão do piloto). Enquanto algum espera o banco, relê a cada 20 s. */

@@ -149,6 +149,14 @@
 .pagTopo { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
 .pagTopo .periodo { font-weight: 600; color: #3d4b43; }
 .pagChave { width: 100%; min-width: 220px; height: 34px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; }
+.pagCodigo { min-width: 330px; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+.pagForma { display: inline-flex; border: 1px solid #d7d3ca; border-radius: 8px; overflow: hidden; }
+.pagForma button { border: none; background: #fff; padding: 6px 12px; font: inherit; font-size: 12.5px; font-weight: 600; color: #6b7b72; cursor: pointer; }
+.pagForma button + button { border-left: 1px solid #d7d3ca; }
+.pagForma .pagFormaOn { background: #143d18; color: #fff; }
+.pagLido { display: flex; align-items: center; gap: 4px; margin-top: 3px; font-size: 12px; font-weight: 600; color: #2e7d44; font-variant-numeric: tabular-nums; }
+.pagVenc { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 12px; color: #3d4b43; }
+.pagVenc input { height: 30px; border: 1px solid #d7d3ca; border-radius: 8px; padding: 4px 8px; font: inherit; font-size: 12.5px; }
 .pagProblema { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: #b5651d; margin-top: 2px; }
 .pagLista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .pagLista li { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 10px; }
@@ -191,3 +199,4 @@
 .variaveisTotal b { color: #143d18; }
 @media (max-width: 640px) { .variavelLinha { grid-template-columns: 1fr 1fr; } }
 .comVariavel { display: block; font-size: 10.5px; font-weight: 600; color: #b5651d; }
+.pagDescartar { margin-left: 6px; border: none; background: none; padding: 0; font: inherit; font-size: 11px; font-weight: 600; color: #a33a2a; text-decoration: underline; cursor: pointer; }

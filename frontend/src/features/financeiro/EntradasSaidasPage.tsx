@@ -10,7 +10,7 @@ import { useEmpresasQuery } from '@/features/cadastros/hooks'
 import { empresaPadrao } from '@/features/unidades/types'
 import { AprovacaoModal } from './AprovacaoModal'
 import { AgendarPagamentoModal } from './AgendarPagamentoModal'
-import { atualizarPagamento, ROTULO_PAGAMENTO, usePagamentos, vigente, type PagamentoBancario } from './pagamentos'
+import { atualizarPagamento, descartarPagamento, ROTULO_PAGAMENTO, rotuloPagamento, usePagamentos, vigente, type PagamentoBancario } from './pagamentos'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { CrudList } from '@/features/common/CrudList'
@@ -35,7 +35,7 @@ const motivoCurto = (msg: string) => {
 
 /** Situação do Pix em andamento; o agendado leva a data marcada no banco: "Pix agendado (21/10/2026)". */
 const rotuloPix = (m: Movimento) => {
-  const base = PIX_SITUACAO[m.pixSituacao ?? ''] ?? 'Pix no banco'
+  const base = (PIX_SITUACAO[m.pixSituacao ?? ''] ?? 'Pix no banco').replace('Pix', m.pixForma === 'boleto' ? 'boleto' : 'Pix').replace(/^boleto/, 'Boleto')
   return m.pixSituacao === 'agendado' && m.pixData ? `${base} (${m.pixData.split('-').reverse().join('/')})` : base
 }
 
@@ -97,6 +97,21 @@ export function EntradasSaidasPage() {
       }
     }
     await Promise.all([recarregarPagamentos(), recarregar()])
+  }
+  const descartarBoleto = async (p: PagamentoBancario) => {
+    const ok = await confirmar({
+      titulo: 'Descartar este boleto?',
+      mensagem: `O banco não mostra o pagamento de ${formatBRL(p.valor)} (lançamento ${p.movimentoNumero}). Confira no app do banco que ele não está lá: ao descartar, o lançamento pode ser mandado de novo.`,
+      confirmar: 'Conferi, descartar',
+      perigo: true,
+    })
+    if (!ok) return
+    try {
+      await descartarPagamento(p.id)
+    } catch (err) {
+      void avisar({ titulo: 'Não foi possível descartar', mensagem: getErrorMessage(err) })
+    }
+    await recarregarPagamentos()
   }
   // Pix que o banco efetivou baixa o lançamento no servidor: relê a lista para a situação acompanhar.
   const pagoSemBaixa = (pagamentosData ?? []).some((p) => p.situacao === 'pago' && todosMovimentos.some((m) => m.id === p.movimentoId && !m.pagoEm))
@@ -230,10 +245,14 @@ export function EntradasSaidasPage() {
                 className={`${s.pagTag} ${p.situacao === 'pago' ? s.pagTagOk : ['recusado', 'cancelado', 'falha'].includes(p.situacao) ? s.pagTagErro : ''}`}
                 title={p.mensagem || (p.situacao === 'cancelado' ? 'Reprovado no app do banco, expirado ou cancelado lá' : undefined)}
               >
-                <Landmark size={11} /> {ROTULO_PAGAMENTO[p.situacao]}
+                <Landmark size={11} /> {rotuloPagamento(p)}
                 {p.situacao === 'pago' && p.emailSituacao ? ` · e-mail ${p.emailSituacao.startsWith('enviado') ? 'enviado' : 'não enviado'}` : ''}
                 {/* O motivo que o banco deu ("limite diário...") sem o código entre colchetes. */}
                 {['recusado', 'falha'].includes(p.situacao) && p.mensagem ? `: ${motivoCurto(p.mensagem)}` : ''}
+                {/* Boleto sem resposta que o banco não mostra: só sai daqui descartando (o ELROND nunca reenvia sozinho). */}
+                {p.forma === 'boleto' && p.situacao === 'incerto' && !p.idBanco && p.mensagem && (
+                  <button type="button" className={s.pagDescartar} onClick={() => void descartarBoleto(p)}>descartar</button>
+                )}
               </small>
             ) : null
           })()}
@@ -481,7 +500,7 @@ export function EntradasSaidasPage() {
                   className={ui.selBtn}
                   disabled={pagaveis.length === 0}
                   onClick={() => setAgendando({ ids: pagaveis.map((m) => m.id), limpar })}
-                  title={pagaveis.length < itens.length ? 'Vão ao banco só os lançamentos a pagar, aprovados e sem Pix em andamento' : 'Mandar ao banco como Pix'}
+                  title={pagaveis.length < itens.length ? 'Vão ao banco só os lançamentos a pagar, aprovados e sem Pix em andamento' : 'Mandar ao banco como Pix ou boleto'}
                 >
                   <Landmark /> Agendar pagamento ({pagaveis.length})
                 </button>

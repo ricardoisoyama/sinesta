@@ -136,6 +136,14 @@ public class PagamentosController(PagamentoService pagamentos, UsuarioContexto u
         var r = await pagamentos.AtualizarAsync(id, ct);
         return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
     }
+
+    /// <summary>Boleto sem confirmação que o banco não mostra: encerra para poder mandar de novo.</summary>
+    [HttpPost("{id}/descartar")]
+    public async Task<IActionResult> Descartar(string id, CancellationToken ct)
+    {
+        var r = await pagamentos.DescartarAsync(id, await usuario.QuemAsync(), ct);
+        return r.IsSuccess ? Ok(r.Value) : BadRequest(r.Error);
+    }
 }
 
 /// <summary>

@@ -177,8 +177,18 @@ public class PagamentoBancario : Rastreavel, IEntity
     public long MovimentoNumero { get; set; }
     public string FavorecidoNome { get; set; } = string.Empty;
     public string FavorecidoEmail { get; set; } = string.Empty;
-    /// <summary>Chave Pix do favorecido (CPF/CNPJ, e-mail, celular ou aleatória).</summary>
+    public const string FormaPix = "pix";
+    public const string FormaBoleto = "boleto";
+    /// <summary>pix | boleto.</summary>
+    public string Forma { get; set; } = FormaPix;
+    /// <summary>Chave Pix do favorecido (CPF/CNPJ, e-mail, celular ou aleatória). Vazio no boleto.</summary>
     public string Chave { get; set; } = string.Empty;
+    /// <summary>Boleto: linha digitável ou código de barras (só dígitos), como foi mandado ao banco.</summary>
+    public string CodigoBarras { get; set; } = string.Empty;
+    /// <summary>Boleto: vencimento do título (yyyy-MM-dd) informado ao banco.</summary>
+    public string VencimentoBoleto { get; set; } = string.Empty;
+    /// <summary>Boleto: quem recebeu, segundo o banco (para o comprovante).</summary>
+    public string Beneficiario { get; set; } = string.Empty;
     public decimal Valor { get; set; }
     /// <summary>yyyy-MM-dd pedido ao banco.</summary>
     public string Data { get; set; } = string.Empty;

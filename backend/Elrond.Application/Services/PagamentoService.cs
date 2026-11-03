@@ -13,7 +13,8 @@ public sealed record PreparoPagamentoDto(
     string MovimentoId, long Numero, string EmpresaId, string Favorecido, string Email, string ChaveSugerida, decimal Valor,
     string Vencimento, string Descricao, string Banco, string Problema, PagamentoBancario? Atual);
 
-public sealed record ItemAgendamentoDto(string MovimentoId, string Chave);
+/// <summary>Um lançamento a mandar ao banco: Pix (chave) ou boleto (linha digitável; vencimento só se o código não trouxer).</summary>
+public sealed record ItemAgendamentoDto(string MovimentoId, string Chave, string Forma = PagamentoBancario.FormaPix, string Codigo = "", string Vencimento = "");
 public sealed record AgendarPagamentosDto(List<ItemAgendamentoDto> Itens, string Data);
 public sealed record ResultadoAgendamentoDto(string MovimentoId, bool Ok, string Mensagem, PagamentoBancario? Pagamento);
 
@@ -25,7 +26,8 @@ public sealed record ComprovantePixDto(
     string IdPix, string CodigoBanco,
     string AgendadoPor, string AgendadoEm, string ConfirmadoComo, string ConfirmadoEm,
     string EmailSituacao, string EmailPara, string EmailEm,
-    string EmpresaCnpj = "");
+    string EmpresaCnpj = "",
+    string Forma = PagamentoBancario.FormaPix, string CodigoBarras = "", string VencimentoBoleto = "", string Beneficiario = "");
 
 /// <summary>
 /// Pagamentos pelo banco (piloto: Pix). Para cada lançamento a pagar APROVADO, grava o pagamento
@@ -75,7 +77,8 @@ public sealed class PagamentoService(
             p.EndToEnd, p.IdBanco,
             p.CriadoPor, p.CriadoEm, QuemConfirmou(p.ConfirmadaPor), p.ConfirmadaEm,
             p.EmailSituacao, mailMascarado, p.EmailEm,
-            empresa?.Cnpj ?? string.Empty);
+            empresa?.Cnpj ?? string.Empty,
+            p.Forma, p.CodigoBarras, p.VencimentoBoleto, p.Beneficiario);
     }
 
     public async Task<List<PagamentoBancario>> ListarAsync() =>
@@ -127,6 +130,7 @@ public sealed class PagamentoService(
         var integ = IntegracaoDe(todasInteg, m.EmpresaId);
         var atual = (await pagamentos.ListarAsync(p => p.MovimentoId == m.Id)).FirstOrDefault(p => p.Vigente);
         if (Problema(m, integ, atual) is { Length: > 0 } problema) return new(m.Id, false, problema, atual);
+        if (item.Forma == PagamentoBancario.FormaBoleto) return await AgendarBoletoAsync(m, item, data, integ!, quem, ct);
         var chavePix = ChavePix.Normalizar(item.Chave);
         if (!chavePix.Ok) return new(m.Id, false, chavePix.Erro, null);
         var chave = chavePix.Chave;
@@ -169,6 +173,98 @@ public sealed class PagamentoService(
         if (envio.Desfecho == DesfechoPagamento.Processado) p = await AtualizarAsync(p, "envio", ct) ?? p;
         var ok = p.Situacao is not (PagamentoBancario.Recusado or PagamentoBancario.Falha or PagamentoBancario.Cancelado);
         return new(m.Id, ok, ok ? Rotulo(p.Situacao) : $"O banco não aceitou: {p.Mensagem}", p);
+    }
+
+    /// <summary>
+    /// Boleto: confere o código (dígitos, valor e vencimento impressos) contra o lançamento, grava e manda
+    /// ao banco UMA vez. Sem resposta, fica "sem confirmação" e a conferência procura pelo código no banco;
+    /// nunca reenvia sozinho (o Inter não tem idempotência para boleto: reenviar pagaria duas vezes).
+    /// </summary>
+    private async Task<ResultadoAgendamentoDto> AgendarBoletoAsync(Movimento m, ItemAgendamentoDto item, string data, IntegracaoBancaria integ, UsuarioAtual quem, CancellationToken ct)
+    {
+        var hoje = DateOnly.FromDateTime(relogio.GetLocalNow().DateTime);
+        var (codigo, erro) = CodigoBoleto.Ler(item.Codigo, hoje);
+        if (codigo is null) return new(m.Id, false, erro, null);
+        var vencimento = codigo.Vencimento?.ToString("yyyy-MM-dd")
+            ?? (DateOnly.TryParseExact(item.Vencimento ?? string.Empty, "yyyy-MM-dd", out var v) ? v.ToString("yyyy-MM-dd") : m.Vencimento);
+        if (!DateOnly.TryParseExact(vencimento, "yyyy-MM-dd", out _)) return new(m.Id, false, "Informe o vencimento do boleto.", null);
+        // O valor impresso no código tem de bater com o lançamento; depois do vencimento pode ser maior (juros e multa).
+        if (codigo.Valor > 0 && m.Liquido != codigo.Valor && !(m.Liquido > codigo.Valor && string.CompareOrdinal(data, vencimento) > 0))
+            return new(m.Id, false, $"O boleto é de {codigo.Valor.ToString("C", PtBr)} e o lançamento, de {m.Liquido.ToString("C", PtBr)}: ajuste o lançamento (ou confira se é o boleto certo).", null);
+        var mesmo = (await pagamentos.ListarAsync(p => p.CodigoBarras == codigo.CodigoBarras)).FirstOrDefault(p => p.Vigente);
+        if (mesmo is not null) return new(m.Id, false, $"Este boleto já foi mandado ao banco pelo lançamento {mesmo.MovimentoNumero} ({Rotulo(mesmo.Situacao)}).", mesmo);
+        var modulo = bancos.Modulo(integ.Banco)!.Pagamento!;
+        var (nome, mail, _) = await FavorecidoAsync(m);
+
+        var p = new PagamentoBancario
+        {
+            Id = Guid.NewGuid().ToString(),
+            EmpresaId = m.EmpresaId,
+            IntegracaoId = integ.Id,
+            Banco = integ.Banco,
+            Ambiente = integ.Ambiente,
+            MovimentoId = m.Id,
+            MovimentoNumero = m.Numero,
+            FavorecidoNome = nome,
+            FavorecidoEmail = mail,
+            Forma = PagamentoBancario.FormaBoleto,
+            CodigoBarras = codigo.CodigoBarras, // sempre os 44 do código de barras: linha e código do mesmo boleto são o mesmo
+            VencimentoBoleto = vencimento,
+            Valor = m.Liquido,
+            Data = data,
+            Descricao = Descricao(m),
+            Situacao = PagamentoBancario.Pendente,
+        };
+        // Grava antes de chamar o banco: queda no meio não perde o rastro e o mesmo código não vai de novo.
+        await pagamentos.AddAsync(p);
+        var envio = await modulo.PagarBoletoAsync(cofre.Abrir(integ), new PedidoBoleto(p.Id, p.CodigoBarras, p.Valor, p.Data, p.VencimentoBoleto), ct);
+        p.IdBanco = envio.IdBanco;
+        p.Mensagem = envio.Mensagem;
+        p.Situacao = envio.Desfecho switch
+        {
+            DesfechoPagamento.Processado => PagamentoBancario.Processando,
+            DesfechoPagamento.AguardandoAprovacao => PagamentoBancario.AguardandoAprovacao,
+            DesfechoPagamento.Agendado => PagamentoBancario.Agendado,
+            DesfechoPagamento.Recusado => PagamentoBancario.Recusado,
+            _ => PagamentoBancario.Incerto,
+        };
+        await pagamentos.UpdateAsync(p.Id, p);
+        await auditoria.RegistrarAsync("pagar", "PagamentoBancario", p.Id,
+            $"{quem.Nome} mandou ao banco o boleto de {p.Valor.ToString("C", PtBr)} de {p.FavorecidoNome} (lançamento {m.Numero}, pagar em {p.Data}, vence {p.VencimentoBoleto}): {Rotulo(p.Situacao)}{(p.Mensagem.Length > 0 ? $" — {p.Mensagem}" : string.Empty)}");
+        if (envio.Desfecho == DesfechoPagamento.Processado) p = await AtualizarAsync(p, "envio", ct) ?? p;
+        var ok = p.Situacao is not (PagamentoBancario.Recusado or PagamentoBancario.Falha or PagamentoBancario.Cancelado);
+        return new(m.Id, ok, ok ? Rotulo(p.Situacao) : $"O banco não aceitou: {p.Mensagem}", p);
+    }
+
+    /// <summary>
+    /// Boleto que ficou sem confirmação e o banco não mostra: depois de conferir de novo no banco, encerra o
+    /// pagamento para o lançamento poder ser mandado outra vez. Quem descarta diz que conferiu no app.
+    /// </summary>
+    public async Task<Result<PagamentoBancario>> DescartarAsync(string id, UsuarioAtual quem, CancellationToken ct = default)
+    {
+        var p = await pagamentos.GetByIdAsync(id);
+        if (p is null) return Result.Failure<PagamentoBancario>("Pagamento não encontrado.");
+        if (p.Forma != PagamentoBancario.FormaBoleto || p.IdBanco.Length > 0 || p.Situacao is not (PagamentoBancario.Incerto or PagamentoBancario.Pendente))
+            return Result.Failure<PagamentoBancario>("Só dá para descartar o boleto que ficou sem confirmação e que o banco não mostra.");
+        var integ = await integracoes.GetByIdAsync(p.IntegracaoId);
+        if (integ is null || bancos.Modulo(integ.Banco)?.Pagamento is not { } modulo || !cofre.Configurado)
+            return Result.Failure<PagamentoBancario>("Integração do banco indisponível: não dá para conferir agora.");
+        var (achado, falha) = await modulo.ProcurarBoletoAsync(cofre.Abrir(integ), p.CodigoBarras, ct);
+        if (falha.Length > 0) return Result.Failure<PagamentoBancario>($"Não deu para conferir no banco agora: {falha}");
+        if (achado.Length > 0)
+        {
+            p.IdBanco = achado;
+            await pagamentos.UpdateAsync(p.Id, p);
+            return await AtualizarAsync(p, "tela", ct) is { } r
+                ? Result.Failure<PagamentoBancario>($"O banco tem este boleto ({Rotulo(r.Situacao)}): ele não foi descartado.")
+                : Result.Failure<PagamentoBancario>("O banco tem este boleto: ele não foi descartado.");
+        }
+        p.Situacao = PagamentoBancario.Cancelado;
+        p.Mensagem = $"Descartado por {quem.Nome}: o envio não chegou ao banco.";
+        await pagamentos.UpdateAsync(p.Id, p);
+        await auditoria.RegistrarAsync("cancelar", "PagamentoBancario", p.Id,
+            $"{quem.Nome} descartou o boleto de {p.Valor.ToString("C", PtBr)} (lançamento {p.MovimentoNumero}) que ficou sem confirmação: o banco não mostra o pagamento");
+        return Result.Success(p);
     }
 
     /// <summary>Consulta no banco e aplica (botão "Atualizar" da tela).</summary>
@@ -225,6 +321,7 @@ public sealed class PagamentoService(
         var integ = await integracoes.GetByIdAsync(p.IntegracaoId);
         if (integ is null || bancos.Modulo(integ.Banco)?.Pagamento is not { } modulo || !cofre.Configurado) return null;
         var credencial = cofre.Abrir(integ);
+        if (p.Forma == PagamentoBancario.FormaBoleto) return await AtualizarBoletoAsync(p, integ, modulo, credencial, origem, ct);
         if (p.IdBanco.Length == 0)
         {
             // Envio incerto: reenviar com o MESMO id é seguro (idempotência) e devolve o código do pagamento.
@@ -253,6 +350,44 @@ public sealed class PagamentoService(
             await AvisarFavorecidoAsync(p, ct);
             await auditoria.RegistrarAsync("pago", "PagamentoBancario", p.Id,
                 $"Pix de {p.Valor.ToString("C", PtBr)} para {p.FavorecidoNome} efetivado no banco (confirmado {QuemConfirmou(origem)}); lançamento {p.MovimentoNumero} baixado");
+        }
+        else await pagamentos.UpdateAsync(p.Id, p);
+        return p;
+    }
+
+    /// <summary>Boleto: sem o código do banco, procura pelo código de barras (nunca reenvia); depois consulta e aplica.</summary>
+    private async Task<PagamentoBancario?> AtualizarBoletoAsync(PagamentoBancario p, IntegracaoBancaria integ, IPagamentoBancario modulo, CredencialBanco credencial, string origem, CancellationToken ct)
+    {
+        if (p.IdBanco.Length == 0)
+        {
+            var (achado, falha) = await modulo.ProcurarBoletoAsync(credencial, p.CodigoBarras, ct);
+            if (falha.Length > 0) return null;
+            if (achado.Length == 0)
+            {
+                p.Mensagem = "O banco não mostra este boleto: o envio não chegou. Confira no app do banco antes de mandar de novo.";
+                await pagamentos.UpdateAsync(p.Id, p);
+                return p;
+            }
+            p.IdBanco = achado;
+        }
+        var c = await modulo.ConsultarBoletoAsync(credencial, p.IdBanco, ct);
+        if (c.Situacao is not { } s) return c.NaoExiste ? p : null;
+        var antes = p.Situacao;
+        p.Situacao = s.Situacao;
+        p.SituacaoBanco = s.SituacaoBanco;
+        if (s.EndToEnd.Length > 0) p.EndToEnd = s.EndToEnd;
+        if (s.PagoEm.Length > 0) p.PagoEm = s.PagoEm;
+        if (s.Beneficiario.Length > 0) p.Beneficiario = s.Beneficiario;
+        if (s.Mensagem.Length > 0) p.Mensagem = s.Mensagem;
+        if (p.Situacao == PagamentoBancario.Pago && antes != PagamentoBancario.Pago)
+        {
+            p.ConfirmadaEm = relogio.GetUtcNow().ToString("o", CultureInfo.InvariantCulture);
+            p.ConfirmadaPor = origem;
+            await pagamentos.UpdateAsync(p.Id, p);
+            await DarBaixaAsync(p, integ);
+            await AvisarFavorecidoAsync(p, ct);
+            await auditoria.RegistrarAsync("pago", "PagamentoBancario", p.Id,
+                $"Boleto de {p.Valor.ToString("C", PtBr)} de {p.FavorecidoNome} pago no banco (confirmado {QuemConfirmou(origem)}); lançamento {p.MovimentoNumero} baixado");
         }
         else await pagamentos.UpdateAsync(p.Id, p);
         return p;
@@ -324,7 +459,7 @@ public sealed class PagamentoService(
         return d.Length > 140 ? d[..140] : d;
     }
 
-    private static bool InterPago(string status) => status.ToUpperInvariant() is "PAGO" or "PROCESSADO";
+    private static bool InterPago(string status) => status.ToUpperInvariant() is "PAGO" or "PROCESSADO" or "REALIZADO";
 
     private static string QuemConfirmou(string origem) => origem switch { "aviso" => "pelo aviso do banco", "rotina" => "pela conferência automática", "envio" => "na hora do envio", _ => "pela consulta na tela" };
 

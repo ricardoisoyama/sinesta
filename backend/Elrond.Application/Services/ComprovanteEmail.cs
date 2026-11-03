@@ -57,9 +57,28 @@ public static class ComprovanteEmail
         ["cpf"] = "CPF", ["cnpj"] = "CNPJ", ["celular"] = "Celular", ["email"] = "E-mail", ["aleatoria"] = "Chave aleatória",
     };
 
+    private static bool EhBoleto(ComprovantePixDto c) => c.Forma == PagamentoBancario.FormaBoleto;
+    public static string Titulo(ComprovantePixDto c) => EhBoleto(c) ? "Comprovante de pagamento de boleto" : "Comprovante de pagamento Pix";
+    public static string Nota(ComprovantePixDto c) => EhBoleto(c)
+        ? "A autenticação bancária identifica o pagamento no banco."
+        : "O ID do Pix identifica a transação em qualquer banco.";
+    private static string Data(string iso) => iso.Length >= 10 ? $"{iso[8..10]}/{iso[5..7]}/{iso[..4]}" : "—";
+
     /// <summary>As linhas que o favorecido vê (sem os dados internos: quem agendou, como confirmou).</summary>
-    public static IReadOnlyList<(string Rotulo, string Valor)> Linhas(ComprovantePixDto c) =>
-    [
+    public static IReadOnlyList<(string Rotulo, string Valor)> Linhas(ComprovantePixDto c) => EhBoleto(c)
+    ? [
+        ("Valor", c.Valor.ToString("C", PtBr)),
+        ("Pago no banco em", Quando(c.EfetivadoEm)),
+        ("Favorecido", c.Beneficiario.Length > 0 ? c.Beneficiario : c.Favorecido),
+        ("Código de barras", c.CodigoBarras),
+        ("Vencimento", Data(c.VencimentoBoleto)),
+        ("Pago por", string.Join(" · ", new[] { c.Empresa, Cnpj(c.EmpresaCnpj) }.Where(x => x.Length > 0))),
+        ("Banco", string.Join(" · ", new[] { c.Banco, c.Conta }.Where(x => x.Length > 0))),
+        ("Autenticação bancária", c.IdPix.Length > 0 ? c.IdPix : "—"),
+        ("Código da transação no banco", c.CodigoBanco.Length > 0 ? c.CodigoBanco : "—"),
+        ("Referência", c.Descricao),
+    ]
+    : [
         ("Valor", c.Valor.ToString("C", PtBr)),
         ("Efetivado no banco em", Quando(c.EfetivadoEm)),
         ("Favorecido", c.Favorecido),
@@ -71,7 +90,7 @@ public static class ComprovanteEmail
         ("Referência", c.Descricao),
     ];
 
-    public static string NomeDoPdf(ComprovantePixDto c) => $"comprovante-pix-lancamento-{c.Numero}.pdf";
+    public static string NomeDoPdf(ComprovantePixDto c) => $"comprovante-{(EhBoleto(c) ? "boleto" : "pix")}-lancamento-{c.Numero}.pdf";
 
     public static AvisoPagamentoEmail Montar(ComprovantePixDto c)
     {
@@ -90,17 +109,17 @@ public static class ComprovanteEmail
             $"<tr><td style=\"background:{Laranja};height:3px;line-height:3px;font-size:0\">&nbsp;</td></tr>" +
             "<tr><td style=\"padding:28px 32px 8px\">" +
             $"<div style=\"font-size:13px;color:#6b7b72\">Olá, {h(c.Favorecido)}.</div>" +
-            "<div style=\"font-size:20px;font-weight:bold;color:#143d18;margin-top:10px\">Comprovante de pagamento Pix</div>" +
+            $"<div style=\"font-size:20px;font-weight:bold;color:#143d18;margin-top:10px\">{Titulo(c)}</div>" +
             $"<div style=\"font-size:12px;color:#6b7b72;margin-top:2px\">Lançamento nº {c.Numero}</div>" +
             $"<div style=\"font-size:30px;font-weight:bold;color:#143d18;margin:18px 0 14px\">{h(valor)}</div>" +
             $"<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">{linhas}</table>" +
-            "<div style=\"font-size:12px;color:#8a978f;margin:18px 0 6px;line-height:1.5\">O comprovante em PDF vai anexo. O ID do Pix identifica a transação em qualquer banco.</div>" +
+            $"<div style=\"font-size:12px;color:#8a978f;margin:18px 0 6px;line-height:1.5\">O comprovante em PDF vai anexo. {Nota(c)}</div>" +
             "</td></tr>" +
             // faixa do rodapé: quem pagou
             $"<tr><td style=\"background:{Verde};padding:16px 32px;color:{Creme};font-size:13px\"><b>{h(rodape)}</b>" +
             $"<div style=\"color:#b9c9bc;font-size:11px;margin-top:3px\">Mensagem automática enviada pelo ELROND em nome da empresa pagadora.</div></td></tr>" +
             "</table></td></tr></table></body></html>";
-        var texto = $"Olá, {c.Favorecido}. Comprovante de pagamento Pix · lançamento nº {c.Numero}\n" +
+        var texto = $"Olá, {c.Favorecido}. {Titulo(c)} · lançamento nº {c.Numero}\n" +
                     string.Join("\n", Linhas(c).Select(l => $"{l.Rotulo}: {l.Valor}")) +
                     $"\n\n{rodape}\nO comprovante em PDF vai anexo.";
         var anexos = new List<AnexoEmail>
@@ -108,7 +127,7 @@ public static class ComprovanteEmail
             new("faixa-elrond.jpg", "image/jpeg", FaixaElrond, CidFaixa),
             new(NomeDoPdf(c), "application/pdf", ComprovantePdf.Gerar(c)),
         };
-        var assunto = $"Comprovante de pagamento Pix · {valor}" + (c.Empresa.Length > 0 ? $" · {c.Empresa}" : string.Empty);
+        var assunto = $"{Titulo(c)} · {valor}" + (c.Empresa.Length > 0 ? $" · {c.Empresa}" : string.Empty);
         return new AvisoPagamentoEmail(assunto, html, texto, anexos);
     }
 
@@ -116,9 +135,10 @@ public static class ComprovanteEmail
     public static AvisoPagamentoEmail SemComprovante(PagamentoBancario p)
     {
         var valor = p.Valor.ToString("C", PtBr);
-        var html = $"<p>Olá, {WebUtility.HtmlEncode(p.FavorecidoNome)}.</p><p>Informamos que o pagamento de <b>{valor}</b> foi efetuado por Pix em {Quando(p.PagoEm)}.</p>" +
-                   $"<p>Referência: {WebUtility.HtmlEncode(p.Descricao)}{(p.EndToEnd.Length > 0 ? $"<br/>Identificador do Pix: {p.EndToEnd}" : string.Empty)}</p>";
-        var texto = $"Olá, {p.FavorecidoNome}. O pagamento de {valor} foi efetuado por Pix em {Quando(p.PagoEm)}. Referência: {p.Descricao}.";
+        var como = p.Forma == PagamentoBancario.FormaBoleto ? "por boleto" : "por Pix";
+        var html = $"<p>Olá, {WebUtility.HtmlEncode(p.FavorecidoNome)}.</p><p>Informamos que o pagamento de <b>{valor}</b> foi efetuado {como} em {Quando(p.PagoEm)}.</p>" +
+                   $"<p>Referência: {WebUtility.HtmlEncode(p.Descricao)}{(p.EndToEnd.Length > 0 ? $"<br/>Identificador no banco: {p.EndToEnd}" : string.Empty)}</p>";
+        var texto = $"Olá, {p.FavorecidoNome}. O pagamento de {valor} foi efetuado {como} em {Quando(p.PagoEm)}. Referência: {p.Descricao}.";
         return new AvisoPagamentoEmail($"Pagamento efetuado · {valor}", html, texto, Array.Empty<AnexoEmail>());
     }
 }

@@ -97,7 +97,7 @@ public class FinanceiroService : IFinanceiroService
         }
         var pix = await PixEmAndamentoAsync(lista.Where(m => !m.Cancelado && m.PagoEm.Length == 0).Select(m => m.Id));
         foreach (var m in lista)
-            if (pix.TryGetValue(m.Id, out var p)) { m.PixSituacao = p.Situacao; m.PixData = p.Data; }
+            if (pix.TryGetValue(m.Id, out var p)) { m.PixSituacao = p.Situacao; m.PixData = p.Data; m.PixForma = p.Forma; }
         return lista.OrderBy(m => m.Vencimento).ToList();
     }
 

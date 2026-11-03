@@ -3615,10 +3615,24 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Beneficiario")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasDefaultValue("");
+
                     b.Property<string>("Chave")
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<string>("CodigoBarras")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(48)
+                        .HasColumnType("character varying(48)")
+                        .HasDefaultValue("");
 
                     b.Property<string>("ConfirmadaEm")
                         .IsRequired()
@@ -3669,6 +3683,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("Forma")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("pix");
+
                     b.Property<string>("IdBanco")
                         .IsRequired()
                         .HasColumnType("text");
@@ -3713,6 +3734,13 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                     b.Property<decimal>("Valor")
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)");
+
+                    b.Property<string>("VencimentoBoleto")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasDefaultValue("");
 
                     b.HasKey("Id");
 
