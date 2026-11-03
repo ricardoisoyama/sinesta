@@ -1,4 +1,7 @@
 import { lerCodigoBoleto } from './codigoBoleto'
+// Import estático com ?url: vira só o endereço do arquivo do worker (o pdf.js em si continua carregando sob demanda).
+// Import dinâmico com ?url quebrava no build de produção (o worker virava código importado).
+import urlDoWorkerPdf from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 /**
  * Lê o boleto de um arquivo, no próprio navegador (o arquivo não sobe para o servidor):
@@ -83,8 +86,7 @@ async function imagemEmCanvas(arquivo: File): Promise<HTMLCanvasElement> {
 
 async function lerPdf(arquivo: File): Promise<LeituraArquivo> {
   const pdfjs = await import('pdfjs-dist')
-  const { default: worker } = await import('pdfjs-dist/build/pdf.worker.min.mjs?url')
-  pdfjs.GlobalWorkerOptions.workerSrc = worker
+  pdfjs.GlobalWorkerOptions.workerSrc = urlDoWorkerPdf
   // Sem eval (a CSP do site não deixa): o pdf.js desenha as fontes do jeito comum.
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await arquivo.arrayBuffer()), isEvalSupported: false }).promise
   const paginas = Math.min(doc.numPages, 3)
@@ -114,13 +116,12 @@ async function lerPdf(arquivo: File): Promise<LeituraArquivo> {
  * anexados, primeiro os que parecem boleto pelo nome, e devolve o primeiro código que confere.
  */
 export async function lerBoletoDosAnexos(movimentoId: string): Promise<{ codigo: string; arquivo: string } | null> {
-  const { listAnexos, baixarAnexo } = await import('@/features/anexos/api')
+  const { listAnexos, lerAnexoComoArquivo } = await import('@/features/anexos/api')
   const anexos = (await listAnexos('movimento', movimentoId)).filter((a) => /\.(pdf|jpe?g|png)$/i.test(a.nome))
   const pareceBoleto = (nome: string) => (/bol|boleto|guia|cobran|fatura|pagamento/i.test(nome) ? 0 : /nf|nota|dacte|danfe/i.test(nome) ? 2 : 1)
   for (const a of anexos.sort((x, y) => pareceBoleto(x.nome) - pareceBoleto(y.nome)).slice(0, 5)) {
     try {
-      const blob = await baixarAnexo(a.id)
-      const r = await lerArquivoBoleto(new File([blob], a.nome, { type: a.tipo || blob.type }))
+      const r = await lerArquivoBoleto(await lerAnexoComoArquivo(a))
       if ('codigo' in r) return { codigo: r.codigo, arquivo: a.nome }
     } catch {
       // anexo que não abre: tenta o próximo

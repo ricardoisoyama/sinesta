@@ -77,6 +77,25 @@ public class AnexosController : ControllerBase
         return Ok(r.Value);
     }
 
+    /// <summary>
+    /// Conteúdo do PDF ou da imagem em base64 dentro de JSON, para a tela LER (o boleto anexado ao lançamento).
+    /// Como arquivo, gerenciadores de download (IDM e parecidos) e filtros do PC interceptam o PDF e o navegador
+    /// recebe vazio; JSON eles deixam passar. Só PDF e imagem, até 12 MB (o limite do anexo).
+    /// </summary>
+    [HttpGet("{id}/leitura")]
+    public async Task<IActionResult> Leitura(string id)
+    {
+        var r = await _anexos.AbrirAsync(id);
+        if (!r.IsSuccess || r.Value is null) return NotFound(r.Error);
+        var (anexo, conteudo) = r.Value;
+        await using var _ = conteudo;
+        if (!await PodeAsync(anexo.Entidade)) return SemPermissao();
+        if (anexo.Tipo is not ("application/pdf" or "image/jpeg" or "image/png")) return BadRequest("Só PDF e imagem são lidos.");
+        using var ms = new MemoryStream();
+        await conteudo.CopyToAsync(ms);
+        return Ok(new { nome = anexo.Nome, tipo = anexo.Tipo, base64 = Convert.ToBase64String(ms.ToArray()) });
+    }
+
     /// <summary>Conteúdo do arquivo. PDF e imagem abrem no navegador; os demais baixam.</summary>
     [HttpGet("{id}/conteudo")]
     public async Task<IActionResult> Conteudo(string id)

@@ -29,4 +29,14 @@ export const enviarAnexo = (entidade: EntidadeAnexo, entidadeId: string, arquivo
 
 export const baixarAnexo = (id: string) => apiBlob(`/anexos/${id}/conteudo`)
 
+/**
+ * O anexo (PDF ou imagem) para a tela ler, em JSON com base64: gerenciadores de download (IDM e parecidos)
+ * interceptam o PDF baixado como arquivo e o navegador recebe vazio; JSON eles deixam passar.
+ */
+export async function lerAnexoComoArquivo(a: Pick<Anexo, 'id' | 'nome'>): Promise<File> {
+  const r = await apiFetch<{ nome: string; tipo: string; base64: string }>(`/anexos/${a.id}/leitura`)
+  const bytes = Uint8Array.from(atob(r.base64), (c) => c.charCodeAt(0))
+  return new File([bytes], r.nome || a.nome, { type: r.tipo })
+}
+
 export const excluirAnexo = (id: string) => apiFetch<void>(`/anexos/${id}`, { method: 'DELETE' })
