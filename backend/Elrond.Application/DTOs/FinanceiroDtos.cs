@@ -25,4 +25,5 @@ public record ImportarExtratoResultado(int Novas, int JaImportadas);
 public record VincularExtratoDto(string LinhaId, string MovimentoId, List<string>? MovimentoIds = null);
 
 /// <summary>Cria o lançamento a partir da linha do extrato (já liquidado) e concilia.</summary>
-public record CriarDoExtratoDto(string LinhaId, string ParceiroNome, string Descricao, string PlanoContaId, string CentroCustoId, string FormaPagamento, string EmpresaId);
+/// <summary>ParceiroId: o fornecedor/cliente do cadastro (vazio = só o nome, como antes).</summary>
+public record CriarDoExtratoDto(string LinhaId, string ParceiroNome, string Descricao, string PlanoContaId, string CentroCustoId, string FormaPagamento, string EmpresaId, string ParceiroId = "");

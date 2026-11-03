@@ -105,3 +105,9 @@
 .opcaoCheck { width: 14px; height: 14px; margin: 0 8px 0 0; vertical-align: -2px; accent-color: #1a4d1e; pointer-events: none; }
 .vincularRodape { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid #ede6d8; font-size: 12.5px; color: #4a5a50; }
 .vincularRodape em { font-style: normal; font-weight: 600; margin-left: 6px; }
+
+/* Conciliação › Criar: cadastrar o fornecedor/cliente ali mesmo (pelo CNPJ do extrato) */
+.form .cadastrarDoExtrato { align-self: flex-start; display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; border: 1px dashed #e8702f; border-radius: 7px; background: #fffaf6; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #b5651d; cursor: pointer; }
+.form .cadastrarDoExtrato:disabled { opacity: 0.6; cursor: default; }
+.form .cadastroOk { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: 11.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #2e7d44; }
+.form .cadastroErro { margin-top: 4px; font-size: 11.5px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #b3261e; }

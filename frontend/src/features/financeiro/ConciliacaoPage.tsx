@@ -1,11 +1,15 @@
 import { useRef, useState, type ChangeEvent } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { createCliente, createFornecedor } from '@/features/cadastros/api'
+import { consultarCnpj } from '@/features/common/consultas'
+import { emptyParceiro } from '@/features/parceiros/parceiro-schema'
+import { novoContato, type Parceiro } from '@/features/parceiros/types'
 import { Link } from 'react-router-dom'
-import { Ban, Check, CheckCheck, CheckCircle2, CloudDownload, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, Wand2, X } from 'lucide-react'
+import { Ban, Check, CheckCheck, CheckCircle2, CloudDownload, FileUp, Link2, Lightbulb, Plus, RotateCcw, Search, Sparkles, Undo2, UserPlus, Wand2, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
 import { Hint } from '@/features/common/Hint'
-import { formatBRL } from '@/lib/format'
+import { formatBRL, formatCnpj } from '@/lib/format'
 import { buscaPeloNumero, semAcento } from '@/lib/texto'
 import { getErrorMessage } from '@/lib/api'
 import { listCategoriasCusto, listClientes, listFornecedores } from '@/features/cadastros/api'
@@ -188,10 +192,10 @@ export function ConciliacaoPage() {
     const resto = falhas.length > 3 ? ` (+${falhas.length - 3})` : ''
     setAviso(`${ok} de ${pares.length} ${plural(pares.length, 'conciliada', 'conciliadas')}.${falhas.length ? ` Não foi possível: ${falhas.slice(0, 3).join(' · ')}${resto}` : ''}`)
   }
-  const criar = async (l: LinhaConciliada, dados: { parceiroNome: string; descricao: string; planoContaId: string; centroCustoId: string; lembrar: boolean }) => {
+  const criar = async (l: LinhaConciliada, dados: { parceiroNome: string; parceiroId: string; descricao: string; planoContaId: string; centroCustoId: string; lembrar: boolean }) => {
     const tipo: Movimento['tipo'] = l.linha.tipo === 'credito' ? 'receber' : 'pagar'
     const feito = await exec(async () => {
-      await criarDoExtrato({ linhaId: l.linha.id, parceiroNome: dados.parceiroNome, descricao: dados.descricao, planoContaId: dados.planoContaId, centroCustoId: dados.centroCustoId, formaPagamento: formaDoMemo(l.linha.memo), empresaId: carteira?.empresaId ?? '' })
+      await criarDoExtrato({ linhaId: l.linha.id, parceiroNome: dados.parceiroNome, parceiroId: dados.parceiroId, descricao: dados.descricao, planoContaId: dados.planoContaId, centroCustoId: dados.centroCustoId, formaPagamento: formaDoMemo(l.linha.memo), empresaId: carteira?.empresaId ?? '' })
       if (dados.lembrar) {
         const regra: RegraConciliacao = { id: crypto.randomUUID(), padrao: padraoDoMemo(l.linha.memo), tipo, parceiroNome: dados.parceiroNome, planoContaId: dados.planoContaId, centroCustoId: dados.centroCustoId, descricao: dados.descricao }
         // Uma regra por padrão: a nova substitui a antiga.
@@ -396,7 +400,7 @@ interface RowProps {
   onDesfazer: () => void
   onIgnorar: () => void
   onDesfazerIgnorar: () => void
-  onCriar: (d: { parceiroNome: string; descricao: string; planoContaId: string; centroCustoId: string; lembrar: boolean }) => void
+  onCriar: (d: { parceiroNome: string; parceiroId: string; descricao: string; planoContaId: string; centroCustoId: string; lembrar: boolean }) => void
   movimentosAbertos: Movimento[]
   nomesConhecidos: string[]
 }
@@ -466,7 +470,7 @@ function LinhaExtratoRow({ l, fitid, aberta, onAbrir, onFechar, onAceitar, onAce
               <button type="button" className={`${s.act} ${s.actOk}`} onClick={() => onAceitar(m)} title="Aceitar a sugestão (Enter)"><Check /> Aceitar</button>
             )}
             {l.situacao === 'regra' && l.regra && (
-              <button type="button" className={`${s.act} ${s.actOk}`} onClick={() => onCriar({ parceiroNome: l.regra!.parceiroNome, descricao: l.regra!.descricao, planoContaId: l.regra!.planoContaId, centroCustoId: l.regra!.centroCustoId, lembrar: false })} title="Criar o lançamento como a regra manda"><Plus /> Criar</button>
+              <button type="button" className={`${s.act} ${s.actOk}`} onClick={() => onCriar({ parceiroNome: l.regra!.parceiroNome, parceiroId: '', descricao: l.regra!.descricao, planoContaId: l.regra!.planoContaId, centroCustoId: l.regra!.centroCustoId, lembrar: false })} title="Criar o lançamento como a regra manda"><Plus /> Criar</button>
             )}
             {(l.situacao === 'sugestao' || l.situacao === 'sem-par' || l.situacao === 'regra') && (
               <>
@@ -579,7 +583,53 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
   const { analiticas } = usePlanoContas()
   const { data: categorias } = useQuery({ queryKey: ['categorias-custo'], queryFn: listCategoriasCusto })
   const contas = analiticas().filter((c) => (credito ? c.grupoDre === 'Receita' : c.grupoDre === 'Despesa') && c.status === 'ativo')
-  const [parceiroNome, setParceiro] = useState(l.regra?.parceiroNome ?? '')
+  // Quem pagou/recebeu: do cadastro (fornecedor na saída, cliente na entrada). O CNPJ do extrato acha o cadastro
+  // ou, se ainda não existe, cadastra pela Receita ali mesmo.
+  const qc = useQueryClient()
+  const { data: parceirosData } = useQuery({ queryKey: [credito ? 'clientes' : 'fornecedores'], queryFn: credito ? listClientes : listFornecedores })
+  const parceiros = (parceirosData ?? []).filter((p) => p.status === 'ativo')
+  const nomeDe = (p: Parceiro) => p.nomeFantasia || p.nome
+  const cnpj = cnpjDoMemo(l.linha.memo)
+  const doCnpj = cnpj ? parceiros.find((p) => p.cpfCnpj.replace(/\D/g, '') === cnpj) : undefined
+  const [parceiroNome, setParceiroNome] = useState(l.regra?.parceiroNome ?? '')
+  const [parceiroId, setParceiroId] = useState('')
+  const [cadastrando, setCadastrando] = useState(false)
+  const [erroCadastro, setErroCadastro] = useState('')
+  const [achou, setAchou] = useState(false)
+  if (!achou && doCnpj) {
+    setAchou(true)
+    setParceiroNome(nomeDe(doCnpj))
+    setParceiroId(doCnpj.id)
+  }
+  const setParceiro = (nome: string) => {
+    setParceiroNome(nome)
+    setParceiroId(parceiros.find((p) => nomeDe(p) === nome || p.nome === nome)?.id ?? '')
+  }
+  const cadastrar = async () => {
+    setCadastrando(true)
+    setErroCadastro('')
+    try {
+      let novo: Parceiro = { ...emptyParceiro, id: '', nome: parceiroNome.trim() || 'Novo cadastro' }
+      if (cnpj) {
+        const c = await consultarCnpj(cnpj)
+        novo = {
+          ...novo, nome: c.razaoSocial, nomeFantasia: c.nomeFantasia, cpfCnpj: formatCnpj(cnpj), cidade: c.cidade,
+          endereco: { ...emptyParceiro.endereco, cep: c.cep, logradouro: c.logradouro, numero: c.numero, complemento: c.complemento, bairro: c.bairro },
+          telefone: c.telefone, email: c.email,
+          contatos: c.telefone || c.email ? [{ ...novoContato(), nome: c.nomeFantasia || c.razaoSocial, telefone: c.telefone, email: c.email }] : [],
+        }
+      }
+      const criado = await (credito ? createCliente(novo) : createFornecedor(novo))
+      await qc.invalidateQueries({ queryKey: [credito ? 'clientes' : 'fornecedores'] })
+      setParceiroNome(nomeDe(criado))
+      setParceiroId(criado.id)
+      setAchou(true)
+    } catch (e) {
+      setErroCadastro(getErrorMessage(e))
+    } finally {
+      setCadastrando(false)
+    }
+  }
   const [descricao, setDescricao] = useState(l.regra?.descricao ?? l.linha.memo)
   const [planoContaId, setPlano] = useState(l.regra?.planoContaId ?? '')
   const [centroCustoId, setCentro] = useState(l.regra?.centroCustoId ?? '')
@@ -598,10 +648,22 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
           {credito ? 'Cliente' : 'Fornecedor / funcionário'}
           <input list={`nomes-${l.linha.id}`} autoFocus value={parceiroNome} onChange={(e) => setParceiro(e.target.value)} placeholder="Quem pagou / quem recebeu" />
           <datalist id={`nomes-${l.linha.id}`}>
-            {nomes.map((n) => (
+            {[...new Set([...parceiros.map(nomeDe), ...nomes])].map((n) => (
               <option key={n} value={n} />
             ))}
           </datalist>
+          {parceiroId ? (
+            <small className={s.cadastroOk}><Check size={12} /> do cadastro{doCnpj?.id === parceiroId && cnpj ? ` (CNPJ ${formatCnpj(cnpj)})` : ''}</small>
+          ) : cnpj ? (
+            <button type="button" className={s.cadastrarDoExtrato} onClick={() => void cadastrar()} disabled={cadastrando}>
+              <UserPlus size={13} /> {cadastrando ? 'Consultando a Receita...' : `Cadastrar ${credito ? 'cliente' : 'fornecedor'} pelo CNPJ ${formatCnpj(cnpj)}`}
+            </button>
+          ) : parceiroNome.trim().length > 1 ? (
+            <button type="button" className={s.cadastrarDoExtrato} onClick={() => void cadastrar()} disabled={cadastrando}>
+              <UserPlus size={13} /> {cadastrando ? 'Cadastrando...' : `Cadastrar "${parceiroNome.trim()}" como ${credito ? 'cliente' : 'fornecedor'}`}
+            </button>
+          ) : null}
+          {erroCadastro && <small className={s.cadastroErro}>{erroCadastro}</small>}
         </label>
         <label>
           Descrição
@@ -633,11 +695,17 @@ function Criar({ l, nomes, onCriar, onFechar }: { l: LinhaConciliada; nomes: str
         </label>
         <div className={s.btns}>
           <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={onFechar}>Cancelar</button>
-          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!ok} onClick={() => onCriar({ parceiroNome: parceiroNome.trim(), descricao: descricao.trim(), planoContaId, centroCustoId, lembrar })}>
+          <button type="button" className={`${ui.btn} ${ui.btnPrimary}`} disabled={!ok} onClick={() => onCriar({ parceiroNome: parceiroNome.trim(), parceiroId, descricao: descricao.trim(), planoContaId, centroCustoId, lembrar })}>
             <Check /> Criar e conciliar
           </button>
         </div>
       </div>
     </div>
   )
+}
+
+/** CNPJ que aparece na linha do extrato (com ou sem pontuação); a própria empresa fica de fora por quem chama. */
+function cnpjDoMemo(memo: string): string {
+  const m = /(\d{2})\.?(\d{3})\.?(\d{3})\/?(\d{4})-?(\d{2})/.exec(memo)
+  return m ? m.slice(1).join('') : ''
 }

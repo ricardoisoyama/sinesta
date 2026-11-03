@@ -622,6 +622,7 @@ public class FinanceiroService : IFinanceiroService
             Tipo = l.Valor >= 0 ? "receber" : "pagar",
             EmpresaId = dto.EmpresaId ?? string.Empty,
             ParceiroNome = dto.ParceiroNome ?? string.Empty,
+            ParceiroId = (dto.ParceiroId ?? string.Empty).Trim(),
             Descricao = dto.Descricao ?? string.Empty,
             PlanoContaId = dto.PlanoContaId ?? string.Empty,
             CentroCustoId = dto.CentroCustoId ?? string.Empty,

@@ -51,7 +51,7 @@ export const vincularExtrato = (linhaId: string, movimentoIds: string | string[]
   const ids = Array.isArray(movimentoIds) ? movimentoIds : [movimentoIds]
   return apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/vincular', { method: 'POST', body: J({ linhaId, movimentoId: ids[0], movimentoIds: ids }) })
 }
-export const criarDoExtrato = (d: { linhaId: string; parceiroNome: string; descricao: string; planoContaId: string; centroCustoId: string; formaPagamento: string; empresaId: string }) =>
+export const criarDoExtrato = (d: { linhaId: string; parceiroNome: string; parceiroId?: string; descricao: string; planoContaId: string; centroCustoId: string; formaPagamento: string; empresaId: string }) =>
   apiFetch<ExtratoLinhaApi>('/financeiro/conciliacao/criar', { method: 'POST', body: J(d) })
 export const desfazerExtrato = (linhaId: string) => apiFetch<ExtratoLinhaApi>(`/financeiro/conciliacao/${linhaId}/desfazer`, { method: 'POST' })
 export const ignorarExtrato = (linhaId: string) => apiFetch<ExtratoLinhaApi>(`/financeiro/conciliacao/${linhaId}/ignorar`, { method: 'POST' })
