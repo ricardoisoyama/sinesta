@@ -50,6 +50,11 @@
 .icmsTabela { font-size: 12.5px; color: #6b7b72; padding-top: 16px !important; }
 .efetiva { font-variant-numeric: tabular-nums; font-weight: 700; color: #143d18; padding-top: 14px !important; }
 .efetiva small { display: block; font-weight: 500; font-size: 11px; color: #8a978f; }
+.emReais { display: block; margin-top: 3px; font-size: 11px; color: #8a978f; font-variant-numeric: tabular-nums; }
+.thSub { display: block; font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8a978f; }
+.exemploConta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12.5px; color: #3d4b43; }
+.exemploValor { width: 150px; }
+.exemploDica { flex-basis: 100%; font-size: 11.5px; color: #8a978f; }
 .radios { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; padding-top: 4px; }
 .radios label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
 .remover { border: none; background: transparent; color: #8a978f; cursor: pointer; padding: 6px; border-radius: 6px; margin-top: 2px; }

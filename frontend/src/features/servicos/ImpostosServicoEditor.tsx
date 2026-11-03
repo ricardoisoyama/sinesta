@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { CalendarPlus, FileSpreadsheet, Info, Plus, Trash2 } from 'lucide-react'
+import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
 import { Link } from 'react-router-dom'
 import { confirmar } from '@/features/common/dialogo/dialogo'
 import ui from '@/features/common/ui.module.css'
-import { formatPct } from '@/lib/format'
+import { formatBRL, formatPct } from '@/lib/format'
 import {
   MODELOS_IMPOSTOS, REGIMES_TABELA, TIPOS_IMPOSTO, cargaDoServico, dataBr, efetivaImposto, hojeIso, impostosDoModelo, novoImposto,
   rotuloImposto, vigenciaEmVigor, vigenciasDoRegime, type ImpostoServico, type RegimeTabela, type TipoImposto,
@@ -35,6 +36,8 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
   const vigencia = escolhida !== null && (vigenciasSalvas.includes(escolhida) || !vigenciasSalvas.length) ? escolhida : (emVigor ?? vigenciasSalvas[0] ?? '')
   const vigencias = vigenciasSalvas.includes(vigencia) ? vigenciasSalvas : [...vigenciasSalvas, vigencia].sort()
   const [novaData, setNovaData] = useState<string | null>(null)
+  // Só para conferir a conta em R$ (como a contabilidade faz); não é gravado nem entra no cálculo.
+  const [exemplo, setExemplo] = useState(100000)
 
   const daTabela = (i: ImpostoServico) => i.regime === regime && i.vigenteDesde === vigencia
   const linhas = value.filter(daTabela)
@@ -139,19 +142,24 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
       {linhas.length === 0 ? (
         <div className={s.semDados}>
           <p>
-            Sem impostos do {regime} {vigencia ? `a partir de ${dataBr(vigencia)}` : ''} neste serviço: para empresa deste regime o Pricing usa os impostos da
-            empresa (aba Markup). Adicione um a um ou comece de um modelo.
+            Sem impostos do {regime} {vigencia ? `a partir de ${dataBr(vigencia)}` : ''} neste serviço: o Pricing não precifica este serviço para empresa
+            deste regime enquanto não houver uma tabela em vigor. Adicione um a um ou comece de um modelo.
           </p>
         </div>
       ) : (
         <div className={s.impostosTabela}>
+          <div className={s.exemploConta}>
+            <span>Conferir a conta sobre um faturamento de</span>
+            <span className={s.exemploValor}><MoneyInput value={exemplo} onChange={setExemplo} /></span>
+            <span className={s.exemploDica}>faturamento × base = valor da base; × alíquota = imposto. A efetiva é imposto ÷ faturamento, e é ela que entra no preço.</span>
+          </div>
           <table className={ui.table}>
             <thead>
               <tr>
                 <th>Imposto</th>
-                <th className={ui.right} style={{ width: 120 }}>Base de cálculo</th>
-                <th className={ui.right} style={{ width: 120 }}>Alíquota</th>
-                <th className={ui.right} style={{ width: 100 }}>Efetiva</th>
+                <th className={ui.right} style={{ width: 130 }} title="Quanto do faturamento é a base do imposto (ex.: IRPJ presumido de 32% na armazenagem)">Base de cálculo<small className={s.thSub}>% do faturamento</small></th>
+                <th className={ui.right} style={{ width: 130 }} title="Aplicada sobre a base (ex.: IRPJ 15%)">Alíquota<small className={s.thSub}>sobre a base</small></th>
+                <th className={ui.right} style={{ width: 130 }} title="Base × alíquota: o quanto o imposto pesa no faturamento">Efetiva<small className={s.thSub}>sobre o faturamento</small></th>
                 <th style={{ width: 170 }}>Afeta o preço?</th>
                 <th style={{ width: 44 }} />
               </tr>
@@ -179,9 +187,15 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
                       </td>
                     ) : (
                       <>
-                        <td className={ui.right}><PercentInput value={i.base} onChange={(n) => mudar(i.id, { base: n })} /></td>
+                        <td className={ui.right}>
+                          <PercentInput value={i.base} onChange={(n) => mudar(i.id, { base: n })} />
+                          <small className={s.emReais}>{formatBRL(exemplo * i.base)}</small>
+                        </td>
                         <td className={ui.right}><PercentInput value={i.aliquota} onChange={(n) => mudar(i.id, { aliquota: n })} /></td>
-                        <td className={`${ui.right} ${s.efetiva}`}>{formatPct(efetivaImposto(i))}</td>
+                        <td className={`${ui.right} ${s.efetiva}`}>
+                          {formatPct(efetivaImposto(i))}
+                          <small>{formatBRL(exemplo * efetivaImposto(i))}</small>
+                        </td>
                       </>
                     )}
                     <td>
@@ -199,7 +213,7 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
             </tbody>
           </table>
           <div className={s.impostosTotais}>
-            <span>Entra no preço (markup) <b>{formatPct(carga.noPreco)}</b></span>
+            <span>Entra no preço (markup) <b>{formatPct(carga.noPreco)}</b> ({formatBRL(exemplo * carga.noPreco)} sobre {formatBRL(exemplo)})</span>
             {carga.destacados > 0 && <span>Só destacado <b>{formatPct(carga.destacados)}</b></span>}
             {carga.icms && <span>ICMS {carga.icms.afetaPreco ? 'por dentro, no preço' : 'só destacado'}, pela Tabela de ICMS da rota</span>}
           </div>

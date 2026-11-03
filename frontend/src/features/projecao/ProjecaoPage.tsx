@@ -399,9 +399,10 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
   const [abrindo, setAbrindo] = useState(false)
   // Hipótese de fora do período mostra o mês do mesmo jeito ("nov/26"), não a chave.
   const rotulo = (chave: string) => meses.find((m) => m.chave === chave)?.rotulo ?? proximosMeses(dataDaChave(chave), 1)[0].rotulo
-  // Se o período muda com o formulário aberto, os meses escolhidos voltam para dentro dele.
-  const inicio = meses.some((m) => m.chave === form.inicio) ? form.inicio : vazio.inicio
-  const fim = form.fim && form.fim >= inicio && meses.some((m) => m.chave === form.fim) ? form.fim : ''
+  // Datas livres (yyyy-MM): a hipótese pode começar ou terminar fora do período que está na tela (ex.: até 2028).
+  const inicio = form.inicio || vazio.inicio
+  const fim = form.fim
+  const fimAntes = !!fim && fim < inicio
 
   if (!cenario)
     return (
@@ -413,7 +414,7 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
 
   const porcento = PORCENTO.includes(form.tipo)
   const comSinal = COM_SINAL.includes(form.tipo)
-  const valido = form.tipo === 'cortar-custo' ? !!form.custoId : form.valor > 0
+  const valido = (form.tipo === 'cortar-custo' ? !!form.custoId : form.valor > 0) && !fimAntes
   const adicionar = () => {
     const nomeAuto = form.tipo === 'cortar-custo' ? `Cortar: ${custos.find((c) => c.id === form.custoId)?.nome ?? ''}` : ROTULO_HIPOTESE[form.tipo]
     const sinal = comSinal && form.negativo ? -1 : 1
@@ -500,16 +501,18 @@ function PainelHipoteses({ cenario, meses, custos, onAlterar, onRenomear, onDupl
           )}
           <label>
             A partir de
-            <select value={inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })}>
-              {meses.map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}
-            </select>
+            <input id="hip-inicio" type="month" value={inicio} onChange={(e) => setForm({ ...form, inicio: e.target.value })} />
           </label>
           <label>
             Até
-            <select value={fim} onChange={(e) => setForm({ ...form, fim: e.target.value })}>
-              <option value="">o fim</option>
-              {meses.filter((m) => m.chave >= inicio).map((m) => <option key={m.chave} value={m.chave}>{m.rotulo}</option>)}
-            </select>
+            <input id="hip-fim" type="month" value={fim} min={inicio} onChange={(e) => setForm({ ...form, fim: e.target.value })} aria-invalid={fimAntes} />
+            {fimAntes ? (
+              <small className={s.hipErro}>Antes do início.</small>
+            ) : fim ? (
+              <button type="button" className={s.hipSemFim} onClick={() => setForm({ ...form, fim: '' })}>tirar a data (sem fim)</button>
+            ) : (
+              <small className={s.hipDica}>Vazio = sem fim.</small>
+            )}
           </label>
           <div className={s.hipBotoes}>
             <button type="button" className={`${ui.btn} ${ui.btnGhost}`} onClick={() => setAbrindo(false)}>Cancelar</button>
