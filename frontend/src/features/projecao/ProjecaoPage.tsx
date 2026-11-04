@@ -32,24 +32,18 @@ const chaveMes = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).pad
 const dataDaChave = (chave: string) => new Date(Number(chave.slice(0, 4)), Number(chave.slice(5, 7)) - 1, 1)
 const mesesEntre = (de: string, ate: string) => (Number(ate.slice(0, 4)) - Number(de.slice(0, 4))) * 12 + Number(ate.slice(5, 7)) - Number(de.slice(5, 7)) + 1
 
-/** Período da projeção: próximos N meses, um ano fechado (jan–dez) ou de/até escolhidos. */
-const mesesDoPeriodo = (periodo: string, hoje: Date, de: string, ate: string) => {
-  if (periodo === 'c') return proximosMeses(dataDaChave(de), Math.min(MAX_MESES, Math.max(1, mesesEntre(de, ate))))
-  return periodo.startsWith('a') ? proximosMeses(new Date(Number(periodo.slice(1)), 0, 1), 12) : proximosMeses(hoje, periodo === 'p6' ? 6 : 12)
-}
-const rotuloDoPeriodo = (periodo: string, meses: Mes[]) =>
-  periodo === 'c' ? (meses.length === 1 ? meses[0].rotulo : `${meses[0].rotulo} a ${meses[meses.length - 1].rotulo}`)
-    : periodo.startsWith('a') ? `jan–dez/${periodo.slice(1)}` : periodo === 'p6' ? '6 meses' : '12 meses'
+/** Os meses do período de/até (aaaa-mm), até o limite. */
+const mesesDoPeriodo = (de: string, ate: string) => proximosMeses(dataDaChave(de), Math.min(MAX_MESES, Math.max(1, mesesEntre(de, ate))))
+const rotuloDoPeriodo = (meses: Mes[]) => (meses.length === 1 ? meses[0].rotulo : `${meses[0].rotulo} a ${meses[meses.length - 1].rotulo}`)
 
 /**
- * Projeção: o período escolhido (atalhos ou de/até) com a META como receita e a DF dos cadastros (reais).
+ * Projeção: o período de/até com a META como receita e a DF dos cadastros (reais).
  * Tudo na tela (cartões, gráficos, mês a mês, alertas, comparação, hipóteses) sai de `meses`.
  * Hipóteses só existem no cenário (gravado no servidor); os cadastros não mudam.
  */
 export function ProjecaoPage() {
   const [hoje] = useState(() => new Date())
   // Período da Base: escolha da tela (não é gravada). No cenário, o período é dele (gravado em meses fixos).
-  const [periodo, setPeriodo] = useState('p12')
   const [de, setDe] = useState(() => chaveMes(hoje))
   const [ate, setAte] = useState(() => chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() + 11, 1)))
   const [fonte, setFonte] = useState('metas')
@@ -59,12 +53,10 @@ export function ProjecaoPage() {
   const cenario = cenarios.find((c) => c.id === ativo)
   // O período do cenário é o "futuro" que o Pricing usa. Sem período gravado (cenário antigo): os próximos 12 meses.
   const gravado = cenario?.periodoDe && cenario.periodoAte ? { de: cenario.periodoDe, ate: cenario.periodoAte } : null
-  const anoCheio = gravado && gravado.de.endsWith('-01') && gravado.ate === `${gravado.de.slice(0, 4)}-12` ? Number(gravado.de.slice(0, 4)) : 0
-  const periodoTela = !cenario ? periodo : !gravado ? 'p12' : anoCheio >= hoje.getFullYear() && anoCheio <= hoje.getFullYear() + 2 ? `a${anoCheio}` : 'c'
-  const deTela = gravado?.de ?? de
-  const ateTela = gravado?.ate ?? ate
-  const meses = mesesDoPeriodo(periodoTela, hoje, deTela, ateTela)
-  const rotuloPeriodo = rotuloDoPeriodo(periodoTela, meses)
+  const proximos12 = { de: chaveMes(hoje), ate: chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() + 11, 1)) }
+  const periodoAtivo = cenario ? (gravado ?? proximos12) : { de, ate }
+  const meses = mesesDoPeriodo(periodoAtivo.de, periodoAtivo.ate)
+  const rotuloPeriodo = rotuloDoPeriodo(meses)
   const aplicarPeriodo = (d: string, a: string) => {
     if (cenario) alterar({ ...cenario, periodoDe: d, periodoAte: a })
     else {
@@ -83,16 +75,6 @@ export function ProjecaoPage() {
     if (!v) return
     const atual = meses[0].chave
     aplicarPeriodo(v < atual ? v : mesesEntre(atual, v) > MAX_MESES ? somarMeses(v, -(MAX_MESES - 1)) : atual, v)
-  }
-  // Os atalhos só preenchem o de/até. Ao escolher "Personalizado", parte do período que estava na tela.
-  const escolherPeriodo = (v: string) => {
-    const ms = v === 'c' ? meses : mesesDoPeriodo(v, hoje, deTela, ateTela)
-    if (cenario) {
-      aplicarPeriodo(ms[0].chave, ms[ms.length - 1].chave)
-      return
-    }
-    if (v === 'c' && periodo !== 'c') aplicarPeriodo(meses[0].chave, meses[meses.length - 1].chave)
-    setPeriodo(v)
   }
   const qc = useQueryClient()
   // Meta e despesa fixa costumam ser mudadas em outra aba: ao voltar para esta, relê os cadastros.
@@ -239,20 +221,13 @@ export function ProjecaoPage() {
           <option value="grupo">Grupo (todas as empresas)</option>
           {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
-        <select className={ui.filterSelect} value={periodoTela} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período" title={cenario ? 'Período do cenário (gravado com ele): é o futuro que o Pricing usa' : undefined}>
-          <option value="p6">Próximos 6 meses</option>
-          <option value="p12">Próximos 12 meses</option>
-          {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
-          <option value="c">Personalizado (de/até)</option>
-        </select>
-        {/* No cenário o de/até fica sempre à vista: é o período gravado com ele (o Pricing usa). */}
-        {(periodoTela === 'c' || cenario) && (
-          <div className={s.periodoLivre} title={`Até ${MAX_MESES} meses`}>
-            <input id="projecao-de" type="month" aria-label="Período: de" value={meses[0].chave} onChange={(e) => mudarDe(e.target.value)} />
-            <span>a</span>
-            <input id="projecao-ate" type="month" aria-label="Período: até" value={meses[meses.length - 1].chave} onChange={(e) => mudarAte(e.target.value)} />
-          </div>
-        )}
+        {/* O período é só o de/até. No cenário fica gravado com ele: é o futuro que o Pricing usa. */}
+        <div className={s.periodoLivre} title={cenario ? `Período do cenário (gravado com ele): é o futuro que o Pricing usa. Até ${MAX_MESES} meses.` : `Até ${MAX_MESES} meses`}>
+          <span className={s.periodoRotulo}>Período</span>
+          <input id="projecao-de" type="month" aria-label="Período: de" value={meses[0].chave} onChange={(e) => mudarDe(e.target.value)} />
+          <span>a</span>
+          <input id="projecao-ate" type="month" aria-label="Período: até" value={meses[meses.length - 1].chave} onChange={(e) => mudarAte(e.target.value)} />
+        </div>
         <select className={ui.filterSelect} value={servicoId} onChange={(e) => setServicoId(e.target.value)} aria-label="Serviço (impostos do fator)" title="Os impostos do fator vêm do serviço, como no Pricing">
           <option value="">Impostos: média dos serviços</option>
           {servicosAtivos.map((x) => <option key={x.id} value={x.id}>Impostos: {x.nome}</option>)}
