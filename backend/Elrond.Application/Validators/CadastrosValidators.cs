@@ -75,6 +75,8 @@ public class ServicoValidator : AbstractValidator<Servico>
             i.RuleFor(x => x.Nome).NotEmpty().When(x => x.Imposto == "outro").WithMessage("Dê um nome ao imposto.");
             i.RuleFor(x => x.Base).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a base de cálculo fica entre 0% e 100%.");
             i.RuleFor(x => x.Aliquota).InclusiveBetween(0m, 1m).WithMessage(x => $"{Rotulo(x)}: a alíquota fica entre 0% e 100%.");
+            i.RuleFor(x => x.EfetivaInformada).InclusiveBetween(0m, 1m).When(x => x.EfetivaInformada is not null)
+                .WithMessage(x => $"{Rotulo(x)}: a efetiva fica entre 0% e 100%.");
             i.RuleFor(x => x.Limite).GreaterThanOrEqualTo(0m).WithMessage("O limite do adicional não pode ser negativo.");
             i.RuleFor(x => x.Regime).Must(r => r.Length == 0 || Regimes.Contains(r)).WithMessage("Regime inválido nos impostos.");
             i.RuleFor(x => x.VigenteDesde).Must(v => v.Length == 0 || DateOnly.TryParseExact(v, "yyyy-MM-dd", out _))

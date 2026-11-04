@@ -12,6 +12,8 @@ export interface ImpostoServico {
   /** Base sobre a receita (fração): 1 = 100%; 0,08 = presunção de 8%. */
   base: number
   aliquota: number
+  /** Efetiva digitada (a que a contabilidade passa): independe da alíquota. Nula = base × alíquota. */
+  efetivaInformada?: number | null
   /** Não usado (fica por compatibilidade com o cadastro de antes). */
   limite: number
   /** true = entra no markup; false = só destacado na nota. */
@@ -77,8 +79,11 @@ export const novoImposto = (imposto: TipoImposto = 'outro', regime: RegimeTabela
   afetaPreco: true,
 })
 
-/** Alíquota efetiva sobre a receita: base × alíquota (o ICMS vem da Tabela de ICMS, pela rota). */
-export const efetivaImposto = (i: ImpostoServico): number => (i.imposto === 'icms' ? 0 : i.base * i.aliquota)
+/** Base × alíquota: a efetiva quando o usuário não digitou outra. */
+export const efetivaCalculada = (i: Pick<ImpostoServico, 'base' | 'aliquota'>): number => i.base * i.aliquota
+
+/** Alíquota efetiva sobre a receita: a informada, senão base × alíquota (o ICMS vem da Tabela de ICMS, pela rota). */
+export const efetivaImposto = (i: ImpostoServico): number => (i.imposto === 'icms' ? 0 : (i.efetivaInformada ?? efetivaCalculada(i)))
 
 /** O que entra no markup e o que é só destacado. O ICMS fica de fora: entra por dentro, pela rota. */
 export function cargaDoServico(impostos: ImpostoServico[]) {

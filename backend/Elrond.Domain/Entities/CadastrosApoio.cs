@@ -65,8 +65,14 @@ public class ImpostoServico
     /// <summary>Início da vigência (aaaa-mm-dd), definido pelo usuário. Vazio = desde sempre.</summary>
     public string VigenteDesde { get; set; } = string.Empty;
 
-    /// <summary>Alíquota efetiva sobre a receita: base × alíquota (o adicional do IRPJ também, com a alíquota que a contabilidade passa).</summary>
-    public decimal Efetiva => Base * Aliquota;
+    /// <summary>
+    /// Efetiva digitada pelo usuário (a que a contabilidade passa, como a do DAS depois da parcela a deduzir):
+    /// independe da alíquota. Nulo = calculada (base × alíquota).
+    /// </summary>
+    public decimal? EfetivaInformada { get; set; }
+
+    /// <summary>Alíquota efetiva sobre a receita: a informada, senão base × alíquota. É ela que entra no preço.</summary>
+    public decimal Efetiva => EfetivaInformada ?? Base * Aliquota;
 }
 
 /// <summary>Como o serviço sai na NFS-e de uma empresa (tabelas oficiais: LC 116, NBS, cIndOp, cClassTrib).</summary>

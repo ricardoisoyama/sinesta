@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CalendarPlus, FileSpreadsheet, Info, Plus, Trash2 } from 'lucide-react'
+import { CalendarPlus, FileSpreadsheet, Info, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { MoneyInput } from '@/features/common/MoneyInput'
 import { PercentInput } from '@/features/common/PercentInput'
 import { Link } from 'react-router-dom'
@@ -7,7 +7,7 @@ import { confirmar } from '@/features/common/dialogo/dialogo'
 import ui from '@/features/common/ui.module.css'
 import { formatBRL, formatPct } from '@/lib/format'
 import {
-  MODELOS_IMPOSTOS, REGIMES_TABELA, TIPOS_IMPOSTO, cargaDoServico, dataBr, efetivaImposto, hojeIso, impostosDoModelo, novoImposto,
+  MODELOS_IMPOSTOS, REGIMES_TABELA, TIPOS_IMPOSTO, cargaDoServico, dataBr, efetivaCalculada, efetivaImposto, hojeIso, impostosDoModelo, novoImposto,
   rotuloImposto, vigenciaEmVigor, vigenciasDoRegime, type ImpostoServico, type RegimeTabela, type TipoImposto,
 } from './impostos'
 import s from './servicos.module.css'
@@ -47,7 +47,7 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
   const proximo = TIPOS_IMPOSTO.find((t) => t.valor !== 'outro' && !usados.has(t.valor))?.valor ?? 'outro'
   const trocarTipo = (i: ImpostoServico, tipo: TipoImposto) => {
     const padrao = novoImposto(tipo)
-    mudar(i.id, { imposto: tipo, base: padrao.base, aliquota: i.aliquota || padrao.aliquota, limite: padrao.limite })
+    mudar(i.id, { imposto: tipo, base: padrao.base, aliquota: i.aliquota || padrao.aliquota, limite: padrao.limite, efetivaInformada: null })
   }
   const usarModelo = async (id: string) => {
     if (!id) return
@@ -193,12 +193,22 @@ export function ImpostosServicoEditor({ value, onChange, regimePadrao, empresasP
                         </td>
                         <td className={ui.right}><PercentInput value={i.aliquota} onChange={(n) => mudar(i.id, { aliquota: n })} /></td>
                         <td className={ui.right}>
-                          {/* Digitar a efetiva (a que a contabilidade passa) recalcula a alíquota sobre a base. */}
+                          {/* A efetiva digitada (a que a contabilidade passa) fica guardada à parte: não mexe na alíquota. */}
                           <PercentInput
                             value={efetivaImposto(i)}
-                            onChange={(n) => (i.base > 0 ? mudar(i.id, { aliquota: n / i.base }) : mudar(i.id, { base: 1, aliquota: n }))}
+                            onChange={(n) => mudar(i.id, { efetivaInformada: Math.abs(n - efetivaCalculada(i)) < 1e-9 ? null : n })}
                           />
                           <small className={s.emReais}>{formatBRL(exemplo * efetivaImposto(i))}</small>
+                          {i.efetivaInformada != null && (
+                            <button
+                              type="button"
+                              className={s.efetivaInformada}
+                              onClick={() => mudar(i.id, { efetivaInformada: null })}
+                              title={`Efetiva digitada. Clique para voltar à calculada (base × alíquota = ${formatPct(efetivaCalculada(i))}).`}
+                            >
+                              <RotateCcw size={11} /> calculada {formatPct(efetivaCalculada(i))}
+                            </button>
+                          )}
                         </td>
                       </>
                     )}

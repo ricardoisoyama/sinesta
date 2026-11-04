@@ -60,6 +60,25 @@ public class FatorTests
     }
 
     [Fact]
+    public void Efetiva_informada_entra_no_preco_sem_mexer_na_aliquota()
+    {
+        // DAS: alíquota nominal da faixa 10%, efetiva (depois da parcela a deduzir) 6,5%.
+        var servico = new Servico
+        {
+            Id = "srv", Nome = "Serviço",
+            Impostos =
+            [
+                new ImpostoServico { Id = "das", Imposto = "das", Base = 1m, Aliquota = 0.10m, EfetivaInformada = 0.065m, Regime = "Lucro Presumido" },
+                new ImpostoServico { Id = "irpj", Imposto = "irpj", Base = 0.08m, Aliquota = 0.15m, Regime = "Lucro Presumido" },
+            ],
+        };
+        var r = FatorService.Calcular(Empresa(), "bm", new[] { Fixo(73319.526m) }, new[] { MetaMensal(565000m) }, Hoje, 0.005m, servico: servico);
+
+        Perto(0.077m, r.Impostos, 0.000001m); // 6,5% informada + 8% × 15% calculada
+        Assert.Equal(0.10m, r.ImpostosDetalhe!.Single(i => i.Imposto == "das").Aliquota);
+    }
+
+    [Fact]
     public void Custo_que_ainda_nao_comecou_entra_e_o_que_terminou_sai()
     {
         var custos = new[] { Fixo(1000m), Fixo(500m, inicio: "2027-03-01"), Fixo(800m, fim: "2026-08-31") };

@@ -40,4 +40,12 @@ describe('impostos do serviço', () => {
     expect(efetivaImposto(adicional)).toBeCloseTo(0.001333, 6)
     expect(efetivaImposto(impostosDoModelo('transporte').find((i) => i.imposto === 'icms')!)).toBe(0)
   })
+
+  it('a efetiva informada vale no lugar de base × alíquota, sem mudar a alíquota', () => {
+    const das = { ...impostosDoModelo('transporte')[0], imposto: 'das' as const, base: 1, aliquota: 0.1, efetivaInformada: 0.065 }
+    expect(efetivaImposto(das)).toBe(0.065)
+    expect(das.aliquota).toBe(0.1)
+    expect(efetivaImposto({ ...das, efetivaInformada: null })).toBeCloseTo(0.1, 9)
+    expect(cargaDoServico([das]).noPreco).toBe(0.065)
+  })
 })

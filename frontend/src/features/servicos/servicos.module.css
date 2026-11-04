@@ -51,6 +51,9 @@
 .efetiva { font-variant-numeric: tabular-nums; font-weight: 700; color: #143d18; padding-top: 14px !important; }
 .efetiva small { display: block; font-weight: 500; font-size: 11px; color: #8a978f; }
 .emReais { display: block; margin-top: 3px; font-size: 11px; color: #8a978f; font-variant-numeric: tabular-nums; }
+/* Efetiva digitada à parte: mostra a calculada e volta a ela no clique. */
+.efetivaInformada { display: inline-flex; white-space: nowrap; align-items: center; gap: 3px; margin-top: 2px; padding: 0; border: 0; background: none; font: inherit; font-size: 11px; font-weight: 600; color: #e8702f; cursor: pointer; font-variant-numeric: tabular-nums; }
+.efetivaInformada:hover { text-decoration: underline; }
 .thSub { display: block; font-size: 10.5px; font-weight: 500; letter-spacing: 0; text-transform: none; color: #8a978f; }
 .exemploConta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12.5px; color: #3d4b43; }
 .exemploValor { width: 150px; }
