@@ -173,3 +173,13 @@
 /* Arrastar a borda do título para alargar a coluna */
 .redim { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 3; }
 .redim:hover, .redim:active { background: rgba(232, 112, 47, 0.35); }
+
+/* Ordem: setas ao passar o mouse e arrastar (linha laranja = antes/depois; fundo = dentro da pasta) */
+.ordemAcoes { display: none; align-items: center; flex-shrink: 0; }
+.pasta:hover .ordemAcoes, .pasta:focus-within .ordemAcoes, .pastaMae .ordemAcoes { display: inline-flex; }
+.ordemAcoes .pastaAcao { width: 22px; height: 24px; margin-right: 0; }
+.pasta[draggable='true'], .pastaMae[draggable='true'] { cursor: grab; }
+.arrastando { opacity: 0.4; }
+.soltarAntes { box-shadow: inset 0 2px 0 var(--orange); }
+.soltarDepois { box-shadow: inset 0 -2px 0 var(--orange); }
+.soltarDentro { background: #fdf0e6; outline: 1px dashed var(--orange); outline-offset: -1px; border-radius: 8px; }

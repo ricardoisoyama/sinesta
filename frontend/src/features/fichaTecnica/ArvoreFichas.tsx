@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { ChevronDown, ChevronRight, CopyPlus, FilePlus, Folder, FolderOpen, FolderPlus, Pencil, Plus, Power } from 'lucide-react'
+import { useState, type DragEvent, type ReactNode } from 'react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, CopyPlus, FilePlus, Folder, FolderOpen, FolderPlus, Pencil, Plus, Power } from 'lucide-react'
 import { confirmar } from '@/features/common/dialogo/dialogo'
 import { caminhoPasta, novaPasta, type GradeFichas, type GrupoFicha, type PastaFicha } from './types'
+import { moverEntreIrmaos, moverPara, zonaDoCursor, type Zona } from './ordem'
 import css from './fichaTecnica.module.css'
 
 interface Props {
@@ -24,7 +25,8 @@ interface Props {
 /**
  * Pastas em níveis à esquerda da Ficha Técnica: uma pasta guarda subpastas e fichas (COBRECOM › Operação
  * Santos › Funcionários). Fichas soltas ficam na raiz. Mover não perde nada (só muda onde aparece);
- * inativar a pasta sobe o que estava nela para a pasta de cima.
+ * inativar a pasta sobe o que estava nela para a pasta de cima. A ordem muda pelas setas ou arrastando
+ * (soltar no meio de uma pasta põe dentro dela; em "Fichas", na raiz); a ordem gravada vale para todos.
  */
 export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, carregando, qtdItens, onEscolher, onSalvarGrupo, onDuplicar, onNovaFicha, onGravar, semFicha }: Props) {
   const pastas = grade.pastas ?? []
@@ -33,6 +35,7 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
   const ativas = pastas.filter((p) => p.status === 'ativo')
   const visiveis = pastas.filter((p) => mostrarInativas || p.status === 'ativo')
   const existe = (id: string | undefined) => !!id && ativas.some((p) => p.id === id)
+  const paiVisivel = (p: PastaFicha) => !!p.paiId && visiveis.some((x) => x.id === p.paiId)
 
   const salvarPasta = (p: PastaFicha) => onGravar({ pastas: pastas.map((x) => (x.id === p.id ? p : x)) })
   const criarPasta = (paiId: string) => {
@@ -65,6 +68,88 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
     })
   }
   const alternar = (id: string) => setRecolhidas((r) => { const n = new Set(r); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  const abrir = (id: string) => setRecolhidas((r) => { const n = new Set(r); n.delete(id); return n })
+
+  // ── ordem: setas (entre os irmãos do mesmo nível) e arrastar ──
+  const pastaDaFicha = (g: GrupoFicha) => (existe(g.pastaId) ? g.pastaId! : '')
+  const paiDaPasta = (p: PastaFicha) => (paiVisivel(p) ? p.paiId! : '')
+  const fichasVisiveis = grade.grupos.filter((g) => mostrarInativas || g.status === 'ativo')
+  const subirFicha = (g: GrupoFicha, delta: -1 | 1) =>
+    onGravar({ grupos: moverEntreIrmaos(grade.grupos, fichasVisiveis.filter((x) => pastaDaFicha(x) === pastaDaFicha(g)), g.id, delta) })
+  const subirPasta = (p: PastaFicha, delta: -1 | 1) =>
+    onGravar({ pastas: moverEntreIrmaos(pastas, visiveis.filter((x) => paiDaPasta(x) === paiDaPasta(p)), p.id, delta) })
+  const setas = (subir: (d: -1 | 1) => void, nome: string) => (
+    <span className={css.ordemAcoes}>
+      <button type="button" className={css.pastaAcao} title={`Subir "${nome}"`} onClick={() => subir(-1)}><ArrowUp size={13} /></button>
+      <button type="button" className={css.pastaAcao} title={`Descer "${nome}"`} onClick={() => subir(1)}><ArrowDown size={13} /></button>
+    </span>
+  )
+
+  const [arrastando, setArrastando] = useState<{ tipo: 'ficha' | 'pasta'; id: string } | null>(null)
+  const [alvo, setAlvo] = useState<{ id: string; zona: Zona } | null>(null)
+  const fimArraste = () => { setArrastando(null); setAlvo(null) }
+  const comecar = (tipo: 'ficha' | 'pasta', id: string) => (e: DragEvent) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', id)
+    setArrastando({ tipo, id })
+  }
+  /** Onde o item arrastado cairia sobre esta linha (null = não dá: pasta sobre ficha, ou pasta dentro dela mesma). */
+  const zonaSobre = (tipo: 'ficha' | 'pasta', id: string, e: DragEvent): Zona | null => {
+    if (!arrastando || arrastando.id === id) return null
+    if (arrastando.tipo === 'pasta' && (tipo === 'ficha' || descendentes(arrastando.id).has(id))) return null
+    if (arrastando.tipo === 'ficha' && tipo === 'pasta') return 'dentro'
+    const r = e.currentTarget.getBoundingClientRect()
+    return zonaDoCursor((e.clientY - r.top) / r.height, tipo === 'pasta')
+  }
+  const sobre = (tipo: 'ficha' | 'pasta', id: string) => (e: DragEvent) => {
+    const zona = zonaSobre(tipo, id, e)
+    if (!zona) return
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (alvo?.id !== id || alvo.zona !== zona) setAlvo({ id, zona })
+  }
+  const soltar = (tipo: 'ficha' | 'pasta', id: string) => (e: DragEvent) => {
+    e.preventDefault()
+    const zona = zonaSobre(tipo, id, e)
+    const a = arrastando
+    fimArraste()
+    if (!zona || !a) return
+    if (a.tipo === 'ficha') {
+      if (tipo === 'pasta') {
+        onGravar({ grupos: moverPara(grade.grupos, a.id, '', true, (g) => ({ ...g, pastaId: id })) })
+        abrir(id)
+      } else {
+        const destino = grade.grupos.find((g) => g.id === id)
+        if (destino) onGravar({ grupos: moverPara(grade.grupos, a.id, id, zona === 'depois', (g) => ({ ...g, pastaId: pastaDaFicha(destino) })) })
+      }
+      return
+    }
+    const destino = pastas.find((p) => p.id === id)
+    if (!destino) return
+    if (zona === 'dentro') {
+      onGravar({ pastas: moverPara(pastas, a.id, '', true, (p) => ({ ...p, paiId: id })) })
+      abrir(id)
+    } else onGravar({ pastas: moverPara(pastas, a.id, id, zona === 'depois', (p) => ({ ...p, paiId: paiDaPasta(destino) })) })
+  }
+  /** Soltar no título "Fichas": vai para a raiz (no fim). */
+  const soltarNaRaiz = (e: DragEvent) => {
+    e.preventDefault()
+    const a = arrastando
+    fimArraste()
+    if (!a) return
+    if (a.tipo === 'ficha') onGravar({ grupos: moverPara(grade.grupos, a.id, '', true, (g) => ({ ...g, pastaId: '' })) })
+    else onGravar({ pastas: moverPara(pastas, a.id, '', true, (p) => ({ ...p, paiId: '' })) })
+  }
+  const classeAlvo = (id: string) =>
+    alvo?.id !== id ? '' : alvo.zona === 'antes' ? css.soltarAntes : alvo.zona === 'depois' ? css.soltarDepois : css.soltarDentro
+  const arrastavel = (tipo: 'ficha' | 'pasta', id: string, pode: boolean) => ({
+    draggable: pode,
+    onDragStart: pode ? comecar(tipo, id) : undefined,
+    onDragEnd: fimArraste,
+    onDragOver: sobre(tipo, id),
+    onDragLeave: () => alvo?.id === id && setAlvo(null),
+    onDrop: soltar(tipo, id),
+  })
 
   const opcoesMover = (excluir: Set<string>) => (
     <>
@@ -79,7 +164,13 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
     const on = g.id === grupoAtual
     const Icone = on ? FolderOpen : Folder
     return (
-      <div key={g.id} className={`${css.pasta} ${css.ficha} ${on ? css.pastaOn : ''} ${g.status !== 'ativo' ? css.pastaOff : ''}`} style={{ paddingLeft: nivel * 14 }}>
+      <div
+        key={g.id}
+        className={`${css.pasta} ${css.ficha} ${on ? css.pastaOn : ''} ${g.status !== 'ativo' ? css.pastaOff : ''} ${arrastando?.id === g.id ? css.arrastando : ''} ${classeAlvo(g.id)}`}
+        style={{ paddingLeft: nivel * 14 }}
+        {...arrastavel('ficha', g.id, !on)}
+        title={on ? undefined : 'Arraste para mudar a ordem ou a pasta'}
+      >
         {on ? (
           <div className={css.fichaAberta}>
             <div className={css.fichaAbertaTopo}>
@@ -93,6 +184,7 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
                 aria-label="Nome da ficha"
                 title={g.nome}
               />
+              {setas((d) => subirFicha(g, d), g.nome)}
               <button type="button" className={css.pastaAcao} title="Duplicar ficha (colunas, itens e valores)" onClick={() => onDuplicar(g.id)}>
                 <CopyPlus size={14} />
               </button>
@@ -107,17 +199,19 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
             )}
           </div>
         ) : (
-          <button type="button" className={css.pastaBtn} onClick={() => onEscolher(g.id)} title={g.nome}>
-            <Icone size={16} />
-            <span>{g.nome || 'Sem nome'}</span>
-            <small>{qtdItens(g.id)}</small>
-          </button>
+          <>
+            <button type="button" className={css.pastaBtn} onClick={() => onEscolher(g.id)} title={g.nome}>
+              <Icone size={16} />
+              <span>{g.nome || 'Sem nome'}</span>
+              <small>{qtdItens(g.id)}</small>
+            </button>
+            {setas((d) => subirFicha(g, d), g.nome)}
+          </>
         )}
       </div>
     )
   }
 
-  const paiVisivel = (p: PastaFicha) => !!p.paiId && visiveis.some((x) => x.id === p.paiId)
   const nivelDe = (paiId: string, nivel: number): ReactNode[] => {
     const filhas = visiveis.filter((p) => (paiId ? p.paiId === paiId : !paiVisivel(p)))
     const fichas = grade.grupos
@@ -129,7 +223,11 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
         const qtd = grade.grupos.filter((g) => g.status === 'ativo' && descendentes(p.id).has(g.pastaId ?? '')).length
         return (
           <div key={p.id} className={css.ramo}>
-            <div className={`${css.pastaMae} ${p.status !== 'ativo' ? css.pastaOff : ''}`} style={{ paddingLeft: nivel * 14 }}>
+            <div
+              className={`${css.pastaMae} ${p.status !== 'ativo' ? css.pastaOff : ''} ${arrastando?.id === p.id ? css.arrastando : ''} ${classeAlvo(p.id)}`}
+              style={{ paddingLeft: nivel * 14 }}
+              {...arrastavel('pasta', p.id, renomeando !== p.id)}
+            >
               <button type="button" className={css.chevron} onClick={() => alternar(p.id)} aria-label={aberta ? 'Recolher pasta' : 'Abrir pasta'} aria-expanded={aberta}>
                 {aberta ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
               </button>
@@ -157,6 +255,7 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
                 </button>
               )}
               <span className={css.pastaMaeAcoes}>
+                {setas((d) => subirPasta(p, d), p.nome)}
                 <button type="button" className={css.pastaAcao} title="Nova ficha nesta pasta" onClick={() => onNovaFicha(p.id)} disabled={carregando}><FilePlus size={14} /></button>
                 <button type="button" className={css.pastaAcao} title="Nova subpasta" onClick={() => criarPasta(p.id)} disabled={carregando}><FolderPlus size={14} /></button>
                 <button type="button" className={css.pastaAcao} title="Renomear ou mover a pasta" onClick={() => setRenomeando(renomeando === p.id ? '' : p.id)}><Pencil size={13} /></button>
@@ -173,7 +272,15 @@ export function ArvoreFichas({ grade, mostrarInativas, grupoAtual, focoGrupo, ca
 
   return (
     <nav className={css.pastas} aria-label="Fichas">
-      <div className={css.pastasTitulo}>Fichas</div>
+      <div
+        className={`${css.pastasTitulo} ${arrastando && alvo?.id === '' ? css.soltarDentro : ''}`}
+        onDragOver={(e) => { if (!arrastando) return; e.preventDefault(); if (alvo?.id !== '') setAlvo({ id: '', zona: 'dentro' }) }}
+        onDragLeave={() => alvo?.id === '' && setAlvo(null)}
+        onDrop={soltarNaRaiz}
+        title={arrastando ? 'Solte aqui para tirar da pasta (vai para a raiz)' : undefined}
+      >
+        Fichas
+      </div>
       {nivelDe('', 0)}
       {semFicha && (
         <div className={`${css.pasta} ${semFicha.ativo ? css.pastaOn : ''}`}>
