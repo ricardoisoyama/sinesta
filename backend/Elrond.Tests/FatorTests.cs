@@ -60,6 +60,32 @@ public class FatorTests
     }
 
     [Fact]
+    public void Projecao_usa_o_periodo_do_cenario_e_nao_o_mes_de_hoje()
+    {
+        // Hoje é out/2026; o cenário projeta jan–mar/2027 com um custo novo de R$ 10.000 só a partir de fev.
+        var cenario = new CenarioProjecao
+        {
+            Id = "c", Nome = "Futuro", PeriodoDe = "2027-01", PeriodoAte = "2027-03",
+            Hipoteses = [new HipoteseProjecao { Id = "h", Tipo = "novo-custo", Valor = 10000m, Inicio = "2027-02", Ativa = true }],
+        };
+        // Sem meta de 2027: repete a de 2026 (100.000/mês). Despesa de 20.000 que só começa em mar/2027.
+        var custos = new[] { Fixo(50000m), Fixo(20000m, inicio: "2027-03-01") };
+        var r = FatorService.Calcular(Empresa(), "bm", custos, new[] { MetaMensal(100000m) }, Hoje, 0.005m, servico: ComImpostos(0.105m), cenario: cenario);
+
+        Assert.True(r.Pronto);
+        Assert.Equal("jan/27 a mar/27", r.CenarioPeriodo);
+        Assert.Equal(190000m, r.CenarioDf);       // 50k + 60k + 80k
+        Assert.Equal(300000m, r.CenarioReceita);  // 3 × 100k (meta de 2026 repetida)
+        Perto(190000m / 300000m, r.DfPct, 0.000001m);
+        Assert.Contains("ano anterior", r.CenarioNota);
+
+        // O mesmo cenário só em jan/2027: o custo novo ainda não vale.
+        cenario.PeriodoAte = "2027-01";
+        var jan = FatorService.Calcular(Empresa(), "bm", custos, new[] { MetaMensal(100000m) }, Hoje, 0.005m, servico: ComImpostos(0.105m), cenario: cenario);
+        Perto(0.5m, jan.DfPct, 0.000001m);
+    }
+
+    [Fact]
     public void Efetiva_informada_entra_no_preco_sem_mexer_na_aliquota()
     {
         // DAS: alíquota nominal da faixa 10%, efetiva (depois da parcela a deduzir) 6,5%.

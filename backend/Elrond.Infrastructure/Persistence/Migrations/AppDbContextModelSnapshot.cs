@@ -564,6 +564,20 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("PeriodoAte")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasDefaultValue("");
+
+                    b.Property<string>("PeriodoDe")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasDefaultValue("");
+
                     b.Property<decimal>("Sensibilidade")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(18, 6)
@@ -7550,6 +7564,9 @@ namespace Elrond.Infrastructure.Persistence.Migrations
                                 .HasPrecision(18, 6);
 
                             b1.Property<decimal>("Base")
+                                .HasPrecision(18, 6);
+
+                            b1.Property<decimal?>("EfetivaInformada")
                                 .HasPrecision(18, 6);
 
                             b1.Property<string>("Id");

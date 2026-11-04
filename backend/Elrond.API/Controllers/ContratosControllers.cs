@@ -59,6 +59,9 @@ public class CenariosProjecaoController(ICrudRepository<CenarioProjecao> repo) :
         : c.Hipoteses.Any(h => !Tipos.Contains(h.Tipo)) ? "Tipo de hipótese inválido."
         : c.Hipoteses.Any(h => h.Inicio.Length != 7 || (h.Fim.Length > 0 && string.CompareOrdinal(h.Fim, h.Inicio) < 0)) ? "Confira o período das hipóteses (aaaa-mm)."
         : Math.Abs(c.Sensibilidade) > 0.5m ? "A sensibilidade vai de −50% a +50%."
+        : (c.PeriodoDe.Length > 0 || c.PeriodoAte.Length > 0)
+          && (c.PeriodoDe.Length != 7 || c.PeriodoAte.Length != 7 || string.CompareOrdinal(c.PeriodoAte, c.PeriodoDe) < 0)
+            ? "Confira o período do cenário (de/até, aaaa-mm)."
         : null);
 }
 

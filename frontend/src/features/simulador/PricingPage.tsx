@@ -603,7 +603,7 @@ export function PricingPage() {
               </label>
             )}
             {ehGestor && cenarios.length > 0 && (
-              <label className={s.empresaSel} title="Precificar com a DF e a meta de um cenário da Projeção (as hipóteses do mês). Base = os cadastros de hoje.">
+              <label className={s.empresaSel} title="Precificar com o futuro de um cenário da Projeção: DF e meta do período projetado, com as hipóteses. Base = os cadastros de hoje.">
                 Projeções
                 <select value={cenarioUsado} onChange={(e) => setCenarioId(e.target.value)} aria-label="Projeção do preço">
                   <option value="">Base (cadastros de hoje)</option>
@@ -896,7 +896,7 @@ export function PricingPage() {
               <>
                 {fr.cenarioNome && (
                   <div className={base.memRow}>
-                    <span className={base.memLabel}>Projeção: cenário {fr.cenarioNome} <span className={base.memSub}>{fr.cenarioNota}: DF {formatBRL(fr.totalDf)} sobre {formatBRL(fr.faturamentoMensal)}</span></span>
+                    <span className={base.memLabel}>Projeção: {fr.cenarioNome} · {fr.cenarioPeriodo} <span className={base.memSub}>{fr.cenarioNota}: DF {formatBRL(fr.cenarioDf ?? 0)} sobre {formatBRL(fr.cenarioReceita ?? 0)} no período</span></span>
                     <span className={base.memVal}>Projeção</span>
                   </div>
                 )}

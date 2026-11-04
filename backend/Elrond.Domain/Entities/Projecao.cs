@@ -30,5 +30,28 @@ public class CenarioProjecao : Rastreavel, IEntity, IInativavel
     public List<HipoteseProjecao> Hipoteses { get; set; } = new();
     /// <summary>Variação do faturamento do cenário (fração, −0,3 a +0,3 na tela): fica gravada com ele.</summary>
     public decimal Sensibilidade { get; set; }
+    /// <summary>Período projetado (aaaa-mm, meses fixos): é o "futuro" que o Pricing usa. Vazio = próximos 12 meses.</summary>
+    public string PeriodoDe { get; set; } = string.Empty;
+    public string PeriodoAte { get; set; } = string.Empty;
     public string Status { get; set; } = "ativo";
+
+    /// <summary>Primeiro dia de cada mês do período (o gravado; sem ele, os 12 meses a partir de <paramref name="hoje"/>).</summary>
+    public List<DateOnly> MesesDoPeriodo(DateOnly hoje)
+    {
+        static DateOnly? Mes(string chave) =>
+            DateOnly.TryParseExact(chave + "-01", "yyyy-MM-dd", out var d) ? d : null;
+        var de = Mes(PeriodoDe);
+        var ate = Mes(PeriodoAte);
+        if (de is null || ate is null || ate < de)
+        {
+            de = new DateOnly(hoje.Year, hoje.Month, 1);
+            ate = de.Value.AddMonths(11);
+        }
+        var meses = new List<DateOnly>();
+        for (var m = de.Value; m <= ate && meses.Count < MaxMeses; m = m.AddMonths(1)) meses.Add(m);
+        return meses;
+    }
+
+    /// <summary>Período mais longo que a tela da Projeção mostra.</summary>
+    public const int MaxMeses = 36;
 }

@@ -114,11 +114,17 @@ public class FatorService : IFatorService
         // "mes" = meta do mês corrente, igual à planilha (G58:G69), e o preço muda a cada mês.
         var faturamentoMensal = meta?.BaseDoMes(hoje.Month) ?? 0m;
         var notaCenario = string.Empty;
+        var periodo = string.Empty;
+        decimal dfPeriodo = 0m, receitaPeriodo = 0m;
         if (cenario is not null)
-            (totalDf, faturamentoMensal, notaCenario) = AplicarCenario(cenario, totalDf, faturamentoMensal, hoje,
-                id => naDf.FirstOrDefault(c => c.Id == id)?.ValorPara(empresaId) ?? 0m);
-        var semMeta = faturamentoMensal <= 0;
-        var dfPct = semMeta ? 0m : PricingEngine.DfPercent(totalDf, faturamentoMensal);
+        {
+            (dfPeriodo, receitaPeriodo, notaCenario, periodo) = Projetar(cenario, empresaId, custos, metas, hoje);
+            if (receitaPeriodo <= 0 && avisoMeta is null)
+                avisoMeta = $"Sem meta de faturamento no período do cenário \"{cenario.Nome}\" ({periodo}): cadastre a meta em Comercial › Metas.";
+        }
+        // Com projeção, o DF% é o do período projetado: DF do período ÷ receita do período.
+        var semMeta = cenario is not null ? receitaPeriodo <= 0 : faturamentoMensal <= 0;
+        var dfPct = semMeta ? 0m : cenario is not null ? PricingEngine.DfPercent(dfPeriodo, receitaPeriodo) : PricingEngine.DfPercent(totalDf, faturamentoMensal);
 
         // Os impostos vêm do serviço: a tabela do regime da empresa em vigor hoje. Entram no markup só os que
         // afetam o preço (o ICMS fica fora: entra por dentro, depois, pela alíquota da Tabela de ICMS da rota).
@@ -211,7 +217,49 @@ public class FatorService : IFatorService
             Icms: doServico is null ? null : new IcmsServicoDto(icmsDoServico is not null, 0m, icmsDoServico?.AfetaPreco ?? false),
             ImpostosNota: notaImpostos,
             CenarioNome: cenario?.Nome ?? string.Empty,
-            CenarioNota: notaCenario);
+            CenarioNota: notaCenario,
+            CenarioPeriodo: periodo,
+            CenarioDf: Math.Round(dfPeriodo, 2),
+            CenarioReceita: Math.Round(receitaPeriodo, 2));
+    }
+
+    private static readonly string[] Rotulos = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+    private static string RotuloMes(DateOnly m) => $"{Rotulos[m.Month - 1]}/{m.Year % 100:00}";
+
+    /// <summary>
+    /// O período projetado do cenário, mês a mês como na tela de Projeção: DF das despesas que valem no mês (a parte
+    /// da empresa) e a meta do mês (sem meta no ano, a do mesmo mês do ano anterior), com as hipóteses do mês.
+    /// Devolve os totais do período: o DF% do preço é DF do período ÷ receita do período.
+    /// </summary>
+    public static (decimal Df, decimal Receita, string Nota, string Periodo) Projetar(CenarioProjecao cenario, string empresaId,
+        IEnumerable<CustoFixo> custos, IEnumerable<Meta> metas, DateOnly hoje)
+    {
+        var meses = cenario.MesesDoPeriodo(hoje);
+        var daEmpresa = custos.Where(c => c.PercentualDa(empresaId) > 0).ToList();
+        decimal df = 0m, receita = 0m;
+        var repetidas = 0;
+        foreach (var m in meses)
+        {
+            var noMes = daEmpresa.Where(c => c.ValeNoMes(m)).ToList();
+            var dfMes = noMes.Sum(c => c.ValorPara(empresaId));
+            var (meta, _) = MetaDoAno(metas, empresaId, m.Year);
+            if (meta is null)
+            {
+                (meta, _) = MetaDoAno(metas, empresaId, m.Year - 1);
+                if (meta is not null) repetidas++;
+            }
+            var receitaMes = meta?.Meses()[m.Month - 1] ?? 0m;
+            (dfMes, receitaMes, _) = AplicarCenario(cenario, dfMes, receitaMes, m, id => noMes.FirstOrDefault(c => c.Id == id)?.ValorPara(empresaId) ?? 0m);
+            df += dfMes;
+            receita += receitaMes;
+        }
+        var rotulo = meses.Count == 1 ? RotuloMes(meses[0]) : $"{RotuloMes(meses[0])} a {RotuloMes(meses[^1])}";
+        var hipoteses = cenario.Hipoteses.Count(h => h.Ativa && h.Tipo != "custo-variavel");
+        var nota = $"{meses.Count} {(meses.Count == 1 ? "mês" : "meses")}, {(hipoteses == 0 && cenario.Sensibilidade == 0 ? "sem hipóteses: igual à base" : $"{hipoteses} hipótese(s)")}"
+            + (cenario.Sensibilidade != 0 ? $", faturamento {(cenario.Sensibilidade > 0 ? "+" : "")}{cenario.Sensibilidade:P0}" : string.Empty)
+            + (repetidas > 0 ? $"; {repetidas} {(repetidas == 1 ? "mês sem meta repetiu" : "meses sem meta repetiram")} a do ano anterior" : string.Empty)
+            + (cenario.PeriodoDe.Length == 0 ? "; período não gravado no cenário: próximos 12 meses" : string.Empty);
+        return (df, receita, nota, rotulo);
     }
 
     private static string DataBr(string iso) =>

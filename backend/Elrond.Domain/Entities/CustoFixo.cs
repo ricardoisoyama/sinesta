@@ -54,6 +54,18 @@ public class CustoFixo : Rastreavel, IEntity, IInativavel, INumerado
         return true;
     }
 
+    /// <summary>
+    /// Conta no mês da projeção (<paramref name="mes"/> = dia 1)? Ativa, recorrente e com a vigência cruzando
+    /// o mês: igual a <c>custoNoMes</c> da tela de Projeção.
+    /// </summary>
+    public bool ValeNoMes(DateOnly mes)
+    {
+        if (Status != "ativo" || Tipo == "spot") return false;
+        if (DateOnly.TryParse(DataInicio, out var inicio) && inicio > mes.AddMonths(1).AddDays(-1)) return false;
+        if (DateOnly.TryParse(DataFim, out var fim) && fim < mes) return false;
+        return true;
+    }
+
     // ── Rateio entre empresas ──────────────────────────────────────────────
     // A empresa da despesa (UnidadeId) é a que paga a conta inteira. Com rateio, cada empresa
     // listada leva a sua parte para a DF (e o markup) dela; sem rateio, tudo é da que paga.

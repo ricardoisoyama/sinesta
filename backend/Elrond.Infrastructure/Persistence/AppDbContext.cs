@@ -542,6 +542,8 @@ public class AppDbContext : DbContext
             e.HasKey(c => c.Id);
             e.OwnsMany(c => c.Hipoteses, b => b.ToJson());
             e.Property(c => c.Sensibilidade).HasDefaultValue(0m);
+            e.Property(c => c.PeriodoDe).HasMaxLength(7).HasDefaultValue("");
+            e.Property(c => c.PeriodoAte).HasMaxLength(7).HasDefaultValue("");
         });
 
         modelBuilder.Entity<CobrancaBancaria>(e =>

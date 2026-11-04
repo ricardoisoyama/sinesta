@@ -10,6 +10,9 @@ export interface Cenario {
   hipoteses: Hipotese[]
   /** Variação do faturamento do cenário (fração); gravada com ele. */
   sensibilidade?: number
+  /** Período projetado (aaaa-mm, meses fixos): o "futuro" que o Pricing usa. Vazio = próximos 12 meses. */
+  periodoDe?: string
+  periodoAte?: string
   status: 'ativo' | 'inativo'
 }
 
@@ -17,7 +20,7 @@ type HipoteseApi = Omit<Hipotese, 'fim' | 'custoId'> & { fim: string; custoId: s
 type CenarioApi = Omit<Cenario, 'hipoteses'> & { hipoteses: HipoteseApi[] }
 
 const deApi = (c: CenarioApi): Cenario => ({ ...c, hipoteses: c.hipoteses.map((h) => ({ ...h, fim: h.fim || undefined, custoId: h.custoId || undefined })) })
-const paraApi = (c: Cenario): CenarioApi => ({ ...c, hipoteses: c.hipoteses.map((h) => ({ ...h, fim: h.fim ?? '', custoId: h.custoId ?? '' })) })
+const paraApi = (c: Cenario): CenarioApi => ({ ...c, periodoDe: c.periodoDe ?? '', periodoAte: c.periodoAte ?? '', hipoteses: c.hipoteses.map((h) => ({ ...h, fim: h.fim ?? '', custoId: h.custoId ?? '' })) })
 
 const base = '/cenarios-projecao'
 const listar = async () => (await apiFetch<CenarioApi[]>(base)).filter((c) => c.status !== 'inativo').map(deApi)

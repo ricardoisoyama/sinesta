@@ -85,6 +85,10 @@ export interface FatorResultado {
   /** Cenário da Projeção usado no lugar dos cadastros (vazio = base) e o que ele mudou no mês. */
   cenarioNome?: string
   cenarioNota?: string
+  /** Período projetado do cenário ("jan/27 a dez/27") e os totais dele: DF% = DF ÷ receita do período. */
+  cenarioPeriodo?: string
+  cenarioDf?: number
+  cenarioReceita?: number
 }
 
 export interface CalcularFatorRequest {

@@ -94,9 +94,13 @@ public record FatorResultado(
     IcmsServicoDto? Icms = null,
     /// <summary>Qual tabela do serviço valeu (regime e vigência), ou por que o serviço caiu nos da empresa.</summary>
     string ImpostosNota = "",
-    /// <summary>Cenário da Projeção usado no lugar dos cadastros (vazio = base) e o que ele mudou no mês.</summary>
+    /// <summary>Cenário da Projeção usado no lugar dos cadastros (vazio = base) e o que ele mudou no período.</summary>
     string CenarioNome = "",
-    string CenarioNota = "");
+    string CenarioNota = "",
+    /// <summary>Período projetado do cenário ("jan/27 a dez/27") e os totais dele: o DF% é DF ÷ receita do período.</summary>
+    string CenarioPeriodo = "",
+    decimal CenarioDf = 0m,
+    decimal CenarioReceita = 0m);
 
 /// <summary>Resultado da precificação + memória de cálculo (fonte da verdade = servidor).</summary>
 public record CalcularPrecoResponse(

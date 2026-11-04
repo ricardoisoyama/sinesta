@@ -48,33 +48,50 @@ const rotuloDoPeriodo = (periodo: string, meses: Mes[]) =>
  */
 export function ProjecaoPage() {
   const [hoje] = useState(() => new Date())
-  // Período e receita da projeção: escolhas da tela (não são gravadas; os cadastros não mudam).
+  // Período da Base: escolha da tela (não é gravada). No cenário, o período é dele (gravado em meses fixos).
   const [periodo, setPeriodo] = useState('p12')
   const [de, setDe] = useState(() => chaveMes(hoje))
   const [ate, setAte] = useState(() => chaveMes(new Date(hoje.getFullYear(), hoje.getMonth() + 11, 1)))
   const [fonte, setFonte] = useState('metas')
   const [digitada, setDigitada] = useState(0)
-  const meses = mesesDoPeriodo(periodo, hoje, de, ate)
-  const rotuloPeriodo = rotuloDoPeriodo(periodo, meses)
+  const { cenarios, alterar, novo, remover, erro: erroCenarios } = useCenarios()
+  const [ativo, setAtivo] = useState<string>('base')
+  const cenario = cenarios.find((c) => c.id === ativo)
+  // O período do cenário é o "futuro" que o Pricing usa. Sem período gravado (cenário antigo): os próximos 12 meses.
+  const gravado = cenario?.periodoDe && cenario.periodoAte ? { de: cenario.periodoDe, ate: cenario.periodoAte } : null
+  const anoCheio = gravado && gravado.de.endsWith('-01') && gravado.ate === `${gravado.de.slice(0, 4)}-12` ? Number(gravado.de.slice(0, 4)) : 0
+  const periodoTela = !cenario ? periodo : !gravado ? 'p12' : anoCheio >= hoje.getFullYear() && anoCheio <= hoje.getFullYear() + 2 ? `a${anoCheio}` : 'c'
+  const deTela = gravado?.de ?? de
+  const ateTela = gravado?.ate ?? ate
+  const meses = mesesDoPeriodo(periodoTela, hoje, deTela, ateTela)
+  const rotuloPeriodo = rotuloDoPeriodo(periodoTela, meses)
+  const aplicarPeriodo = (d: string, a: string) => {
+    if (cenario) alterar({ ...cenario, periodoDe: d, periodoAte: a })
+    else {
+      setDe(d)
+      setAte(a)
+    }
+  }
+  const somarMeses = (chave: string, n: number) => chaveMes(new Date(dataDaChave(chave).getFullYear(), dataDaChave(chave).getMonth() + n, 1))
   // "De" depois do "até" empurra o "até"; intervalo maior que o limite puxa o outro lado.
   const mudarDe = (v: string) => {
     if (!v) return
-    setDe(v)
-    if (v > ate) setAte(v)
-    else if (mesesEntre(v, ate) > MAX_MESES) setAte(chaveMes(new Date(dataDaChave(v).getFullYear(), dataDaChave(v).getMonth() + MAX_MESES - 1, 1)))
+    const atual = meses[meses.length - 1].chave
+    aplicarPeriodo(v, v > atual ? v : mesesEntre(v, atual) > MAX_MESES ? somarMeses(v, MAX_MESES - 1) : atual)
   }
   const mudarAte = (v: string) => {
     if (!v) return
-    setAte(v)
-    if (v < de) setDe(v)
-    else if (mesesEntre(de, v) > MAX_MESES) setDe(chaveMes(new Date(dataDaChave(v).getFullYear(), dataDaChave(v).getMonth() - MAX_MESES + 1, 1)))
+    const atual = meses[0].chave
+    aplicarPeriodo(v < atual ? v : mesesEntre(atual, v) > MAX_MESES ? somarMeses(v, -(MAX_MESES - 1)) : atual, v)
   }
-  // Ao escolher "Personalizado", parte do período que estava na tela.
+  // Os atalhos só preenchem o de/até. Ao escolher "Personalizado", parte do período que estava na tela.
   const escolherPeriodo = (v: string) => {
-    if (v === 'c' && periodo !== 'c') {
-      setDe(meses[0].chave)
-      setAte(meses[meses.length - 1].chave)
+    const ms = v === 'c' ? meses : mesesDoPeriodo(v, hoje, deTela, ateTela)
+    if (cenario) {
+      aplicarPeriodo(ms[0].chave, ms[ms.length - 1].chave)
+      return
     }
+    if (v === 'c' && periodo !== 'c') aplicarPeriodo(meses[0].chave, meses[meses.length - 1].chave)
     setPeriodo(v)
   }
   const qc = useQueryClient()
@@ -110,8 +127,6 @@ export function ProjecaoPage() {
   const fatorDe = (id: string): FatorResultado | undefined => fatores.find((q) => q.data?.empresaId === id)?.data
 
   const [escopo, setEscopo] = useState<string>('grupo')
-  const { cenarios, alterar, novo, remover, erro: erroCenarios } = useCenarios()
-  const [ativo, setAtivo] = useState<string>('base')
   // Sensibilidade: no cenário fica gravada com ele (sozinha, como as hipóteses); na Base é só para olhar.
   const [sensBase, setSensBase] = useState(0)
 
@@ -164,7 +179,6 @@ export function ProjecaoPage() {
   }
   const rodar = (hipoteses: Hipotese[], sens = 0) => projetar({ meses, receita, df, valorDoCusto, parametros, hipoteses, sensibilidade: sens })
 
-  const cenario = cenarios.find((c) => c.id === ativo)
   const sensibilidade = cenario ? (cenario.sensibilidade ?? 0) : sensBase
   const setSensibilidade = (v: number) => (cenario ? alterar({ ...cenario, sensibilidade: v }) : setSensBase(v))
   const linhasBase = rodar([])
@@ -178,7 +192,14 @@ export function ProjecaoPage() {
 
   const alterarHipoteses = (fn: (h: Hipotese[]) => Hipotese[]) => cenario && alterar({ ...cenario, hipoteses: fn(cenario.hipoteses) })
   const novoCenario = async (copiar?: Cenario) => {
-    const c = await novo({ nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`, hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: novoId('h') })) : [], sensibilidade: copiar?.sensibilidade ?? 0 })
+    // O cenário novo já nasce com o período da tela (em meses fixos); a cópia leva o do original.
+    const c = await novo({
+      nome: copiar ? `${copiar.nome} (cópia)` : `Cenário ${cenarios.length + 1}`,
+      hipoteses: copiar ? copiar.hipoteses.map((h) => ({ ...h, id: novoId('h') })) : [],
+      sensibilidade: copiar?.sensibilidade ?? 0,
+      periodoDe: copiar ? copiar.periodoDe : meses[0].chave,
+      periodoAte: copiar ? copiar.periodoAte : meses[meses.length - 1].chave,
+    })
     if (c) setAtivo(c.id)
   }
 
@@ -192,10 +213,16 @@ export function ProjecaoPage() {
   const vermelho = linhas.filter((l) => l.lucro < 0)
   const rotuloMes = (iso: string) => meses.find((m) => m.chave === iso.slice(0, 7))?.rotulo ?? iso.slice(0, 7)
 
-  // Fator: o do primeiro mês em que o cenário muda alguma coisa (senão, o do mês corrente).
-  const iFator = Math.max(0, linhas.findIndex((l, i) => Math.abs(l.fator - linhasBase[i].fator) > 1e-6))
-  const fatorHoje = linhas[iFator]?.fator ?? 0
-  const fatorBaseHoje = linhasBase[iFator]?.fator ?? 0
+  // Fator do período (o mesmo do Pricing com este cenário): DF do período ÷ receita do período + DV + lucro.
+  const fatorDoPeriodo = (ls: LinhaMes[]) => {
+    const rec = ls.reduce((a, l) => a + l.receita, 0)
+    const dfPct = rec > 0 ? ls.reduce((a, l) => a + l.df, 0) / rec : 0
+    const markup = dfPct + parametros.dvSemLucro + parametros.lucro
+    return { dfPct, fator: rec > 0 && markup < 1 ? 1 / (1 - markup) : 0 }
+  }
+  const fp = fatorDoPeriodo(linhas)
+  const fatorHoje = fp.fator
+  const fatorBaseHoje = fatorDoPeriodo(linhasBase).fator
   const rSemSens = resumir(rodar(cenario?.hipoteses ?? []))
   const delta = (a: number, b: number) => (b ? (a - b) / Math.abs(b) : 0)
 
@@ -212,17 +239,18 @@ export function ProjecaoPage() {
           <option value="grupo">Grupo (todas as empresas)</option>
           {empresas.map((e) => <option key={e.id} value={e.id}>{e.nome}</option>)}
         </select>
-        <select className={ui.filterSelect} value={periodo} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período">
+        <select className={ui.filterSelect} value={periodoTela} onChange={(e) => escolherPeriodo(e.target.value)} aria-label="Período" title={cenario ? 'Período do cenário (gravado com ele): é o futuro que o Pricing usa' : undefined}>
           <option value="p6">Próximos 6 meses</option>
           <option value="p12">Próximos 12 meses</option>
           {[0, 1, 2].map((i) => <option key={i} value={`a${hoje.getFullYear() + i}`}>Jan–dez/{hoje.getFullYear() + i}</option>)}
           <option value="c">Personalizado (de/até)</option>
         </select>
-        {periodo === 'c' && (
+        {/* No cenário o de/até fica sempre à vista: é o período gravado com ele (o Pricing usa). */}
+        {(periodoTela === 'c' || cenario) && (
           <div className={s.periodoLivre} title={`Até ${MAX_MESES} meses`}>
-            <input id="projecao-de" type="month" aria-label="Período: de" value={de} onChange={(e) => mudarDe(e.target.value)} />
+            <input id="projecao-de" type="month" aria-label="Período: de" value={meses[0].chave} onChange={(e) => mudarDe(e.target.value)} />
             <span>a</span>
-            <input id="projecao-ate" type="month" aria-label="Período: até" value={ate} onChange={(e) => mudarAte(e.target.value)} />
+            <input id="projecao-ate" type="month" aria-label="Período: até" value={meses[meses.length - 1].chave} onChange={(e) => mudarAte(e.target.value)} />
           </div>
         )}
         <select className={ui.filterSelect} value={servicoId} onChange={(e) => setServicoId(e.target.value)} aria-label="Serviço (impostos do fator)" title="Os impostos do fator vêm do serviço, como no Pricing">
@@ -275,9 +303,9 @@ export function ProjecaoPage() {
         <Kpi icone={CalendarClock} rotulo="Meses no vermelho" valor={String(r.mesesNoVermelho)} sub={r.mesesNoVermelho ? vermelho.map((l) => l.rotulo).join(', ') : 'nenhum mês abaixo do equilíbrio'} destaque={r.mesesNoVermelho ? 'ruim' : undefined} />
         <Kpi
           icone={Gauge}
-          rotulo={`Fator dos preços novos · ${linhas[iFator]?.rotulo ?? ''}`}
+          rotulo={`Fator dos preços · ${rotuloPeriodo}`}
           valor={fatorTxt(fatorHoje)}
-          sub={cenario ? `base ${fatorTxt(fatorBaseHoje)} · ${fatorHoje > fatorBaseHoje ? '+' : ''}${formatPct(delta(fatorHoje, fatorBaseHoje), 1)} no preço` : `DF ${formatPct(linhas[iFator]?.dfPct ?? 0, 1)} da receita do mês`}
+          sub={cenario ? `base ${fatorTxt(fatorBaseHoje)} · ${fatorHoje > fatorBaseHoje ? '+' : ''}${formatPct(delta(fatorHoje, fatorBaseHoje), 1)} no preço · o Pricing usa este período` : `DF ${formatPct(fp.dfPct, 1)} da receita do período`}
         />
       </div>
 
