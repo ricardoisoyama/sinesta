@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronUp, Copy, FolderInput, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
+import { useState, type DragEvent } from 'react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronUp, Copy, FolderInput, GripVertical, Info, Lightbulb, Plus, Power, Settings2, Trash2, X } from 'lucide-react'
 import ui from '@/features/common/ui.module.css'
 import sheet from '@/features/common/planilha.module.css'
 import { PageHeader } from '@/features/common/PageHeader'
@@ -17,6 +17,7 @@ import { CopiarItensModal } from './CopiarItensModal'
 import { ArvoreFichas } from './ArvoreFichas'
 import { EditorFormula } from './EditorFormula'
 import { TIPOS_COLUNA, TIPOS_NUMERICOS, novaColuna, novaFicha, novoGrupo, type ColunaFicha, type FichaTecnica, type GradeFichas, type GrupoFicha, type TipoColunaFicha } from './types'
+import { moverEntreIrmaos, moverPara, zonaDoCursor } from './ordem'
 import css from './fichaTecnica.module.css'
 
 const TAG: Record<TipoColunaFicha, { label: string; cls: string }> = {
@@ -152,6 +153,26 @@ export function FichasTecnicasPage() {
     setFocoId(copia.id)
   }
   const alternarStatus = (f: FichaTecnica) => salvarFicha({ ...f, status: f.status === 'ativo' ? 'inativo' : 'ativo' })
+  // Ordem dos itens: setas (entre os itens desta ficha) ou arrastar pela alça; grava sozinho, vale para todos.
+  const moverItem = (f: FichaTecnica, delta: -1 | 1) => gravar({ fichas: moverEntreIrmaos(grade.fichas, visiveis, f.id, delta) })
+  const [pegando, setPegando] = useState('')
+  const [arrastandoItem, setArrastandoItem] = useState('')
+  const [alvoItem, setAlvoItem] = useState<{ id: string; depois: boolean } | null>(null)
+  const fimArrasteItem = () => { setPegando(''); setArrastandoItem(''); setAlvoItem(null) }
+  const sobreItem = (f: FichaTecnica) => (e: DragEvent) => {
+    if (!arrastandoItem || arrastandoItem === f.id) return
+    e.preventDefault()
+    const r = e.currentTarget.getBoundingClientRect()
+    const depois = zonaDoCursor((e.clientY - r.top) / r.height, false) === 'depois'
+    if (alvoItem?.id !== f.id || alvoItem.depois !== depois) setAlvoItem({ id: f.id, depois })
+  }
+  const soltarItem = (f: FichaTecnica) => (e: DragEvent) => {
+    e.preventDefault()
+    const id = arrastandoItem
+    const depois = alvoItem?.id === f.id ? alvoItem.depois : true
+    fimArrasteItem()
+    if (id && id !== f.id) gravar({ fichas: moverPara(grade.fichas, id, f.id, depois) })
+  }
 
   // ── colunas ──
   const updColuna = (id: string, patch: Partial<ColunaFicha>) =>
@@ -297,13 +318,13 @@ export function FichasTecnicasPage() {
                     </th>
                   ))}
                   <th className={sheet.num} style={{ minWidth: 130 }}>Total (custo)</th>
-                  <th style={{ width: 120 }}>
+                  <th style={{ width: 166 }}>
                     <button type="button" className={sheet.addCol} onClick={adicionarColuna} disabled={!podeLancar}><Plus /> Coluna</button>
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {visiveis.map((f) => {
+                {visiveis.map((f, i) => {
                   const calc = calcularFicha(colunas, f.valores, formulaTotal)
                   const por = Object.fromEntries(calc.colunas.map((c) => [c.chave, c]))
                   const expandida = aberta === f.id
@@ -325,6 +346,20 @@ export function FichasTecnicasPage() {
                       onCopiar={() => setCopiarDe(f.id)}
                       onStatus={() => alternarStatus(f)}
                       onEnter={adicionarFicha}
+                      ordem={{
+                        primeiro: i === 0,
+                        ultimo: i === visiveis.length - 1,
+                        onMover: (d) => moverItem(f, d),
+                        onPegar: () => setPegando(f.id),
+                        arrastavel: pegando === f.id,
+                        arrastando: arrastandoItem === f.id,
+                        alvo: alvoItem?.id === f.id ? (alvoItem.depois ? 'depois' : 'antes') : null,
+                        onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', f.id); setArrastandoItem(f.id) },
+                        onDragEnd: fimArrasteItem,
+                        onDragOver: sobreItem(f),
+                        onDragLeave: () => alvoItem?.id === f.id && setAlvoItem(null),
+                        onDrop: soltarItem(f),
+                      }}
                     />
                   )
                 })}
@@ -358,7 +393,7 @@ export function FichasTecnicasPage() {
           <div className={camposCss.dica}>
             <Lightbulb />
             <span>
-              Grava sozinho a cada alteração. Clique no título de uma coluna para mudar tipo, fórmula ou se ela entra no total. Clique no total para ver a composição. <kbd>Enter</kbd> no nome cria o próximo item. <FolderInput size={13} style={{ verticalAlign: -2 }} /> no item copia os custos para outra ficha. Remover coluna ou inativar item ou ficha não apaga nada: as propostas feitas guardam a composição do dia.
+              Grava sozinho a cada alteração. Clique no título de uma coluna para mudar tipo, fórmula ou se ela entra no total. Clique no total para ver a composição. <kbd>Enter</kbd> no nome cria o próximo item. Arraste pela alça <GripVertical size={13} style={{ verticalAlign: -2 }} /> ou use as setas para mudar a ordem. <FolderInput size={13} style={{ verticalAlign: -2 }} /> no item copia os custos para outra ficha. Remover coluna ou inativar item ou ficha não apaga nada: as propostas feitas guardam a composição do dia.
             </span>
           </div>
         </div>
@@ -506,14 +541,41 @@ interface LinhaProps {
   onCopiar: () => void
   onStatus: () => void
   onEnter: () => void
+  /** Ordem: setas e arrastar pela alça (só a alça inicia o arraste, para não atrapalhar os campos). */
+  ordem: {
+    primeiro: boolean
+    ultimo: boolean
+    onMover: (delta: -1 | 1) => void
+    onPegar: () => void
+    arrastavel: boolean
+    arrastando: boolean
+    alvo: 'antes' | 'depois' | null
+    onDragStart: (e: DragEvent) => void
+    onDragEnd: () => void
+    onDragOver: (e: DragEvent) => void
+    onDragLeave: () => void
+    onDrop: (e: DragEvent) => void
+  }
 }
 
-function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco, onNome, onValor, onExpandir, onDuplicar, onCopiar, onStatus, onEnter }: LinhaProps) {
+function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco, onNome, onValor, onExpandir, onDuplicar, onCopiar, onStatus, onEnter, ordem }: LinhaProps) {
   const inativa = f.status !== 'ativo'
+  const alvo = ordem.alvo === 'antes' ? css.itemAntes : ordem.alvo === 'depois' ? css.itemDepois : ''
   return (
     <>
-      <tr className={inativa ? sheet.ativoOff : ''}>
-        <td className={sheet.fixa}>
+      <tr
+        className={`${inativa ? sheet.ativoOff : ''} ${ordem.arrastando ? css.itemArrastando : ''} ${alvo}`}
+        draggable={ordem.arrastavel}
+        onDragStart={ordem.onDragStart}
+        onDragEnd={ordem.onDragEnd}
+        onDragOver={ordem.onDragOver}
+        onDragLeave={ordem.onDragLeave}
+        onDrop={ordem.onDrop}
+      >
+        <td className={`${sheet.fixa} ${css.itemCelula}`}>
+          <span className={css.pegador} onMouseDown={ordem.onPegar} onMouseUp={ordem.onDragEnd} title="Arraste para mudar a ordem" aria-hidden>
+            <GripVertical size={14} />
+          </span>
           <input
             value={f.nome}
             autoFocus={foco}
@@ -565,6 +627,8 @@ function FichaLinha({ f, colunas, por, total, porFormula, erro, expandida, foco,
         </td>
         <td>
           <div className={sheet.acoes}>
+            <button type="button" title="Subir o item" onClick={() => ordem.onMover(-1)} disabled={ordem.primeiro}><ArrowUp /></button>
+            <button type="button" title="Descer o item" onClick={() => ordem.onMover(1)} disabled={ordem.ultimo}><ArrowDown /></button>
             <button type="button" title="Duplicar item" onClick={onDuplicar}><Copy /></button>
             <button type="button" title="Copiar para outra ficha" onClick={onCopiar} disabled={inativa}><FolderInput /></button>
             <button type="button" className={inativa ? '' : sheet.perigo} title={inativa ? 'Reativar' : 'Inativar (fica no histórico)'} onClick={onStatus}><Power /></button>

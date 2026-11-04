@@ -183,3 +183,13 @@
 .soltarAntes { box-shadow: inset 0 2px 0 var(--orange); }
 .soltarDepois { box-shadow: inset 0 -2px 0 var(--orange); }
 .soltarDentro { background: #fdf0e6; outline: 1px dashed var(--orange); outline-offset: -1px; border-radius: 8px; }
+
+/* Ordem dos itens: alça à esquerda do nome (só ela inicia o arraste) e linha laranja onde o item cai */
+.itemCelula { white-space: nowrap; }
+tr > td.itemCelula > input { width: calc(100% - 20px); }
+.pegador { display: inline-flex; vertical-align: middle; width: 18px; justify-content: center; color: #c3c9c4; cursor: grab; }
+.pegador:hover { color: var(--orange); }
+tr:not(:hover) > .itemCelula .pegador { visibility: hidden; }
+.itemArrastando { opacity: 0.4; }
+.itemAntes > td { box-shadow: inset 0 2px 0 var(--orange); }
+.itemDepois > td { box-shadow: inset 0 -2px 0 var(--orange); }
